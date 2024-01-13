@@ -6,7 +6,7 @@
 
 |  序号  |  要点  |  序号  |  要点  |
 |----|----|----|----|
-| [001](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/001.html)| me | [003](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/002.html)| me |
+| [001](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/001.html)| me | [003](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/003.html)| me |
 | [003](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/005.html)| me | [04](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/04.html)| me |
 | [05](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/05.html)| me | [06](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/06.html)| me |
 | [07](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/07.html)| me | [08](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/08.html)| me |
