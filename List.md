@@ -20,8 +20,8 @@
 | [045](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/045.html)| me | [047](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/047.html)| me |
 | [049](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/049.html)| me | [051](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/051.html)| me |
 | [053](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/053.html)| me | [057](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/057.html)| me |
-| [059](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/059.html)| me | [30](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/30.html)| me |
-|[31](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/31.html)| me | [32](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/32.html)| me |
+| [059](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/059.html)| me | [061](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/061.html)| me |
+|[063](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/063.html)| me | [065](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/065.html)| me |
 | [33](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/33.html)| me | [34](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/34.html)| me |
 | [35](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/35.html)| me | [36](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/36.html)| me |
 | [37](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/37.html)| me | [38](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/38.html)| me |
