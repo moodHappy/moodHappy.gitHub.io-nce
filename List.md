@@ -84,7 +84,7 @@
 | [59](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/59.html)| me | [60](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/60.html)| me |
 
 
-# **nce2 Notes**  
+# **NCE2 Notes**  
 ## **目录**
 
 <div style="text-align: center;">
