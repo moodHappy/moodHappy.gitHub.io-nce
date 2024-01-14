@@ -2,10 +2,8 @@
 # **NCE1 Notes**  
 ## **目录**
 
-<div style="text-align: center;">
-
 |  序号  |  要点  |  序号  |  要点  |
-|----|----|----|----|
+|:-:|:-:|:-:|:-:|
 | [001](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/001.html)|  | [003](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/003.html)|  |
 | [005](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/005.html)|  | [007](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/007.html)|  |
 | [009](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/009.html)|  | [011](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/011.html)|  |
