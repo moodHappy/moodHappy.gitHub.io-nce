@@ -1,9 +1,8 @@
 # **NCE4 Notes**  
 ## **目录**
-<div style="text-align: center;">
 
 |  序号  |  要点  |  序号  |  要点  |
-|----|----|----|----|
+|:-:|:-:|:-:|:-:|
 | [01](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/01.html)|  | [02](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/02.html)|  |
 | [03](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/03.html)|  | [04](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/04.html)|  |
 | [05](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/05.html)|  | [06](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/06.html)|  |
@@ -29,6 +28,3 @@
 | [45](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/45.html)|  | [46](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/46.html)|  |
 | [47](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/47.html)|  | [48](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/48.html)|  |
 | [49](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/49.html)|  | [50](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce4/50.html)|  |
-
-</div>
-
