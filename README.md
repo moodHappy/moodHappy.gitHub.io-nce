@@ -14,7 +14,7 @@
 
 [NCE1](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/NCE1.html)
 
-[NCE2](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/nce2%2FTable%20of%20contents.md)
+[NCE2](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce2/NCE2.html)
 
 [NCE3](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/nce3%2FTable%20of%20contents.md)
 
