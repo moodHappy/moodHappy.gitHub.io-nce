@@ -61,11 +61,15 @@
     "https://www.elle.com/",
     "https://www.cosmopolitan.com/",
     "https://www.vogue.com/", 
-    "https://pageviews.wmcloud.org/topviews/?project=en.wikipedia.org&platform=all-access&date=2023-12-29&excludes=",
+    "https://pageviews.wmcloud.org/topviews/?project=en.wikipedia.org&platform=all-access&date=yesterday&excludes=",
     "https://www.taicishe.com/",
     "https://www.lyricsmode.com/",
     "https://bigthink.com/",
-    "https://www.themoscowtimes.com/"
+    "https://www.themoscowtimes.com/",
+    "https://www.miamiherald.com/",
+    "www.axios.com",
+    "https://dictionary.cambridge.org/zht/%E8%A9%9E%E5%85%B8/%E8%8B%B1%E8%AA%9E-%E6%BC%A2%E8%AA%9E-%E7%B0%A1%E9%AB%94/",
+    "https://www.vocabulary.com/"
             ];
             var randomIndex = Math.floor(Math.random() * newsSites.length);
             window.open(newsSites[randomIndex], "_blank");
