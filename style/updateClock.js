@@ -83,7 +83,7 @@ document.addEventListener('touchstart', function(event) {
       if (currentTime - lastClickTime < 300) { // Check if it's a double tap
         clickCount++;
         if (clickCount == 3) {
-          window.location.href = 'https://moodhappy.github.io/moodHappy.github.io-nce/image/LOL_hero_show.html';
+          window.location.href = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/image/LOL_hero_show.html';
         }
       } else {
         clickCount = 1;
