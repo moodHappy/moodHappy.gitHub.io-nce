@@ -68,15 +68,20 @@ window.location.href = 'https://www.google.com';
 });
 
 // 双击右下角进入LOL英雄秀
-
-document.addEventListener('dblclick', function(event) {
+var clickCount = 0;
+document.addEventListener('click', function(event) {
   var x = event.clientX;
   var y = event.clientY;
   if (window.innerWidth <= 768) { // Check if it's a mobile device
     var bottomMargin = window.innerHeight - y;
     var rightMargin = window.innerWidth - x;
-    if (bottomMargin < 50 && rightMargin < 50) { // Check if double click is within the bottom-right corner
-      window.location.href = 'https://moodhappy.github.io/moodHappy.github.io-nce/image/LOL_hero_show.html';
+    if (bottomMargin < 50 && rightMargin < 50) { // Check if click is within the bottom-right corner
+      clickCount++;
+      if (clickCount == 3) {
+        window.location.href = 'https://moodhappy.github.io/moodHappy.github.io-nce/image/LOL_hero_show.html';
+      }
+    } else {
+      clickCount = 0; // Reset click count if click is not within the bottom-right corner
     }
   }
 });
