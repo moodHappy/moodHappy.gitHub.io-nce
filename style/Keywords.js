@@ -4,6 +4,6 @@ var keywords = [
     'example',
     'JavaScript',
     'programming',
-    'with'
+    'with',
     // 添加更多关键词...
 ];
