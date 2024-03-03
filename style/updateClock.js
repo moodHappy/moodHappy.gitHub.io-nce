@@ -71,15 +71,16 @@ window.location.href = 'https://www.google.com';
 var clickCount = 0;
 var lastClickTime = 0;
 
-document.addEventListener('click', function(event) {
-  var x = event.clientX;
-  var y = event.clientY;
+document.addEventListener('touchstart', function(event) {
+  var touch = event.touches[0];
+  var x = touch.clientX;
+  var y = touch.clientY;
   if (window.innerWidth <= 768) { // Check if it's a mobile device
     var bottomMargin = window.innerHeight - y;
     var rightMargin = window.innerWidth - x;
-    if (bottomMargin < 50 && rightMargin < 50) { // Check if click is within the bottom-right corner
+    if (bottomMargin < 50 && rightMargin < 50) { // Check if touch is within the bottom-right corner
       var currentTime = new Date().getTime();
-      if (currentTime - lastClickTime < 300) { // Check if it's a double click
+      if (currentTime - lastClickTime < 300) { // Check if it's a double tap
         clickCount++;
         if (clickCount == 3) {
           window.location.href = 'https://moodhappy.github.io/moodHappy.github.io-nce/image/LOL_hero_show.html';
@@ -89,7 +90,7 @@ document.addEventListener('click', function(event) {
       }
       lastClickTime = currentTime;
     } else {
-      clickCount = 0; // Reset click count if click is not within the bottom-right corner
+      clickCount = 0; // Reset click count if touch is not within the bottom-right corner
     }
   }
 });
