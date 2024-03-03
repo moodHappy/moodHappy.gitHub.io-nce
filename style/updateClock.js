@@ -53,3 +53,16 @@ elements[i].style.color = color;
 
 // 页面加载完成时，调用 addEffects 函数添加随机颜色效果
 window.addEventListener("load", addEffects);
+
+// 双击左下角进入Google
+document.addEventListener('dblclick', function(event) {
+    var x = event.clientX;
+    var y = event.clientY;
+    if (window.innerWidth <= 768) { // Check if it's a mobile device
+      var bottomMargin = window.innerHeight - y;
+      var leftMargin = x;
+      if (bottomMargin < 50 && leftMargin < 50) { // Check if double click is within the bottom-left corner
+        window.location.href = 'https://www.google.com';
+      }
+    }
+  });
