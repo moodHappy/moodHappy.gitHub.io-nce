@@ -28,7 +28,7 @@
                 keywords.forEach(function(keyword) {
                     var re = new RegExp('\\b' + keyword + '\\b', 'gi');
                     text = text.replace(re, function(match) {
-                        return '<span style="background-color: yellow;">' + match + '</span>';
+                        return '<span style="background-color: red;">' + match + '</span>';
                     });
                 });
                 var newNode = document.createElement('span');
