@@ -1,1 +1,1 @@
-var keywords=['the','and',];
+var keywords=['the','and'];
