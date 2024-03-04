@@ -72,27 +72,27 @@ var clickCount = 0;
 var lastClickTime = 0;
 
 document.addEventListener('touchstart', function(event) {
-  var touch = event.touches[0];
-  var x = touch.clientX;
-  var y = touch.clientY;
-  if (window.innerWidth <= 768) { // Check if it's a mobile device
-    var bottomMargin = window.innerHeight - y;
-    var rightMargin = window.innerWidth - x;
-    if (bottomMargin < 50 && rightMargin < 50) { // Check if touch is within the bottom-right corner
-      var currentTime = new Date().getTime();
-      if (currentTime - lastClickTime < 300) { // Check if it's a double tap
-        clickCount++;
-        if (clickCount == 3) {
-          window.location.href = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/image/LOL_hero_show.html';
-        }
-      } else {
-        clickCount = 1;
-      }
-      lastClickTime = currentTime;
-    } else {
-      clickCount = 0; // Reset click count if touch is not within the bottom-right corner
-    }
-  }
+var touch = event.touches[0];
+var x = touch.clientX;
+var y = touch.clientY;
+if (window.innerWidth <= 768) { // Check if it's a mobile device
+var bottomMargin = window.innerHeight - y;
+var rightMargin = window.innerWidth - x;
+if (bottomMargin < 50 && rightMargin < 50) { // Check if touch is within the bottom-right corner
+var currentTime = new Date().getTime();
+if (currentTime - lastClickTime < 300) { // Check if it's a double tap
+clickCount++;
+if (clickCount == 3) {
+window.location.href = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/image/LOL_hero_show.html';
+}
+} else {
+clickCount = 1;
+}
+lastClickTime = currentTime;
+} else {
+clickCount = 0; // Reset click count if touch is not within the bottom-right corner
+}
+}
 });
 
 // 获取实时新闻
@@ -101,21 +101,21 @@ const apiKey = 'dac6abc0634b4de08429b2580628dba8';
 
 // Function to fetch news and display them in the newsContainer div
 async function displayNews() {
-  const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}`);
-  const data = await response.json();
+const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}`);
+const data = await response.json();
 
-  const newsContainer = document.getElementById('newsContainer');
-  newsContainer.innerHTML = ''; // Clear previous news
+const newsContainer = document.getElementById('newsContainer');
+newsContainer.innerHTML = ''; // Clear previous news
 
-  data.articles.forEach(article => {
-    const newsItem = document.createElement('div');
-    newsItem.innerHTML = `
-      <h3>${article.title}</h3>
-      <p>${article.description}</p>
-      <a href="${article.url}" target="_blank">Read more</a>
-    `;
-    newsContainer.appendChild(newsItem);
-  });
+data.articles.forEach(article => {
+const newsItem = document.createElement('div');
+newsItem.innerHTML = `
+<h3>${article.title}</h3>
+<p>${article.description}</p>
+<a href="${article.url}" target="_blank">Read more</a>
+`;
+newsContainer.appendChild(newsItem);
+});
 }
 
 // Call the displayNews function to fetch and display news when the page loads
