@@ -94,3 +94,29 @@ document.addEventListener('touchstart', function(event) {
     }
   }
 });
+
+// 获取实时新闻
+// Your news API key
+const apiKey = 'dac6abc0634b4de08429b2580628dba8';
+
+// Function to fetch news and display them in the newsContainer div
+async function displayNews() {
+  const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}`);
+  const data = await response.json();
+
+  const newsContainer = document.getElementById('newsContainer');
+  newsContainer.innerHTML = ''; // Clear previous news
+
+  data.articles.forEach(article => {
+    const newsItem = document.createElement('div');
+    newsItem.innerHTML = `
+      <h3>${article.title}</h3>
+      <p>${article.description}</p>
+      <a href="${article.url}" target="_blank">Read more</a>
+    `;
+    newsContainer.appendChild(newsItem);
+  });
+}
+
+// Call the displayNews function to fetch and display news when the page loads
+window.onload = displayNews;
