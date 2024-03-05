@@ -21,10 +21,10 @@ clock.textContent = time;
 
 // 注释掉旋转角度的更新部分，不再自动旋转时钟
 // --------------
-angle += 6;
+// angle += 6;
 
 // 使用 transform 属性和 rotate 函数来设置时钟元素的旋转角度
-clock.style.transform = "rotate(" + angle + "deg)";
+// clock.style.transform = "rotate(" + angle + "deg)";
 }
 // --------------
 
