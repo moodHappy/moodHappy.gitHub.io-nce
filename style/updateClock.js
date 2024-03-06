@@ -1,3 +1,4 @@
+// JavaScript 代码
 // 获取实时新闻
 // Your news API key
 const apiKey = 'dac6abc0634b4de08429b2580628dba8';
