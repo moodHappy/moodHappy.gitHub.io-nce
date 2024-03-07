@@ -19,6 +19,7 @@ snowflake.remove();
 };
 }
 setInterval(createSnowflake, 100);
+
 // 添加太阳特效
 /*
 function createSnowflake() {
@@ -41,6 +42,7 @@ snowflake.remove();
 };
 }
 setInterval(createSnowflake, 100);
+
 //添加秋叶特效
 function createSnowflake() {
 const snowflake = document.createElement('div');
@@ -62,6 +64,7 @@ snowflake.remove();
 };
 }
 setInterval(createSnowflake, 100);
+
 // 添加雪花特效
 function createSnowflake() {
 const snowflake = document.createElement('div');
@@ -84,7 +87,7 @@ snowflake.remove();
 }
 setInterval(createSnowflake, 100);
 */
-// JavaScript 代码
+
 // 获取实时新闻
 // Your news API key
 const apiKey = 'dac6abc0634b4de08429b2580628dba8';
@@ -118,6 +121,7 @@ window.location.href = 'https://www.google.com';
 }
 }
 });
+
 // 双击右下角进入LOL英雄秀
 var clickCount = 0;
 var lastClickTime = 0;
