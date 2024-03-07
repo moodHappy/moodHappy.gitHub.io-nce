@@ -27,7 +27,7 @@ function createSnowflake() {
 function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
-        snowflake.innerHTML = '🌞';
+        snowflake.innerHTML = '☀️';
         snowflake.style.fontSize = Math.random() * 20 + 'px';
         snowflake.style.left = Math.random() * window.innerWidth + 'px';
         document.body.appendChild(snowflake);
