@@ -48,7 +48,7 @@ function createSnowflake() {
 
     setInterval(createSnowflake, 100);
 
-//添加樱花特效
+//添加秋叶特效
 function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
