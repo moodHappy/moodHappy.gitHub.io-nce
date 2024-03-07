@@ -42,7 +42,7 @@ document.addEventListener('dblclick', function(event) {
 
 
 // 添加雪花特效
-    function createSnowflake() {
+function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
         snowflake.innerHTML = '❄';
