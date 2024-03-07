@@ -76,7 +76,7 @@ function createSnowflake() {
 
 
 // 添加雪花特效
-function createSnowflake() {
+/* function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
         snowflake.innerHTML = '❄';
@@ -99,7 +99,7 @@ function createSnowflake() {
     }
 
     setInterval(createSnowflake, 100);
-
+*/
 
 
 // JavaScript 代码
