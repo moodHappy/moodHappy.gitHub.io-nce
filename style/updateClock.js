@@ -66,6 +66,56 @@ function createSnowflake() {
 
     setInterval(createSnowflake, 100);
 
+// 添加桃花特效
+function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        snowflake.innerHTML = '🌸';
+        snowflake.style.fontSize = Math.random() * 20 + 'px';
+        snowflake.style.left = Math.random() * window.innerWidth + 'px';
+        document.body.appendChild(snowflake);
+
+        const animation = snowflake.animate([
+            { top: '-10px' },
+            { top: window.innerHeight + 'px' }
+        ], {
+            duration: Math.random() * 5000 + 5000, // 随机速度
+            iterations: Infinity,
+            easing: 'linear'
+        });
+
+        animation.onfinish = () => {
+            snowflake.remove();
+        };
+    }
+
+    setInterval(createSnowflake, 100);
+
+//添加樱花特效
+function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        snowflake.innerHTML = '🌸';
+        snowflake.style.fontSize = Math.random() * 20 + 'px';
+        snowflake.style.left = Math.random() * window.innerWidth + 'px';
+        document.body.appendChild(snowflake);
+
+        const animation = snowflake.animate([
+            { top: '-10px' },
+            { top: window.innerHeight + 'px' }
+        ], {
+            duration: Math.random() * 5000 + 5000, // 随机速度
+            iterations: Infinity,
+            easing: 'linear'
+        });
+
+        animation.onfinish = () => {
+            snowflake.remove();
+        };
+    }
+
+    setInterval(createSnowflake, 100);
+
 
 // 双击右下角进入LOL英雄秀
 var clickCount = 0;
