@@ -1,28 +1,3 @@
-// 添加雪花特效
-function createSnowflake() {
-        const snowflake = document.createElement('div');
-        snowflake.classList.add('snowflake');
-        snowflake.innerHTML = '❄';
-        snowflake.style.fontSize = Math.random() * 20 + 'px';
-        snowflake.style.left = Math.random() * window.innerWidth + 'px';
-        document.body.appendChild(snowflake);
-
-        const animation = snowflake.animate([
-            { top: '-10px' },
-            { top: window.innerHeight + 'px' }
-        ], {
-            duration: Math.random() * 5000 + 5000, // 随机速度
-            iterations: Infinity,
-            easing: 'linear'
-        });
-
-        animation.onfinish = () => {
-            snowflake.remove();
-        };
-    }
-
-    setInterval(createSnowflake, 100);
-
 // 添加桃花特效
 function createSnowflake() {
         const snowflake = document.createElement('div');
@@ -48,6 +23,32 @@ function createSnowflake() {
 
     setInterval(createSnowflake, 100);
 
+// 添加太阳特效
+function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        snowflake.innerHTML = '🌞';
+        snowflake.style.fontSize = Math.random() * 20 + 'px';
+        snowflake.style.left = Math.random() * window.innerWidth + 'px';
+        document.body.appendChild(snowflake);
+
+        const animation = snowflake.animate([
+            { top: '-10px' },
+            { top: window.innerHeight + 'px' }
+        ], {
+            duration: Math.random() * 5000 + 5000, // 随机速度
+            iterations: Infinity,
+            easing: 'linear'
+        });
+
+        animation.onfinish = () => {
+            snowflake.remove();
+        };
+    }
+
+    setInterval(createSnowflake, 100);
+
+
 //添加秋叶特效
 function createSnowflake() {
         const snowflake = document.createElement('div');
@@ -72,6 +73,34 @@ function createSnowflake() {
     }
 
     setInterval(createSnowflake, 100);
+
+
+// 添加雪花特效
+function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        snowflake.innerHTML = '❄';
+        snowflake.style.fontSize = Math.random() * 20 + 'px';
+        snowflake.style.left = Math.random() * window.innerWidth + 'px';
+        document.body.appendChild(snowflake);
+
+        const animation = snowflake.animate([
+            { top: '-10px' },
+            { top: window.innerHeight + 'px' }
+        ], {
+            duration: Math.random() * 5000 + 5000, // 随机速度
+            iterations: Infinity,
+            easing: 'linear'
+        });
+
+        animation.onfinish = () => {
+            snowflake.remove();
+        };
+    }
+
+    setInterval(createSnowflake, 100);
+
+
 
 // JavaScript 代码
 // 获取实时新闻
