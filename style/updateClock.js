@@ -117,7 +117,7 @@ if (window.innerWidth <= 768) { // Check if it's a mobile device
 var bottomMargin = window.innerHeight - y;
 var leftMargin = x;
 if (bottomMargin < 50 && leftMargin < 50) { // Check if double click is within the bottom-left corner
-window.location.href = 'https://www.google.com';
+window.location.href = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/search.html';
 }
 }
 });
