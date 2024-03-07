@@ -50,6 +50,7 @@ function createSnowflake() {
 
 
 //添加秋叶特效
+/*
 function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
@@ -76,7 +77,7 @@ function createSnowflake() {
 
 
 // 添加雪花特效
-/* function createSnowflake() {
+ function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
         snowflake.innerHTML = '❄';
