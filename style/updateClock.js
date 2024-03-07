@@ -42,7 +42,6 @@ document.addEventListener('dblclick', function(event) {
 
 
 // 添加雪花特效
-<script>
     function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
@@ -66,7 +65,7 @@ document.addEventListener('dblclick', function(event) {
     }
 
     setInterval(createSnowflake, 100);
-</script>
+
 
 // 双击右下角进入LOL英雄秀
 var clickCount = 0;
