@@ -24,6 +24,7 @@ function createSnowflake() {
     setInterval(createSnowflake, 100);
 
 // 添加太阳特效
+/*
 function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
@@ -50,7 +51,6 @@ function createSnowflake() {
 
 
 //添加秋叶特效
-/*
 function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
