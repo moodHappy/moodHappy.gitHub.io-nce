@@ -107,7 +107,6 @@ newsItem.innerHTML = `
 newsContainer.appendChild(newsItem);
 });
 }
-// Call the displayNews function to fetch and display news when the page loads
 window.onload = displayNews;
 
 // 双击左下角进入Google
