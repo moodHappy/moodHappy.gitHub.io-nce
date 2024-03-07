@@ -1,3 +1,5 @@
+
+
 // JavaScript 代码
 // 获取实时新闻
 // Your news API key
@@ -37,6 +39,34 @@ document.addEventListener('dblclick', function(event) {
         }
     }
 });
+
+
+// 添加雪花特效
+<script>
+    function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        snowflake.innerHTML = '❄';
+        snowflake.style.fontSize = Math.random() * 20 + 'px';
+        snowflake.style.left = Math.random() * window.innerWidth + 'px';
+        document.body.appendChild(snowflake);
+
+        const animation = snowflake.animate([
+            { top: '-10px' },
+            { top: window.innerHeight + 'px' }
+        ], {
+            duration: Math.random() * 5000 + 5000, // 随机速度
+            iterations: Infinity,
+            easing: 'linear'
+        });
+
+        animation.onfinish = () => {
+            snowflake.remove();
+        };
+    }
+
+    setInterval(createSnowflake, 100);
+</script>
 
 // 双击右下角进入LOL英雄秀
 var clickCount = 0;
