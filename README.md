@@ -1,7 +1,7 @@
 # **NCE Notes**  
 ## **目录**
 
-[格言](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/style%2Fdaily-quote.html)
+[首页](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/style%2FNCEHomepage.html)
 
 [NCE1](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/NCE1.html)
 
