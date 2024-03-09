@@ -1,5 +1,5 @@
 // 格言引入自动调整iframe高度
-<script>
+
     // 定义函数来调整 iframe 的高度以适应内容
     function resizeIframe() {
         // 获取 iframe 元素
@@ -7,7 +7,6 @@
         // 设置 iframe 的高度为内容文档的高度
         iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px';
     }
-</script>
 
 // openRandomNewsSite.js 的内容
 // performSearch() 函数以及相关的事件处理程序
