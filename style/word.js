@@ -1,4 +1,4 @@
-var phrases = [
+var words = [
   "bless you",
   "either of",
   "neither of",
