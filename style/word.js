@@ -30,5 +30,3 @@ var words = [
   "set off",
   "set up"
 ];
-
-var wordsAndPhrases = words.concat(phrases);
