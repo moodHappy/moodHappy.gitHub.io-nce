@@ -1,3 +1,34 @@
-// words.js
+var phrases = [
+  "bless you",
+  "either of",
+  "neither of",
+  "both of",
+  "wave to",
+  "on the way",
+  "by that time",
+  "As a child",
+  "as soon as",
+  "grown up",
+  "up to now",
+  "good at",
+  "guilty pleasure",
+  "has to",
+  "take pride in",
+  "be in",
+  "move on",
+  "have got",
+  "have a hard time",
+  "be out",
+  "be away",
+  "have got to",
+  "have been",
+  "have to",
+  "be on",
+  "be back",
+  "be over",
+  "set out",
+  "set off",
+  "set up"
+];
 
-var words = ["apple", "banana", "orange", "watermelon", "strawberry", "grape", "pineapple", "pear", "cherry", "peach"];
+var wordsAndPhrases = words.concat(phrases);
