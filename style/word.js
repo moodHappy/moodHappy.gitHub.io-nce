@@ -375,7 +375,7 @@ var words = [
 "try on",
 "try out",
 "turn down",
-"turn off"*/
+"turn off"
 ];
 */
 var words = [
