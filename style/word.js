@@ -99,7 +99,7 @@ var words = [
   "good thing: It's a good thing you remembered to bring an umbrella; it's raining outside.",
   "the good things about sth: One of the good things about living in the countryside is the fresh air.",
   "go out: Let's go out for dinner tonight.",
-  "go to bed: It's getting late; time to go to bed.",
+  "go to bed: It's getting late; time to go to bed."
 
 /*
 "1. a bit (of): She's feeling a bit tired after the long hike.",
