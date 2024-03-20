@@ -973,8 +973,7 @@ var words = [
 "up against sth: The team knew they were up against tough competition in the tournament.",
 "with regard to sb/sth: With regard to your request, we will review the matter and get back to you.",
 "with respect to sth: With respect to your question, I believe further investigation is needed.",
-"with the exception of sb/sth: Everyone was present for the meeting, with the exception of John."
-/*
+"with the exception of sb/sth: Everyone was present for the meeting, with the exception of John.",
 "1. a bit (of): She's feeling a bit tired after the long hike.",
 "2. a few: There are only a few apples left in the basket.",
 "3. a little: Could you add a little sugar to my tea, please?",
@@ -1374,5 +1373,5 @@ var words = [
 "397. too…to…: She was too tired to go out last night.",
 "398. try on: She tried on several dresses before finding the perfect one.",
 "399. try out: He decided to try out for the school basketball team this year.",
-"400. turn down: Can you turn down the volume on the TV? It's too loud."*/
+"400. turn down: Can you turn down the volume on the TV? It's too loud."
 ];
