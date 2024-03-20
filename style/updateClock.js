@@ -1,31 +1,28 @@
 // openRandomNewsSite.js 的内容
 // performSearch() 函数以及相关的事件处理程序
-
 // 点击放大镜图标时触发搜索操作
 function performSearch() {
-    const searchInput = document.querySelector('.search-input');
-    const selectedEngine = document.querySelector('input[name="search-engine"]:checked').value;
-    const query = searchInput.value;
-    // 根据选定的搜索引擎执行搜索操作
-    switch (selectedEngine) {
-        case 'google':
-            window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-            break;
-        case 'wikipedia':
-            window.location.href = `https://zh.wikipedia.org/wiki/${encodeURIComponent(query)}`;
-            break;
-        case 'bing':
-            window.location.href = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
-            break;
-        case 'baidu':
-            window.location.href = `https://www.baidu.com/s?wd=${encodeURIComponent(query)}`;
-            break;
-        default:
-            alert('请选择一个搜索引擎！');
-    }
+const searchInput = document.querySelector('.search-input');
+const selectedEngine = document.querySelector('input[name="search-engine"]:checked').value;
+const query = searchInput.value;
+// 根据选定的搜索引擎执行搜索操作
+switch (selectedEngine) {
+case 'google':
+window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+break;
+case 'wikipedia':
+window.location.href = `https://zh.wikipedia.org/wiki/${encodeURIComponent(query)}`;
+break;
+case 'bing':
+window.location.href = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
+break;
+case 'baidu':
+window.location.href = `https://www.baidu.com/s?wd=${encodeURIComponent(query)}`;
+break;
+default:
+alert('请选择一个搜索引擎！');
 }
-
-
+}
 // 添加桃花特效
 function createSnowflake() {
 const snowflake = document.createElement('div');
@@ -47,7 +44,6 @@ snowflake.remove();
 };
 }
 setInterval(createSnowflake, 100);
-
 // 添加太阳特效
 /*
 function createSnowflake() {
@@ -70,7 +66,6 @@ snowflake.remove();
 };
 }
 setInterval(createSnowflake, 100);
-
 //添加秋叶特效
 function createSnowflake() {
 const snowflake = document.createElement('div');
@@ -92,7 +87,6 @@ snowflake.remove();
 };
 }
 setInterval(createSnowflake, 100);
-
 // 添加雪花特效
 function createSnowflake() {
 const snowflake = document.createElement('div');
@@ -115,7 +109,6 @@ snowflake.remove();
 }
 setInterval(createSnowflake, 100);
 */
-
 // 获取实时新闻
 // Your news API key
 const apiKey = 'dac6abc0634b4de08429b2580628dba8';
@@ -136,7 +129,6 @@ newsContainer.appendChild(newsItem);
 });
 }
 window.onload = displayNews;
-
 // 双击左下角进入Google
 document.addEventListener('dblclick', function(event) {
 var x = event.clientX;
@@ -149,7 +141,6 @@ window.location.href = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/styl
 }
 }
 });
-
 // 双击右下角进入LOL英雄秀
 var clickCount = 0;
 var lastClickTime = 0;
