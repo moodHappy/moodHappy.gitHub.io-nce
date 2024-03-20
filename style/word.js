@@ -718,6 +718,8 @@ var words = [
 "take sth up: I'm thinking about taking up jogging to improve my fitness.",
 "take up golf: He decided to take up golf as a leisure activity.","tend to do sth: He tends to procrastinate when it comes to studying for exams.",
 "tend to be sth: Cats tend to be independent animals.",
+/*
+
 "thanks to sb/sth: Thanks to your help, we were able to finish the project on time.",
 "that’s it: You've completed all the tasks on the list; that's it for today.",
 "the case: In this particular case, we need to gather more information before making a decision.",
@@ -975,6 +977,7 @@ var words = [
 "with regard to sb/sth: With regard to your request, we will review the matter and get back to you.",
 "with respect to sth: With respect to your question, I believe further investigation is needed.",
 "with the exception of sb/sth: Everyone was present for the meeting, with the exception of John."
+*/
 /*
 "1. a bit (of): She's feeling a bit tired after the long hike.",
 "2. a few: There are only a few apples left in the basket.",
