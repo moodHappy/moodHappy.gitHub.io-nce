@@ -1,4 +1,4 @@
-// var words = ["She's feeling a bit tired after the long hike.","There are only a few apples left in the basket.",]
+// var words = ["She's feeling a bit tired after the long hike.","There are only a few apples left in the basket."]
 
 
 var words = [
