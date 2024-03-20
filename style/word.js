@@ -375,4 +375,5 @@ var words = [
   "turn down",
   "turn off"*/
  "what you name",
+  "are you ok"
 ];
