@@ -121,6 +121,8 @@ var words = [
 "How often…?: How often do you go to the gym?",
 "important for sb/sth: Regular exercise is important for maintaining good health.",
 "It is important for sb/sth to do sth: It is important for children to eat a balanced diet for their growth.",
+
+/*
 "I’m sorry: I'm sorry for the mistake I made.",
 "in April: My birthday is in April.",
 "in July, etc.: We usually go on vacation in July.",
@@ -718,8 +720,6 @@ var words = [
 "take sth up: I'm thinking about taking up jogging to improve my fitness.",
 "take up golf: He decided to take up golf as a leisure activity.","tend to do sth: He tends to procrastinate when it comes to studying for exams.",
 "tend to be sth: Cats tend to be independent animals.",
-/*
-
 "thanks to sb/sth: Thanks to your help, we were able to finish the project on time.",
 "that’s it: You've completed all the tasks on the list; that's it for today.",
 "the case: In this particular case, we need to gather more information before making a decision.",
