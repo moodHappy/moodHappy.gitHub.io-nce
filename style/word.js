@@ -1,4 +1,5 @@
 var words = [
+/*
 "a few: I have a few books to return to the library.",
 "a few minutes: Can you wait for me? I'll be ready in a few minutes.",
 "a few times: I've tried to solve this puzzle a few times, but I still can't figure it out.",
@@ -121,8 +122,6 @@ var words = [
 "How often…?: How often do you go to the gym?",
 "important for sb/sth: Regular exercise is important for maintaining good health.",
 "It is important for sb/sth to do sth: It is important for children to eat a balanced diet for their growth.",
-
-/*
 "I’m sorry: I'm sorry for the mistake I made.",
 "in April: My birthday is in April.",
 "in July, etc.: We usually go on vacation in July.",
@@ -889,6 +888,8 @@ var words = [
 "when it comes to sth: She's an expert when it comes to baking cakes.",
 "when it comes to doing sth: He's very careful when it comes to handling delicate equipment.",
 "whether or not…: We need to decide whether or not to proceed with the project.",
+*/
+
 "would rather…: I would rather stay home and relax than go out tonight.",
 "above all: Above all, we need to prioritize safety in this project.",
 "all but: The storm all but destroyed the small town.",
@@ -977,7 +978,6 @@ var words = [
 "with regard to sb/sth: With regard to your request, we will review the matter and get back to you.",
 "with respect to sth: With respect to your question, I believe further investigation is needed.",
 "with the exception of sb/sth: Everyone was present for the meeting, with the exception of John."
-*/
 /*
 "1. a bit (of): She's feeling a bit tired after the long hike.",
 "2. a few: There are only a few apples left in the basket.",
