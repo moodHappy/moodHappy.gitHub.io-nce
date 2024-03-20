@@ -1,5 +1,5 @@
 var words = [
-  "bless you",
+ /* "bless you",
   "either of",
   "a bit (of)",
   "a few",
@@ -373,5 +373,5 @@ var words = [
   "try on",
   "try out",
   "turn down",
-  "turn off"
+  "turn off"*/
 ];
