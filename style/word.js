@@ -1,3 +1,4 @@
+// var words = []
 /*
 var words = [
   "bless you",
