@@ -294,7 +294,6 @@ var words = [
 "X days later: Three days later, the package arrived in the mail.",
 "X minutes later: Twenty minutes later, he finally arrived.",
 "X years old: My grandfather is eighty years old.",
-"You’re welcome: Thank you for your help." "You're welcome, anytime.",
 "a bit: Can you speak a bit louder, please?",
 "able to do sth: She is able to speak three languages fluently.",
 "a couple of sth: I bought a couple of books at the bookstore.",
