@@ -1,5 +1,4 @@
 var words = [
-/*
 "a few: I have a few books to return to the library.",
 "a few minutes: Can you wait for me? I'll be ready in a few minutes.",
 "a few times: I've tried to solve this puzzle a few times, but I still can't figure it out.",
@@ -888,8 +887,6 @@ var words = [
 "when it comes to sth: She's an expert when it comes to baking cakes.",
 "when it comes to doing sth: He's very careful when it comes to handling delicate equipment.",
 "whether or not…: We need to decide whether or not to proceed with the project.",
-*/
-
 "would rather…: I would rather stay home and relax than go out tonight.",
 "above all: Above all, we need to prioritize safety in this project.",
 "all but: The storm all but destroyed the small town.",
