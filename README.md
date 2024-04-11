@@ -3,7 +3,7 @@
 
 [英语简易教程](https://github.com/moodHappy/HelloWorld/tree/master/English%20tutorial)
 
-[四星](https://github.com/moodHappy/HelloWorld/tree/master/word%20pool%2FCopy%20version)
+[词汇](https://github.com/moodHappy/HelloWorld/tree/master/word%20pool%2FCopy%20version)
 
 [首页](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/style%2FNCEHomepage.html)
 
