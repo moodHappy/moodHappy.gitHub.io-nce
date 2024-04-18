@@ -1,6 +1,7 @@
 function openRandomNewsSite() {
 var newsSites = [
 "https://www.hindustantimes.com/",
+"https://variety.com/",
 "https://www.bbc.com/",
 "https://www.cnn.com/",
 "https://www.reuters.com/",
