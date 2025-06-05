@@ -103,6 +103,10 @@
             transition: opacity .2s;
         }
 
+        .speed-control input[type="range"]:hover {
+            opacity: 1;
+        }
+
         .speed-control input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -130,6 +134,18 @@
             padding: 5px 10px;
             cursor: pointer;
             font-size: 0.8em;
+        }
+
+        .speed-control-close:hover {
+            background: #c82333;
+        }
+
+        /* 语速提示信息 */
+        .speed-info {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
         }
 
         /* 遮罩层 */
@@ -192,6 +208,12 @@
             .speed-control {
                 width: 90%;
                 max-width: 300px;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .speed-control input[type="range"] {
+                width: 100%;
             }
 
             .read-aloud-container {
@@ -238,6 +260,7 @@
             <label for="speedRange">语速:</label>
             <input type="range" id="speedRange" min="-50" max="50" value="-20" step="1">
             <span id="currentSpeedValue">-20</span>
+            <div class="speed-info">调整后需重新播放生效</div>
             <button class="speed-control-close" onclick="hideSpeedControl()">关闭</button>
         </div>
     </div>
@@ -266,6 +289,7 @@
         let isPaused = false;
         let currentTextToSpeak = '';
         let currentSpeed = -20;
+        let currentPosition = 0; // Track current position for resume
 
         // --- Summary Functions ---
 
@@ -274,6 +298,12 @@
             if (!textToSpeak || textToSpeak.trim() === '') {
                 console.warn('Text to speak is empty.');
                 return;
+            }
+
+            // Stop current audio if playing
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
             }
 
             // Store current text and speed for resume functionality
@@ -303,6 +333,12 @@
                 console.log('Attempting to play TTS from:', ttsUrl);
 
                 currentAudio.src = ttsUrl;
+                
+                // Set the current position if resuming
+                if (currentPosition > 0) {
+                    currentAudio.currentTime = currentPosition;
+                }
+
                 currentAudio.play()
                     .then(() => {
                         console.log('TTS started playing successfully from:', ttsUrl);
@@ -323,13 +359,20 @@
                 currentAudio.addEventListener('ended', function() {
                     isReading = false;
                     isPaused = false;
+                    currentPosition = 0;
                     updateButtonState();
                 });
 
                 currentAudio.addEventListener('error', function() {
                     isReading = false;
                     isPaused = false;
+                    currentPosition = 0;
                     updateButtonState();
+                });
+
+                // Track current time for resume functionality
+                currentAudio.addEventListener('timeupdate', function() {
+                    currentPosition = currentAudio.currentTime;
                 });
             }
         }
@@ -337,6 +380,7 @@
         // Function to pause TTS
         function pauseTTS() {
             if (currentAudio && !currentAudio.paused) {
+                currentPosition = currentAudio.currentTime;
                 currentAudio.pause();
                 isPaused = true;
                 isReading = false;
@@ -347,6 +391,7 @@
         // Function to resume TTS
         function resumeTTS() {
             if (currentAudio && isPaused) {
+                currentAudio.currentTime = currentPosition;
                 currentAudio.play()
                     .then(() => {
                         isReading = true;
@@ -356,13 +401,36 @@
                     .catch(e => {
                         console.error('Error resuming TTS:', e);
                         // If resume fails, restart from beginning
+                        currentPosition = 0;
                         playSummaryTTS(currentTextToSpeak, currentSpeed);
                     });
             } else if (!currentAudio || currentAudio.ended) {
                 // If no audio or audio ended, start from beginning
                 const dynamicContentDiv = document.getElementById('dynamic-content');
                 const textToRead = dynamicContentDiv.innerText;
+                currentPosition = 0;
                 playSummaryTTS(textToRead, currentSpeed);
+            }
+        }
+
+        // Function to restart TTS with new speed
+        function restartTTSWithNewSpeed(newSpeed) {
+            const wasPlaying = isReading;
+            const dynamicContentDiv = document.getElementById('dynamic-content');
+            const textToRead = dynamicContentDiv.innerText;
+            
+            // Stop current audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            
+            // Reset position and start with new speed
+            currentPosition = 0;
+            currentSpeed = newSpeed;
+            
+            if (wasPlaying || isPaused) {
+                playSummaryTTS(textToRead, newSpeed);
             }
         }
 
@@ -402,10 +470,19 @@
             const readAloudContainer = document.getElementById('readAloudContainer'); // Get the button container
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
 
-            // Update speed display
+            // Update speed display and apply new speed
             speedRange.addEventListener('input', function() {
-                currentSpeedValue.textContent = speedRange.value;
-                currentSpeed = parseInt(speedRange.value);
+                const newSpeed = parseInt(speedRange.value);
+                currentSpeedValue.textContent = newSpeed;
+                currentSpeed = newSpeed;
+            });
+
+            // Apply new speed when user stops dragging (for better performance)
+            speedRange.addEventListener('change', function() {
+                const newSpeed = parseInt(speedRange.value);
+                if (isReading || isPaused) {
+                    restartTTSWithNewSpeed(newSpeed);
+                }
             });
 
             // --- Scroll to hide/show button ---
@@ -464,6 +541,7 @@
                     // Start reading
                     const textToRead = dynamicContentDiv.innerText;
                     const selectedSpeed = parseInt(speedRange.value);
+                    currentPosition = 0; // Reset position for new reading
                     playSummaryTTS(textToRead, selectedSpeed);
                 }
             });
