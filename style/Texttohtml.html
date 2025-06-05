@@ -16,32 +16,43 @@
             background-color: #f8f8f8; /* 轻微的页面背景色 */
         }
 
-        /* 朗读按钮容器 */
+        /* 朗读按钮容器 - FLOATING AT BOTTOM */
         .read-aloud-container {
-            text-align: center;
-            padding: 20px;
-            background-color: #fff;
-            border-bottom: 1px solid #eee;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            display: flex; /* 使用 flexbox */
-            flex-direction: column; /* 垂直排列 */
-            align-items: center; /* 水平居中 */
-            gap: 15px; /* 元素之间的间距 */
+            position: fixed; /* Fixed position */
+            bottom: 420px; /* Adjusted: 20px (original) + 400px (moved up) = 420px from the bottom */
+            left: 50%; /* Center horizontally */
+            transform: translateX(-50%); /* Adjust for perfect centering */
+            z-index: 100; /* Ensure it's above other content */
+            padding: 0; /* Remove padding as the button itself has it */
+            display: flex; /* Use flexbox */
+            align-items: center; /* Vertically center items */
+            justify-content: center; /* Horizontally center items */
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Smooth transition for hide/show */
+            opacity: 1; /* Initially visible */
+            visibility: visible; /* Initially visible */
+        }
+
+        /* Hidden state for the button container */
+        .read-aloud-container.hidden {
+            opacity: 0;
+            visibility: hidden;
         }
 
         .read-aloud-button {
             background-color: #007bff;
             color: white;
-            padding: 10px 20px;
+            padding: 12px 25px; /* Slightly larger padding for better touch target */
             border: none;
-            border-radius: 5px;
-            font-size: 1em;
+            border-radius: 25px; /* More rounded for a pill shape */
+            font-size: 1.1em; /* Slightly larger font */
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.2s ease; /* Add transform for subtle hover effect */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Soft shadow for the button itself */
         }
 
         .read-aloud-button:hover {
             background-color: #0056b3;
+            transform: translateY(-2px); /* Lift slightly on hover */
         }
 
         /* 朗读中状态样式 */
@@ -51,58 +62,7 @@
 
         .read-aloud-button.reading:hover {
             background-color: #c82333;
-        }
-
-        /* 播放进度条样式 */
-        .progress-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .progress-control label {
-            font-size: 0.9em;
-            color: #555;
-        }
-
-        .progress-control input[type="range"] {
-            flex: 1;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 8px;
-            background: #ddd;
-            border-radius: 5px;
-            outline: none;
-            opacity: 0.7;
-            transition: opacity .2s;
-        }
-
-        .progress-control input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #007bff;
-            cursor: pointer;
-        }
-
-        .progress-control input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #007bff;
-            cursor: pointer;
-            border: none;
-        }
-
-        .time-display {
-            font-size: 0.9em;
-            color: #555;
-            min-width: 100px;
-            text-align: center;
+            transform: translateY(-2px);
         }
 
         /* 语速调节条样式 */
@@ -229,13 +189,19 @@
                 font-size: 1.3em; /* Content font size unchanged: medium mobile */
             }
 
-            .progress-control {
-                max-width: 300px;
-            }
-
             .speed-control {
                 width: 90%;
                 max-width: 300px;
+            }
+
+            .read-aloud-container {
+                bottom: 215px; /* Adjusted for mobile: 15px (original) + 200px (approx. half of 400px) */
+                padding: 0;
+            }
+
+            .read-aloud-button {
+                padding: 10px 20px;
+                font-size: 1em;
             }
         }
 
@@ -250,8 +216,14 @@
                 font-size: 1.2em; /* Content font size unchanged: minimum mobile */
             }
 
-            .progress-control {
-                max-width: 250px;
+            .read-aloud-container {
+                bottom: 210px; /* Adjusted for smallest mobile: 10px (original) + 200px (approx. half of 400px) */
+                padding: 0;
+            }
+
+            .read-aloud-button {
+                padding: 8px 18px;
+                font-size: 0.9em;
             }
         }
     </style>
@@ -259,13 +231,8 @@
 <body>
     <div class="overlay" id="overlay"></div>
     
-    <div class="read-aloud-container">
+    <div class="read-aloud-container" id="readAloudContainer">
         <button id="readAloudButton" class="read-aloud-button">朗读页面</button>
-        <div class="progress-control">
-            <label>进度:</label>
-            <input type="range" id="progressRange" min="0" max="100" value="0" step="0.1">
-            <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
-        </div>
         
         <div class="speed-control" id="speedControl">
             <label for="speedRange">语速:</label>
@@ -343,7 +310,6 @@
                         isReading = true;
                         isPaused = false;
                         updateButtonState();
-                        startProgressTracking();
                     })
                     .catch(e => {
                         console.error('Error playing TTS from ' + ttsUrl + ':', e);
@@ -358,14 +324,12 @@
                     isReading = false;
                     isPaused = false;
                     updateButtonState();
-                    resetProgress();
                 });
 
                 currentAudio.addEventListener('error', function() {
                     isReading = false;
                     isPaused = false;
                     updateButtonState();
-                    resetProgress();
                 });
             }
         }
@@ -388,7 +352,6 @@
                         isReading = true;
                         isPaused = false;
                         updateButtonState();
-                        startProgressTracking();
                     })
                     .catch(e => {
                         console.error('Error resuming TTS:', e);
@@ -418,44 +381,6 @@
             }
         }
 
-        // Function to start progress tracking
-        function startProgressTracking() {
-            const progressRange = document.getElementById('progressRange');
-            const timeDisplay = document.getElementById('timeDisplay');
-            
-            const updateProgress = () => {
-                if (currentAudio && isReading) {
-                    const currentTime = currentAudio.currentTime;
-                    const duration = currentAudio.duration;
-                    
-                    if (duration > 0) {
-                        const progress = (currentTime / duration) * 100;
-                        progressRange.value = progress;
-                        timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
-                    }
-                    
-                    requestAnimationFrame(updateProgress);
-                }
-            };
-            
-            requestAnimationFrame(updateProgress);
-        }
-
-        // Function to format time
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = Math.floor(seconds % 60);
-            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-        }
-
-        // Function to reset progress
-        function resetProgress() {
-            const progressRange = document.getElementById('progressRange');
-            const timeDisplay = document.getElementById('timeDisplay');
-            progressRange.value = 0;
-            timeDisplay.textContent = '0:00 / 0:00';
-        }
-
         // Function to show speed control
         function showSpeedControl() {
             document.getElementById('speedControl').classList.add('show');
@@ -473,8 +398,8 @@
             const readAloudButton = document.getElementById('readAloudButton');
             const speedRange = document.getElementById('speedRange');
             const currentSpeedValue = document.getElementById('currentSpeedValue');
-            const progressRange = document.getElementById('progressRange');
             const overlay = document.getElementById('overlay');
+            const readAloudContainer = document.getElementById('readAloudContainer'); // Get the button container
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
 
             // Update speed display
@@ -483,13 +408,19 @@
                 currentSpeed = parseInt(speedRange.value);
             });
 
-            // Progress bar control
-            progressRange.addEventListener('input', function() {
-                if (currentAudio) {
-                    const newTime = (progressRange.value / 100) * currentAudio.duration;
-                    currentAudio.currentTime = newTime;
+            // --- Scroll to hide/show button ---
+            let lastScrollTop = 0;
+            window.addEventListener('scroll', function() {
+                let st = window.pageYOffset || document.documentElement.scrollTop;
+                if (st > lastScrollTop) {
+                    // Scrolling down
+                    readAloudContainer.classList.add('hidden');
+                } else {
+                    // Scrolling up
+                    readAloudContainer.classList.remove('hidden');
                 }
-            });
+                lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
+            }, false);
 
             // Double click to show speed control
             document.addEventListener('dblclick', function(e) {
