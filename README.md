@@ -5,7 +5,7 @@
 
 [Prompt](https://github.com/moodHappy/HelloWorld/blob/master/other%20%2FPrompt.md)
 
-[词库](https://github.com/moodHappy/HelloWorld/tree/master/word%20pool%2FCopy%20version)
+[B1](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/style%2FTexttohtml.html)
 
 [NCE1](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/NCE1.html)
 
