@@ -44,11 +44,86 @@
             background-color: #0056b3;
         }
 
-        /* 语速调节条样式 */
-        .speed-control {
+        /* 朗读中状态样式 */
+        .read-aloud-button.reading {
+            background-color: #dc3545;
+        }
+
+        .read-aloud-button.reading:hover {
+            background-color: #c82333;
+        }
+
+        /* 播放进度条样式 */
+        .progress-control {
             display: flex;
             align-items: center;
             gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .progress-control label {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .progress-control input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #ddd;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        .progress-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+
+        .progress-control input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: none;
+        }
+
+        .time-display {
+            font-size: 0.9em;
+            color: #555;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        /* 语速调节条样式 */
+        .speed-control {
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            z-index: 1000;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speed-control.show {
+            display: flex;
         }
 
         .speed-control label {
@@ -58,7 +133,7 @@
 
         .speed-control input[type="range"] {
             width: 200px;
-            -webkit-appearance: none; /* 移除默认样式 */
+            -webkit-appearance: none;
             appearance: none;
             height: 8px;
             background: #ddd;
@@ -84,8 +159,34 @@
             border-radius: 50%;
             background: #007bff;
             cursor: pointer;
+            border: none;
         }
 
+        .speed-control-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        /* 遮罩层 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .overlay.show {
+            display: block;
+        }
 
         /* 内容区域容器 */
         .content-container {
@@ -127,6 +228,15 @@
                 padding: 30px; /* Mobile padding increase */
                 font-size: 1.3em; /* Content font size unchanged: medium mobile */
             }
+
+            .progress-control {
+                max-width: 300px;
+            }
+
+            .speed-control {
+                width: 90%;
+                max-width: 300px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -139,16 +249,29 @@
                 padding: 25px; /* Minimum mobile padding */
                 font-size: 1.2em; /* Content font size unchanged: minimum mobile */
             }
+
+            .progress-control {
+                max-width: 250px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="overlay" id="overlay"></div>
+    
     <div class="read-aloud-container">
-        <button id="readAloudButton" class="read-aloud-button">朗读页面内容</button>
-        <div class="speed-control">
+        <button id="readAloudButton" class="read-aloud-button">朗读页面</button>
+        <div class="progress-control">
+            <label>进度:</label>
+            <input type="range" id="progressRange" min="0" max="100" value="0" step="0.1">
+            <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+        </div>
+        
+        <div class="speed-control" id="speedControl">
             <label for="speedRange">语速:</label>
             <input type="range" id="speedRange" min="-50" max="50" value="-20" step="1">
             <span id="currentSpeedValue">-20</span>
+            <button class="speed-control-close" onclick="hideSpeedControl()">关闭</button>
         </div>
     </div>
 
@@ -170,6 +293,13 @@
         // TTS Voice Setting (Forced)
         let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
 
+        // Global variables for audio control
+        let currentAudio = null;
+        let isReading = false;
+        let isPaused = false;
+        let currentTextToSpeak = '';
+        let currentSpeed = -20;
+
         // --- Summary Functions ---
 
         // Function to play TTS
@@ -178,6 +308,10 @@
                 console.warn('Text to speak is empty.');
                 return;
             }
+
+            // Store current text and speed for resume functionality
+            currentTextToSpeak = textToSpeak;
+            currentSpeed = speedValue;
 
             // --- New Rule: Ignore "URL" at the beginning of the text ---
             const trimmedText = textToSpeak.trim();
@@ -194,18 +328,22 @@
                 speed: speedValue, // Use the passed speed value
             }).toString();
 
-            let audio = new Audio();
+            currentAudio = new Audio();
             let played = false;
 
             for (const url of ttsDomains) {
                 const ttsUrl = `${url}api/aiyue?${queryString}`;
                 console.log('Attempting to play TTS from:', ttsUrl);
 
-                audio.src = ttsUrl;
-                audio.play()
+                currentAudio.src = ttsUrl;
+                currentAudio.play()
                     .then(() => {
                         console.log('TTS started playing successfully from:', ttsUrl);
                         played = true;
+                        isReading = true;
+                        isPaused = false;
+                        updateButtonState();
+                        startProgressTracking();
                     })
                     .catch(e => {
                         console.error('Error playing TTS from ' + ttsUrl + ':', e);
@@ -213,6 +351,121 @@
 
                 if (played) break; // If one URL works, stop trying others
             }
+
+            // Add event listener for when audio ends
+            if (currentAudio) {
+                currentAudio.addEventListener('ended', function() {
+                    isReading = false;
+                    isPaused = false;
+                    updateButtonState();
+                    resetProgress();
+                });
+
+                currentAudio.addEventListener('error', function() {
+                    isReading = false;
+                    isPaused = false;
+                    updateButtonState();
+                    resetProgress();
+                });
+            }
+        }
+
+        // Function to pause TTS
+        function pauseTTS() {
+            if (currentAudio && !currentAudio.paused) {
+                currentAudio.pause();
+                isPaused = true;
+                isReading = false;
+                updateButtonState();
+            }
+        }
+
+        // Function to resume TTS
+        function resumeTTS() {
+            if (currentAudio && isPaused) {
+                currentAudio.play()
+                    .then(() => {
+                        isReading = true;
+                        isPaused = false;
+                        updateButtonState();
+                        startProgressTracking();
+                    })
+                    .catch(e => {
+                        console.error('Error resuming TTS:', e);
+                        // If resume fails, restart from beginning
+                        playSummaryTTS(currentTextToSpeak, currentSpeed);
+                    });
+            } else if (!currentAudio || currentAudio.ended) {
+                // If no audio or audio ended, start from beginning
+                const dynamicContentDiv = document.getElementById('dynamic-content');
+                const textToRead = dynamicContentDiv.innerText;
+                playSummaryTTS(textToRead, currentSpeed);
+            }
+        }
+
+        // Function to update button state
+        function updateButtonState() {
+            const readAloudButton = document.getElementById('readAloudButton');
+            if (isReading) {
+                readAloudButton.textContent = '暂停朗读';
+                readAloudButton.classList.add('reading');
+            } else if (isPaused) {
+                readAloudButton.textContent = '继续朗读';
+                readAloudButton.classList.remove('reading');
+            } else {
+                readAloudButton.textContent = '朗读页面';
+                readAloudButton.classList.remove('reading');
+            }
+        }
+
+        // Function to start progress tracking
+        function startProgressTracking() {
+            const progressRange = document.getElementById('progressRange');
+            const timeDisplay = document.getElementById('timeDisplay');
+            
+            const updateProgress = () => {
+                if (currentAudio && isReading) {
+                    const currentTime = currentAudio.currentTime;
+                    const duration = currentAudio.duration;
+                    
+                    if (duration > 0) {
+                        const progress = (currentTime / duration) * 100;
+                        progressRange.value = progress;
+                        timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+                    }
+                    
+                    requestAnimationFrame(updateProgress);
+                }
+            };
+            
+            requestAnimationFrame(updateProgress);
+        }
+
+        // Function to format time
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Function to reset progress
+        function resetProgress() {
+            const progressRange = document.getElementById('progressRange');
+            const timeDisplay = document.getElementById('timeDisplay');
+            progressRange.value = 0;
+            timeDisplay.textContent = '0:00 / 0:00';
+        }
+
+        // Function to show speed control
+        function showSpeedControl() {
+            document.getElementById('speedControl').classList.add('show');
+            document.getElementById('overlay').classList.add('show');
+        }
+
+        // Function to hide speed control
+        function hideSpeedControl() {
+            document.getElementById('speedControl').classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -220,11 +473,36 @@
             const readAloudButton = document.getElementById('readAloudButton');
             const speedRange = document.getElementById('speedRange');
             const currentSpeedValue = document.getElementById('currentSpeedValue');
+            const progressRange = document.getElementById('progressRange');
+            const overlay = document.getElementById('overlay');
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
 
             // Update speed display
             speedRange.addEventListener('input', function() {
                 currentSpeedValue.textContent = speedRange.value;
+                currentSpeed = parseInt(speedRange.value);
+            });
+
+            // Progress bar control
+            progressRange.addEventListener('input', function() {
+                if (currentAudio) {
+                    const newTime = (progressRange.value / 100) * currentAudio.duration;
+                    currentAudio.currentTime = newTime;
+                }
+            });
+
+            // Double click to show speed control
+            document.addEventListener('dblclick', function(e) {
+                // Check if clicked on empty space (not on buttons or inputs)
+                if (e.target === document.body || e.target.classList.contains('content-container') || 
+                    e.target.classList.contains('text-placeholder') || e.target === document.documentElement) {
+                    showSpeedControl();
+                }
+            });
+
+            // Click overlay to close speed control
+            overlay.addEventListener('click', function() {
+                hideSpeedControl();
             });
 
             // Fetch the content from the URL
@@ -245,9 +523,18 @@
 
             // Add event listener to the read aloud button
             readAloudButton.addEventListener('click', function() {
-                const textToRead = dynamicContentDiv.innerText;
-                const selectedSpeed = parseInt(speedRange.value); // Get current speed value
-                playSummaryTTS(textToRead, selectedSpeed);
+                if (isReading) {
+                    // Pause reading
+                    pauseTTS();
+                } else if (isPaused) {
+                    // Resume reading
+                    resumeTTS();
+                } else {
+                    // Start reading
+                    const textToRead = dynamicContentDiv.innerText;
+                    const selectedSpeed = parseInt(speedRange.value);
+                    playSummaryTTS(textToRead, selectedSpeed);
+                }
             });
         });
     </script>
