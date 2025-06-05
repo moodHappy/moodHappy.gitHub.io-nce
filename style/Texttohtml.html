@@ -293,14 +293,14 @@
         // --- Summary Functions ---
 
         // Function to play TTS
-        function playSummaryTTS(textToSpeak) {
+        function playSummaryTTS(textToSpeak, fromCurrentPosition = false) { // Added fromCurrentPosition parameter
             if (!textToSpeak || textToSpeak.trim() === '') {
                 console.warn('Text to speak is empty.');
                 return;
             }
 
-            // Stop current audio if playing
-            if (currentAudio) {
+            // Stop current audio if playing and not resuming
+            if (currentAudio && currentAudio.played) {
                 currentAudio.pause();
                 currentAudio = null;
             }
@@ -332,9 +332,11 @@
 
                 currentAudio.src = ttsUrl;
 
-                // Set the current position if resuming
-                if (currentPosition > 0) {
+                // Set the current position ONLY if resuming from current position
+                if (fromCurrentPosition && currentPosition > 0) {
                     currentAudio.currentTime = currentPosition;
+                } else {
+                    currentPosition = 0; // Reset position for new playback
                 }
 
                 currentAudio.play()
@@ -357,20 +359,23 @@
                 currentAudio.addEventListener('ended', function() {
                     isReading = false;
                     isPaused = false;
-                    currentPosition = 0;
+                    currentPosition = 0; // Reset position when audio ends
                     updateButtonState();
                 });
 
                 currentAudio.addEventListener('error', function() {
                     isReading = false;
                     isPaused = false;
-                    currentPosition = 0;
+                    currentPosition = 0; // Reset position on error
                     updateButtonState();
                 });
 
                 // Track current time for resume functionality
                 currentAudio.addEventListener('timeupdate', function() {
-                    currentPosition = currentAudio.currentTime;
+                    // Only update currentPosition if it's currently playing
+                    if (!currentAudio.paused) {
+                        currentPosition = currentAudio.currentTime;
+                    }
                 });
             }
         }
@@ -378,7 +383,7 @@
         // Function to pause TTS
         function pauseTTS() {
             if (currentAudio && !currentAudio.paused) {
-                currentPosition = currentAudio.currentTime;
+                currentPosition = currentAudio.currentTime; // Save current time before pausing
                 currentAudio.pause();
                 isPaused = true;
                 isReading = false;
@@ -389,7 +394,8 @@
         // Function to resume TTS
         function resumeTTS() {
             if (currentAudio && isPaused) {
-                currentAudio.currentTime = currentPosition;
+                // No need to set currentTime here directly if playSummaryTTS handles it
+                // and if currentAudio is already the one that was paused.
                 currentAudio.play()
                     .then(() => {
                         isReading = true;
@@ -406,7 +412,7 @@
                 // If no audio or audio ended, start from beginning
                 const dynamicContentDiv = document.getElementById('dynamic-content');
                 const textToRead = dynamicContentDiv.innerText;
-                currentPosition = 0;
+                currentPosition = 0; // Ensure reset for a fresh start
                 playSummaryTTS(textToRead);
             }
         }
@@ -503,7 +509,8 @@
                     // Pause reading
                     pauseTTS();
                 } else if (isPaused) {
-                    // Resume reading
+                    // Resume reading - pass true to playSummaryTTS to indicate resumption
+                    // No need to explicitly set currentTime here as playSummaryTTS will use currentPosition
                     resumeTTS();
                 } else {
                     // Start reading
