@@ -4,47 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>推送文章朗读中转站</title>
-</head>
-<body>
-    <div class="content-container">
-        <div id="dynamic-content" class="text-placeholder">
-            加载中...
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const dynamicContentDiv = document.getElementById('dynamic-content');
-            const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
-
-            // Fetch the content from the URL
-            fetch(contentUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.text(); // Get the response as plain text
-                })
-                .then(data => {
-                    // Assuming the content is plain text or Markdown,
-                    // you can directly set it as innerHTML or innerText.
-                    // If it's Markdown, you might want a Markdown parser library.
-                    dynamicContentDiv.innerText = data; // Use innerText to preserve text and avoid HTML injection issues
-
-                    // Optional: If you want to format it into paragraphs from raw text with double newlines
-                    // const paragraphs = data.split(/\n\s*\n/).map(paragraph => {
-                    //     const trimmedParagraph = paragraph.trim();
-                    //     return trimmedParagraph ? `<p>${trimmedParagraph}</p>` : '';
-                    // }).join('');
-                    // dynamicContentDiv.innerHTML = paragraphs;
-                })
-                .catch(error => {
-                    console.error('Error fetching content:', error);
-                    dynamicContentDiv.innerText = '无法加载内容。请检查网络或链接。'; // Display an error message
-                });
-        });
-    </script>
-
     <style>
         /* 基础样式 */
         body {
@@ -56,6 +15,77 @@
             color: #333;
             background-color: #f8f8f8; /* 轻微的页面背景色 */
         }
+
+        /* 朗读按钮容器 */
+        .read-aloud-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex; /* 使用 flexbox */
+            flex-direction: column; /* 垂直排列 */
+            align-items: center; /* 水平居中 */
+            gap: 15px; /* 元素之间的间距 */
+        }
+
+        .read-aloud-button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .read-aloud-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* 语速调节条样式 */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speed-control label {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .speed-control input[type="range"] {
+            width: 200px;
+            -webkit-appearance: none; /* 移除默认样式 */
+            appearance: none;
+            height: 8px;
+            background: #ddd;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        .speed-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+
+        .speed-control input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+
 
         /* 内容区域容器 */
         .content-container {
@@ -102,6 +132,108 @@
                 padding: 25px; /* 最小移动端内边距 */
                 font-size: 1.2em; /* 内容字号保持不变：最小移动端 */
             }
-        </style>
+        }
+    </style>
+</head>
+<body>
+    <div class="read-aloud-container">
+        <button id="readAloudButton" class="read-aloud-button">朗读页面内容</button>
+        <div class="speed-control">
+            <label for="speedRange">语速:</label>
+            <input type="range" id="speedRange" min="-50" max="50" value="-20" step="1">
+            <span id="currentSpeedValue">-20</span>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <div id="dynamic-content" class="text-placeholder">
+            加载中...
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+
+        // TTS配置域名 (Used for Summary TTS)
+        const ttsDomains = [
+            'https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/',
+            // Add more TTS domains here if needed
+        ];
+
+        // TTS Voice Setting (Forced)
+        let summaryVoice = 'en-US-EricNeural'; // 强制使用 en-US-EricNeural
+
+        // --- Summary Functions ---
+
+        // Function to play TTS
+        function playSummaryTTS(textToSpeak, speedValue) {
+            if (!textToSpeak || textToSpeak.trim() === '') {
+                console.warn('Text to speak is empty.');
+                return;
+            }
+
+            const queryString = new URLSearchParams({
+                text: textToSpeak,
+                voiceName: summaryVoice,
+                speed: speedValue, // 使用传入的语速值
+            }).toString();
+
+            let audio = new Audio();
+            let played = false;
+
+            for (const url of ttsDomains) {
+                const ttsUrl = `${url}api/aiyue?${queryString}`;
+                console.log('Attempting to play TTS from:', ttsUrl);
+
+                audio.src = ttsUrl;
+                audio.play()
+                    .then(() => {
+                        console.log('TTS started playing successfully from:', ttsUrl);
+                        played = true;
+                    })
+                    .catch(e => {
+                        console.error('Error playing TTS from ' + ttsUrl + ':', e);
+                    });
+
+                if (played) break; // If one URL works, stop trying others
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dynamicContentDiv = document.getElementById('dynamic-content');
+            const readAloudButton = document.getElementById('readAloudButton');
+            const speedRange = document.getElementById('speedRange');
+            const currentSpeedValue = document.getElementById('currentSpeedValue');
+            const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
+
+            // 更新语速显示
+            speedRange.addEventListener('input', function() {
+                currentSpeedValue.textContent = speedRange.value;
+            });
+
+            // Fetch the content from the URL
+            fetch(contentUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text(); // Get the response as plain text
+                })
+                .then(data => {
+                    dynamicContentDiv.innerText = data; // Use innerText to preserve text and avoid HTML injection issues
+                })
+                .catch(error => {
+                    console.error('Error fetching content:', error);
+                    dynamicContentDiv.innerText = '无法加载内容。请检查网络或链接。'; // Display an error message
+                });
+
+            // Add event listener to the read aloud button
+            readAloudButton.addEventListener('click', function() {
+                const textToRead = dynamicContentDiv.innerText;
+                const selectedSpeed = parseInt(speedRange.value); // 获取当前语速值
+                playSummaryTTS(textToRead, selectedSpeed);
+            });
+        });
+    </script>
 </body>
 </html>
