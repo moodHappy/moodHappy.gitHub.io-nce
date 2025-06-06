@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">中转站</title> <style>
+    <title>中转站</title> <style>
         /* 基础样式 */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -465,7 +465,6 @@
             currentUrl.searchParams.set('hash', newHash); // Set or update the 'hash' parameter
             window.history.replaceState({}, '', currentUrl.toString()); // Update URL without reloading
             console.log("URL updated with new hash:", currentUrl.toString());
-            return newHash; // Return the generated hash
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -474,14 +473,10 @@
             const speedRange = document.getElementById('speedRange');
             const currentSpeedValueDisplay = document.getElementById('currentSpeedValue');
             const readAloudContainer = document.getElementById('readAloudContainer');
-            const pageTitleElement = document.getElementById('pageTitle'); // Get the title element
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
 
             // Generate and update URL with a new hash when the page loads
-            const hash = updateUrlWithHash();
-            // Update the title with the generated hash
-            pageTitleElement.textContent = `中转站 (${hash})`;
-
+            updateUrlWithHash();
 
             // Initialize speed display
             currentSpeedValueDisplay.textContent = speedRange.value;
@@ -521,10 +516,33 @@
                 })
                 .then(data => {
                     dynamicContentDiv.innerHTML = data; // Use innerHTML to render HTML content
+
+                    // --- NEW: Update the title with the first sentence ---
+                    const cleanedText = data.replace(/<\/?[^>]+(>|$)/g, ""); // Remove HTML tags
+                    const firstSentenceMatch = cleanedText.match(/^.*?[.?!。？！\n]/); // Match up to the first sentence terminator or newline
+                    let firstSentence = "中转站"; // Default title
+
+                    if (firstSentenceMatch) {
+                        firstSentence = firstSentenceMatch[0].trim();
+                        // Optional: Limit the length of the title to avoid overly long titles
+                        if (firstSentence.length > 70) {
+                            firstSentence = firstSentence.substring(0, 67) + '...';
+                        }
+                    } else if (cleanedText.length > 0) {
+                        // If no terminator found, take the first N characters or the whole text
+                        firstSentence = cleanedText.substring(0, Math.min(cleanedText.length, 70)).trim();
+                        if (cleanedText.length > 70) {
+                             firstSentence += '...';
+                        }
+                    }
+                    document.title = firstSentence;
+                    // --- END NEW ---
+
                 })
                 .catch(error => {
                     console.error('Error fetching content:', error);
                     dynamicContentDiv.innerText = '无法加载内容。请检查网络或链接。'; // Display an error message
+                    document.title = '加载失败 - 中转站'; // Update title on error
                 });
 
             // Add event listener to the read aloud button
