@@ -3,219 +3,354 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中转站</title> <style>
-        /* 基础样式 */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    <title>中转站</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            line-height: 1.8; /* 调整行高，让文字更易读 */
-            color: #333;
-            background-color: #f8f8f8; /* 轻微的页面背景色 */
-            padding-top: 80px; /* Space for the fixed speed control */
         }
 
-        /* 朗读按钮容器 - FLOATING AT BOTTOM */
-        .read-aloud-container {
-            position: fixed; /* Fixed position */
-            bottom: 150px; /* Adjusted to 150px from the bottom */
-            left: 50%; /* Center horizontally */
-            transform: translateX(-50%); /* Adjust for perfect centering */
-            z-index: 100; /* Ensure it's above other content */
-            padding: 0; /* Remove padding as the button itself has it */
-            display: flex; /* Use flexbox */
-            align-items: center; /* Vertically center items */
-            justify-content: center; /* Horizontally center items */
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Smooth transition for hide/show */
-            opacity: 1; /* Initially visible */
-            visibility: visible; /* Initially visible */
+        body {
+            font-family: 'Noto Serif SC', 'Inter', serif;
+            line-height: 1.75;
+            color: #2c2c2c;
+            background: linear-gradient(135deg, #f8f4f0 0%, #e8e4e0 25%, #f2ede8 50%, #ebe6e1 75%, #f5f1ec 100%);
+            background-attachment: fixed;
+            padding-top: 90px;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        /* Hidden state for the button container */
-        .read-aloud-container.hidden {
-            opacity: 0;
-            visibility: hidden;
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(198, 167, 130, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(158, 125, 95, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(178, 145, 118, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
         }
 
-        .read-aloud-button {
-            background-color: #007bff;
-            color: white;
-            padding: 12px 25px; /* Slightly larger padding for better touch target */
-            border: none;
-            border-radius: 25px; /* More rounded for a pill shape */
-            font-size: 1.1em; /* Slightly larger font */
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease; /* Add transform for subtle hover effect */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Soft shadow for the button itself */
-        }
-
-        .read-aloud-button:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px); /* Lift slightly on hover */
-        }
-
-        /* 朗读中状态样式 */
-        .read-aloud-button.reading {
-            background-color: #dc3545;
-        }
-
-        .read-aloud-button.reading:hover {
-            background-color: #c82333;
-            transform: translateY(-2px);
-        }
-
-        /* Speed Control Container */
         .speed-control-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            background-color: #ffffff;
-            padding: 15px 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 1000; /* Ensure it's on top */
+            background: linear-gradient(90deg, rgba(248, 244, 240, 0.95) 0%, rgba(242, 237, 232, 0.95) 50%, rgba(235, 230, 225, 0.95) 100%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 20px 30px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.08),
+                0 2px 8px rgba(0, 0, 0, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px; /* Space between items */
+            gap: 25px;
+            border-bottom: 1px solid rgba(198, 167, 130, 0.15);
         }
 
         .speed-label {
-            font-size: 1.1em;
-            color: #555;
-            white-space: nowrap; /* Prevent text wrapping */
+            font-size: 1.15em;
+            font-weight: 500;
+            color: #6b5b4f;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            white-space: nowrap;
+            font-family: 'Inter', sans-serif;
         }
 
         .speed-slider {
-            flex-grow: 1; /* Allow slider to take available space */
-            -webkit-appearance: none; /* Override default look */
+            -webkit-appearance: none;
             appearance: none;
-            height: 8px;
-            background: #ddd;
+            height: 10px;
+            background: linear-gradient(90deg, #d4c4b0 0%, #c6a782 50%, #9e7d5f 100%);
             outline: none;
-            border-radius: 5px;
+            border-radius: 25px;
             cursor: pointer;
-            width: 200px; /* Default width for desktop */
-            max-width: 60%; /* Prevent slider from becoming too wide on large screens */
+            width: 220px;
+            max-width: 65%;
+            position: relative;
+            box-shadow:
+                inset 0 2px 6px rgba(0, 0, 0, 0.15),
+                0 1px 2px rgba(255, 255, 255, 0.8);
         }
 
         .speed-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #007bff;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #8b7355 0%, #a68b6b 50%, #c6a782 100%);
             border-radius: 50%;
             cursor: grab;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.25),
+                0 2px 4px rgba(0, 0, 0, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
         .speed-slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            background: #007bff;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #8b7355 0%, #a68b6b 50%, #c6a782 100%);
             border-radius: 50%;
             cursor: grab;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.25),
+                0 2px 4px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
         .speed-slider:active::-webkit-slider-thumb {
             cursor: grabbing;
-            background-color: #0056b3;
+            transform: scale(1.1);
+            box-shadow:
+                0 6px 16px rgba(0, 0, 0, 0.3),
+                0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px 2px rgba(255, 255, 255, 0.5);
         }
 
         .speed-slider:active::-moz-range-thumb {
             cursor: grabbing;
-            background-color: #0056b3;
+            transform: scale(1.1);
+            box-shadow:
+                0 6px 16px rgba(0, 0, 0, 0.3),
+                0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
         .speed-value-display {
-            font-weight: bold;
-            color: #007bff;
-            min-width: 30px; /* Ensure space for two digits and sign */
+            font-weight: 600;
+            color: #8b7355;
+            min-width: 35px;
             text-align: center;
+            font-size: 1.1em;
+            font-family: 'Inter', monospace;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
         }
 
-        /* 内容区域容器 */
+        .read-aloud-container {
+            position: fixed;
+            bottom: 60px; /* Adjusted to lower the button */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .read-aloud-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-50%) translateY(20px);
+        }
+
+        .read-aloud-button {
+            background: linear-gradient(135deg, #8b7355 0%, #a68b6b 25%, #c6a782 50%, #d4c4b0 75%, #e8ddd2 100%);
+            color: #f8f4f0;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow:
+                0 8px 24px rgba(139, 115, 85, 0.3),
+                0 4px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .read-aloud-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease-in-out;
+        }
+
+        .read-aloud-button:hover::before {
+            left: 100%;
+        }
+
+        .read-aloud-button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow:
+                0 12px 32px rgba(139, 115, 85, 0.4),
+                0 6px 12px rgba(0, 0, 0, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, #9e7d5f 0%, #b8987a 25%, #d4c4b0 50%, #e0d5ca 75%, #f0e5da 100%);
+        }
+
+        .read-aloud-button.reading {
+            background: linear-gradient(135deg, #a0522d 0%, #cd853f 25%, #daa520 50%, #f4a460 75%, #ffe4b5 100%);
+            animation: pulse 2s infinite;
+        }
+
+        .read-aloud-button.reading:hover {
+            background: linear-gradient(135deg, #8b4513 0%, #b8860b 25%, #cd853f 50%, #daa520 75%, #f4a460 100%);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 8px 24px rgba(160, 82, 45, 0.3), 0 4px 8px rgba(0, 0, 0, 0.1); }
+            50% { box-shadow: 0 12px 32px rgba(160, 82, 45, 0.5), 0 6px 12px rgba(0, 0, 0, 0.2); }
+        }
+
         .content-container {
-            max-width: 800px; /* 内容最大宽度 */
-            margin: 0 auto; /* 水平居中 */
-            padding: 25px; /* 顶部、左右、底部都有内边距 */
-            padding-top: 0; /* Adjusted for the fixed header */
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 30px;
+            position: relative;
         }
 
-        /* 预留文字空间样式 */
+        .content-container::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 15px;
+            right: 15px;
+            bottom: 20px;
+            background:
+                linear-gradient(135deg, rgba(248, 244, 240, 0.9) 0%, rgba(242, 237, 232, 0.85) 50%, rgba(235, 230, 225, 0.9) 100%);
+            border-radius: 25px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.08),
+                0 8px 20px rgba(0, 0, 0, 0.04),
+                inset 0 1px 2px rgba(255, 255, 255, 0.9),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.02);
+            z-index: -1;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
         .text-placeholder {
-            background-color: #ffffff; /* 内容区背景色 */
-            border: 1px solid #e0e0e0;
-            padding: 40px; /* 增加内容区内边距 */
-            min-height: 300px; /* 预留的最小高度 */
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            overflow: auto; /* 内容溢出时显示滚动条 */
-            font-size: 1.4em; /* 内容字号保持不变 */
-            line-height: 1.8; /* 调整行高，让文字更易读 */
-            color: #444;
-            white-space: pre-wrap; /* Preserve whitespace and wrap text */
-            word-wrap: break-word; /* 允许长单词或URL在任意点断开 */
-            overflow-wrap: break-word; /* 现代替代属性 */
+            background: transparent;
+            border: none;
+            padding: 50px 45px;
+            min-height: 400px;
+            border-radius: 20px;
+            overflow: auto;
+            font-size: 1.45em;
+            line-height: 1.8;
+            color: #2c2c2c;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            position: relative;
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 0.3px;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
         }
 
-        /* Add this to remove underlines from links */
+        .text-placeholder::selection {
+            background: rgba(198, 167, 130, 0.3);
+            color: #2c2c2c;
+        }
+
         .text-placeholder a {
-            text-decoration: none;
+            text-decoration: none; /* Removed underline */
+            color: #8b7355;
+            transition: all 0.3s ease;
         }
 
-        /* No specific style for hash display div as it's removed from HTML */
+        .text-placeholder a:hover {
+            color: #6b5b4f;
+            background: rgba(198, 167, 130, 0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
 
-        /* Mobile responsiveness */
+        .text-placeholder h1, .text-placeholder h2, .text-placeholder h3 {
+            color: #6b5b4f;
+            margin: 1.5em 0 0.8em 0;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .text-placeholder p {
+            margin-bottom: 1.2em;
+            text-indent: 2em;
+        }
+
+        .text-placeholder strong {
+            color: #8b7355;
+            font-weight: 600;
+        }
+
+        .text-placeholder em {
+            color: #a68b6b;
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             body {
-                padding-top: 70px; /* Adjust for mobile speed control */
+                padding-top: 80px;
             }
 
             .speed-control-container {
-                padding: 10px 15px;
-                gap: 10px;
+                padding: 15px 20px;
+                gap: 15px;
             }
 
             .speed-slider {
-                width: 150px; /* Adjust slider width for smaller screens */
-                max-width: 55%; /* Further constrain max width */
+                width: 160px;
+                max-width: 60%;
             }
 
             .content-container {
-                padding: 15px 20px; /* Mobile adjust padding */
+                padding: 25px 20px;
             }
 
             .text-placeholder {
-                min-height: 250px; /* Mobile reserved height increase */
-                padding: 30px; /* Mobile padding increase */
-                font-size: 1.3em; /* Content font size unchanged: medium mobile */
+                min-height: 300px;
+                padding: 35px 30px;
+                font-size: 1.35em;
             }
 
             .read-aloud-container {
-                bottom: 150px; /* Adjusted to 150px from the bottom */
-                padding: 0; /* Remove padding as the button itself has it */
+                bottom: 50px; /* Adjusted for smaller screens */
             }
 
             .read-aloud-button {
-                padding: 10px 20px;
-                font-size: 1em;
+                padding: 14px 28px;
+                font-size: 1.1em;
             }
         }
 
         @media (max-width: 480px) {
             body {
-                padding-top: 60px; /* Adjust for smallest mobile speed control */
+                padding-top: 70px;
             }
 
             .speed-control-container {
-                padding: 8px 10px;
-                gap: 8px;
+                padding: 12px 15px;
+                gap: 12px;
             }
 
             .speed-label {
@@ -223,40 +358,39 @@
             }
 
             .speed-slider {
-                width: 100px; /* Further adjust slider width for smallest screens */
-                max-width: 50%; /* Further constrain max width */
+                width: 120px;
+                max-width: 55%;
             }
 
             .speed-value-display {
-                font-size: 0.9em;
-                min-width: 25px; /* Reduce min-width for smaller font */
+                font-size: 1em;
+                min-width: 30px;
             }
 
             .content-container {
-                padding: 10px 15px; /* Minimum mobile adjust padding */
+                padding: 20px 15px;
             }
 
             .text-placeholder {
-                min-height: 200px; /* Minimum mobile reserved height */
-                padding: 25px; /* Minimum mobile padding */
-                font-size: 1.2em; /* Content font size unchanged: minimum mobile */
+                min-height: 250px;
+                padding: 30px 25px;
+                font-size: 1.25em;
             }
 
             .read-aloud-container {
-                bottom: 150px; /* Adjusted to 150px from the bottom */
-                padding: 0; /* Remove padding as the button itself has it */
+                bottom: 40px; /* Adjusted for smaller screens */
             }
 
             .read-aloud-button {
-                padding: 8px 18px;
-                font-size: 0.9em;
+                padding: 12px 24px;
+                font-size: 1em;
             }
         }
     </style>
 </head>
 <body>
     <div class="speed-control-container">
-        <span class="speed-label">语速:</span>
+        <span class="speed-label">语速</span>
         <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20">
         <span id="currentSpeedValue" class="speed-value-display">-20</span>
     </div>
@@ -269,59 +403,46 @@
         <div id="dynamic-content" class="text-placeholder">
             加载中...
         </div>
-        </div>
+    </div>
 
     <script>
-        // --- Configuration ---
-
-        // TTS configuration domain (Used for Summary TTS)
         const ttsDomains = [
             'https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/',
-            // Add more TTS domains here if needed
         ];
 
-        // TTS Voice Setting (Forced)
-        let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
+        let summaryVoice = 'en-US-EricNeural';
 
-        // Global variables for audio control
         let currentAudio = null;
         let isReading = false;
         let isPaused = false;
         let currentTextToSpeak = '';
-        let currentSpeed = -20; // Initialize with default speed from slider
-        let currentPosition = 0; // Track current position for resume
+        let currentSpeed = -20;
+        let currentPosition = 0;
 
-        // --- Summary Functions ---
-
-        // Function to play TTS
-        function playSummaryTTS(textToSpeak, fromCurrentPosition = false) { // Added fromCurrentPosition parameter
+        function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
             if (!textToSpeak || textToSpeak.trim() === '') {
                 console.warn('Text to speak is empty.');
                 return;
             }
 
-            // Stop current audio if playing and not resuming
             if (currentAudio && currentAudio.played) {
                 currentAudio.pause();
                 currentAudio = null;
             }
 
-            // Store current text for resume functionality
             currentTextToSpeak = textToSpeak;
 
-            // --- New Rule: Ignore "URL" at the beginning of the text ---
             const trimmedText = textToSpeak.trim();
             let finaltextToSpeak = trimmedText;
             if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
                 finaltextToSpeak = trimmedText.substring(3);
                 console.log('Detected "URL" at the beginning, reading from:', finaltextToSpeak);
             }
-            // --- End of New Rule ---
 
             const queryString = new URLSearchParams({
-                text: finaltextToSpeak, // Use the potentially modified text
+                text: finaltextToSpeak,
                 voiceName: summaryVoice,
-                speed: currentSpeed, // Use the user-selected speed
+                speed: currentSpeed,
             }).toString();
 
             currentAudio = new Audio();
@@ -333,11 +454,10 @@
 
                 currentAudio.src = ttsUrl;
 
-                // Set the current position ONLY if resuming from current position
                 if (fromCurrentPosition && currentPosition > 0) {
                     currentAudio.currentTime = currentPosition;
                 } else {
-                    currentPosition = 0; // Reset position for new playback
+                    currentPosition = 0;
                 }
 
                 currentAudio.play()
@@ -352,28 +472,25 @@
                         console.error('Error playing TTS from ' + ttsUrl + ':', e);
                     });
 
-                if (played) break; // If one URL works, stop trying others
+                if (played) break;
             }
 
-            // Add event listener for when audio ends
             if (currentAudio) {
                 currentAudio.addEventListener('ended', function() {
                     isReading = false;
                     isPaused = false;
-                    currentPosition = 0; // Reset position when audio ends
+                    currentPosition = 0;
                     updateButtonState();
                 });
 
                 currentAudio.addEventListener('error', function() {
                     isReading = false;
                     isPaused = false;
-                    currentPosition = 0; // Reset position on error
+                    currentPosition = 0;
                     updateButtonState();
                 });
 
-                // Track current time for resume functionality
                 currentAudio.addEventListener('timeupdate', function() {
-                    // Only update currentPosition if it's currently playing
                     if (!currentAudio.paused) {
                         currentPosition = currentAudio.currentTime;
                     }
@@ -381,10 +498,9 @@
             }
         }
 
-        // Function to pause TTS
         function pauseTTS() {
             if (currentAudio && !currentAudio.paused) {
-                currentPosition = currentAudio.currentTime; // Save current time before pausing
+                currentPosition = currentAudio.currentTime;
                 currentAudio.pause();
                 isPaused = true;
                 isReading = false;
@@ -392,11 +508,8 @@
             }
         }
 
-        // Function to resume TTS
         function resumeTTS() {
             if (currentAudio && isPaused) {
-                // No need to set currentTime here directly if playSummaryTTS handles it
-                // and if currentAudio is already the one that was paused.
                 currentAudio.play()
                     .then(() => {
                         isReading = true;
@@ -405,30 +518,26 @@
                     })
                     .catch(e => {
                         console.error('Error resuming TTS:', e);
-                        // If resume fails, restart from beginning
                         currentPosition = 0;
                         playSummaryTTS(currentTextToSpeak);
                     });
             } else if (!currentAudio || currentAudio.ended) {
-                // If no audio or audio ended, start from beginning
                 const dynamicContentDiv = document.getElementById('dynamic-content');
                 const textToRead = dynamicContentDiv.innerText;
-                currentPosition = 0; // Ensure reset for a fresh start
+                currentPosition = 0;
                 playSummaryTTS(textToRead);
             }
         }
 
-        // Function to restart TTS with new speed
         function restartTTSWithNewSpeed() {
             if (currentAudio) {
                 currentAudio.pause();
                 currentAudio = null;
             }
-            currentPosition = 0; // Always restart from the beginning when speed changes
+            currentPosition = 0;
             const dynamicContentDiv = document.getElementById('dynamic-content');
             const textToRead = dynamicContentDiv.innerText;
             if (textToRead && textToRead.trim() !== '' && (isReading || isPaused)) {
-                // Only play if it was already reading or paused
                 playSummaryTTS(textToRead);
             } else {
                 isReading = false;
@@ -437,7 +546,6 @@
             }
         }
 
-        // Function to update button state
         function updateButtonState() {
             const readAloudButton = document.getElementById('readAloudButton');
             if (isReading) {
@@ -452,18 +560,15 @@
             }
         }
 
-        // --- New Function: Generate Random Hash for URL ---
         function generateRandomHash() {
-            // A simple hash using a combination of timestamp and a random number
             return (Math.random().toString(36).substring(2, 10) + Date.now().toString(36)).toUpperCase();
         }
 
-        // --- New Function: Update URL with Hash ---
         function updateUrlWithHash() {
             const currentUrl = new URL(window.location.href);
             const newHash = generateRandomHash();
-            currentUrl.searchParams.set('hash', newHash); // Set or update the 'hash' parameter
-            window.history.replaceState({}, '', currentUrl.toString()); // Update URL without reloading
+            currentUrl.searchParams.set('hash', newHash);
+            window.history.replaceState({}, '', currentUrl.toString());
             console.log("URL updated with new hash:", currentUrl.toString());
         }
 
@@ -475,14 +580,11 @@
             const readAloudContainer = document.getElementById('readAloudContainer');
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
 
-            // Generate and update URL with a new hash when the page loads
             updateUrlWithHash();
 
-            // Initialize speed display
             currentSpeedValueDisplay.textContent = speedRange.value;
             currentSpeed = parseInt(speedRange.value);
 
-            // Speed slider event listeners
             speedRange.addEventListener('input', function() {
                 currentSpeedValueDisplay.textContent = this.value;
             });
@@ -492,79 +594,65 @@
                 restartTTSWithNewSpeed();
             });
 
-            // --- Scroll to hide/show button ---
             let lastScrollTop = 0;
             window.addEventListener('scroll', function() {
                 let st = window.pageYOffset || document.documentElement.scrollTop;
                 if (st > lastScrollTop) {
-                    // Scrolling down
                     readAloudContainer.classList.add('hidden');
                 } else {
-                    // Scrolling up
                     readAloudContainer.classList.remove('hidden');
                 }
-                lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
+                lastScrollTop = st <= 0 ? 0 : st;
             }, false);
 
-            // Fetch the content from the URL
             fetch(contentUrl)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    return response.text(); // Get the response as plain text
+                    return response.text();
                 })
                 .then(data => {
-                    dynamicContentDiv.innerHTML = data; // Use innerHTML to render HTML content
+                    dynamicContentDiv.innerHTML = data;
 
-                    // --- NEW: Update the title with the first sentence, ignoring "URL" ---
-                    let cleanedText = data.replace(/<\/?[^>]+(>|$)/g, ""); // Remove HTML tags
-                    
-                    // Ignore "URL" at the beginning of the text for the title
+                    let cleanedText = data.replace(/<\/?[^>]+(>|$)/g, "");
+
                     if (cleanedText.trim().length >= 3 && cleanedText.trim().substring(0, 3).toUpperCase() === 'URL') {
                         cleanedText = cleanedText.trim().substring(3).trim();
                         console.log('Detected "URL" at the beginning for title, using:', cleanedText);
                     }
 
-                    const firstSentenceMatch = cleanedText.match(/^.*?[.?!。？！\n]/); // Match up to the first sentence terminator or newline
-                    let firstSentence = "中转站"; // Default title
+                    const firstSentenceMatch = cleanedText.match(/^.*?[.?!。？！\n]/);
+                    let firstSentence = "中转站";
 
                     if (firstSentenceMatch) {
                         firstSentence = firstSentenceMatch[0].trim();
-                        // Optional: Limit the length of the title to avoid overly long titles
                         if (firstSentence.length > 70) {
                             firstSentence = firstSentence.substring(0, 67) + '...';
                         }
                     } else if (cleanedText.length > 0) {
-                        // If no terminator found, take the first N characters or the whole text
                         firstSentence = cleanedText.substring(0, Math.min(cleanedText.length, 70)).trim();
                         if (cleanedText.length > 70) {
                              firstSentence += '...';
                         }
                     }
                     document.title = firstSentence;
-                    // --- END NEW ---
 
                 })
                 .catch(error => {
                     console.error('Error fetching content:', error);
-                    dynamicContentDiv.innerText = '无法加载内容。请检查网络或链接。'; // Display an error message
-                    document.title = '加载失败 - 中转站'; // Update title on error
+                    dynamicContentDiv.innerText = '无法加载内容。请检查网络或链接。';
+                    document.title = '加载失败 - 中转站';
                 });
 
-            // Add event listener to the read aloud button
             readAloudButton.addEventListener('click', function() {
                 if (isReading) {
-                    // Pause reading
                     pauseTTS();
                 } else if (isPaused) {
-                    // Resume reading - pass true to playSummaryTTS to indicate resumption
-                    // No need to explicitly set currentTime here as playSummaryTTS will use currentPosition
                     resumeTTS();
                 } else {
-                    // Start reading
                     const textToRead = dynamicContentDiv.innerText;
-                    currentPosition = 0; // Reset position for new reading
+                    currentPosition = 0;
                     playSummaryTTS(textToRead);
                 }
             });
