@@ -140,11 +140,11 @@
             text-align: center;
         }
 
-        /* 内容区域容器 */
+        /* Content Area Container */
         .content-container {
-            max-width: 800px; /* 内容最大宽度 */
-            margin: 0 auto; /* 水平居中 */
-            padding: 25px; /* 顶部、左右、底部都有内边距 */
+            max-width: 800px; /* Content max width */
+            margin: 0 auto; /* Horizontal centering */
+            padding: 25px; /* Top, left, right, bottom padding */
             padding-top: 0; /* Adjusted for the fixed header */
         }
 
@@ -159,12 +159,14 @@
 
         .article-header {
             padding: 20px;
-            font-size: 1.6em; /* Larger font for the title */
+            color: #000000; /* Black color */
+            font-size: 14px; /* 14px font size */
             font-weight: bold;
-            color: #007bff;
             cursor: pointer; /* Indicate it's clickable */
             transition: background-color 0.3s ease;
             border-bottom: 1px solid #e0e0e0; /* Separator for header */
+            display: block; /* Make the entire header clickable */
+            text-decoration: none; /* Remove underline from the link */
         }
 
         .article-header:hover {
@@ -218,7 +220,7 @@
             }
 
             .article-header {
-                font-size: 1.4em;
+                font-size: 14px; /* Maintain 14px on mobile */
                 padding: 15px;
             }
 
@@ -271,7 +273,7 @@
             }
 
             .article-header {
-                font-size: 1.2em;
+                font-size: 14px; /* Maintain 14px on smallest mobile */
                 padding: 12px;
             }
 
@@ -326,6 +328,7 @@
         let currentSpeed = -20;
         let currentPosition = 0;
         let currentArticleIndex = -1; // To track which article is being read
+        let allArticles = []; // To store all parsed articles
 
         // --- Summary Functions ---
         function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
@@ -430,30 +433,29 @@
                     .catch(e => {
                         console.error('Error resuming TTS:', e);
                         // If resume fails, restart the specific article from beginning
-                        if (currentArticleIndex !== -1) {
-                            const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
-                            if (articleContentDiv) {
-                                playSummaryTTS(articleContentDiv.innerText);
-                            }
+                        if (currentArticleIndex !== -1 && allArticles[currentArticleIndex]) {
+                            playSummaryTTS(allArticles[currentArticleIndex].textContent);
                         } else {
                             // If no specific article, try to get the first one if available
-                            const firstArticleContent = document.querySelector('.article-content');
-                            if (firstArticleContent) {
-                                playSummaryTTS(firstArticleContent.innerText);
+                            if (allArticles.length > 0) {
+                                playSummaryTTS(allArticles[0].textContent);
                             }
                         }
                     });
             } else if (!currentAudio || currentAudio.ended) {
-                // If no audio or audio ended, start reading from the first article
+                // If no audio or audio ended, start reading from the current active article or first one
                 currentPosition = 0;
-                currentArticleIndex = 0; // Start with the first article
-                const firstArticleContent = document.getElementById(`article-content-0`);
-                if (firstArticleContent) {
-                    // Ensure the first article is expanded if we are about to read it
-                    firstArticleContent.classList.add('expanded');
-                    playSummaryTTS(firstArticleContent.innerText);
+                let articleToReadIndex = currentArticleIndex !== -1 ? currentArticleIndex : 0;
+
+                if (allArticles[articleToReadIndex]) {
+                    const articleContentDiv = document.getElementById(`article-content-${articleToReadIndex}`);
+                    if (articleContentDiv) {
+                        currentArticleIndex = articleToReadIndex; // Ensure it's set
+                        articleContentDiv.classList.add('expanded');
+                        playSummaryTTS(articleContentDiv.innerText);
+                    }
                 } else {
-                    console.warn("No articles found to read.");
+                    console.warn("No articles found to read or active article not found.");
                 }
             }
         }
@@ -466,15 +468,8 @@
             currentPosition = 0; // Always restart from the beginning when speed changes
 
             // If an article was being read, restart that specific article
-            if (currentArticleIndex !== -1) {
-                const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
-                if (articleContentDiv && (isReading || isPaused)) {
-                    playSummaryTTS(articleContentDiv.innerText);
-                } else {
-                    isReading = false;
-                    isPaused = false;
-                    updateButtonState();
-                }
+            if (currentArticleIndex !== -1 && allArticles[currentArticleIndex] && (isReading || isPaused)) {
+                playSummaryTTS(allArticles[currentArticleIndex].textContent);
             } else {
                 // If no specific article was being read, reset state
                 isReading = false;
@@ -510,17 +505,13 @@
         }
 
         // --- Refined: Function to split content by "URL" and render articles ---
-        function renderArticles(fullContent) {
+        function renderArticles(fullContent, articleIdToDisplay = null) {
             const articlesContainer = document.getElementById('articles-container');
             articlesContainer.innerHTML = ''; // Clear existing content
 
             // Normalize line endings and trim the whole content
             fullContent = fullContent.replace(/\r\n/g, '\n').trim();
 
-            // Split content by "URL", keeping the delimiter. This creates an array like:
-            // ["", "URL", "content after first URL", "URL", "content after second URL", ...]
-            // Or if content starts with URL: ["", "URL", "content after first URL", ...]
-            // Or if content doesn't have URL: ["full content"]
             const rawParts = fullContent.split(/(URL)/i);
             const processedArticles = [];
             let currentContent = '';
@@ -529,109 +520,115 @@
                 const part = rawParts[i];
 
                 if (part.toUpperCase() === 'URL') {
-                    // If we found 'URL', and there's accumulated content, push it as an article.
-                    // Then, start a new article with 'URL' as its prefix.
                     if (currentContent.trim() !== '') {
                         processedArticles.push(currentContent.trim());
                     }
-                    currentContent = 'URL'; // Start the new article with 'URL'
+                    currentContent = 'URL';
                 } else {
-                    // This is content. Append it to the current temporary article content.
                     currentContent += part;
                 }
             }
 
-            // Push any remaining content as the last article, if it's not empty.
             if (currentContent.trim() !== '') {
                 processedArticles.push(currentContent.trim());
             }
 
-            // Filter out any articles that are effectively empty (e.g., from leading/trailing splits or consecutive URLs)
-            const finalArticles = processedArticles.filter(article => {
-                // Remove HTML tags and then trim whitespace to check for true emptiness
+            allArticles = processedArticles.filter(article => {
                 const textOnly = article.replace(/<\/?[^>]+(>|$)/g, '').trim();
                 return textOnly !== '';
             });
 
-
-            if (finalArticles.length === 0) {
+            if (allArticles.length === 0) {
                 articlesContainer.innerHTML = '<p>没有内容可显示。</p>';
                 document.title = '无内容 - 中转站';
                 return;
             }
 
-            finalArticles.forEach((articleText, index) => {
+            let articlesToRender = allArticles;
+
+            if (articleIdToDisplay !== null && !isNaN(articleIdToDisplay) && allArticles[articleIdToDisplay]) {
+                articlesToRender = [allArticles[articleIdToDisplay]]; // Only render the specified article
+                currentArticleIndex = articleIdToDisplay; // Set the current reading index
+            } else {
+                articleIdToDisplay = null; // Reset if invalid or not provided
+            }
+
+            articlesToRender.forEach((articleText, index) => {
+                // If displaying a single article, use its actual index from allArticles array
+                const actualIndex = articleIdToDisplay !== null ? articleIdToDisplay : index;
+
                 let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
 
-                // If the article text starts with "URL" (after trimming), remove it for the display title.
                 let displayTitleText = cleanedTextForTitle;
                 if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
                     displayTitleText = displayTitleText.substring(3).trim();
                 }
 
                 const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
-                let articleTitle = `文章 ${index + 1}`; // Default title
+                let articleTitle = `文章 ${actualIndex + 1}`; // Default title
 
                 if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
                     articleTitle = firstSentenceMatch[0].trim();
-                    // Limit title length for display
                     if (articleTitle.length > 70) {
                         articleTitle = articleTitle.substring(0, 67) + '...';
                     }
                 } else if (displayTitleText.length > 0) {
-                    // If no full sentence, take the beginning of the cleaned text
                     articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
                     if (displayTitleText.length > 70) {
                          articleTitle += '...';
                     }
                 }
-                // If displayTitleText is empty after URL removal/trimming, default title "文章 X" will be used.
 
                 const articleSection = document.createElement('div');
                 articleSection.classList.add('article-section');
 
-                const articleHeader = document.createElement('div');
-                articleHeader.classList.add('article-header');
-                articleHeader.textContent = articleTitle; // Set initial title here
-                articleHeader.dataset.articleIndex = index; // Store index for click handling
+                // Create an anchor tag for the header
+                const articleHeaderLink = document.createElement('a');
+                articleHeaderLink.classList.add('article-header');
+                articleHeaderLink.textContent = articleTitle;
+                articleHeaderLink.href = `?articleId=${actualIndex}`; // Link to the same page with articleId
+                articleHeaderLink.dataset.articleIndex = actualIndex; // Store index
 
                 const articleContent = document.createElement('div');
                 articleContent.classList.add('article-content');
-                articleContent.id = `article-content-${index}`; // Unique ID for each content div
-                articleContent.innerHTML = articleText; // Use innerHTML to render HTML content
+                articleContent.id = `article-content-${actualIndex}`; // Unique ID
+                articleContent.innerHTML = articleText;
 
-                articleSection.appendChild(articleHeader);
+                articleSection.appendChild(articleHeaderLink);
                 articleSection.appendChild(articleContent);
                 articlesContainer.appendChild(articleSection);
 
-                // Add event listener to each article header
-                articleHeader.addEventListener('click', function() {
-                    // Pause current TTS if playing and different article is clicked
-                    if (isReading && currentAudio && currentArticleIndex !== index) {
-                        pauseTTS();
-                    }
-
-                    // Toggle visibility of the content
-                    articleContent.classList.toggle('expanded');
-                    // Stop TTS if article is being collapsed
-                    if (!articleContent.classList.contains('expanded') && isReading && currentArticleIndex === index) {
-                         pauseTTS();
-                    }
-
-                    // If expanded, set it as the current article for TTS button
-                    if (articleContent.classList.contains('expanded')) {
-                        currentArticleIndex = index;
-                        // If "朗读页面" button is clicked while this article is expanded, it will read this one.
-                        // No automatic playback here, just setting context.
-                    } else if (currentArticleIndex === index) {
-                        currentArticleIndex = -1; // No article is currently expanded
-                    }
-                });
+                // If a specific article is being displayed, expand it immediately
+                if (articleIdToDisplay !== null && actualIndex === articleIdToDisplay) {
+                    articleContent.classList.add('expanded');
+                }
             });
 
-            // Set main document title to the first article's title, or default
-            if (finalArticles.length > 0) {
-                let cleanedFirstArticleText = finalArticles[0].replace(/<\/?[^>]+(>|$)/g, "").trim();
+            // Set main document title
+            if (articleIdToDisplay !== null && allArticles[articleIdToDisplay]) {
+                let cleanedArticleText = allArticles[articleIdToDisplay].replace(/<\/?[^>]+(>|$)/g, "").trim();
+                let mainTitleDisplay = cleanedArticleText;
+                if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
+                    mainTitleDisplay = mainTitleDisplay.substring(3).trim();
+                }
+                const articleTitleMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
+                if (articleTitleMatch && articleTitleMatch[0].trim() !== '') {
+                    let mainTitle = articleTitleMatch[0].trim();
+                    if (mainTitle.length > 70) {
+                        mainTitle = mainTitle.substring(0, 67) + '...';
+                    }
+                    document.title = mainTitle;
+                } else if (mainTitleDisplay.length > 0) {
+                    let mainTitle = mainTitleDisplay.substring(0, Math.min(mainTitleDisplay.length, 70)).trim();
+                    if (mainTitleDisplay.length > 70) {
+                         mainTitle += '...';
+                    }
+                    document.title = mainTitle;
+                } else {
+                    document.title = `文章 ${articleIdToDisplay + 1} - 中转站`;
+                }
+            } else if (allArticles.length > 0) {
+                let cleanedFirstArticleText = allArticles[0].replace(/<\/?[^>]+(>|$)/g, "").trim();
                 let mainTitleDisplay = cleanedFirstArticleText;
 
                 if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
@@ -658,27 +655,20 @@
                 document.title = '中转站'; // Fallback if no articles
             }
 
-            // --- NEW: Title Cleaning Logic ---
-            // This function runs AFTER renderArticles has created the elements
             cleanAllTitles();
         }
 
-        // --- NEW FUNCTION: To clean titles ---
+        // --- Function to clean titles ---
         function cleanAllTitles() {
-            // Select all elements that could contain a title
             const elementsWithTitles = document.querySelectorAll('.article-header, title');
 
             elementsWithTitles.forEach(element => {
                 let originalText = element.textContent;
 
-                // **CORRECTED LINE:** Remove "Title: \"" (8 characters: T, i, t, l, e, :, space, double quote)
-                // and the trailing double quote.
                 if (originalText.startsWith('Title: "') && originalText.endsWith('"')) {
-                    let newText = originalText.substring(8, originalText.length - 1); // Start from index 8
+                    let newText = originalText.substring(8, originalText.length - 1);
                     element.textContent = newText;
                 }
-                // If it's the document title, also update it directly
-                // This handles the <title> tag in the HTML head
                 if (element.tagName.toLowerCase() === 'title') {
                     document.title = element.textContent;
                 }
@@ -692,7 +682,6 @@
             const speedRange = document.getElementById('speedRange');
             const currentSpeedValueDisplay = document.getElementById('currentSpeedValue');
             const readAloudContainer = document.getElementById('readAloudContainer');
-            // --- Changed from B1.md to B1_copy.md ---
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1_copy.md';
 
             updateUrlWithHash();
@@ -720,6 +709,16 @@
                 lastScrollTop = st <= 0 ? 0 : st;
             }, false);
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const articleIdFromUrl = urlParams.get('articleId');
+            let initialArticleId = null;
+            if (articleIdFromUrl !== null) {
+                const parsedId = parseInt(articleIdFromUrl, 10);
+                if (!isNaN(parsedId)) {
+                    initialArticleId = parsedId;
+                }
+            }
+
             fetch(contentUrl)
                 .then(response => {
                     if (!response.ok) {
@@ -728,7 +727,8 @@
                     return response.text();
                 })
                 .then(data => {
-                    renderArticles(data); // Call the new function to render articles
+                    // Pass the initialArticleId to renderArticles
+                    renderArticles(data, initialArticleId);
                 })
                 .catch(error => {
                     console.error('Error fetching content:', error);
@@ -742,24 +742,21 @@
                 } else if (isPaused) {
                     resumeTTS();
                 } else {
-                    // If no specific article is active, try to read the first one
-                    if (currentArticleIndex === -1) {
-                        const firstArticleContent = document.getElementById(`article-content-0`);
-                        if (firstArticleContent) {
-                            currentArticleIndex = 0; // Set first article as active
-                            firstArticleContent.classList.add('expanded'); // Also expand it
-                            playSummaryTTS(firstArticleContent.innerText);
-                        } else {
-                            console.warn("No articles to read on button click.");
-                        }
+                    // Determine which article to read
+                    let articleToRead = null;
+                    if (currentArticleIndex !== -1 && allArticles[currentArticleIndex]) {
+                        articleToRead = document.getElementById(`article-content-${currentArticleIndex}`);
+                    } else if (allArticles.length > 0) {
+                        // If no specific article active, and on the main page, try to read the first one
+                        currentArticleIndex = 0;
+                        articleToRead = document.getElementById(`article-content-0`);
+                    }
+
+                    if (articleToRead) {
+                        articleToRead.classList.add('expanded'); // Ensure it's expanded before reading
+                        playSummaryTTS(articleToRead.innerText);
                     } else {
-                        // Read the currently active article
-                        const activeArticleContent = document.getElementById(`article-content-${currentArticleIndex}`);
-                        if (activeArticleContent) {
-                            playSummaryTTS(activeArticleContent.innerText);
-                        } else {
-                             console.warn("Currently selected article content not found for playback.");
-                        }
+                        console.warn("No articles found to read on button click.");
                     }
                 }
             });
