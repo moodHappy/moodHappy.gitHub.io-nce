@@ -79,8 +79,8 @@
             z-index: 1000;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 20px;
+            justify-content: flex-start; /* 将按钮放在左侧 */
+            gap: 20px; /* 增加按钮之间的间距 */
             box-shadow: var(--shadow-sm);
         }
 
@@ -92,18 +92,80 @@
             white-space: nowrap;
         }
 
+        /* Home Button Style - Applied to "语速" button as well */
+        .home-button {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+            text-decoration: none; /* For anchor tag if used as button */
+            display: inline-block;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            white-space: nowrap;
+        }
+
+        .home-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            background: linear-gradient(135deg, var(--primary-hover) 0%, var(--accent-color) 100%);
+        }
+
+        .home-button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Speed Slider Wrapper for vertical orientation and hiding */
+        .speed-slider-wrapper {
+            position: fixed;
+            left: 20px; /* Position on the left side */
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 10px;
+            background: rgba(255, 255, 255, 0.15); /* Glass effect for the wrapper */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            gap: 10px;
+            transition: opacity 0.3s, visibility 0.3s, transform 0.3s ease-in-out; /* Add transform for slide effect */
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none; /* Don't block clicks when hidden */
+            transform: translateY(-50%) translateX(-100%); /* Start off-screen to the left */
+        }
+
+        .speed-slider-wrapper.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto; /* Allow clicks when visible */
+            transform: translateY(-50%) translateX(0); /* Slide in to original position */
+        }
+
         .speed-slider {
-            flex-grow: 1;
             -webkit-appearance: none;
             appearance: none;
-            height: 8px;
+            width: 8px; /* Width becomes height for vertical slider */
+            height: 180px; /* Height becomes width for vertical slider */
             background: rgba(255, 255, 255, 0.3); /* Lighter, more transparent track */
             outline: none;
             border-radius: 50px;
             cursor: pointer;
-            width: 250px;
-            max-width: 60%;
             transition: var(--transition);
+            writing-mode: vertical-lr; /* Makes the slider vertical */
+            transform: rotate(180deg); /* Rotates the slider so min is at bottom, max at top */
         }
 
         .speed-slider::-webkit-slider-thumb {
@@ -131,13 +193,13 @@
         }
 
         .speed-slider:hover::-webkit-slider-thumb {
-            transform: scale(1.1);
+            transform: scale(1.1) rotate(-180deg); /* Counter-rotate to keep thumb upright */
             box-shadow: var(--shadow-lg);
         }
 
         .speed-slider:active::-webkit-slider-thumb {
             cursor: grabbing;
-            transform: scale(0.95);
+            transform: scale(0.95) rotate(-180deg); /* Counter-rotate to keep thumb upright */
         }
 
         .speed-value-display {
@@ -205,7 +267,6 @@
             position: relative;
             overflow: hidden;
             white-space: nowrap; /* Prevent wrapping */
-            overflow: hidden; /* Hide overflow content */
             text-overflow: ellipsis; /* Add ellipsis for overflow */
             max-width: 100%; /* Ensure it respects parent width */
         }
@@ -368,9 +429,13 @@
                 gap: 15px;
             }
 
+            .speed-slider-wrapper {
+                left: 10px;
+                padding: 10px 8px;
+            }
+
             .speed-slider {
-                width: 180px;
-                max-width: 55%;
+                height: 150px;
             }
 
             .content-container {
@@ -391,6 +456,11 @@
                 padding: 14px 28px;
                 font-size: 1em;
             }
+
+            .home-button {
+                padding: 8px 16px;
+                font-size: 0.9em;
+            }
         }
 
         @media (max-width: 480px) {
@@ -403,18 +473,17 @@
                 gap: 12px;
             }
 
-            .speed-label {
-                font-size: 0.95em;
+            .speed-slider-wrapper {
+                left: 5px;
+                padding: 8px 5px;
             }
 
             .speed-slider {
-                width: 120px;
-                max-width: 50%;
+                height: 100px;
             }
 
-            .speed-value-display {
+            .speed-label, .speed-value-display {
                 font-size: 0.95em;
-                min-width: 30px;
             }
 
             .content-container {
@@ -435,6 +504,11 @@
                 padding: 12px 24px;
                 font-size: 0.9em;
             }
+
+            .home-button {
+                padding: 6px 12px;
+                font-size: 0.85em;
+            }
         }
 
         /* Accessibility improvements */
@@ -449,7 +523,8 @@
         /* Focus styles for accessibility */
         .article-header:focus,
         .read-aloud-button:focus,
-        .speed-slider:focus {
+        .speed-slider:focus,
+        .home-button:focus {
             outline: 2px solid var(--accent-color); /* Highlight with accent color */
             outline-offset: 3px;
         }
@@ -457,6 +532,11 @@
 </head>
 <body>
     <div class="speed-control-container">
+        <a href="?" id="homeButton" class="home-button" aria-label="返回首页">首页</a>
+        <button id="toggleSpeedSliderButton" class="home-button" aria-label="切换语速控制条">语速</button>
+    </div>
+
+    <div class="speed-slider-wrapper" id="speedSliderWrapper">
         <span class="speed-label">语速:</span>
         <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20" aria-label="调整语速">
         <span id="currentSpeedValue" class="speed-value-display">-20</span>
@@ -858,6 +938,9 @@
             const speedRange = document.getElementById('speedRange');
             const currentSpeedValueDisplay = document.getElementById('currentSpeedValue');
             const readAloudContainer = document.getElementById('readAloudContainer');
+            const speedSliderWrapper = document.getElementById('speedSliderWrapper');
+            const homeButton = document.getElementById('homeButton');
+            const toggleSpeedSliderButton = document.getElementById('toggleSpeedSliderButton'); // 获取新增的语速按钮
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1_copy.md';
 
             updateUrlWithHash();
@@ -884,6 +967,36 @@
                 }
                 lastScrollTop = st <= 0 ? 0 : st;
             }, false);
+
+            // Home button functionality
+            homeButton.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default link behavior
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('articleId'); // Remove articleId
+                currentUrl.searchParams.delete('hash'); // Optionally remove hash
+                window.location.href = currentUrl.origin + currentUrl.pathname; // Navigate to base URL
+            });
+
+            // Toggle Speed Slider button functionality
+            toggleSpeedSliderButton.addEventListener('click', function() {
+                speedSliderWrapper.classList.toggle('visible'); // 切换可见性
+                if (speedSliderWrapper.classList.contains('visible')) {
+                    speedRange.focus(); // 聚焦滑动条
+                }
+            });
+
+            // 移除音量键监听器，因为它不再是触发语速条的方式
+            // window.addEventListener('keydown', function(event) {
+            //     if (event.key === 'VolumeUp' || event.key === 'VolumeDown' || event.key === 'AudioVolumeUp' || event.key === 'AudioVolumeDown') {
+            //         speedSliderWrapper.classList.add('visible');
+            //         clearTimeout(speedSliderTimeout);
+            //         speedSliderTimeout = setTimeout(() => {
+            //             speedSliderWrapper.classList.remove('visible');
+            //         }, 3000); // Hide after 3 seconds
+            //         event.preventDefault();
+            //     }
+            // });
+
 
             const loadContent = () => {
                 const urlParams = new URLSearchParams(window.location.search);
