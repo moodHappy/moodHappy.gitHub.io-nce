@@ -5,312 +5,472 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中转站</title>
     <style>
-        /* 基础样式 */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* Modern CSS Variables */
+        :root {
+            --primary-color: #667eea; /* A vibrant blue-purple */
+            --primary-hover: #5a6fd8;
+            --secondary-color: #764ba2; /* A deeper purple */
+            --accent-color: #f093fb; /* A bright pink/purple */
+            --background-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: rgba(255, 255, 255, 0.1); /* Lighter, more transparent for glass effect */
+            --card-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #f8f9fa; /* Light text for dark background */
+            --text-secondary: #e0e0e0;
+            --text-muted: #c0c0c0;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --border-radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Base Styles */
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            line-height: 1.8; /* 调整行高，让文字更易读 */
-            color: #333;
-            background-color: #f8f8f8; /* 轻微的页面背景色 */
-            padding-top: 80px; /* Space for the fixed speed control */
         }
 
-        /* 朗读按钮容器 - FLOATING AT BOTTOM */
-        .read-aloud-container {
-            position: fixed; /* Fixed position */
-            bottom: 150px; /* Adjusted to 150px from the bottom */
-            left: 50%; /* Center horizontally */
-            transform: translateX(-50%); /* Adjust for perfect centering */
-            z-index: 100; /* Ensure it's above other content */
-            padding: 0; /* Remove padding as the button itself has it */
-            display: flex; /* Use flexbox */
-            align-items: center; /* Vertically center items */
-            justify-content: center; /* Horizontally center items */
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Smooth transition for hide/show */
-            opacity: 1; /* Initially visible */
-            visibility: visible; /* Initially visible */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: var(--text-primary);
+            background: var(--background-gradient);
+            min-height: 100vh;
+            padding-top: 90px;
+            position: relative;
+            overflow-x: hidden; /* Prevent horizontal scroll due to animations */
         }
 
-        /* Hidden state for the button container */
-        .read-aloud-container.hidden {
-            opacity: 0;
-            visibility: hidden;
+        /* Animated background elements */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.2) 0%, transparent 50%);
+            z-index: -1;
+            animation: float 20s ease-in-out infinite;
         }
 
-        .read-aloud-button {
-            background-color: #007bff;
-            color: white;
-            padding: 12px 25px; /* Slightly larger padding for better touch target */
-            border: none;
-            border-radius: 25px; /* More rounded for a pill shape */
-            font-size: 1.1em; /* Slightly larger font */
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease; /* Add transform for subtle hover effect */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Soft shadow for the button itself */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(1deg); }
+            66% { transform: translateY(10px) rotate(-1deg); }
         }
 
-        .read-aloud-button:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px); /* Lift slightly on hover */
-        }
-
-        /* 朗读中状态样式 */
-        .read-aloud-button.reading {
-            background-color: #dc3545;
-        }
-
-        .read-aloud-button.reading:hover {
-            background-color: #c82333;
-            transform: translateY(-2px);
-        }
-
-        /* Speed Control Container */
+        /* Speed Control Container - Modern Glass Effect */
         .speed-control-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            background-color: #ffffff;
-            padding: 15px 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 1000; /* Ensure it's on top */
+            background: rgba(255, 255, 255, 0.1); /* More transparent background */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px 30px;
+            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px; /* Space between items */
+            gap: 20px;
+            box-shadow: var(--shadow-sm);
         }
 
         .speed-label {
             font-size: 1.1em;
-            color: #555;
-            white-space: nowrap; /* Prevent text wrapping */
+            color: white; /* White text for contrast against blurred background */
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Subtle text shadow */
+            white-space: nowrap;
         }
 
         .speed-slider {
-            flex-grow: 1; /* Allow slider to take available space */
-            -webkit-appearance: none; /* Override default look */
+            flex-grow: 1;
+            -webkit-appearance: none;
             appearance: none;
             height: 8px;
-            background: #ddd;
+            background: rgba(255, 255, 255, 0.3); /* Lighter, more transparent track */
             outline: none;
-            border-radius: 5px;
+            border-radius: 50px;
             cursor: pointer;
-            width: 200px; /* Default width for desktop */
-            max-width: 60%; /* Prevent slider from becoming too wide on large screens */
+            width: 250px;
+            max-width: 60%;
+            transition: var(--transition);
         }
 
         .speed-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #007bff;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%); /* White gradient thumb */
             border-radius: 50%;
             cursor: grab;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            border: 2px solid rgba(255, 255, 255, 0.8);
         }
 
         .speed-slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            background: #007bff;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
             border-radius: 50%;
             cursor: grab;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .speed-slider:hover::-webkit-slider-thumb {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
         }
 
         .speed-slider:active::-webkit-slider-thumb {
             cursor: grabbing;
-            background-color: #0056b3;
-        }
-
-        .speed-slider:active::-moz-range-thumb {
-            cursor: grabbing;
-            background-color: #0056b3;
+            transform: scale(0.95);
         }
 
         .speed-value-display {
-            font-weight: bold;
-            color: #007bff;
-            min-width: 30px; /* Ensure space for two digits and sign */
+            font-weight: 700;
+            color: white;
+            min-width: 40px;
             text-align: center;
+            font-size: 1.1em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        /* Content Area Container */
+        /* Content Container */
         .content-container {
-            max-width: 800px; /* Content max width */
-            margin: 0 auto; /* Horizontal centering */
-            padding: 25px; /* Top, left, right, bottom padding */
-            padding-top: 0; /* Adjusted for the fixed header */
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px;
+            padding-top: 0;
         }
 
-        /* Styles for individual article sections */
+        /* Article Sections - Modern Card Design */
         .article-section {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            margin-bottom: 20px; /* Space between articles */
+            background: var(--card-bg); /* Use card background variable */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 30px;
+            overflow: hidden;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .article-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .article-section:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .article-section:hover::before {
+            opacity: 1;
         }
 
         .article-header {
-            padding: 20px;
-            color: #000000; /* Black color */
-            font-size: 14px; /* 14px font size */
-            font-weight: bold;
-            cursor: pointer; /* Indicate it's clickable */
-            transition: background-color 0.3s ease;
-            border-bottom: 1px solid #e0e0e0; /* Separator for header */
-            display: block; /* Make the entire header clickable */
-            text-decoration: none; /* Remove underline from the link */
+            padding: 25px;
+            color: var(--text-primary); /* Use primary text color for header */
+            font-size: 1em; /* Adjusted to be smaller */
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Lighter border for glass effect */
+            display: block;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden; /* Hide overflow content */
+            text-overflow: ellipsis; /* Add ellipsis for overflow */
+            max-width: 100%; /* Ensure it respects parent width */
+        }
+
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent); /* Lighter shimmer */
+            transition: var(--transition);
         }
 
         .article-header:hover {
-            background-color: #e9f5ff;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(240, 147, 251, 0.1));
+            color: var(--primary-color); /* Highlight color on hover */
+        }
+
+        .article-header:hover::before {
+            left: 100%;
         }
 
         .article-content {
-            padding: 0 40px; /* Padding only left/right */
-            min-height: 0; /* Changed from min-height to enable collapse */
-            max-height: 0; /* Initially hidden */
-            overflow: hidden; /* Hide overflow when collapsed */
-            transition: max-height 0.5s ease-out, padding 0.5s ease-out, opacity 0.5s ease-out; /* Smooth collapse/expand */
-            opacity: 0;
-            font-size: 1.4em;
+            padding: 40px; /* Always show padding when content is visible */
+            font-size: 1.1em; /* Base font size for content */
             line-height: 1.8;
-            color: #444;
+            color: var(--text-secondary); /* Secondary text color for content */
             white-space: pre-wrap;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
 
-        .article-content.expanded {
-            max-height: 50000px; /* A very large value to ensure all content is shown */
-            padding: 40px; /* Add vertical padding when expanded */
-            opacity: 1;
-        }
-
-        /* Add this to remove underlines from links */
         .article-content a {
             text-decoration: none;
+            color: var(--accent-color); /* Use accent color for links */
+            font-weight: 500;
+            transition: var(--transition);
         }
 
-        /* Mobile responsiveness */
+        .article-content a:hover {
+            color: var(--primary-color); /* Primary color on link hover */
+            text-decoration: underline;
+        }
+
+        /* Read Aloud Button - Modern Floating Design */
+        .read-aloud-container {
+            position: fixed;
+            bottom: 35px; /* Adjusted to be closer to bottom */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                       visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                       transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .read-aloud-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-50%) translateY(20px);
+        }
+
+        .read-aloud-button {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .read-aloud-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: var(--transition);
+        }
+
+        .read-aloud-button:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .read-aloud-button:active {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .read-aloud-button.reading {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); /* Red for reading state */
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: var(--shadow-lg); }
+            50% { box-shadow: var(--shadow-xl), 0 0 30px rgba(239, 68, 68, 0.4); }
+        }
+
+        .read-aloud-button.reading:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 1.1em;
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Mobile Responsiveness */
         @media (max-width: 768px) {
             body {
-                padding-top: 70px; /* Adjust for mobile speed control */
+                padding-top: 80px;
             }
 
             .speed-control-container {
-                padding: 10px 15px;
-                gap: 10px;
+                padding: 15px 20px;
+                gap: 15px;
             }
 
             .speed-slider {
-                width: 150px; /* Adjust slider width for smaller screens */
-                max-width: 55%; /* Further constrain max width */
+                width: 180px;
+                max-width: 55%;
             }
 
             .content-container {
-                padding: 15px 20px; /* Mobile adjust padding */
+                padding: 20px;
             }
 
             .article-header {
-                font-size: 14px; /* Maintain 14px on mobile */
-                padding: 15px;
+                font-size: 0.9em; /* Slightly smaller for mobile */
+                padding: 20px;
             }
 
             .article-content {
-                padding: 0 30px; /* Mobile adjust horizontal padding */
-                font-size: 1.3em;
-            }
-
-            .article-content.expanded {
-                padding: 30px; /* Mobile adjust vertical padding when expanded */
-            }
-
-            .read-aloud-container {
-                bottom: 150px; /* Adjusted to 150px from the bottom */
-                padding: 0; /* Remove padding as the button itself has it */
+                padding: 30px;
+                font-size: 1em;
             }
 
             .read-aloud-button {
-                padding: 10px 20px;
+                padding: 14px 28px;
                 font-size: 1em;
             }
         }
 
         @media (max-width: 480px) {
             body {
-                padding-top: 60px; /* Adjust for smallest mobile speed control */
+                padding-top: 70px;
             }
 
             .speed-control-container {
-                padding: 8px 10px;
-                gap: 8px;
+                padding: 12px 15px;
+                gap: 12px;
             }
 
             .speed-label {
-                font-size: 1em;
+                font-size: 0.95em;
             }
 
             .speed-slider {
-                width: 100px; /* Further adjust slider width for smallest screens */
-                max-width: 50%; /* Further constrain max width */
+                width: 120px;
+                max-width: 50%;
             }
 
             .speed-value-display {
-                font-size: 0.9em;
-                min-width: 25px; /* Reduce min-width for smaller font */
+                font-size: 0.95em;
+                min-width: 30px;
             }
 
             .content-container {
-                padding: 10px 15px; /* Minimum mobile adjust padding */
+                padding: 15px;
             }
 
             .article-header {
-                font-size: 14px; /* Maintain 14px on smallest mobile */
-                padding: 12px;
+                font-size: 0.85em; /* Even smaller for very small screens */
+                padding: 18px;
             }
 
             .article-content {
-                padding: 0 25px; /* Minimum mobile adjust horizontal padding */
-                font-size: 1.2em;
-            }
-
-            .article-content.expanded {
-                padding: 25px; /* Minimum mobile adjust vertical padding when expanded */
-            }
-
-            .read-aloud-container {
-                bottom: 150px; /* Adjusted to 150px from the bottom */
-                padding: 0; /* Remove padding as the button itself has it */
+                padding: 25px;
+                font-size: 0.95em;
             }
 
             .read-aloud-button {
-                padding: 8px 18px;
+                padding: 12px 24px;
                 font-size: 0.9em;
             }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus styles for accessibility */
+        .article-header:focus,
+        .read-aloud-button:focus,
+        .speed-slider:focus {
+            outline: 2px solid var(--accent-color); /* Highlight with accent color */
+            outline-offset: 3px;
         }
     </style>
 </head>
 <body>
     <div class="speed-control-container">
         <span class="speed-label">语速:</span>
-        <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20">
+        <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20" aria-label="调整语速">
         <span id="currentSpeedValue" class="speed-value-display">-20</span>
     </div>
 
     <div class="read-aloud-container" id="readAloudContainer">
-        <button id="readAloudButton" class="read-aloud-button">朗读页面</button>
+        <button id="readAloudButton" class="read-aloud-button" aria-label="朗读或暂停朗读">朗读页面</button>
     </div>
 
     <div class="content-container" id="articles-container">
-        <p>加载中...</p>
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">加载中...</p>
+        </div>
     </div>
 
     <script>
@@ -337,7 +497,7 @@
                 return;
             }
 
-            if (currentAudio && currentAudio.played) {
+            if (currentAudio && !currentAudio.paused && !currentAudio.ended) { // Check if audio is actively playing
                 currentAudio.pause();
                 currentAudio = null;
             }
@@ -346,6 +506,9 @@
 
             const trimmedText = textToSpeak.trim();
             let finaltextToSpeak = trimmedText;
+            // Removed HTML tags from the final text sent to TTS
+            finaltextToSpeak = finaltextToSpeak.replace(/<[^>]*>/g, '');
+
             if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
                 finaltextToSpeak = trimmedText.substring(3);
                 console.log('Detected "URL" at the beginning, reading from:', finaltextToSpeak);
@@ -382,6 +545,7 @@
                     })
                     .catch(e => {
                         console.error('Error playing TTS from ' + ttsUrl + ':', e);
+                        // Try next domain if available, or handle error
                     });
 
                 if (played) break;
@@ -396,12 +560,14 @@
                     updateButtonState();
                 });
 
-                currentAudio.addEventListener('error', function() {
+                currentAudio.addEventListener('error', function(e) {
+                    console.error('Audio playback error:', e);
                     isReading = false;
                     isPaused = false;
                     currentPosition = 0;
                     currentArticleIndex = -1; // Reset article index on error
                     updateButtonState();
+                    // Optionally show an error message to the user
                 });
 
                 currentAudio.addEventListener('timeupdate', function() {
@@ -434,11 +600,18 @@
                         console.error('Error resuming TTS:', e);
                         // If resume fails, restart the specific article from beginning
                         if (currentArticleIndex !== -1 && allArticles[currentArticleIndex]) {
-                            playSummaryTTS(allArticles[currentArticleIndex].textContent);
+                            // Fetch the innerText of the article content div directly
+                            const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
+                            if (articleContentDiv) {
+                                playSummaryTTS(articleContentDiv.innerText);
+                            }
                         } else {
                             // If no specific article, try to get the first one if available
                             if (allArticles.length > 0) {
-                                playSummaryTTS(allArticles[0].textContent);
+                                const articleContentDiv = document.getElementById(`article-content-0`);
+                                if (articleContentDiv) {
+                                    playSummaryTTS(articleContentDiv.innerText);
+                                }
                             }
                         }
                     });
@@ -451,7 +624,6 @@
                     const articleContentDiv = document.getElementById(`article-content-${articleToReadIndex}`);
                     if (articleContentDiv) {
                         currentArticleIndex = articleToReadIndex; // Ensure it's set
-                        articleContentDiv.classList.add('expanded');
                         playSummaryTTS(articleContentDiv.innerText);
                     }
                 } else {
@@ -469,7 +641,10 @@
 
             // If an article was being read, restart that specific article
             if (currentArticleIndex !== -1 && allArticles[currentArticleIndex] && (isReading || isPaused)) {
-                playSummaryTTS(allArticles[currentArticleIndex].textContent);
+                const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
+                if (articleContentDiv) {
+                    playSummaryTTS(articleContentDiv.innerText);
+                }
             } else {
                 // If no specific article was being read, reset state
                 isReading = false;
@@ -483,12 +658,15 @@
             if (isReading) {
                 readAloudButton.textContent = '暂停朗读';
                 readAloudButton.classList.add('reading');
+                readAloudButton.setAttribute('aria-label', '暂停朗读');
             } else if (isPaused) {
                 readAloudButton.textContent = '继续朗读';
                 readAloudButton.classList.remove('reading');
+                readAloudButton.setAttribute('aria-label', '继续朗读');
             } else {
                 readAloudButton.textContent = '朗读页面';
                 readAloudButton.classList.remove('reading');
+                readAloudButton.setAttribute('aria-label', '朗读页面');
             }
         }
 
@@ -499,12 +677,15 @@
         function updateUrlWithHash() {
             const currentUrl = new URL(window.location.href);
             const newHash = generateRandomHash();
-            currentUrl.searchParams.set('hash', newHash);
+            // Only add hash if not already present or if we are on the main page (no articleId)
+            if (!currentUrl.searchParams.has('hash') || !currentUrl.searchParams.has('articleId')) {
+                currentUrl.searchParams.set('hash', newHash);
+            }
             window.history.replaceState({}, '', currentUrl.toString());
             console.log("URL updated with new hash:", currentUrl.toString());
         }
 
-        // --- Refined: Function to split content by "URL" and render articles ---
+        // --- Function to split content by "URL" and render articles ---
         function renderArticles(fullContent, articleIdToDisplay = null) {
             const articlesContainer = document.getElementById('articles-container');
             articlesContainer.innerHTML = ''; // Clear existing content
@@ -539,81 +720,36 @@
             });
 
             if (allArticles.length === 0) {
-                articlesContainer.innerHTML = '<p>没有内容可显示。</p>';
+                articlesContainer.innerHTML = '<div class="article-section"><div class="article-content" style="text-align: center; color: var(--text-muted); padding: 40px;">没有内容可显示。</div></div>';
                 document.title = '无内容 - 中转站';
                 return;
             }
 
-            let articlesToRender = allArticles;
-
+            // Determine which articles to render
             if (articleIdToDisplay !== null && !isNaN(articleIdToDisplay) && allArticles[articleIdToDisplay]) {
-                articlesToRender = [allArticles[articleIdToDisplay]]; // Only render the specified article
+                const articleText = allArticles[articleIdToDisplay];
                 currentArticleIndex = articleIdToDisplay; // Set the current reading index
-            } else {
-                articleIdToDisplay = null; // Reset if invalid or not provided
-            }
-
-            articlesToRender.forEach((articleText, index) => {
-                // If displaying a single article, use its actual index from allArticles array
-                const actualIndex = articleIdToDisplay !== null ? articleIdToDisplay : index;
-
-                let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
-
-                let displayTitleText = cleanedTextForTitle;
-                if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
-                    displayTitleText = displayTitleText.substring(3).trim();
-                }
-
-                const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
-                let articleTitle = `文章 ${actualIndex + 1}`; // Default title
-
-                if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
-                    articleTitle = firstSentenceMatch[0].trim();
-                    if (articleTitle.length > 70) {
-                        articleTitle = articleTitle.substring(0, 67) + '...';
-                    }
-                } else if (displayTitleText.length > 0) {
-                    articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
-                    if (displayTitleText.length > 70) {
-                         articleTitle += '...';
-                    }
-                }
 
                 const articleSection = document.createElement('div');
                 articleSection.classList.add('article-section');
 
-                // Create an anchor tag for the header
-                const articleHeaderLink = document.createElement('a');
-                articleHeaderLink.classList.add('article-header');
-                articleHeaderLink.textContent = articleTitle;
-                articleHeaderLink.href = `?articleId=${actualIndex}`; // Link to the same page with articleId
-                articleHeaderLink.dataset.articleIndex = actualIndex; // Store index
-
                 const articleContent = document.createElement('div');
                 articleContent.classList.add('article-content');
-                articleContent.id = `article-content-${actualIndex}`; // Unique ID
+                articleContent.id = `article-content-${articleIdToDisplay}`; // Unique ID
                 articleContent.innerHTML = articleText;
 
-                articleSection.appendChild(articleHeaderLink);
                 articleSection.appendChild(articleContent);
                 articlesContainer.appendChild(articleSection);
 
-                // If a specific article is being displayed, expand it immediately
-                if (articleIdToDisplay !== null && actualIndex === articleIdToDisplay) {
-                    articleContent.classList.add('expanded');
-                }
-            });
-
-            // Set main document title
-            if (articleIdToDisplay !== null && allArticles[articleIdToDisplay]) {
-                let cleanedArticleText = allArticles[articleIdToDisplay].replace(/<\/?[^>]+(>|$)/g, "").trim();
+                // Set main document title to the displayed article's title
+                let cleanedArticleText = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
                 let mainTitleDisplay = cleanedArticleText;
                 if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
                     mainTitleDisplay = mainTitleDisplay.substring(3).trim();
                 }
-                const articleTitleMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
-                if (articleTitleMatch && articleTitleMatch[0].trim() !== '') {
-                    let mainTitle = articleTitleMatch[0].trim();
+                const firstSentenceMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
+                if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
+                    let mainTitle = firstSentenceMatch[0].trim();
                     if (mainTitle.length > 70) {
                         mainTitle = mainTitle.substring(0, 67) + '...';
                     }
@@ -627,34 +763,73 @@
                 } else {
                     document.title = `文章 ${articleIdToDisplay + 1} - 中转站`;
                 }
-            } else if (allArticles.length > 0) {
-                let cleanedFirstArticleText = allArticles[0].replace(/<\/?[^>]+(>|$)/g, "").trim();
-                let mainTitleDisplay = cleanedFirstArticleText;
 
-                if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
-                    mainTitleDisplay = mainTitleDisplay.substring(3).trim();
-                }
+            } else { // Render all articles as links
+                allArticles.forEach((articleText, index) => {
+                    let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
 
-                const firstArticleTitleMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
-                if (firstArticleTitleMatch && firstArticleTitleMatch[0].trim() !== '') {
-                    let mainTitle = firstArticleTitleMatch[0].trim();
-                    if (mainTitle.length > 70) {
-                        mainTitle = mainTitle.substring(0, 67) + '...';
+                    let displayTitleText = cleanedTextForTitle;
+                    if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
+                        displayTitleText = displayTitleText.substring(3).trim();
                     }
-                    document.title = mainTitle;
-                } else if (mainTitleDisplay.length > 0) {
-                    let mainTitle = mainTitleDisplay.substring(0, Math.min(mainTitleDisplay.length, 70)).trim();
-                    if (mainTitleDisplay.length > 70) {
-                         mainTitle += '...';
+
+                    const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
+                    let articleTitle = `文章 ${index + 1}`; // Default title
+
+                    if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
+                        articleTitle = firstSentenceMatch[0].trim();
+                        if (articleTitle.length > 70) {
+                            articleTitle = articleTitle.substring(0, 67) + '...';
+                        }
+                    } else if (displayTitleText.length > 0) {
+                        articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
+                        if (displayTitleText.length > 70) {
+                             articleTitle += '...';
+                        }
                     }
-                    document.title = mainTitle;
+
+                    const articleSection = document.createElement('div');
+                    articleSection.classList.add('article-section');
+
+                    const articleHeaderLink = document.createElement('a');
+                    articleHeaderLink.classList.add('article-header');
+                    articleHeaderLink.textContent = articleTitle;
+                    articleHeaderLink.href = `?articleId=${index}`; // Link to the specific article
+                    articleHeaderLink.dataset.articleIndex = index; // Store index
+
+                    articleSection.appendChild(articleHeaderLink);
+                    articlesContainer.appendChild(articleSection);
+                });
+
+                // Set main document title to the first article's title or default
+                if (allArticles.length > 0) {
+                    let cleanedFirstArticleText = allArticles[0].replace(/<\/?[^>]+(>|$)/g, "").trim();
+                    let mainTitleDisplay = cleanedFirstArticleText;
+
+                    if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
+                        mainTitleDisplay = mainTitleDisplay.substring(3).trim();
+                    }
+
+                    const firstArticleTitleMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
+                    if (firstArticleTitleMatch && firstArticleTitleMatch[0].trim() !== '') {
+                        let mainTitle = firstArticleTitleMatch[0].trim();
+                        if (mainTitle.length > 70) {
+                            mainTitle = mainTitle.substring(0, 67) + '...';
+                        }
+                        document.title = mainTitle;
+                    } else if (mainTitleDisplay.length > 0) {
+                        let mainTitle = mainTitleDisplay.substring(0, Math.min(mainTitleDisplay.length, 70)).trim();
+                        if (mainTitleDisplay.length > 70) {
+                             mainTitle += '...';
+                        }
+                        document.title = mainTitle;
+                    } else {
+                        document.title = '中转站'; // Fallback if first article has no extractable title
+                    }
                 } else {
-                    document.title = '中转站'; // Fallback if first article has no extractable title
+                    document.title = '中转站'; // Fallback if no articles
                 }
-            } else {
-                document.title = '中转站'; // Fallback if no articles
             }
-
             cleanAllTitles();
         }
 
@@ -670,6 +845,7 @@
                     element.textContent = newText;
                 }
                 if (element.tagName.toLowerCase() === 'title') {
+                    // This specifically updates the browser tab title
                     document.title = element.textContent;
                 }
             });
@@ -709,32 +885,39 @@
                 lastScrollTop = st <= 0 ? 0 : st;
             }, false);
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const articleIdFromUrl = urlParams.get('articleId');
-            let initialArticleId = null;
-            if (articleIdFromUrl !== null) {
-                const parsedId = parseInt(articleIdFromUrl, 10);
-                if (!isNaN(parsedId)) {
-                    initialArticleId = parsedId;
-                }
-            }
-
-            fetch(contentUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+            const loadContent = () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const articleIdFromUrl = urlParams.get('articleId');
+                let initialArticleId = null;
+                if (articleIdFromUrl !== null) {
+                    const parsedId = parseInt(articleIdFromUrl, 10);
+                    if (!isNaN(parsedId)) {
+                        initialArticleId = parsedId;
                     }
-                    return response.text();
-                })
-                .then(data => {
-                    // Pass the initialArticleId to renderArticles
-                    renderArticles(data, initialArticleId);
-                })
-                .catch(error => {
-                    console.error('Error fetching content:', error);
-                    articlesContainer.innerHTML = '<p>无法加载内容。请检查网络或链接。</p>';
-                    document.title = '加载失败 - 中转站';
-                });
+                }
+
+                fetch(contentUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(data => {
+                        renderArticles(data, initialArticleId);
+                        // If an article is being displayed directly, scroll to top
+                        if (initialArticleId !== null) {
+                            window.scrollTo(0, 0);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching content:', error);
+                        articlesContainer.innerHTML = '<div class="article-section"><div class="article-content" style="text-align: center; color: var(--text-muted); padding: 40px;">无法加载内容。请检查网络或链接。</div></div>';
+                        document.title = '加载失败 - 中转站';
+                    });
+            };
+
+            loadContent(); // Initial content load
 
             readAloudButton.addEventListener('click', function() {
                 if (isReading) {
@@ -747,17 +930,34 @@
                     if (currentArticleIndex !== -1 && allArticles[currentArticleIndex]) {
                         articleToRead = document.getElementById(`article-content-${currentArticleIndex}`);
                     } else if (allArticles.length > 0) {
-                        // If no specific article active, and on the main page, try to read the first one
+                        // If no specific article active (on main listing page), read the first one
                         currentArticleIndex = 0;
                         articleToRead = document.getElementById(`article-content-0`);
+                        // If on the main page and clicking read, navigate to the first article
+                        if (articleToRead && window.location.search.indexOf('articleId=') === -1) {
+                            const newUrl = new URL(window.location.href);
+                            newUrl.searchParams.set('articleId', currentArticleIndex);
+                            // Use location.href for full page reload to simulate new page feel
+                            window.location.href = newUrl.toString();
+                            return; // Exit to prevent immediate TTS before re-render
+                        }
                     }
 
                     if (articleToRead) {
-                        articleToRead.classList.add('expanded'); // Ensure it's expanded before reading
                         playSummaryTTS(articleToRead.innerText);
                     } else {
                         console.warn("No articles found to read on button click.");
                     }
+                }
+            });
+
+            // Handle browser back/forward buttons to reload content based on URL
+            window.addEventListener('popstate', function(event) {
+                // When popstate occurs, reload content based on the new URL
+                loadContent();
+                // Stop TTS on navigation change
+                if (currentAudio && (isReading || isPaused)) {
+                    pauseTTS();
                 }
             });
         });
