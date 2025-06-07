@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中转站</title>
+    <style>
+        /* 基础样式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            line-height: 1.8; /* 调整行高，让文字更易读 */
+            color: #333;
+            background-color: #f8f8f8; /* 轻微的页面背景色 */
+            padding-top: 80px; /* Space for the fixed speed control */
+        }
+
+        /* 朗读按钮容器 - FLOATING AT BOTTOM */
+        .read-aloud-container {
+            position: fixed; /* Fixed position */
+            bottom: 150px; /* Adjusted to 150px from the bottom */
+            left: 50%; /* Center horizontally */
+            transform: translateX(-50%); /* Adjust for perfect centering */
+            z-index: 100; /* Ensure it's above other content */
+            padding: 0; /* Remove padding as the button itself has it */
+            display: flex; /* Use flexbox */
+            align-items: center; /* Vertically center items */
+            justify-content: center; /* Horizontally center items */
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Smooth transition for hide/show */
+            opacity: 1; /* Initially visible */
+            visibility: visible; /* Initially visible */
+        }
+
+        /* Hidden state for the button container */
+        .read-aloud-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .read-aloud-button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px; /* Slightly larger padding for better touch target */
+            border: none;
+            border-radius: 25px; /* More rounded for a pill shape */
+            font-size: 1.1em; /* Slightly larger font */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease; /* Add transform for subtle hover effect */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Soft shadow for the button itself */
+        }
+
+        .read-aloud-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px); /* Lift slightly on hover */
+        }
+
+        /* 朗读中状态样式 */
+        .read-aloud-button.reading {
+            background-color: #dc3545;
+        }
+
+        .read-aloud-button.reading:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
+        /* Speed Control Container */
+        .speed-control-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #ffffff;
+            padding: 15px 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000; /* Ensure it's on top */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px; /* Space between items */
+        }
+
+        .speed-label {
+            font-size: 1.1em;
+            color: #555;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+
+        .speed-slider {
+            flex-grow: 1; /* Allow slider to take available space */
+            -webkit-appearance: none; /* Override default look */
+            appearance: none;
+            height: 8px;
+            background: #ddd;
+            outline: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 200px; /* Default width for desktop */
+            max-width: 60%; /* Prevent slider from becoming too wide on large screens */
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.3s ease;
+        }
+
+        .speed-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.3s ease;
+        }
+
+        .speed-slider:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            background-color: #0056b3;
+        }
+
+        .speed-slider:active::-moz-range-thumb {
+            cursor: grabbing;
+            background-color: #0056b3;
+        }
+
+        .speed-value-display {
+            font-weight: bold;
+            color: #007bff;
+            min-width: 30px; /* Ensure space for two digits and sign */
+            text-align: center;
+        }
+
+        /* 内容区域容器 */
+        .content-container {
+            max-width: 800px; /* 内容最大宽度 */
+            margin: 0 auto; /* 水平居中 */
+            padding: 25px; /* 顶部、左右、底部都有内边距 */
+            padding-top: 0; /* Adjusted for the fixed header */
+        }
+
+        /* Styles for individual article sections */
+        .article-section {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 20px; /* Space between articles */
+        }
+
+        .article-header {
+            padding: 20px;
+            font-size: 1.6em; /* Larger font for the title */
+            font-weight: bold;
+            color: #007bff;
+            cursor: pointer; /* Indicate it's clickable */
+            transition: background-color 0.3s ease;
+            border-bottom: 1px solid #e0e0e0; /* Separator for header */
+        }
+
+        .article-header:hover {
+            background-color: #e9f5ff;
+        }
+
+        .article-content {
+            padding: 0 40px; /* Padding only left/right */
+            min-height: 0; /* Changed from min-height to enable collapse */
+            max-height: 0; /* Initially hidden */
+            overflow: hidden; /* Hide overflow when collapsed */
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out, opacity 0.5s ease-out; /* Smooth collapse/expand */
+            opacity: 0;
+            font-size: 1.4em;
+            line-height: 1.8;
+            color: #444;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .article-content.expanded {
+            max-height: 50000px; /* A very large value to ensure all content is shown */
+            padding: 40px; /* Add vertical padding when expanded */
+            opacity: 1;
+        }
+
+        /* Add this to remove underlines from links */
+        .article-content a {
+            text-decoration: none;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 70px; /* Adjust for mobile speed control */
+            }
+
+            .speed-control-container {
+                padding: 10px 15px;
+                gap: 10px;
+            }
+
+            .speed-slider {
+                width: 150px; /* Adjust slider width for smaller screens */
+                max-width: 55%; /* Further constrain max width */
+            }
+
+            .content-container {
+                padding: 15px 20px; /* Mobile adjust padding */
+            }
+
+            .article-header {
+                font-size: 1.4em;
+                padding: 15px;
+            }
+
+            .article-content {
+                padding: 0 30px; /* Mobile adjust horizontal padding */
+                font-size: 1.3em;
+            }
+
+            .article-content.expanded {
+                padding: 30px; /* Mobile adjust vertical padding when expanded */
+            }
+
+            .read-aloud-container {
+                bottom: 150px; /* Adjusted to 150px from the bottom */
+                padding: 0; /* Remove padding as the button itself has it */
+            }
+
+            .read-aloud-button {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding-top: 60px; /* Adjust for smallest mobile speed control */
+            }
+
+            .speed-control-container {
+                padding: 8px 10px;
+                gap: 8px;
+            }
+
+            .speed-label {
+                font-size: 1em;
+            }
+
+            .speed-slider {
+                width: 100px; /* Further adjust slider width for smallest screens */
+                max-width: 50%; /* Further constrain max width */
+            }
+
+            .speed-value-display {
+                font-size: 0.9em;
+                min-width: 25px; /* Reduce min-width for smaller font */
+            }
+
+            .content-container {
+                padding: 10px 15px; /* Minimum mobile adjust padding */
+            }
+
+            .article-header {
+                font-size: 1.2em;
+                padding: 12px;
+            }
+
+            .article-content {
+                padding: 0 25px; /* Minimum mobile adjust horizontal padding */
+                font-size: 1.2em;
+            }
+
+            .article-content.expanded {
+                padding: 25px; /* Minimum mobile adjust vertical padding when expanded */
+            }
+
+            .read-aloud-container {
+                bottom: 150px; /* Adjusted to 150px from the bottom */
+                padding: 0; /* Remove padding as the button itself has it */
+            }
+
+            .read-aloud-button {
+                padding: 8px 18px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="speed-control-container">
+        <span class="speed-label">语速:</span>
+        <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20">
+        <span id="currentSpeedValue" class="speed-value-display">-20</span>
+    </div>
+
+    <div class="read-aloud-container" id="readAloudContainer">
+        <button id="readAloudButton" class="read-aloud-button">朗读页面</button>
+    </div>
+
+    <div class="content-container" id="articles-container">
+        <p>加载中...</p>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const ttsDomains = [
+            'https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/',
+        ];
+        let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
+
+        // Global variables for audio control
+        let currentAudio = null;
+        let isReading = false;
+        let isPaused = false;
+        let currentTextToSpeak = ''; // Stores the text of the *currently playing* article
+        let currentSpeed = -20;
+        let currentPosition = 0;
+        let currentArticleIndex = -1; // To track which article is being read
+
+        // --- Summary Functions ---
+        function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
+            if (!textToSpeak || textToSpeak.trim() === '') {
+                console.warn('Text to speak is empty.');
+                return;
+            }
+
+            if (currentAudio && currentAudio.played) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            currentTextToSpeak = textToSpeak;
+
+            const trimmedText = textToSpeak.trim();
+            let finaltextToSpeak = trimmedText;
+            if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
+                finaltextToSpeak = trimmedText.substring(3);
+                console.log('Detected "URL" at the beginning, reading from:', finaltextToSpeak);
+            }
+
+            const queryString = new URLSearchParams({
+                text: finaltextToSpeak,
+                voiceName: summaryVoice,
+                speed: currentSpeed,
+            }).toString();
+
+            currentAudio = new Audio();
+            let played = false;
+
+            for (const url of ttsDomains) {
+                const ttsUrl = `${url}api/aiyue?${queryString}`;
+                console.log('Attempting to play TTS from:', ttsUrl);
+
+                currentAudio.src = ttsUrl;
+
+                if (fromCurrentPosition && currentPosition > 0) {
+                    currentAudio.currentTime = currentPosition;
+                } else {
+                    currentPosition = 0;
+                }
+
+                currentAudio.play()
+                    .then(() => {
+                        console.log('TTS started playing successfully from:', ttsUrl);
+                        played = true;
+                        isReading = true;
+                        isPaused = false;
+                        updateButtonState();
+                    })
+                    .catch(e => {
+                        console.error('Error playing TTS from ' + ttsUrl + ':', e);
+                    });
+
+                if (played) break;
+            }
+
+            if (currentAudio) {
+                currentAudio.addEventListener('ended', function() {
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    currentArticleIndex = -1; // Reset article index when done
+                    updateButtonState();
+                });
+
+                currentAudio.addEventListener('error', function() {
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    currentArticleIndex = -1; // Reset article index on error
+                    updateButtonState();
+                });
+
+                currentAudio.addEventListener('timeupdate', function() {
+                    if (!currentAudio.paused) {
+                        currentPosition = currentAudio.currentTime;
+                    }
+                });
+            }
+        }
+
+        function pauseTTS() {
+            if (currentAudio && !currentAudio.paused) {
+                currentPosition = currentAudio.currentTime;
+                currentAudio.pause();
+                isPaused = true;
+                isReading = false;
+                updateButtonState();
+            }
+        }
+
+        function resumeTTS() {
+            if (currentAudio && isPaused) {
+                currentAudio.play()
+                    .then(() => {
+                        isReading = true;
+                        isPaused = false;
+                        updateButtonState();
+                    })
+                    .catch(e => {
+                        console.error('Error resuming TTS:', e);
+                        // If resume fails, restart the specific article from beginning
+                        if (currentArticleIndex !== -1) {
+                            const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
+                            if (articleContentDiv) {
+                                playSummaryTTS(articleContentDiv.innerText);
+                            }
+                        } else {
+                            // If no specific article, try to get the first one if available
+                            const firstArticleContent = document.querySelector('.article-content');
+                            if (firstArticleContent) {
+                                playSummaryTTS(firstArticleContent.innerText);
+                            }
+                        }
+                    });
+            } else if (!currentAudio || currentAudio.ended) {
+                // If no audio or audio ended, start reading from the first article
+                currentPosition = 0;
+                currentArticleIndex = 0; // Start with the first article
+                const firstArticleContent = document.getElementById(`article-content-0`);
+                if (firstArticleContent) {
+                    // Ensure the first article is expanded if we are about to read it
+                    firstArticleContent.classList.add('expanded');
+                    playSummaryTTS(firstArticleContent.innerText);
+                } else {
+                    console.warn("No articles found to read.");
+                }
+            }
+        }
+
+        function restartTTSWithNewSpeed() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            currentPosition = 0; // Always restart from the beginning when speed changes
+
+            // If an article was being read, restart that specific article
+            if (currentArticleIndex !== -1) {
+                const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
+                if (articleContentDiv && (isReading || isPaused)) {
+                    playSummaryTTS(articleContentDiv.innerText);
+                } else {
+                    isReading = false;
+                    isPaused = false;
+                    updateButtonState();
+                }
+            } else {
+                // If no specific article was being read, reset state
+                isReading = false;
+                isPaused = false;
+                updateButtonState();
+            }
+        }
+
+        function updateButtonState() {
+            const readAloudButton = document.getElementById('readAloudButton');
+            if (isReading) {
+                readAloudButton.textContent = '暂停朗读';
+                readAloudButton.classList.add('reading');
+            } else if (isPaused) {
+                readAloudButton.textContent = '继续朗读';
+                readAloudButton.classList.remove('reading');
+            } else {
+                readAloudButton.textContent = '朗读页面';
+                readAloudButton.classList.remove('reading');
+            }
+        }
+
+        function generateRandomHash() {
+            return (Math.random().toString(36).substring(2, 10) + Date.now().toString(36)).toUpperCase();
+        }
+
+        function updateUrlWithHash() {
+            const currentUrl = new URL(window.location.href);
+            const newHash = generateRandomHash();
+            currentUrl.searchParams.set('hash', newHash);
+            window.history.replaceState({}, '', currentUrl.toString());
+            console.log("URL updated with new hash:", currentUrl.toString());
+        }
+
+        // --- Refined: Function to split content by "URL" and render articles ---
+        function renderArticles(fullContent) {
+            const articlesContainer = document.getElementById('articles-container');
+            articlesContainer.innerHTML = ''; // Clear existing content
+
+            // Normalize line endings and trim the whole content
+            fullContent = fullContent.replace(/\r\n/g, '\n').trim();
+
+            // Split content by "URL", keeping the delimiter. This creates an array like:
+            // ["", "URL", "content after first URL", "URL", "content after second URL", ...]
+            // Or if content starts with URL: ["", "URL", "content after first URL", ...]
+            // Or if content doesn't have URL: ["full content"]
+            const rawParts = fullContent.split(/(URL)/i);
+            const processedArticles = [];
+            let currentContent = '';
+
+            for (let i = 0; i < rawParts.length; i++) {
+                const part = rawParts[i];
+
+                if (part.toUpperCase() === 'URL') {
+                    // If we found 'URL', and there's accumulated content, push it as an article.
+                    // Then, start a new article with 'URL' as its prefix.
+                    if (currentContent.trim() !== '') {
+                        processedArticles.push(currentContent.trim());
+                    }
+                    currentContent = 'URL'; // Start the new article with 'URL'
+                } else {
+                    // This is content. Append it to the current temporary article content.
+                    currentContent += part;
+                }
+            }
+
+            // Push any remaining content as the last article, if it's not empty.
+            if (currentContent.trim() !== '') {
+                processedArticles.push(currentContent.trim());
+            }
+
+            // Filter out any articles that are effectively empty (e.g., from leading/trailing splits or consecutive URLs)
+            const finalArticles = processedArticles.filter(article => {
+                // Remove HTML tags and then trim whitespace to check for true emptiness
+                const textOnly = article.replace(/<\/?[^>]+(>|$)/g, '').trim();
+                return textOnly !== '';
+            });
+
+
+            if (finalArticles.length === 0) {
+                articlesContainer.innerHTML = '<p>没有内容可显示。</p>';
+                document.title = '无内容 - 中转站';
+                return;
+            }
+
+            finalArticles.forEach((articleText, index) => {
+                let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
+
+                // If the article text starts with "URL" (after trimming), remove it for the display title.
+                let displayTitleText = cleanedTextForTitle;
+                if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
+                    displayTitleText = displayTitleText.substring(3).trim();
+                }
+
+                const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
+                let articleTitle = `文章 ${index + 1}`; // Default title
+
+                if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
+                    articleTitle = firstSentenceMatch[0].trim();
+                    // Limit title length for display
+                    if (articleTitle.length > 70) {
+                        articleTitle = articleTitle.substring(0, 67) + '...';
+                    }
+                } else if (displayTitleText.length > 0) {
+                    // If no full sentence, take the beginning of the cleaned text
+                    articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
+                    if (displayTitleText.length > 70) {
+                         articleTitle += '...';
+                    }
+                }
+                // If displayTitleText is empty after URL removal/trimming, default title "文章 X" will be used.
+
+                const articleSection = document.createElement('div');
+                articleSection.classList.add('article-section');
+
+                const articleHeader = document.createElement('div');
+                articleHeader.classList.add('article-header');
+                articleHeader.textContent = articleTitle; // Set initial title here
+                articleHeader.dataset.articleIndex = index; // Store index for click handling
+
+                const articleContent = document.createElement('div');
+                articleContent.classList.add('article-content');
+                articleContent.id = `article-content-${index}`; // Unique ID for each content div
+                articleContent.innerHTML = articleText; // Use innerHTML to render HTML content
+
+                articleSection.appendChild(articleHeader);
+                articleSection.appendChild(articleContent);
+                articlesContainer.appendChild(articleSection);
+
+                // Add event listener to each article header
+                articleHeader.addEventListener('click', function() {
+                    // Pause current TTS if playing and different article is clicked
+                    if (isReading && currentAudio && currentArticleIndex !== index) {
+                        pauseTTS();
+                    }
+
+                    // Toggle visibility of the content
+                    articleContent.classList.toggle('expanded');
+                    // Stop TTS if article is being collapsed
+                    if (!articleContent.classList.contains('expanded') && isReading && currentArticleIndex === index) {
+                         pauseTTS();
+                    }
+
+                    // If expanded, set it as the current article for TTS button
+                    if (articleContent.classList.contains('expanded')) {
+                        currentArticleIndex = index;
+                        // If "朗读页面" button is clicked while this article is expanded, it will read this one.
+                        // No automatic playback here, just setting context.
+                    } else if (currentArticleIndex === index) {
+                        currentArticleIndex = -1; // No article is currently expanded
+                    }
+                });
+            });
+
+            // Set main document title to the first article's title, or default
+            if (finalArticles.length > 0) {
+                let cleanedFirstArticleText = finalArticles[0].replace(/<\/?[^>]+(>|$)/g, "").trim();
+                let mainTitleDisplay = cleanedFirstArticleText;
+
+                if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
+                    mainTitleDisplay = mainTitleDisplay.substring(3).trim();
+                }
+
+                const firstArticleTitleMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
+                if (firstArticleTitleMatch && firstArticleTitleMatch[0].trim() !== '') {
+                    let mainTitle = firstArticleTitleMatch[0].trim();
+                    if (mainTitle.length > 70) {
+                        mainTitle = mainTitle.substring(0, 67) + '...';
+                    }
+                    document.title = mainTitle;
+                } else if (mainTitleDisplay.length > 0) {
+                    let mainTitle = mainTitleDisplay.substring(0, Math.min(mainTitleDisplay.length, 70)).trim();
+                    if (mainTitleDisplay.length > 70) {
+                         mainTitle += '...';
+                    }
+                    document.title = mainTitle;
+                } else {
+                    document.title = '中转站'; // Fallback if first article has no extractable title
+                }
+            } else {
+                document.title = '中转站'; // Fallback if no articles
+            }
+
+            // --- NEW: Title Cleaning Logic ---
+            // This function runs AFTER renderArticles has created the elements
+            cleanAllTitles();
+        }
+
+        // --- NEW FUNCTION: To clean titles ---
+        function cleanAllTitles() {
+            // Select all elements that could contain a title
+            const elementsWithTitles = document.querySelectorAll('.article-header, title');
+
+            elementsWithTitles.forEach(element => {
+                let originalText = element.textContent;
+
+                // **CORRECTED LINE:** Remove "Title: \"" (8 characters: T, i, t, l, e, :, space, double quote)
+                // and the trailing double quote.
+                if (originalText.startsWith('Title: "') && originalText.endsWith('"')) {
+                    let newText = originalText.substring(8, originalText.length - 1); // Start from index 8
+                    element.textContent = newText;
+                }
+                // If it's the document title, also update it directly
+                // This handles the <title> tag in the HTML head
+                if (element.tagName.toLowerCase() === 'title') {
+                    document.title = element.textContent;
+                }
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const articlesContainer = document.getElementById('articles-container');
+            const readAloudButton = document.getElementById('readAloudButton');
+            const speedRange = document.getElementById('speedRange');
+            const currentSpeedValueDisplay = document.getElementById('currentSpeedValue');
+            const readAloudContainer = document.getElementById('readAloudContainer');
+            // --- Changed from B1.md to B1_copy.md ---
+            const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1_copy.md';
+
+            updateUrlWithHash();
+
+            currentSpeedValueDisplay.textContent = speedRange.value;
+            currentSpeed = parseInt(speedRange.value);
+
+            speedRange.addEventListener('input', function() {
+                currentSpeedValueDisplay.textContent = this.value;
+            });
+
+            speedRange.addEventListener('change', function() {
+                currentSpeed = parseInt(this.value);
+                restartTTSWithNewSpeed();
+            });
+
+            let lastScrollTop = 0;
+            window.addEventListener('scroll', function() {
+                let st = window.pageYOffset || document.documentElement.scrollTop;
+                if (st > lastScrollTop) {
+                    readAloudContainer.classList.add('hidden');
+                } else {
+                    readAloudContainer.classList.remove('hidden');
+                }
+                lastScrollTop = st <= 0 ? 0 : st;
+            }, false);
+
+            fetch(contentUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    renderArticles(data); // Call the new function to render articles
+                })
+                .catch(error => {
+                    console.error('Error fetching content:', error);
+                    articlesContainer.innerHTML = '<p>无法加载内容。请检查网络或链接。</p>';
+                    document.title = '加载失败 - 中转站';
+                });
+
+            readAloudButton.addEventListener('click', function() {
+                if (isReading) {
+                    pauseTTS();
+                } else if (isPaused) {
+                    resumeTTS();
+                } else {
+                    // If no specific article is active, try to read the first one
+                    if (currentArticleIndex === -1) {
+                        const firstArticleContent = document.getElementById(`article-content-0`);
+                        if (firstArticleContent) {
+                            currentArticleIndex = 0; // Set first article as active
+                            firstArticleContent.classList.add('expanded'); // Also expand it
+                            playSummaryTTS(firstArticleContent.innerText);
+                        } else {
+                            console.warn("No articles to read on button click.");
+                        }
+                    } else {
+                        // Read the currently active article
+                        const activeArticleContent = document.getElementById(`article-content-${currentArticleIndex}`);
+                        if (activeArticleContent) {
+                            playSummaryTTS(activeArticleContent.innerText);
+                        } else {
+                             console.warn("Currently selected article content not found for playback.");
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
