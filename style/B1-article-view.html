@@ -217,6 +217,7 @@
             margin: 0 auto;
             padding: 30px;
             padding-top: 0;
+            min-height: 50vh; /* Ensure container has some height even with few items */
         }
 
         /* Article Sections - Modern Card Design */
@@ -418,6 +419,56 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
+        /* --- NEW: Pagination Styles --- */
+        #pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0 40px 0;
+        }
+        .pagination {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            justify-content: center;
+        }
+        .pagination li a {
+            display: block;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            transition: var(--transition);
+            font-weight: 600;
+        }
+        .pagination li a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+        .pagination li.active a {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-md);
+            cursor: default;
+        }
+        .pagination li.disabled a {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--card-bg);
+            color: var(--text-muted);
+        }
+        .pagination li.disabled a:hover {
+            transform: none;
+        }
+
+
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
             body {
@@ -459,6 +510,12 @@
 
             .home-button {
                 padding: 8px 16px;
+                font-size: 0.9em;
+            }
+
+            /* --- NEW: Mobile Pagination Styles --- */
+            .pagination li a {
+                padding: 8px 14px;
                 font-size: 0.9em;
             }
         }
@@ -509,6 +566,12 @@
                 padding: 6px 12px;
                 font-size: 0.85em;
             }
+
+            /* --- NEW: Small Mobile Pagination Styles --- */
+            .pagination li a {
+                padding: 6px 12px;
+                font-size: 0.85em;
+            }
         }
 
         /* Accessibility improvements */
@@ -553,12 +616,16 @@
         </div>
     </div>
 
+    <div id="pagination-container"></div>
+
+
     <script>
         // --- Configuration ---
         const ttsDomains = [
             'https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/',
         ];
         let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
+        const itemsPerPage = 10; // Number of articles per page
 
         // Global variables for audio control
         let currentAudio = null;
@@ -764,11 +831,63 @@
             window.history.replaceState({}, '', currentUrl.toString());
             console.log("URL updated with new hash:", currentUrl.toString());
         }
+        
+        // --- NEW: Function to render pagination controls ---
+        function renderPagination(totalPages, currentPage) {
+            const paginationContainer = document.getElementById('pagination-container');
+            paginationContainer.innerHTML = ''; // Clear old pagination
 
-        // --- Function to split content by "URL" and render articles ---
-        function renderArticles(fullContent, articleIdToDisplay = null) {
+            if (totalPages <= 1) return; // Don't render if only one page
+
+            const ul = document.createElement('ul');
+            ul.classList.add('pagination');
+
+            // Previous button
+            const prevLi = document.createElement('li');
+            const prevA = document.createElement('a');
+            prevA.href = `?page=${currentPage - 1}`;
+            prevA.textContent = '« 上一页';
+            if (currentPage === 1) {
+                prevLi.classList.add('disabled');
+                prevA.removeAttribute('href');
+            }
+            prevLi.appendChild(prevA);
+            ul.appendChild(prevLi);
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `?page=${i}`;
+                a.textContent = i;
+                if (i === currentPage) {
+                    li.classList.add('active');
+                    a.removeAttribute('href');
+                }
+                li.appendChild(a);
+                ul.appendChild(li);
+            }
+
+            // Next button
+            const nextLi = document.createElement('li');
+            const nextA = document.createElement('a');
+            nextA.href = `?page=${currentPage + 1}`;
+            nextA.textContent = '下一页 »';
+            if (currentPage === totalPages) {
+                nextLi.classList.add('disabled');
+                nextA.removeAttribute('href');
+            }
+            nextLi.appendChild(nextA);
+            ul.appendChild(nextLi);
+
+            paginationContainer.appendChild(ul);
+        }
+
+        // --- MODIFIED: Function to split content by "URL" and render articles ---
+        function renderArticles(fullContent, articleIdToDisplay = null, currentPage = 1) {
             const articlesContainer = document.getElementById('articles-container');
             articlesContainer.innerHTML = ''; // Clear existing content
+            document.getElementById('pagination-container').innerHTML = ''; // Clear pagination
 
             // Normalize line endings and trim the whole content
             fullContent = fullContent.replace(/\r\n/g, '\n').trim();
@@ -807,6 +926,7 @@
 
             // Determine which articles to render
             if (articleIdToDisplay !== null && !isNaN(articleIdToDisplay) && allArticles[articleIdToDisplay]) {
+                // SINGLE ARTICLE VIEW (no pagination)
                 const articleText = allArticles[articleIdToDisplay];
                 currentArticleIndex = articleIdToDisplay; // Set the current reading index
 
@@ -844,8 +964,17 @@
                     document.title = `文章 ${articleIdToDisplay + 1} - 中转站`;
                 }
 
-            } else { // Render all articles as links
-                allArticles.forEach((articleText, index) => {
+            } else { // PAGINATED LIST VIEW
+                document.title = `新闻列表 (第 ${currentPage} 页) - 中转站`;
+
+                const totalPages = Math.ceil(allArticles.length / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedArticles = allArticles.slice(startIndex, endIndex);
+
+                paginatedArticles.forEach((articleText, index) => {
+                    const originalIndex = startIndex + index; // Get the index from the original allArticles array
+
                     let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
 
                     let displayTitleText = cleanedTextForTitle;
@@ -854,7 +983,7 @@
                     }
 
                     const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
-                    let articleTitle = `文章 ${index + 1}`; // Default title
+                    let articleTitle = `文章 ${originalIndex + 1}`; // Default title using original index
 
                     if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
                         articleTitle = firstSentenceMatch[0].trim();
@@ -874,41 +1003,15 @@
                     const articleHeaderLink = document.createElement('a');
                     articleHeaderLink.classList.add('article-header');
                     articleHeaderLink.textContent = articleTitle;
-                    articleHeaderLink.href = `?articleId=${index}`; // Link to the specific article
-                    articleHeaderLink.dataset.articleIndex = index; // Store index
+                    articleHeaderLink.href = `?articleId=${originalIndex}`; // Link to the specific article using original index
+                    articleHeaderLink.dataset.articleIndex = originalIndex; // Store original index
 
                     articleSection.appendChild(articleHeaderLink);
                     articlesContainer.appendChild(articleSection);
                 });
 
-                // Set main document title to the first article's title or default
-                if (allArticles.length > 0) {
-                    let cleanedFirstArticleText = allArticles[0].replace(/<\/?[^>]+(>|$)/g, "").trim();
-                    let mainTitleDisplay = cleanedFirstArticleText;
-
-                    if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
-                        mainTitleDisplay = mainTitleDisplay.substring(3).trim();
-                    }
-
-                    const firstArticleTitleMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
-                    if (firstArticleTitleMatch && firstArticleTitleMatch[0].trim() !== '') {
-                        let mainTitle = firstArticleTitleMatch[0].trim();
-                        if (mainTitle.length > 70) {
-                            mainTitle = mainTitle.substring(0, 67) + '...';
-                        }
-                        document.title = mainTitle;
-                    } else if (mainTitleDisplay.length > 0) {
-                        let mainTitle = mainTitleDisplay.substring(0, Math.min(mainTitleDisplay.length, 70)).trim();
-                        if (mainTitleDisplay.length > 70) {
-                             mainTitle += '...';
-                        }
-                        document.title = mainTitle;
-                    } else {
-                        document.title = '中转站'; // Fallback if first article has no extractable title
-                    }
-                } else {
-                    document.title = '中转站'; // Fallback if no articles
-                }
+                // Render pagination controls
+                renderPagination(totalPages, currentPage);
             }
             cleanAllTitles();
         }
@@ -943,7 +1046,8 @@
             const toggleSpeedSliderButton = document.getElementById('toggleSpeedSliderButton'); // 获取新增的语速按钮
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1_copy.md';
 
-            updateUrlWithHash();
+            // Don't add hash on initial load to keep URL clean for pagination
+            // updateUrlWithHash(); 
 
             currentSpeedValueDisplay.textContent = speedRange.value;
             currentSpeed = parseInt(speedRange.value);
@@ -973,8 +1077,8 @@
                 e.preventDefault(); // Prevent default link behavior
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.delete('articleId'); // Remove articleId
-                currentUrl.searchParams.delete('hash'); // Optionally remove hash
-                window.location.href = currentUrl.origin + currentUrl.pathname; // Navigate to base URL
+                currentUrl.searchParams.set('page', '1'); // Go to page 1
+                window.location.href = currentUrl.pathname + currentUrl.search;
             });
 
             // Toggle Speed Slider button functionality
@@ -985,27 +1089,24 @@
                 }
             });
 
-            // 移除音量键监听器，因为它不再是触发语速条的方式
-            // window.addEventListener('keydown', function(event) {
-            //     if (event.key === 'VolumeUp' || event.key === 'VolumeDown' || event.key === 'AudioVolumeUp' || event.key === 'AudioVolumeDown') {
-            //         speedSliderWrapper.classList.add('visible');
-            //         clearTimeout(speedSliderTimeout);
-            //         speedSliderTimeout = setTimeout(() => {
-            //             speedSliderWrapper.classList.remove('visible');
-            //         }, 3000); // Hide after 3 seconds
-            //         event.preventDefault();
-            //     }
-            // });
-
-
             const loadContent = () => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const articleIdFromUrl = urlParams.get('articleId');
+                const pageFromUrl = urlParams.get('page');
+
                 let initialArticleId = null;
                 if (articleIdFromUrl !== null) {
                     const parsedId = parseInt(articleIdFromUrl, 10);
                     if (!isNaN(parsedId)) {
                         initialArticleId = parsedId;
+                    }
+                }
+                
+                let currentPage = 1;
+                if (pageFromUrl !== null) {
+                    const parsedPage = parseInt(pageFromUrl, 10);
+                    if (!isNaN(parsedPage) && parsedPage > 0) {
+                        currentPage = parsedPage;
                     }
                 }
 
@@ -1017,7 +1118,8 @@
                         return response.text();
                     })
                     .then(data => {
-                        renderArticles(data, initialArticleId);
+                        // Pass current page to renderArticles
+                        renderArticles(data, initialArticleId, currentPage);
                         // If an article is being displayed directly, scroll to top
                         if (initialArticleId !== null) {
                             window.scrollTo(0, 0);
@@ -1047,10 +1149,10 @@
                         currentArticleIndex = 0;
                         articleToRead = document.getElementById(`article-content-0`);
                         // If on the main page and clicking read, navigate to the first article
-                        if (articleToRead && window.location.search.indexOf('articleId=') === -1) {
+                        if (window.location.search.indexOf('articleId=') === -1) {
                             const newUrl = new URL(window.location.href);
                             newUrl.searchParams.set('articleId', currentArticleIndex);
-                            // Use location.href for full page reload to simulate new page feel
+                            newUrl.searchParams.delete('page'); // remove page param when viewing single article
                             window.location.href = newUrl.toString();
                             return; // Exit to prevent immediate TTS before re-render
                         }
