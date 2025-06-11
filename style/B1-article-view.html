@@ -292,6 +292,32 @@
             left: 100%;
         }
 
+        /* Added style for the pinned article header */
+        .article-header.pinned-article {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 100%);
+            color: white; /* Ensure text is white for contrast */
+            font-size: 1.1em; /* Slightly larger for emphasis */
+            border-bottom: none; /* No border for a cleaner look */
+            box-shadow: var(--shadow-md); /* Add a subtle shadow */
+            position: sticky; /* Make it sticky */
+            top: 90px; /* Position it below the speed control container */
+            z-index: 990; /* Ensure it stays above other articles but below speed control */
+            padding: 20px 25px; /* Adjust padding */
+            animation: pulse-pin 2s infinite ease-in-out; /* Subtle animation */
+        }
+
+        @keyframes pulse-pin {
+            0% { transform: scale(1); box-shadow: var(--shadow-md); }
+            50% { transform: scale(1.01); box-shadow: var(--shadow-lg); }
+            100% { transform: scale(1); box-shadow: var(--shadow-md); }
+        }
+
+        .article-header.pinned-article:hover {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-hover) 100%);
+            transform: scale(1.005); /* Slight scale on hover */
+            box-shadow: var(--shadow-xl);
+        }
+
         .article-content {
             padding: 40px; /* Always show padding when content is visible */
             font-size: 1.1em; /* Base font size for content */
@@ -497,6 +523,11 @@
                 font-size: 0.9em; /* Slightly smaller for mobile */
                 padding: 20px;
             }
+            .article-header.pinned-article {
+                top: 80px; /* Adjust pinned header position for mobile */
+                font-size: 1em;
+                padding: 18px 20px;
+            }
 
             .article-content {
                 padding: 30px;
@@ -550,6 +581,11 @@
             .article-header {
                 font-size: 0.85em; /* Even smaller for very small screens */
                 padding: 18px;
+            }
+            .article-header.pinned-article {
+                top: 70px; /* Adjust pinned header position for small mobile */
+                font-size: 0.95em;
+                padding: 15px 18px;
             }
 
             .article-content {
@@ -626,6 +662,11 @@
         ];
         let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
         const itemsPerPage = 10; // Number of articles per page
+        // Define the pinned article URL
+        const pinnedArticleUrl = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/Texttohtml.html';
+        // Define the title for the pinned article
+        const pinnedArticleTitle = '置顶文章';
+
 
         // Global variables for audio control
         let currentAudio = null;
@@ -831,7 +872,7 @@
             window.history.replaceState({}, '', currentUrl.toString());
             console.log("URL updated with new hash:", currentUrl.toString());
         }
-        
+
         // --- NEW: Function to render pagination controls ---
         function renderPagination(totalPages, currentPage) {
             const paginationContainer = document.getElementById('pagination-container');
@@ -923,6 +964,20 @@
                 document.title = '无内容 - 中转站';
                 return;
             }
+
+            // Always add the pinned article at the top
+            const pinnedArticleSection = document.createElement('div');
+            pinnedArticleSection.classList.add('article-section');
+            const pinnedArticleHeaderLink = document.createElement('a');
+            pinnedArticleHeaderLink.classList.add('article-header', 'pinned-article');
+            // Set the text content to '置顶文章'
+            pinnedArticleHeaderLink.textContent = pinnedArticleTitle;
+            pinnedArticleHeaderLink.href = pinnedArticleUrl;
+            pinnedArticleHeaderLink.target = '_blank'; // Open in new tab
+            pinnedArticleHeaderLink.rel = 'noopener noreferrer'; // Security best practice
+            pinnedArticleSection.appendChild(pinnedArticleHeaderLink);
+            articlesContainer.appendChild(pinnedArticleSection);
+
 
             // Determine which articles to render
             if (articleIdToDisplay !== null && !isNaN(articleIdToDisplay) && allArticles[articleIdToDisplay]) {
@@ -1101,7 +1156,7 @@
                         initialArticleId = parsedId;
                     }
                 }
-                
+
                 let currentPage = 1;
                 if (pageFromUrl !== null) {
                     const parsedPage = parseInt(pageFromUrl, 10);
@@ -1142,19 +1197,29 @@
                 } else {
                     // Determine which article to read
                     let articleToRead = null;
-                    if (currentArticleIndex !== -1 && allArticles[currentArticleIndex]) {
+                    // If a specific article is currently being viewed, read that one
+                    if (currentArticleIndex !== -1 && document.getElementById(`article-content-${currentArticleIndex}`)) {
                         articleToRead = document.getElementById(`article-content-${currentArticleIndex}`);
-                    } else if (allArticles.length > 0) {
-                        // If no specific article active (on main listing page), read the first one
-                        currentArticleIndex = 0;
-                        articleToRead = document.getElementById(`article-content-0`);
-                        // If on the main page and clicking read, navigate to the first article
-                        if (window.location.search.indexOf('articleId=') === -1) {
-                            const newUrl = new URL(window.location.href);
-                            newUrl.searchParams.set('articleId', currentArticleIndex);
-                            newUrl.searchParams.delete('page'); // remove page param when viewing single article
-                            window.location.href = newUrl.toString();
-                            return; // Exit to prevent immediate TTS before re-render
+                    } else {
+                        // If on the main listing page, read the pinned article's title
+                        const pinnedArticleLink = document.querySelector('.article-header.pinned-article');
+                        if (pinnedArticleLink) {
+                            // Read the *text content* of the pinned article header, not its href
+                            playSummaryTTS(pinnedArticleLink.textContent);
+                            return; // Stop here as the pinned link is read
+                        }
+                        // If no pinned article or pinned article already read, read the first regular article
+                        if (allArticles.length > 0) {
+                            currentArticleIndex = 0;
+                            articleToRead = document.getElementById(`article-content-0`);
+                            // If on the main page and clicking read, navigate to the first article
+                            if (window.location.search.indexOf('articleId=') === -1) {
+                                const newUrl = new URL(window.location.href);
+                                newUrl.searchParams.set('articleId', currentArticleIndex);
+                                newUrl.searchParams.delete('page'); // remove page param when viewing single article
+                                window.location.href = newUrl.toString();
+                                return; // Exit to prevent immediate TTS before re-render
+                            }
                         }
                     }
 
