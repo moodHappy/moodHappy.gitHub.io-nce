@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GitHub 同步器（沉浸式翻译兼容）</title>
+  <title>GitHub 同步器（段落翻译兼容）</title>
   <style>
     body {
       font-family: sans-serif;
@@ -20,7 +20,6 @@
       box-sizing: border-box;
       resize: none;
       overflow: hidden;
-      transition: background 0.3s;
     }
     button {
       margin: 6px 6px 6px 0;
@@ -77,9 +76,12 @@
       border-radius: 8px;
       border: 1px solid #ccc;
       line-height: 1.6;
-      white-space: pre-wrap;
       font-size: 17px;
       color: #222;
+    }
+    article.immersive-content p {
+      margin-bottom: 1em;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -93,7 +95,7 @@
     <button class="copy" onclick="copyContent()">复制</button>
   </div>
 
-  <textarea id="inputContent" placeholder="请输入英文文本，将显示为网页正文..."></textarea>
+  <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
   <article id="renderedContent" class="immersive-content" style="display:none;"></article>
 
   <div id="status">⏳ 正在加载 GitHub 内容...</div>
@@ -185,7 +187,7 @@
 
       if (res.ok) {
         renderMode(content);
-        document.getElementById("status").textContent = "✅ 提交成功，已转为网页正文显示。";
+        document.getElementById("status").textContent = "✅ 提交成功，段落已渲染。";
       } else {
         document.getElementById("status").textContent = "❌ 提交失败：" + (await res.json()).message;
       }
@@ -230,8 +232,16 @@
       document.getElementById("status").textContent = "📋 内容已复制到剪贴板。";
     }
 
-    function renderMode(html) {
-      renderedDiv.innerText = html; // 插件识别纯文本，非 innerHTML
+    function renderMode(text) {
+      renderedDiv.innerHTML = ""; // 清空
+      const paragraphs = text.split(/\n+/); // 按多行分段
+      for (const para of paragraphs) {
+        if (para.trim()) {
+          const p = document.createElement("p");
+          p.textContent = para.trim();
+          renderedDiv.appendChild(p);
+        }
+      }
       renderedDiv.style.display = "block";
       textarea.style.display = "none";
     }
