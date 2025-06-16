@@ -323,10 +323,15 @@
         right: -100%;
       }
       
+      /* --- 修复点 1: 在移动端样式中明确定义 .open 状态 --- */
+      #settingsPanel.open {
+        right: 0;
+      }
+
       .button-group {
         flex-direction: column;
       }
-      
+
       button {
         width: 100%;
       }
@@ -355,7 +360,7 @@
   <h2>
     📤 GitHub 同步助手
     <div style="margin-left: auto;">
-      <button class="settings" onclick="toggleSettings()">⚙️ 设置</button>
+      <button id="settingsBtn" class="settings">⚙️ 设置</button>
     </div>
   </h2>
 
@@ -368,12 +373,11 @@
 
   <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
   <div class="word-count" id="wordCount">0 字符 | 0 单词</div>
-  
+
   <article id="renderedContent" class="immersive-content" style="display:none;"></article>
 
   <div id="status">⏳ 正在加载 GitHub 内容...</div>
 
-  <!-- 设置面板 -->
   <div id="settingsOverlay" onclick="closeSettings()"></div>
   <div id="settingsPanel">
     <div class="settings-section">
@@ -447,7 +451,6 @@
     </div>
   </div>
 
-  <!-- Token 模态框 -->
   <div id="tokenModal" style="display:none;">
     <div id="tokenModalContent">
       <h3>🔐 请输入你的 GitHub Token：</h3>
@@ -468,7 +471,7 @@
     const renderedDiv = document.getElementById("renderedContent");
     const wordCountDiv = document.getElementById("wordCount");
     const editToggle = document.getElementById("editToggle");
-    
+
     let isRenderMode = false;
 
     // 初始化设置
@@ -476,7 +479,7 @@
       const savedTheme = localStorage.getItem("app_theme") || "light";
       const savedFont = localStorage.getItem("app_font") || "mixed";
       const savedSize = localStorage.getItem("app_size") || "medium";
-      
+
       applySettings(savedTheme, savedFont, savedSize);
       updateRadioButtons("theme", savedTheme);
       updateRadioButtons("font", savedFont);
@@ -499,7 +502,7 @@
       const panel = document.getElementById("settingsPanel");
       const overlay = document.getElementById("settingsOverlay");
       const isOpen = panel.classList.contains("open");
-      
+
       if (isOpen) {
         closeSettings();
       } else {
@@ -613,9 +616,9 @@
 
     async function deleteContent() {
       if (!confirm("确定要清空 GitHub 文件吗？")) return;
-      
+
       document.getElementById("status").textContent = "🗑️ 正在清空 GitHub 文件...";
-      
+
       try {
         const { sha } = await getCurrentFileShaAndContent();
         if (!sha) {
@@ -660,7 +663,7 @@
         document.getElementById("status").textContent = "⚠️ 没有内容可复制。";
         return;
       }
-      
+
       navigator.clipboard.writeText(content).then(() => {
         document.getElementById("status").textContent = "📋 内容已复制到剪贴板。";
       }).catch(() => {
@@ -701,7 +704,7 @@
         const { content } = await getCurrentFileShaAndContent();
         textarea.value = content;
         updateWordCount();
-        
+
         if (content.trim()) {
           renderMode(content);
         } else {
@@ -717,12 +720,15 @@
     // 事件监听
     textarea.addEventListener("input", updateWordCount);
 
+    // --- 修复点 2 (推荐): 绑定点击事件 ---
+    document.getElementById('settingsBtn').addEventListener('click', toggleSettings);
+
     // 设置变更监听
     document.addEventListener("change", (e) => {
       if (e.target.type === "radio") {
         const name = e.target.name;
         const value = e.target.value;
-        
+
         if (name === "theme") {
           localStorage.setItem("app_theme", value);
           document.body.setAttribute("data-theme", value);
