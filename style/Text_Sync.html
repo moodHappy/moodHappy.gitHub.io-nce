@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GitHub 同步器（无Token托管）</title>
+  <title>GitHub 同步器（可渲染内容）</title>
   <style>
     body {
       font-family: sans-serif;
@@ -22,10 +22,6 @@
       resize: none;
       overflow: hidden;
       transition: background 0.3s;
-    }
-    textarea[readonly] {
-      background: #eee;
-      cursor: default;
     }
     button {
       margin: 6px 6px 6px 0;
@@ -74,23 +70,33 @@
       border-radius: 5px;
       border: 1px solid #aaa;
     }
+    #renderedContent {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
   <div id="settings" title="重新输入 GitHub Token" onclick="resetToken()">⚙️</div>
   <h2>📤 GitHub 同步器</h2>
 
-  <!-- 按钮放在输入框上方 -->
+  <!-- 按钮 -->
   <div>
     <button onclick="submitContent()">提交</button>
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
   </div>
 
+  <!-- 输入框或内容渲染容器 -->
   <textarea id="inputContent" placeholder="加载中或输入内容..."></textarea>
+  <div id="renderedContent" style="display:none;"></div>
+
   <div id="status">⏳ 正在加载 GitHub 内容...</div>
 
-  <!-- Token 输入弹窗 -->
+  <!-- Token 弹窗 -->
   <div id="tokenModal" style="display:none;">
     <div id="tokenModalContent">
       <h3>🔐 请输入你的 GitHub Token：</h3>
@@ -108,6 +114,7 @@
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
 
     const textarea = document.getElementById("inputContent");
+    const renderedDiv = document.getElementById("renderedContent");
 
     function ensureToken() {
       if (!GITHUB_TOKEN) {
@@ -116,8 +123,7 @@
     }
 
     function saveToken() {
-      const input = document.getElementById("tokenInput");
-      const token = input.value.trim();
+      const token = document.getElementById("tokenInput").value.trim();
       if (!token.startsWith("ghp_") && !token.startsWith("github_pat_")) {
         alert("请输入有效的 GitHub Token！");
         return;
@@ -125,7 +131,7 @@
       localStorage.setItem("github_token", token);
       GITHUB_TOKEN = token;
       document.getElementById("tokenModal").style.display = "none";
-      loadContent(); // 加载内容
+      loadContent();
     }
 
     function resetToken() {
@@ -176,9 +182,12 @@
         })
       });
 
-      document.getElementById("status").textContent = res.ok
-        ? "✅ 提交成功，内容已同步。"
-        : "❌ 提交失败：" + (await res.json()).message;
+      if (res.ok) {
+        renderMode(content);
+        document.getElementById("status").textContent = "✅ 提交成功，已转为网页内容显示。";
+      } else {
+        document.getElementById("status").textContent = "❌ 提交失败：" + (await res.json()).message;
+      }
     }
 
     async function deleteContent() {
@@ -186,8 +195,8 @@
       const { sha } = await getCurrentFileShaAndContent();
       if (!sha) {
         textarea.value = "";
-        updateTextareaState();
-        document.getElementById("status").textContent = "✅ 文件已为空，无需删除。";
+        editMode();
+        document.getElementById("status").textContent = "✅ 文件已为空。";
         return;
       }
 
@@ -207,38 +216,40 @@
 
       if (res.ok) {
         textarea.value = "";
-        updateTextareaState();
-        document.getElementById("status").textContent = "✅ GitHub 文件内容已清空。";
+        editMode();
+        document.getElementById("status").textContent = "✅ GitHub 内容已清空。";
       } else {
         document.getElementById("status").textContent = "❌ 删除失败：" + (await res.json()).message;
       }
     }
 
     function copyContent() {
-      textarea.select();
-      document.execCommand("copy");
+      const content = renderedDiv.style.display !== "none" ? renderedDiv.textContent : textarea.value;
+      navigator.clipboard.writeText(content);
       document.getElementById("status").textContent = "📋 内容已复制到剪贴板。";
     }
 
-    function autoResizeTextarea() {
-      textarea.style.height = "auto";
-      textarea.style.height = (textarea.scrollHeight + 4) + "px";
+    function renderMode(html) {
+      renderedDiv.innerHTML = html;
+      renderedDiv.style.display = "block";
+      textarea.style.display = "none";
     }
 
-    function updateTextareaState() {
-      const value = textarea.value.trim();
-      textarea.readOnly = !!value;
-      autoResizeTextarea();
+    function editMode() {
+      textarea.style.display = "block";
+      renderedDiv.style.display = "none";
     }
 
     async function loadContent() {
       const { content } = await getCurrentFileShaAndContent();
-      textarea.value = content;
-      updateTextareaState();
+      if (content.trim()) {
+        renderMode(content);
+      } else {
+        textarea.value = "";
+        editMode();
+      }
       document.getElementById("status").textContent = "✅ GitHub 内容已加载。";
     }
-
-    textarea.addEventListener("input", updateTextareaState);
 
     window.onload = () => {
       ensureToken();
