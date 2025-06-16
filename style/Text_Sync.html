@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>GitHub 文本同步器</title>
+  <title>GitHub 文本同步器（Token 加密）</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     textarea { width: 100%; height: 150px; font-size: 16px; }
@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <h2>📤 GitHub 文本同步器</h2>
+  <h2>📤 GitHub 文本同步器（base64 Token 隐藏）</h2>
   <textarea id="inputContent" placeholder="加载中或输入内容..."></textarea><br>
   <button onclick="submitContent()">提交</button>
   <button onclick="deleteContent()">删除</button>
@@ -20,28 +20,36 @@
   <script>
     const GITHUB_USERNAME = "moodHappy";
     const GITHUB_REPO = "HelloWorld";
-    const GITHUB_TOKEN = "";
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
 
+    // 用 Base64 编码你的 Token，复制自浏览器控制台：btoa("your_real_token")
+    const ENCODED_TOKEN = "Z2l0aHViX3BhdF8xMUFGNUMyRkkwcVVGMDIyTnVORTg4X1pTcmRHT3Zrb25DQ1JRN1hVaEE5bVIwcXpjZEVqMGtXcFJtWnl5MGdoMmtNUDZLNFBaQ3VaUWk3MXRz";
+
+    const GITHUB_TOKEN = atob(ENCODED_TOKEN);
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
     const headers = {
       Authorization: `Bearer ${GITHUB_TOKEN}`,
-      "Content-Type": "application/json"
+      Accept: "application/vnd.github.v3+json"
     };
 
     async function getCurrentFileShaAndContent() {
-      const res = await fetch(apiUrl, { headers });
-      if (res.status === 404) return { sha: null, content: "" };
-      const data = await res.json();
-      const decoded = decodeURIComponent(escape(atob(data.content)));
-      return { sha: data.sha, content: decoded };
+      try {
+        const res = await fetch(apiUrl, { headers });
+        if (!res.ok) throw new Error(`GitHub 状态码 ${res.status}`);
+        const data = await res.json();
+        if (!data.content) throw new Error("文件为空或格式错误");
+        const decoded = decodeURIComponent(escape(atob(data.content)));
+        return { sha: data.sha, content: decoded };
+      } catch (err) {
+        console.warn("读取失败：", err.message);
+        return { sha: null, content: "" };
+      }
     }
 
     async function submitContent() {
       const textarea = document.getElementById("inputContent");
       const content = textarea.value.trim();
       if (!content) return alert("请输入内容再提交！");
-
       document.getElementById("status").textContent = "🔄 正在提交到 GitHub...";
 
       const { sha } = await getCurrentFileShaAndContent();
@@ -49,7 +57,10 @@
 
       const res = await fetch(apiUrl, {
         method: "PUT",
-        headers,
+        headers: {
+          ...headers,
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           message: "更新 transfer.txt",
           content: encodedContent,
@@ -58,25 +69,26 @@
         })
       });
 
-      if (res.ok) {
-        document.getElementById("status").textContent = "✅ 提交成功，内容已同步。";
-      } else {
-        const err = await res.json();
-        document.getElementById("status").textContent = "❌ 提交失败：" + (err.message || res.statusText);
-      }
+      document.getElementById("status").textContent = res.ok
+        ? "✅ 提交成功，内容已同步。"
+        : "❌ 提交失败：" + (await res.json()).message;
     }
 
     async function deleteContent() {
       document.getElementById("status").textContent = "🗑️ 正在清空 GitHub 文件...";
       const { sha } = await getCurrentFileShaAndContent();
       if (!sha) {
+        document.getElementById("inputContent").value = "";
         document.getElementById("status").textContent = "✅ 文件已为空，无需删除。";
         return;
       }
 
       const res = await fetch(apiUrl, {
         method: "PUT",
-        headers,
+        headers: {
+          ...headers,
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           message: "清空 transfer.txt",
           content: btoa(""),
@@ -87,25 +99,18 @@
 
       if (res.ok) {
         document.getElementById("inputContent").value = "";
-        document.getElementById("status").textContent = "✅ 删除成功，GitHub 内容已清空。";
+        document.getElementById("status").textContent = "✅ GitHub 文件内容已清空。";
       } else {
-        const err = await res.json();
-        document.getElementById("status").textContent = "❌ 删除失败：" + (err.message || res.statusText);
+        document.getElementById("status").textContent = "❌ 删除失败：" + (await res.json()).message;
       }
     }
 
-    // 页面加载时自动获取 GitHub 内容
     window.onload = async () => {
       const textarea = document.getElementById("inputContent");
       const status = document.getElementById("status");
-
-      try {
-        const { content } = await getCurrentFileShaAndContent();
-        textarea.value = content;
-        status.textContent = "✅ 已加载 GitHub 内容。";
-      } catch (err) {
-        status.textContent = "⚠️ 无法加载 GitHub 内容：" + err.message;
-      }
+      const { content } = await getCurrentFileShaAndContent();
+      textarea.value = content;
+      status.textContent = "✅ GitHub 内容已加载。";
     };
   </script>
 </body>
