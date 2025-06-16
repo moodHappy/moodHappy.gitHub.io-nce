@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GitHub 同步器（移动端支持）</title>
+  <title>GitHub 同步器（无Token托管）</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 1em;
       background: #f9f9f9;
+      position: relative;
     }
     textarea {
       width: 100%;
@@ -41,9 +42,44 @@
       color: #444;
       font-size: 14px;
     }
+    #settings {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    #tokenModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    #tokenModalContent {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 90%;
+    }
+    #tokenModalContent input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+    }
   </style>
 </head>
 <body>
+  <div id="settings" title="重新输入 GitHub Token" onclick="resetToken()">⚙️</div>
+
   <h2>📤 GitHub 同步器</h2>
   <textarea id="inputContent" placeholder="加载中或输入内容..."></textarea><br/>
   <button onclick="submitContent()">提交</button>
@@ -51,27 +87,60 @@
   <button class="copy" onclick="copyContent()">复制</button>
   <div id="status">⏳ 正在加载 GitHub 内容...</div>
 
+  <!-- Token 输入弹窗 -->
+  <div id="tokenModal" style="display:none;">
+    <div id="tokenModalContent">
+      <h3>🔐 请输入你的 GitHub Token：</h3>
+      <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
+      <button style="margin-top:10px;" onclick="saveToken()">保存 Token</button>
+    </div>
+  </div>
+
   <script>
     const GITHUB_USERNAME = "moodHappy";
     const GITHUB_REPO = "HelloWorld";
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
 
-    // 新的 GitHub Token（使用 base64 加密隐藏）
-    const ENCODED_TOKEN = "Z2l0aHViX3BhdF8xMUFGNUMyRkkwNEE5c0t1TGkyd3dhXzdBRmJJUFlBNHRMaUswVURrYVg5blRSY3VqZVhlRlZFZXI2MTRzaU11MG40UVdMTkoyQ0k4Z3pHZlQ0";
-    const GITHUB_TOKEN = atob(ENCODED_TOKEN);
-
+    let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
-    const headers = {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      Accept: "application/vnd.github.v3+json"
-    };
+
+    function ensureToken() {
+      if (!GITHUB_TOKEN) {
+        document.getElementById("tokenModal").style.display = "flex";
+      }
+    }
+
+    function saveToken() {
+      const input = document.getElementById("tokenInput");
+      const token = input.value.trim();
+      if (!token.startsWith("ghp_") && !token.startsWith("github_pat_")) {
+        alert("请输入有效的 GitHub Token！");
+        return;
+      }
+      localStorage.setItem("github_token", token);
+      GITHUB_TOKEN = token;
+      document.getElementById("tokenModal").style.display = "none";
+      loadContent(); // 加载内容
+    }
+
+    function resetToken() {
+      localStorage.removeItem("github_token");
+      GITHUB_TOKEN = null;
+      ensureToken();
+    }
+
+    function getHeaders() {
+      return {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github.v3+json"
+      };
+    }
 
     async function getCurrentFileShaAndContent() {
       try {
-        const res = await fetch(apiUrl, { headers });
+        const res = await fetch(apiUrl, { headers: getHeaders() });
         if (!res.ok) throw new Error(`GitHub 状态码 ${res.status}`);
         const data = await res.json();
-        if (!data.content) throw new Error("文件为空或格式错误");
         const decoded = decodeURIComponent(escape(atob(data.content)));
         return { sha: data.sha, content: decoded };
       } catch (err) {
@@ -92,7 +161,7 @@
       const res = await fetch(apiUrl, {
         method: "PUT",
         headers: {
-          ...headers,
+          ...getHeaders(),
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -120,7 +189,7 @@
       const res = await fetch(apiUrl, {
         method: "PUT",
         headers: {
-          ...headers,
+          ...getHeaders(),
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -146,12 +215,17 @@
       document.getElementById("status").textContent = "📋 内容已复制到剪贴板。";
     }
 
-    window.onload = async () => {
+    async function loadContent() {
       const textarea = document.getElementById("inputContent");
       const status = document.getElementById("status");
       const { content } = await getCurrentFileShaAndContent();
       textarea.value = content;
       status.textContent = "✅ GitHub 内容已加载。";
+    }
+
+    window.onload = () => {
+      ensureToken();
+      if (GITHUB_TOKEN) loadContent();
     };
   </script>
 </body>
