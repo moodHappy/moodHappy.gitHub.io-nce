@@ -5,106 +5,454 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GitHub 同步助手</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 1em;
-      background: #f9f9f9;
+    :root {
+      --primary-bg: #f9f9f9;
+      --secondary-bg: #fff;
+      --text-color: #222;
+      --border-color: #ccc;
+      --button-primary: #4CAF50;
+      --button-copy: #2196F3;
+      --button-delete: #f44336;
+      --shadow: rgba(0,0,0,0.1);
+      --modal-bg: rgba(0,0,0,0.5);
+      --status-color: #444;
     }
+
+    /* 护眼主题 */
+    [data-theme="dark"] {
+      --primary-bg: #1a1a1a;
+      --secondary-bg: #2d2d2d;
+      --text-color: #e0e0e0;
+      --border-color: #555;
+      --button-primary: #45a049;
+      --button-copy: #1976D2;
+      --button-delete: #d32f2f;
+      --shadow: rgba(255,255,255,0.1);
+      --modal-bg: rgba(0,0,0,0.8);
+      --status-color: #bbb;
+    }
+
+    [data-theme="sepia"] {
+      --primary-bg: #f4f1e8;
+      --secondary-bg: #faf8f1;
+      --text-color: #5c4b37;
+      --border-color: #d4c5a9;
+      --button-primary: #8b7355;
+      --button-copy: #6b5b73;
+      --button-delete: #a0616a;
+      --shadow: rgba(92,75,55,0.1);
+      --modal-bg: rgba(92,75,55,0.5);
+      --status-color: #7a6b4d;
+    }
+
+    [data-theme="green"] {
+      --primary-bg: #f0f4f0;
+      --secondary-bg: #f8faf8;
+      --text-color: #2d4a2d;
+      --border-color: #c8d4c8;
+      --button-primary: #5d7c5d;
+      --button-copy: #4a6b7c;
+      --button-delete: #7c5d5d;
+      --shadow: rgba(45,74,45,0.1);
+      --modal-bg: rgba(45,74,45,0.5);
+      --status-color: #5d7c5d;
+    }
+
+    [data-theme="blue"] {
+      --primary-bg: #f0f4f8;
+      --secondary-bg: #f8fafc;
+      --text-color: #2d3748;
+      --border-color: #cbd5e0;
+      --button-primary: #4299e1;
+      --button-copy: #3182ce;
+      --button-delete: #e53e3e;
+      --shadow: rgba(45,55,72,0.1);
+      --modal-bg: rgba(45,55,72,0.5);
+      --status-color: #4a5568;
+    }
+
+    body {
+      font-family: var(--font-family, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+      font-size: var(--font-size, 16px);
+      line-height: var(--line-height, 1.6);
+      padding: 1em;
+      background: var(--primary-bg);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+      margin: 0;
+    }
+
+    /* 字体族设置 */
+    [data-font="system"] { --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    [data-font="serif"] { --font-family: 'Times New Roman', Georgia, serif; }
+    [data-font="mono"] { --font-family: 'Consolas', 'Monaco', 'Courier New', monospace; }
+    [data-font="chinese"] { --font-family: 'PingFang SC', 'Microsoft YaHei', '微软雅黑', sans-serif; }
+    [data-font="mixed"] { --font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+
+    /* 字号设置 */
+    [data-size="small"] { --font-size: 14px; --line-height: 1.5; }
+    [data-size="medium"] { --font-size: 16px; --line-height: 1.6; }
+    [data-size="large"] { --font-size: 18px; --line-height: 1.7; }
+    [data-size="xlarge"] { --font-size: 20px; --line-height: 1.8; }
+
+    h2 {
+      margin-top: 0;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     textarea {
       width: 100%;
-      min-height: 100px;
-      font-size: 16px;
-      padding: 10px;
+      min-height: 120px;
+      font-size: var(--font-size);
+      font-family: var(--font-family);
+      line-height: var(--line-height);
+      padding: 12px;
       border-radius: 8px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border-color);
       box-sizing: border-box;
-      resize: none;
-      overflow: hidden;
+      resize: vertical;
+      background: var(--secondary-bg);
+      color: var(--text-color);
+      transition: all 0.3s ease;
     }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--button-primary);
+      box-shadow: 0 0 0 2px var(--shadow);
+    }
+
+    .button-group {
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     button {
-      margin: 6px 6px 6px 0;
       padding: 10px 16px;
-      font-size: 16px;
+      font-size: 14px;
       border-radius: 6px;
       border: none;
-      background-color: #4CAF50;
+      background-color: var(--button-primary);
       color: white;
-    }
-    button.copy { background-color: #2196F3; }
-    button.delete { background-color: #f44336; }
-    #status {
-      margin-top: 10px;
-      color: #444;
-      font-size: 14px;
-    }
-    #settings {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 20px;
       cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
     }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.copy { background-color: var(--button-copy); }
+    button.delete { background-color: var(--button-delete); }
+    button.settings { background-color: #666; }
+
+    #status {
+      margin-top: 15px;
+      color: var(--status-color);
+      font-size: 14px;
+      padding: 8px 12px;
+      background: var(--secondary-bg);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    #settingsPanel {
+      position: fixed;
+      top: 0; right: -350px;
+      width: 300px;
+      height: 100vh;
+      background: var(--secondary-bg);
+      border-left: 1px solid var(--border-color);
+      padding: 20px;
+      box-shadow: -2px 0 10px var(--shadow);
+      transition: right 0.3s ease;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+
+    #settingsPanel.open {
+      right: 0;
+    }
+
+    #settingsOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: var(--modal-bg);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    #settingsOverlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .settings-section {
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .settings-section:last-child {
+      border-bottom: none;
+    }
+
+    .settings-section h4 {
+      margin: 0 0 15px 0;
+      color: var(--text-color);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-option {
+      margin-bottom: 10px;
+    }
+
+    .settings-option label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .settings-option label:hover {
+      background: var(--primary-bg);
+    }
+
+    .settings-option input[type="radio"] {
+      margin: 0;
+    }
+
     #tokenModal {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: var(--modal-bg);
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 999;
+      z-index: 1001;
     }
+
     #tokenModalContent {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
+      background: var(--secondary-bg);
+      color: var(--text-color);
+      padding: 25px;
+      border-radius: 12px;
       max-width: 90%;
+      width: 400px;
+      box-shadow: 0 10px 30px var(--shadow);
     }
+
+    #tokenModalContent h3 {
+      margin-top: 0;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     #tokenModalContent input {
       width: 100%;
-      padding: 10px;
-      margin-top: 10px;
+      padding: 12px;
+      margin: 15px 0;
       font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #aaa;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--primary-bg);
+      color: var(--text-color);
+      box-sizing: border-box;
     }
+
     article.immersive-content {
       display: block;
-      background: #fff;
-      padding: 12px;
-      margin-top: 10px;
+      background: var(--secondary-bg);
+      padding: 20px;
+      margin-top: 15px;
       border-radius: 8px;
-      border: 1px solid #ccc;
-      line-height: 1.6;
-      font-size: 17px;
-      color: #222;
+      border: 1px solid var(--border-color);
+      line-height: var(--line-height);
+      font-size: var(--font-size);
+      font-family: var(--font-family);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px var(--shadow);
     }
+
     article.immersive-content p {
       margin-bottom: 1em;
       white-space: pre-wrap;
     }
+
+    article.immersive-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .word-count {
+      font-size: 12px;
+      color: var(--status-color);
+      text-align: right;
+      margin-top: 5px;
+      opacity: 0.7;
+    }
+
+    @media (max-width: 768px) {
+      #settingsPanel {
+        width: 100%;
+        right: -100%;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--primary-bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--status-color);
+    }
   </style>
 </head>
-<body>
-  <div id="settings" title="重新输入 GitHub Token" onclick="resetToken()">⚙️</div>
-  <h2>📤 GitHub 同步助手</h2>
+<body data-theme="light" data-font="mixed" data-size="medium">
+  <h2>
+    📤 GitHub 同步助手
+    <div style="margin-left: auto;">
+      <button class="settings" onclick="toggleSettings()">⚙️ 设置</button>
+    </div>
+  </h2>
 
-  <div>
-    <button onclick="submitContent()">提交</button>
-    <button class="delete" onclick="deleteContent()">删除</button>
-    <button class="copy" onclick="copyContent()">复制</button>
+  <div class="button-group">
+    <button onclick="submitContent()">✅ 提交</button>
+    <button class="delete" onclick="deleteContent()">🗑️ 删除</button>
+    <button class="copy" onclick="copyContent()">📋 复制</button>
+    <button onclick="toggleEditMode()" id="editToggle" style="background: #ff9800;">✏️ 编辑</button>
   </div>
 
   <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
+  <div class="word-count" id="wordCount">0 字符 | 0 单词</div>
+  
   <article id="renderedContent" class="immersive-content" style="display:none;"></article>
 
   <div id="status">⏳ 正在加载 GitHub 内容...</div>
 
+  <!-- 设置面板 -->
+  <div id="settingsOverlay" onclick="closeSettings()"></div>
+  <div id="settingsPanel">
+    <div class="settings-section">
+      <h4>🎨 护眼主题</h4>
+      <div class="settings-option">
+        <label><input type="radio" name="theme" value="light" checked> 🌞 明亮模式</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="theme" value="dark"> 🌙 深色模式</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="theme" value="sepia"> 📜 护眼棕色</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="theme" value="green"> 🌿 护眼绿色</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="theme" value="blue"> 💙 护眼蓝色</label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>🔤 字体选择</h4>
+      <div class="settings-option">
+        <label><input type="radio" name="font" value="mixed" checked> 🌐 中英混排</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="font" value="system"> 💻 系统默认</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="font" value="serif"> 📖 衬线字体</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="font" value="mono"> ⌨️ 等宽字体</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="font" value="chinese"> 🇨🇳 中文优先</label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>📏 字号大小</h4>
+      <div class="settings-option">
+        <label><input type="radio" name="size" value="small"> 🔍 小号 (14px)</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="size" value="medium" checked> 📝 中号 (16px)</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="size" value="large"> 📖 大号 (18px)</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="radio" name="size" value="xlarge"> 🔎 特大 (20px)</label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>🔐 账户管理</h4>
+      <button onclick="resetToken()" style="width: 100%; background: #ff9800;">🔄 重设 GitHub Token</button>
+    </div>
+
+    <div class="settings-section">
+      <h4>ℹ️ 使用说明</h4>
+      <p style="font-size: 12px; line-height: 1.4; color: var(--status-color); margin: 0;">
+        • 支持实时字数统计<br>
+        • 自动保存设置偏好<br>
+        • 支持键盘快捷键<br>
+        • Ctrl+S 快速提交<br>
+        • Esc 关闭设置面板
+      </p>
+    </div>
+  </div>
+
+  <!-- Token 模态框 -->
   <div id="tokenModal" style="display:none;">
     <div id="tokenModalContent">
       <h3>🔐 请输入你的 GitHub Token：</h3>
       <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
-      <button style="margin-top:10px;" onclick="saveToken()">保存 Token</button>
+      <button style="margin-top:15px; width: 100%;" onclick="saveToken()">💾 保存 Token</button>
     </div>
   </div>
 
@@ -118,6 +466,69 @@
 
     const textarea = document.getElementById("inputContent");
     const renderedDiv = document.getElementById("renderedContent");
+    const wordCountDiv = document.getElementById("wordCount");
+    const editToggle = document.getElementById("editToggle");
+    
+    let isRenderMode = false;
+
+    // 初始化设置
+    function initSettings() {
+      const savedTheme = localStorage.getItem("app_theme") || "light";
+      const savedFont = localStorage.getItem("app_font") || "mixed";
+      const savedSize = localStorage.getItem("app_size") || "medium";
+      
+      applySettings(savedTheme, savedFont, savedSize);
+      updateRadioButtons("theme", savedTheme);
+      updateRadioButtons("font", savedFont);
+      updateRadioButtons("size", savedSize);
+    }
+
+    function updateRadioButtons(name, value) {
+      const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    function applySettings(theme, font, size) {
+      document.body.setAttribute("data-theme", theme);
+      document.body.setAttribute("data-font", font);
+      document.body.setAttribute("data-size", size);
+    }
+
+    // 设置面板控制
+    function toggleSettings() {
+      const panel = document.getElementById("settingsPanel");
+      const overlay = document.getElementById("settingsOverlay");
+      const isOpen = panel.classList.contains("open");
+      
+      if (isOpen) {
+        closeSettings();
+      } else {
+        panel.classList.add("open");
+        overlay.classList.add("open");
+      }
+    }
+
+    function closeSettings() {
+      document.getElementById("settingsPanel").classList.remove("open");
+      document.getElementById("settingsOverlay").classList.remove("open");
+    }
+
+    // 字数统计
+    function updateWordCount() {
+      const text = textarea.value;
+      const charCount = text.length;
+      const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+      wordCountDiv.textContent = `${charCount} 字符 | ${wordCount} 单词`;
+    }
+
+    // 编辑模式切换
+    function toggleEditMode() {
+      if (isRenderMode) {
+        editMode();
+      } else if (textarea.value.trim()) {
+        renderMode(textarea.value);
+      }
+    }
 
     function ensureToken() {
       if (!GITHUB_TOKEN) {
@@ -134,12 +545,14 @@
       localStorage.setItem("github_token", token);
       GITHUB_TOKEN = token;
       document.getElementById("tokenModal").style.display = "none";
+      document.getElementById("tokenInput").value = "";
       loadContent();
     }
 
     function resetToken() {
       localStorage.removeItem("github_token");
       GITHUB_TOKEN = null;
+      closeSettings();
       ensureToken();
     }
 
@@ -168,73 +581,96 @@
       if (!content) return alert("请输入内容再提交！");
       document.getElementById("status").textContent = "🔄 正在提交到 GitHub...";
 
-      const { sha } = await getCurrentFileShaAndContent();
-      const encodedContent = btoa(unescape(encodeURIComponent(content)));
+      try {
+        const { sha } = await getCurrentFileShaAndContent();
+        const encodedContent = btoa(unescape(encodeURIComponent(content)));
 
-      const res = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: "更新 transfer.txt",
-          content: encodedContent,
-          committer: { name: "AutoCommit", email: "bot@example.com" },
-          ...(sha ? { sha } : {})
-        })
-      });
+        const res = await fetch(apiUrl, {
+          method: "PUT",
+          headers: {
+            ...getHeaders(),
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: "更新 transfer.txt",
+            content: encodedContent,
+            committer: { name: "AutoCommit", email: "bot@example.com" },
+            ...(sha ? { sha } : {})
+          })
+        });
 
-      if (res.ok) {
-        renderMode(content);
-        document.getElementById("status").textContent = "✅ 提交成功，段落已渲染。";
-      } else {
-        document.getElementById("status").textContent = "❌ 提交失败：" + (await res.json()).message;
+        if (res.ok) {
+          renderMode(content);
+          document.getElementById("status").textContent = "✅ 提交成功，段落已渲染。";
+        } else {
+          const errorData = await res.json();
+          document.getElementById("status").textContent = "❌ 提交失败：" + (errorData.message || "未知错误");
+        }
+      } catch (err) {
+        document.getElementById("status").textContent = "❌ 网络错误：" + err.message;
       }
     }
 
     async function deleteContent() {
+      if (!confirm("确定要清空 GitHub 文件吗？")) return;
+      
       document.getElementById("status").textContent = "🗑️ 正在清空 GitHub 文件...";
-      const { sha } = await getCurrentFileShaAndContent();
-      if (!sha) {
-        textarea.value = "";
-        editMode();
-        document.getElementById("status").textContent = "✅ 文件已为空。";
-        return;
-      }
+      
+      try {
+        const { sha } = await getCurrentFileShaAndContent();
+        if (!sha) {
+          textarea.value = "";
+          editMode();
+          updateWordCount();
+          document.getElementById("status").textContent = "✅ 文件已为空。";
+          return;
+        }
 
-      const res = await fetch(apiUrl, {
-        method: "PUT",
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: "清空 transfer.txt",
-          content: btoa(""),
-          sha,
-          committer: { name: "AutoCommit", email: "bot@example.com" }
-        })
-      });
+        const res = await fetch(apiUrl, {
+          method: "PUT",
+          headers: {
+            ...getHeaders(),
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: "清空 transfer.txt",
+            content: btoa(""),
+            sha,
+            committer: { name: "AutoCommit", email: "bot@example.com" }
+          })
+        });
 
-      if (res.ok) {
-        textarea.value = "";
-        editMode();
-        document.getElementById("status").textContent = "✅ GitHub 内容已清空。";
-      } else {
-        document.getElementById("status").textContent = "❌ 删除失败：" + (await res.json()).message;
+        if (res.ok) {
+          textarea.value = "";
+          editMode();
+          updateWordCount();
+          document.getElementById("status").textContent = "✅ GitHub 内容已清空。";
+        } else {
+          const errorData = await res.json();
+          document.getElementById("status").textContent = "❌ 删除失败：" + (errorData.message || "未知错误");
+        }
+      } catch (err) {
+        document.getElementById("status").textContent = "❌ 网络错误：" + err.message;
       }
     }
 
     function copyContent() {
-      const content = renderedDiv.style.display !== "none" ? renderedDiv.textContent : textarea.value;
-      navigator.clipboard.writeText(content);
-      document.getElementById("status").textContent = "📋 内容已复制到剪贴板。";
+      const content = isRenderMode ? renderedDiv.textContent : textarea.value;
+      if (!content.trim()) {
+        document.getElementById("status").textContent = "⚠️ 没有内容可复制。";
+        return;
+      }
+      
+      navigator.clipboard.writeText(content).then(() => {
+        document.getElementById("status").textContent = "📋 内容已复制到剪贴板。";
+      }).catch(() => {
+        document.getElementById("status").textContent = "❌ 复制失败，请手动选择复制。";
+      });
     }
 
     function renderMode(text) {
-      renderedDiv.innerHTML = ""; // 清空
-      const paragraphs = text.split(/\n+/); // 按多行分段
+      renderedDiv.innerHTML = "";
+      const paragraphs = text.split(/\n\s*\n/);
       for (const para of paragraphs) {
         if (para.trim()) {
           const p = document.createElement("p");
@@ -244,27 +680,85 @@
       }
       renderedDiv.style.display = "block";
       textarea.style.display = "none";
+      wordCountDiv.style.display = "none";
+      editToggle.textContent = "✏️ 编辑";
+      editToggle.style.background = "#ff9800";
+      isRenderMode = true;
     }
 
     function editMode() {
       textarea.style.display = "block";
       renderedDiv.style.display = "none";
+      wordCountDiv.style.display = "block";
+      editToggle.textContent = "👁️ 预览";
+      editToggle.style.background = "#9c27b0";
+      isRenderMode = false;
+      textarea.focus();
     }
 
     async function loadContent() {
-      const { content } = await getCurrentFileShaAndContent();
-      if (content.trim()) {
-        renderMode(content);
-      } else {
-        textarea.value = "";
+      try {
+        const { content } = await getCurrentFileShaAndContent();
+        textarea.value = content;
+        updateWordCount();
+        
+        if (content.trim()) {
+          renderMode(content);
+        } else {
+          editMode();
+        }
+        document.getElementById("status").textContent = "✅ GitHub 内容已加载。";
+      } catch (err) {
+        document.getElementById("status").textContent = "❌ 加载失败：" + err.message;
         editMode();
       }
-      document.getElementById("status").textContent = "✅ GitHub 内容已加载。";
     }
 
+    // 事件监听
+    textarea.addEventListener("input", updateWordCount);
+
+    // 设置变更监听
+    document.addEventListener("change", (e) => {
+      if (e.target.type === "radio") {
+        const name = e.target.name;
+        const value = e.target.value;
+        
+        if (name === "theme") {
+          localStorage.setItem("app_theme", value);
+          document.body.setAttribute("data-theme", value);
+        } else if (name === "font") {
+          localStorage.setItem("app_font", value);
+          document.body.setAttribute("data-font", value);
+        } else if (name === "size") {
+          localStorage.setItem("app_size", value);
+          document.body.setAttribute("data-size", value);
+        }
+      }
+    });
+
+    // 键盘快捷键
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
+        submitContent();
+      } else if (e.key === "Escape") {
+        closeSettings();
+      }
+    });
+
+    // Token 输入框回车提交
+    document.getElementById("tokenInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        saveToken();
+      }
+    });
+
+    // 初始化
     window.onload = () => {
+      initSettings();
       ensureToken();
       if (GITHUB_TOKEN) loadContent();
+      updateWordCount();
     };
   </script>
 </body>
