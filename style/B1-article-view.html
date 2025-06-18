@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中转站</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* Modern CSS Variables */
         :root {
@@ -23,6 +24,7 @@
             --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             --border-radius: 16px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --base-font-size: 16px; /* Define a base font size variable */
         }
 
         /* Base Styles */
@@ -92,7 +94,7 @@
             white-space: nowrap;
         }
 
-        /* Home Button Style - Applied to "语速" button as well */
+        /* Home Button Style - Applied to "语速" and "齿轮" buttons as well */
         .home-button {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
@@ -120,6 +122,27 @@
         .home-button:active {
             transform: translateY(0);
             box-shadow: var(--shadow-sm);
+        }
+
+        /* NEW: Settings Gear Button */
+        #settingsGearButton {
+            width: 40px; /* Make it a square for the icon */
+            height: 40px;
+            padding: 0; /* Remove padding to center icon */
+            border-radius: 50%; /* Make it circular */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            box-shadow: var(--shadow-sm);
+            margin-left: auto; /* Push to the right */
+        }
+        #settingsGearButton:hover {
+            transform: rotate(30deg) translateY(-2px); /* Add rotation on hover */
+        }
+        #settingsGearButton i {
+            color: white;
+            transition: var(--transition);
         }
 
         /* Speed Slider Wrapper for vertical orientation and hiding */
@@ -210,6 +233,95 @@
             font-size: 1.1em;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
+
+        /* NEW: Font Size Slider Wrapper */
+        .font-size-slider-wrapper {
+            position: fixed;
+            right: 20px; /* Position on the right side */
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 10px;
+            background: rgba(255, 255, 255, 0.15); /* Glass effect */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            gap: 10px;
+            transition: opacity 0.3s, visibility 0.3s, transform 0.3s ease-in-out;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(-50%) translateX(100%); /* Start off-screen to the right */
+        }
+        .font-size-slider-wrapper.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(-50%) translateX(0);
+        }
+
+        .font-size-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 8px; /* Vertical slider */
+            height: 180px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: var(--transition);
+            writing-mode: vertical-lr;
+            transform: rotate(180deg); /* Min at bottom, max at top */
+        }
+
+        .font-size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .font-size-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .font-size-slider:hover::-webkit-slider-thumb {
+            transform: scale(1.1) rotate(-180deg);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .font-size-slider:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            transform: scale(0.95) rotate(-180deg);
+        }
+
+        .font-size-value-display {
+            font-weight: 700;
+            color: white;
+            min-width: 40px;
+            text-align: center;
+            font-size: 1.1em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
 
         /* Content Container */
         .content-container {
@@ -326,6 +438,9 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            /* Apply dynamic font size */
+            font-size: calc(var(--base-font-size) * var(--font-scale, 1));
+            transition: font-size 0.2s ease-in-out; /* Smooth transition for font size change */
         }
 
         .article-content a {
@@ -515,6 +630,15 @@
                 height: 150px;
             }
 
+            .font-size-slider-wrapper {
+                right: 10px;
+                padding: 10px 8px;
+            }
+
+            .font-size-slider {
+                height: 150px;
+            }
+
             .content-container {
                 padding: 20px;
             }
@@ -529,9 +653,10 @@
                 padding: 18px 20px;
             }
 
+            /* Adjust article-content font size calculation for mobile */
             .article-content {
                 padding: 30px;
-                font-size: 1em;
+                font-size: calc(var(--base-font-size) * var(--font-scale, 1) * 0.9); /* Slightly smaller base for mobile */
             }
 
             .read-aloud-button {
@@ -542,6 +667,12 @@
             .home-button {
                 padding: 8px 16px;
                 font-size: 0.9em;
+            }
+
+            #settingsGearButton {
+                width: 35px;
+                height: 35px;
+                font-size: 1.1em;
             }
 
             /* --- NEW: Mobile Pagination Styles --- */
@@ -574,6 +705,19 @@
                 font-size: 0.95em;
             }
 
+            .font-size-slider-wrapper {
+                right: 5px;
+                padding: 8px 5px;
+            }
+
+            .font-size-slider {
+                height: 100px;
+            }
+
+            .font-size-label, .font-size-value-display {
+                font-size: 0.95em;
+            }
+
             .content-container {
                 padding: 15px;
             }
@@ -588,9 +732,10 @@
                 padding: 15px 18px;
             }
 
+            /* Adjust article-content font size calculation for smaller mobile */
             .article-content {
                 padding: 25px;
-                font-size: 0.95em;
+                font-size: calc(var(--base-font-size) * var(--font-scale, 1) * 0.85); /* Even smaller base for small mobile */
             }
 
             .read-aloud-button {
@@ -601,6 +746,12 @@
             .home-button {
                 padding: 6px 12px;
                 font-size: 0.85em;
+            }
+
+            #settingsGearButton {
+                width: 30px;
+                height: 30px;
+                font-size: 1em;
             }
 
             /* --- NEW: Small Mobile Pagination Styles --- */
@@ -615,7 +766,7 @@
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
+                transition-duration: 0.01ms !iqmportant;
             }
         }
 
@@ -623,7 +774,9 @@
         .article-header:focus,
         .read-aloud-button:focus,
         .speed-slider:focus,
-        .home-button:focus {
+        .home-button:focus,
+        .font-size-slider:focus, /* Added for font size slider */
+        #settingsGearButton:focus { /* Added for settings gear button */
             outline: 2px solid var(--accent-color); /* Highlight with accent color */
             outline-offset: 3px;
         }
@@ -633,12 +786,21 @@
     <div class="speed-control-container">
         <a href="?" id="homeButton" class="home-button" aria-label="返回首页">首页</a>
         <button id="toggleSpeedSliderButton" class="home-button" aria-label="切换语速控制条">语速</button>
+        <button id="settingsGearButton" class="home-button" aria-label="切换字体大小控制条">
+            <i class="fas fa-cog"></i>
+        </button>
     </div>
 
     <div class="speed-slider-wrapper" id="speedSliderWrapper">
-        <span class="speed-label"></span>
+        <span class="speed-label">语速</span>
         <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20" aria-label="调整语速">
         <span id="currentSpeedValue" class="speed-value-display">-20</span>
+    </div>
+
+    <div class="font-size-slider-wrapper" id="fontSizeSliderWrapper">
+        <span class="font-size-label">字体大小</span>
+        <input type="range" id="fontSizeRange" class="font-size-slider" min="0.7" max="1.5" step="0.1" value="1.0" aria-label="调整字体大小">
+        <span id="currentFontSizeValue" class="font-size-value-display">1.0x</span>
     </div>
 
     <div class="read-aloud-container" id="readAloudContainer">
@@ -1069,6 +1231,7 @@
                 renderPagination(totalPages, currentPage);
             }
             cleanAllTitles();
+            applyFontSize(parseFloat(localStorage.getItem('fontSize') || '1.0')); // Apply saved font size after rendering
         }
 
         // --- Function to clean titles ---
@@ -1089,6 +1252,11 @@
             });
         }
 
+        // NEW: Font Size functions
+        function applyFontSize(scale) {
+            document.documentElement.style.setProperty('--font-scale', scale);
+            document.getElementById('currentFontSizeValue').textContent = `${scale.toFixed(1)}x`;
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             const articlesContainer = document.getElementById('articles-container');
@@ -1098,14 +1266,27 @@
             const readAloudContainer = document.getElementById('readAloudContainer');
             const speedSliderWrapper = document.getElementById('speedSliderWrapper');
             const homeButton = document.getElementById('homeButton');
-            const toggleSpeedSliderButton = document.getElementById('toggleSpeedSliderButton'); // 获取新增的语速按钮
+            const toggleSpeedSliderButton = document.getElementById('toggleSpeedSliderButton');
+            const settingsGearButton = document.getElementById('settingsGearButton'); // NEW
+            const fontSizeSliderWrapper = document.getElementById('fontSizeSliderWrapper'); // NEW
+            const fontSizeRange = document.getElementById('fontSizeRange'); // NEW
+            const currentFontSizeValueDisplay = document.getElementById('currentFontSizeValue'); // NEW
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1_copy.md';
 
             // Don't add hash on initial load to keep URL clean for pagination
-            // updateUrlWithHash(); 
+            // updateUrlWithHash();
 
+            // Initialize speed slider
             currentSpeedValueDisplay.textContent = speedRange.value;
             currentSpeed = parseInt(speedRange.value);
+
+            // Initialize font size slider from localStorage or default
+            const savedFontSize = parseFloat(localStorage.getItem('fontSize'));
+            if (!isNaN(savedFontSize)) {
+                fontSizeRange.value = savedFontSize;
+            }
+            applyFontSize(parseFloat(fontSizeRange.value));
+
 
             speedRange.addEventListener('input', function() {
                 currentSpeedValueDisplay.textContent = this.value;
@@ -1114,6 +1295,16 @@
             speedRange.addEventListener('change', function() {
                 currentSpeed = parseInt(this.value);
                 restartTTSWithNewSpeed();
+            });
+
+            // NEW: Font size slider event listeners
+            fontSizeRange.addEventListener('input', function() {
+                const newScale = parseFloat(this.value);
+                applyFontSize(newScale);
+            });
+
+            fontSizeRange.addEventListener('change', function() {
+                localStorage.setItem('fontSize', this.value); // Save font size to localStorage
             });
 
             let lastScrollTop = 0;
@@ -1138,10 +1329,22 @@
 
             // Toggle Speed Slider button functionality
             toggleSpeedSliderButton.addEventListener('click', function() {
-                speedSliderWrapper.classList.toggle('visible'); // 切换可见性
+                speedSliderWrapper.classList.toggle('visible'); // Toggle visibility
                 if (speedSliderWrapper.classList.contains('visible')) {
-                    speedRange.focus(); // 聚焦滑动条
+                    speedRange.focus(); // Focus slider
                 }
+                // Ensure other sliders are hidden
+                fontSizeSliderWrapper.classList.remove('visible');
+            });
+
+            // NEW: Toggle Font Size Slider button functionality
+            settingsGearButton.addEventListener('click', function() {
+                fontSizeSliderWrapper.classList.toggle('visible'); // Toggle visibility
+                if (fontSizeSliderWrapper.classList.contains('visible')) {
+                    fontSizeRange.focus(); // Focus slider
+                }
+                // Ensure other sliders are hidden
+                speedSliderWrapper.classList.remove('visible');
             });
 
             const loadContent = () => {
