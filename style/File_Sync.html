@@ -126,6 +126,7 @@
     const GITHUB_USERNAME = "moodHappy";
     const GITHUB_REPO = "HelloWorld";
     const BRANCH_NAME = "master";
+    const UPLOAD_PREFIX = "push_"; // Define the prefix
     let currentSHA = null;
     let transferTxtSHA = null;
 
@@ -152,7 +153,8 @@
       const file = document.getElementById("fileInput").files[0];
       if (file) {
         const pathInput = document.getElementById("pathInput");
-        if (!pathInput.value) pathInput.value = "Notes/" + file.name;
+        // Add the prefix to the filename
+        if (!pathInput.value) pathInput.value = "Notes/" + UPLOAD_PREFIX + file.name;
       }
     }
 
@@ -189,7 +191,9 @@
         const reader = new FileReader();
         reader.onload = async () => {
           const base64Data = reader.result.split(',')[1];
-          const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${pathInput}`;
+          // Ensure the uploaded path includes the prefix if not already present
+          const finalPath = pathInput.includes(UPLOAD_PREFIX) ? pathInput : "Notes/" + UPLOAD_PREFIX + file.name;
+          const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${finalPath}`;
 
           let sha = null;
           try {
@@ -220,7 +224,7 @@
           const data = await confirmRes.json();
           currentSHA = data.sha;
 
-          const encodedPath = encodePath(pathInput);
+          const encodedPath = encodePath(finalPath); // Use finalPath here
           const githubPageLink = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/blob/${BRANCH_NAME}/${encodedPath}`;
           const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
           shareDiv.innerHTML = `📎 <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br><br>📥 <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>`;
@@ -230,7 +234,7 @@
           const deleteAt = Date.now() + deleteTimeMinutes * 60 * 1000; // 计算删除时间戳 (毫秒)
 
           try {
-            await updatePendingDeletion(pathInput, deleteAt, token);
+            await updatePendingDeletion(finalPath, deleteAt, token); // Use finalPath here
              log.textContent += `\n✅ 文件上传成功！`;
               log.textContent += `\n⏳ 文件将在大约 ${deleteTimeMinutes} 分钟后被 GitHub Actions 自动删除。`;
           } catch (err) {
