@@ -9,12 +9,9 @@
       font-family: sans-serif;
       max-width: 600px;
       margin: auto;
-      padding: 20px; /* 页面的整体内边距 */
+      padding: 20px;
       background: #f9f9f9;
-      /* 确保 body 不会溢出，尤其在移动端 */
       overflow-x: hidden;
-      /* Add padding-bottom to ensure content isn't obscured by fixedBar */
-      /* Height of fixedBar (approx 40px button + 2*10px padding) + 10px bottom = ~70px. Let's make it 90px for safety. */
       padding-bottom: 90px;
     }
     input, button, textarea {
@@ -43,8 +40,7 @@
       border: none;
       background: none;
       box-sizing: border-box;
-      /* Ensure shareLink content is visible and does not get cut off */
-      padding-bottom: 20px; /* Give some space below the links */
+      padding-bottom: 20px;
     }
     #shareLink a {
       color: blue;
@@ -59,20 +55,20 @@
       bottom: 10px;
       left: 0;
       right: 0;
-      width: 100%; /* 占据视口宽度 */
-      max-width: 600px; /* 但不超过 600px */
-      margin: auto; /* 在宽屏居中 */
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
       display: flex;
       gap: 10px;
-      padding: 10px; /* fixedBar 自身的内边距 */
+      padding: 10px;
       background: #ffffffdd;
       backdrop-filter: blur(4px);
       border-top: 1px solid #ccc;
       box-shadow: 0 -1px 6px rgba(0,0,0,0.1);
       z-index: 1000;
-      flex-wrap: nowrap; /* 不允许按钮换行，让它们收缩 */
-      box-sizing: border-box; /* 确保 padding 包含在 width 内 */
-      overflow: hidden; /* 隐藏可能溢出的内容，尽管我们希望按钮自身收缩 */
+      flex-wrap: nowrap;
+      box-sizing: border-box;
+      overflow: hidden;
     }
     @media (max-width: 600px) {
         #fixedBar {
@@ -81,7 +77,7 @@
         }
     }
     #fixedBar button {
-      flex: 1 1 0%; /* flex-grow: 1, flex-shrink: 1, flex-basis: 0%. 允许按钮充分收缩 */
+      flex: 1 1 0%;
       min-width: unset;
     }
     @media (max-width: 480px) {
@@ -108,8 +104,13 @@
   <label>上传路径:</label>
   <input id="pathInput" />
 
-  <label>删除时间 (秒):</label>
-  <input id="deleteTimeInput" type="number" value="30" min="1" /> <div id="savingStatus"></div>
+  <label>删除延迟 (分钟):</label>
+  <input id="deleteTimeInput" type="number" value="20" min="20" />
+  <p style="color: gray; font-size: 0.9em;">
+    文件将在上传后至少 20 分钟删除。实际删除时间取决于 GitHub Actions 的运行周期。
+  </p>
+
+  <div id="savingStatus"></div>
   <div id="shareLink"></div>
   <div id="log"></div>
 
@@ -175,7 +176,6 @@
       currentSHA = null;
 
       if (file) {
-        // --- 文件上传逻辑 ---
         if (!pathInput) {
           log.textContent = "❌ 请填写文件上传路径";
           return;
@@ -197,7 +197,7 @@
               headers: { Authorization: `token ${token}` }
             });
             if (checkRes.ok) sha = (await checkRes.json()).sha;
-          } catch (e) { /* 忽略 404 用于新文件，sha 保持 null */ }
+          } catch (e) { }
 
           const res = await fetch(url, {
             method: "PUT",
@@ -225,13 +225,14 @@
           const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
           shareDiv.innerHTML = `📎 <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br><br>📥 <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>`;
 
-          const deleteTimeSeconds = parseInt(document.getElementById("deleteTimeInput").value, 10) || 30;
-          const deleteAt = Date.now() + deleteTimeSeconds * 1000; // 计算删除时间戳 (毫秒)
+          // 获取删除延迟（分钟）并转换为毫秒
+          const deleteTimeMinutes = parseInt(document.getElementById("deleteTimeInput").value, 10) || 20;
+          const deleteAt = Date.now() + deleteTimeMinutes * 60 * 1000; // 计算删除时间戳 (毫秒)
 
           try {
             await updatePendingDeletion(pathInput, deleteAt, token);
-            log.textContent += `\n✅ 文件上传成功！`;
-            log.textContent += `\n⏳ 文件已计划在 ${deleteTimeSeconds} 秒（约 ${Math.ceil(deleteTimeSeconds / 60)} 分钟）后通过 GitHub Actions 自动删除。`;
+             log.textContent += `\n✅ 文件上传成功！`;
+              log.textContent += `\n⏳ 文件将在大约 ${deleteTimeMinutes} 分钟后被 GitHub Actions 自动删除。`;
           } catch (err) {
             log.textContent += `\n❌ 文件上传成功，但无法更新删除计划：${err.message}`;
           }
@@ -239,7 +240,6 @@
         reader.readAsDataURL(file);
 
       } else if (transferContentArea.value.trim() !== "") {
-        // --- 文本提交逻辑 (从 transferContentArea 到 Notes/transfer.txt) ---
         log.textContent = "📝 正在提交 Notes/transfer.txt 文本...";
         const transferFilePath = "Notes/transfer.txt";
         try {
@@ -255,12 +255,6 @@
       }
     }
 
-    /**
-     * 更新或创建 pending_deletion.json 文件，添加新的删除计划。
-     * @param {string} filePath - 需要删除的文件路径（相对于仓库根目录）。
-     * @param {number} deleteAt - 删除时间戳（Unix 毫秒）。
-     * @param {string} token - GitHub Token。
-     */
     async function updatePendingDeletion(filePath, deleteAt, token) {
       const pendingDeletionFileName = "pending_deletion.json";
       const pendingDeletionPath = `Notes/${pendingDeletionFileName}`;
@@ -268,7 +262,6 @@
       let sha = null;
       let data = [];
 
-      // 1. 尝试获取现有的 pending_deletion.json 内容
       try {
         const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
         if (res.ok) {
@@ -282,10 +275,8 @@
         console.error(`Error getting ${pendingDeletionFileName}:`, err);
       }
 
-      // 2. 添加新的删除条目
       data.push({ path: filePath, deleteAt: deleteAt });
 
-      // 3. 将更新后的数据写回 pending_deletion.json
       const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
       const putRes = await fetch(url, {
         method: "PUT",
@@ -299,11 +290,6 @@
       }
     }
 
-    /**
-     * 更新或创建 Notes/transfer.txt 文件。
-     * @param {string} text - 要写入文件的文本内容。
-     * @param {string} token - GitHub Token。
-     */
     async function updateTransferFile(text, token) {
       const filePath = "Notes/transfer.txt";
       const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
@@ -342,7 +328,6 @@
       transferTxtSHA = data.content.sha;
     }
 
-    // 自动保存 transfer.txt 内容的防抖函数
     function debounce(fn, delay) {
       let timer = null;
       return function (...args) {
@@ -363,9 +348,6 @@
       }
     }, 800));
 
-    /**
-     * 从 GitHub 加载 Notes/transfer.txt 的内容。
-     */
     async function loadTransfer() {
       try {
         const token = getToken();
@@ -386,9 +368,6 @@
       }
     }
 
-    /**
-     * 复制 transfer.txt 的内容到剪贴板。
-     */
     function copyTransfer() {
       navigator.clipboard.writeText(document.getElementById("transferContent").value)
         .then(() => alert("📋 transfer.txt 内容已复制"))
