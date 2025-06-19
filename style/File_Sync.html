@@ -56,7 +56,7 @@
   <input id="pathInput" placeholder="上传到 GitHub 路径，例如 Notes/test.txt" />
 
   <label>删除时间 (秒):</label>
-  <input id="deleteTimeInput" type="number" value="60" min="1" />
+  <input id="deleteTimeInput" type="number" value="300" min="1" />
 
   <button onclick="uploadFile()">⬆️ 上传</button>
   <button id="deleteBtn" style="display:none; background:#f44; color:#fff;" onclick="deleteFile()">🗑️ 立即删除</button>
@@ -75,22 +75,58 @@
     let countdownTimer = null;
     let countdownSeconds = 60;
 
-    // 将路径按 / 分割，对每段分别 encodeURIComponent，再拼接，防止 / 变成 %2F
+    const STORAGE_DELETE_TIMESTAMP_KEY = "auto_delete_timestamp";
+    const STORAGE_DELETE_PATH_KEY = "auto_delete_path";
+    const STORAGE_DELETE_SHA_KEY = "auto_delete_sha";
+    const STORAGE_GITHUB_TOKEN_KEY = "github_token";
+
     function encodePath(path) {
       return path.split('/').map(encodeURIComponent).join('/');
     }
 
     window.onload = () => {
-      const savedToken = localStorage.getItem("github_token");
+      const savedToken = localStorage.getItem(STORAGE_GITHUB_TOKEN_KEY);
       if (savedToken) {
         document.getElementById("tokenInput").value = savedToken;
       }
+
+      tryRestoreAutoDelete();
     };
+
+    function tryRestoreAutoDelete() {
+      const timestamp = localStorage.getItem(STORAGE_DELETE_TIMESTAMP_KEY);
+      const path = localStorage.getItem(STORAGE_DELETE_PATH_KEY);
+      const sha = localStorage.getItem(STORAGE_DELETE_SHA_KEY);
+
+      if (timestamp && path && sha) {
+        const now = Date.now();
+        const expireTime = parseInt(timestamp, 10);
+
+        if (expireTime > now) {
+          countdownSeconds = Math.floor((expireTime - now) / 1000);
+          currentSHA = sha;
+          document.getElementById("pathInput").value = path;
+          document.getElementById("deleteBtn").style.display = "inline-block";
+
+          logMessage(`⏳ 恢复自动删除计时，文件将于 ${new Date(expireTime).toLocaleString()} 自动删除`);
+          startCountdown(getToken(), path);
+        } else {
+          currentSHA = sha;
+          document.getElementById("pathInput").value = path;
+          deleteFile(true, getToken(), path);
+        }
+      }
+    }
+
+    function logMessage(msg) {
+      const log = document.getElementById("log");
+      log.textContent = msg;
+    }
 
     function getToken() {
       const token = document.getElementById("tokenInput").value.trim();
       if (!token) throw new Error("请先输入 GitHub Token");
-      localStorage.setItem("github_token", token); // 记住 Token
+      localStorage.setItem(STORAGE_GITHUB_TOKEN_KEY, token);
       return token;
     }
 
@@ -120,16 +156,16 @@
       const shareDiv = document.getElementById("shareLink");
 
       if (!file || !path) {
-        log.textContent = "❌ 请选择文件并填写上传路径";
+        logMessage("❌ 请选择文件并填写上传路径");
         return;
       }
 
       if (file.size > 100 * 1024 * 1024) {
-        log.textContent = "❌ GitHub 不支持上传超过 100MB 的文件";
+        logMessage("❌ GitHub 不支持上传超过 100MB 的文件");
         return;
       }
 
-      log.textContent = `📤 正在上传 ${file.name}...`;
+      logMessage(`📤 正在上传 ${file.name}...`);
       deleteBtn.style.display = "none";
       contentArea.value = "";
       countdownDiv.textContent = "";
@@ -150,10 +186,10 @@
           if (checkRes.ok) {
             const data = await checkRes.json();
             sha = data.sha;
-            log.textContent += "\n📄 文件已存在，将覆盖";
+            logMessage(log.textContent + "\n📄 文件已存在，将覆盖");
           }
         } catch (e) {
-          log.textContent += "\n⚠️ 检查文件失败：" + e.message;
+          logMessage(log.textContent + "\n⚠️ 检查文件失败：" + e.message);
         }
 
         const res = await fetch(url, {
@@ -171,11 +207,11 @@
 
         if (!res.ok) {
           const err = await res.json();
-          log.textContent += `\n❌ 上传失败：${res.status} - ${err.message}`;
+          logMessage(log.textContent + `\n❌ 上传失败：${res.status} - ${err.message}`);
           return;
         }
 
-        log.textContent += "\n✅ 上传成功，正在确认...";
+        logMessage(log.textContent + "\n✅ 上传成功，正在确认...");
         const confirmRes = await fetch(url, {
           headers: { Authorization: `token ${token}` }
         });
@@ -194,7 +230,6 @@
           contentArea.value = "[内容解码失败]";
         }
 
-        // 生成正确编码的分享链接
         const encodedPath = encodePath(path);
 
         const githubPageLink = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/blob/${BRANCH_NAME}/${encodedPath}`;
@@ -205,7 +240,15 @@
 <a href="${rawLink}" target="_blank">${rawLink}</a>`;
 
         deleteBtn.style.display = "inline-block";
-        log.textContent += "\n⏳ 文件将在指定时间后自动删除";
+        logMessage(log.textContent + "\n⏳ 文件将在指定时间后自动删除");
+
+        // 保存删除绝对时间戳
+        const deleteSeconds = parseInt(document.getElementById("deleteTimeInput").value, 10) || 60;
+        const deleteTimestamp = Date.now() + deleteSeconds * 1000;
+
+        localStorage.setItem(STORAGE_DELETE_TIMESTAMP_KEY, deleteTimestamp.toString());
+        localStorage.setItem(STORAGE_DELETE_PATH_KEY, path);
+        localStorage.setItem(STORAGE_DELETE_SHA_KEY, currentSHA);
 
         startCountdown(token, path);
       };
@@ -214,7 +257,9 @@
     }
 
     function startCountdown(token, path) {
+      // 修复点：从输入框重新读取倒计时时间
       countdownSeconds = parseInt(document.getElementById("deleteTimeInput").value, 10) || 60;
+
       updateCountdownDisplay();
 
       countdownTimer = setInterval(() => {
@@ -254,7 +299,7 @@
       const shareDiv = document.getElementById("shareLink");
 
       if (!currentSHA || !path) {
-        log.textContent = "❌ 无法删除：缺少 SHA 或路径";
+        logMessage("❌ 无法删除：缺少 SHA 或路径");
         return;
       }
 
@@ -273,15 +318,20 @@
       });
 
       if (res.ok) {
-        log.textContent = `✅ 文件 ${path} 已成功删除`;
+        logMessage(`✅ 文件 ${path} 已成功删除`);
         contentArea.value = "";
         deleteBtn.style.display = "none";
         countdownDiv.textContent = "";
         shareDiv.innerHTML = "";
         currentSHA = null;
+
+        localStorage.removeItem(STORAGE_DELETE_TIMESTAMP_KEY);
+        localStorage.removeItem(STORAGE_DELETE_PATH_KEY);
+        localStorage.removeItem(STORAGE_DELETE_SHA_KEY);
+
       } else {
         const err = await res.json();
-        log.textContent = `❌ 删除失败：${res.status} - ${err.message}`;
+        logMessage(`❌ 删除失败：${res.status} - ${err.message}`);
       }
 
       clearInterval(countdownTimer);
