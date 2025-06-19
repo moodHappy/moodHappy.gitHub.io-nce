@@ -34,10 +34,6 @@
       white-space: pre-wrap;
       color: green;
     }
-    #countdown {
-      color: red;
-      font-weight: bold;
-    }
     #shareLink {
       width: 100%;
       word-break: break-word;
@@ -112,12 +108,8 @@
   <label>上传路径:</label>
   <input id="pathInput" />
 
-  <label>删除时间:</label>
-  <input id="deleteTimeInput" type="number" value="300" min="1" />
-
-  <button id="deleteBtn" style="display:none; background:#f44; color:#fff;" onclick="deleteFile()">🗑️ 立即删除</button>
-  <div id="countdown"></div>
-  <div id="savingStatus"></div>
+  <label>删除时间 (秒):</label>
+  <input id="deleteTimeInput" type="number" value="30" min="1" /> <div id="savingStatus"></div>
   <div id="shareLink"></div>
   <div id="log"></div>
 
@@ -133,10 +125,8 @@
     const GITHUB_USERNAME = "moodHappy";
     const GITHUB_REPO = "HelloWorld";
     const BRANCH_NAME = "master";
-    let currentSHA = null; // For the currently uploaded file (if any)
-    let transferTxtSHA = null; // For Notes/transfer.txt to ensure correct updates/deletes
-    let countdownTimer = null;
-    let countdownSeconds = 60;
+    let currentSHA = null;
+    let transferTxtSHA = null;
 
     function encodePath(path) {
       return path.split('/').map(encodeURIComponent).join('/');
@@ -146,7 +136,7 @@
       const savedToken = localStorage.getItem("github_token");
       if (savedToken) {
         document.getElementById("tokenInput").value = savedToken;
-        await loadTransfer(); // Load transfer.txt content on page load
+        await loadTransfer();
       }
     };
 
@@ -178,19 +168,14 @@
       const pathInput = document.getElementById("pathInput").value.trim();
       const log = document.getElementById("log");
       const shareDiv = document.getElementById("shareLink");
-      const deleteBtn = document.getElementById("deleteBtn");
-      const countdownDiv = document.getElementById("countdown");
       const transferContentArea = document.getElementById("transferContent");
 
-      log.textContent = ""; // Clear previous log
+      log.textContent = "";
       shareDiv.innerHTML = "";
-      deleteBtn.style.display = "none";
-      countdownDiv.textContent = "";
-      clearInterval(countdownTimer);
-      currentSHA = null; // Reset for new file operation
+      currentSHA = null;
 
       if (file) {
-        // --- File Upload Logic ---
+        // --- 文件上传逻辑 ---
         if (!pathInput) {
           log.textContent = "❌ 请填写文件上传路径";
           return;
@@ -212,7 +197,7 @@
               headers: { Authorization: `token ${token}` }
             });
             if (checkRes.ok) sha = (await checkRes.json()).sha;
-          } catch (e) { /* Ignore 404 for new files, sha remains null */ }
+          } catch (e) { /* 忽略 404 用于新文件，sha 保持 null */ }
 
           const res = await fetch(url, {
             method: "PUT",
@@ -229,32 +214,37 @@
             return;
           }
 
-          const confirmRes = await fetch(url, { // Get the new SHA
+          const confirmRes = await fetch(url, {
             headers: { Authorization: `token ${token}` }
           });
           const data = await confirmRes.json();
-          currentSHA = data.sha; // Store SHA for deletion
+          currentSHA = data.sha;
 
           const encodedPath = encodePath(pathInput);
           const githubPageLink = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/blob/${BRANCH_NAME}/${encodedPath}`;
           const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
           shareDiv.innerHTML = `📎 <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br><br>📥 <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>`;
 
-          deleteBtn.style.display = "inline-block";
-          log.textContent += "\n⏳ 文件将在指定时间后自动删除";
-          countdownSeconds = parseInt(document.getElementById("deleteTimeInput").value, 10) || 300;
-          startCountdown(token, pathInput);
+          const deleteTimeSeconds = parseInt(document.getElementById("deleteTimeInput").value, 10) || 30;
+          const deleteAt = Date.now() + deleteTimeSeconds * 1000; // 计算删除时间戳 (毫秒)
+
+          try {
+            await updatePendingDeletion(pathInput, deleteAt, token);
+            log.textContent += `\n✅ 文件上传成功！`;
+            log.textContent += `\n⏳ 文件已计划在 ${deleteTimeSeconds} 秒（约 ${Math.ceil(deleteTimeSeconds / 60)} 分钟）后通过 GitHub Actions 自动删除。`;
+          } catch (err) {
+            log.textContent += `\n❌ 文件上传成功，但无法更新删除计划：${err.message}`;
+          }
         };
         reader.readAsDataURL(file);
 
       } else if (transferContentArea.value.trim() !== "") {
-        // --- Text Submission Logic (from transferContentArea to Notes/transfer.txt) ---
+        // --- 文本提交逻辑 (从 transferContentArea 到 Notes/transfer.txt) ---
         log.textContent = "📝 正在提交 Notes/transfer.txt 文本...";
         const transferFilePath = "Notes/transfer.txt";
         try {
-            await updateTransferFile(transferContentArea.value, token); // No filePath param needed here
+            await updateTransferFile(transferContentArea.value, token);
             log.textContent = "✅ 文本已成功提交到 Notes/transfer.txt";
-            // Display a direct link to transfer.txt (raw)
             const transferTxtLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodePath(transferFilePath)}`;
             shareDiv.innerHTML = `📝 <b>transfer.txt 直链:</b><br><a href="${transferTxtLink}" target="_blank">${transferTxtLink}</a>`;
         } catch (err) {
@@ -265,76 +255,74 @@
       }
     }
 
-    function startCountdown(token, path) {
-      countdownTimer = setInterval(() => {
-        countdownSeconds--;
-        document.getElementById("countdown").textContent = `⏱️ 将在 ${countdownSeconds} 秒后自动删除`;
-        if (countdownSeconds <= 0) {
-          clearInterval(countdownTimer);
-          deleteFile(true, token, path);
-        }
-      }, 1000);
-    }
+    /**
+     * 更新或创建 pending_deletion.json 文件，添加新的删除计划。
+     * @param {string} filePath - 需要删除的文件路径（相对于仓库根目录）。
+     * @param {number} deleteAt - 删除时间戳（Unix 毫秒）。
+     * @param {string} token - GitHub Token。
+     */
+    async function updatePendingDeletion(filePath, deleteAt, token) {
+      const pendingDeletionFileName = "pending_deletion.json";
+      const pendingDeletionPath = `Notes/${pendingDeletionFileName}`;
+      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${pendingDeletionPath}`;
+      let sha = null;
+      let data = [];
 
-    async function deleteFile(auto = false, tokenOverride = null, pathOverride = null) {
-      let token;
+      // 1. 尝试获取现有的 pending_deletion.json 内容
       try {
-        token = tokenOverride || getToken();
-      } catch (e) {
-        alert(e.message);
-        return;
+        const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
+        if (res.ok) {
+          const json = await res.json();
+          sha = json.sha;
+          data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
+        } else if (res.status !== 404) {
+          throw new Error(`无法获取 ${pendingDeletionFileName}: ${res.status} - ${res.statusText}`);
+        }
+      } catch (err) {
+        console.error(`Error getting ${pendingDeletionFileName}:`, err);
       }
 
-      const path = pathOverride || document.getElementById("pathInput").value.trim();
-      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${path}`;
+      // 2. 添加新的删除条目
+      data.push({ path: filePath, deleteAt: deleteAt });
 
-      if (!currentSHA) {
-          document.getElementById("log").textContent = "❌ 无法删除文件：没有找到文件 SHA。请先上传文件。";
-          return;
-      }
-
-      document.getElementById("log").textContent = `🗑️ 正在删除 ${path}...`;
-      const res = await fetch(url, {
-        method: "DELETE",
+      // 3. 将更新后的数据写回 pending_deletion.json
+      const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+      const putRes = await fetch(url, {
+        method: "PUT",
         headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Auto-delete ${path}`, sha: currentSHA })
+        body: JSON.stringify({ message: `Add deletion plan for ${filePath}`, content: base64Content, sha: sha })
       });
 
-      if (res.ok) {
-        document.getElementById("log").textContent = `✅ 文件 ${path} 已成功删除`;
-        document.getElementById("deleteBtn").style.display = "none";
-        document.getElementById("countdown").textContent = "";
-        document.getElementById("shareLink").innerHTML = "";
-        currentSHA = null;
-      } else {
-        const err = await res.json();
-        document.getElementById("log").textContent = `❌ 删除失败：${res.status} - ${err.message || res.statusText}`;
+      if (!putRes.ok) {
+        const err = await putRes.json();
+        throw new Error(`无法更新 ${pendingDeletionFileName}: ${putRes.status} - ${err.message || putRes.statusText}`);
       }
-      clearInterval(countdownTimer);
     }
 
+    /**
+     * 更新或创建 Notes/transfer.txt 文件。
+     * @param {string} text - 要写入文件的文本内容。
+     * @param {string} token - GitHub Token。
+     */
     async function updateTransferFile(text, token) {
       const filePath = "Notes/transfer.txt";
       const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
-      let sha = transferTxtSHA; // Use the stored SHA for transfer.txt
+      let sha = transferTxtSHA;
 
-      // If we don't have a SHA for transfer.txt, try to fetch it first
       if (!sha) {
           try {
             const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
             if (res.ok) {
                 const data = await res.json();
                 sha = data.sha;
-                transferTxtSHA = data.sha; // Store it for future use
+                transferTxtSHA = data.sha;
             } else if (res.status === 404) {
-                // File doesn't exist, will be created
                 sha = null;
             } else {
                 throw new Error(`Failed to check existing ${filePath}: ${res.status}`);
             }
           } catch (e) {
               console.error("Error checking transfer.txt SHA:", e);
-              // Proceed without SHA if fetching failed, PUT will attempt creation
               sha = null;
           }
       }
@@ -351,10 +339,10 @@
           throw new Error(`${putRes.status} - ${err.message || putRes.statusText}`);
       }
       const data = await putRes.json();
-      transferTxtSHA = data.content.sha; // Update SHA after successful write
+      transferTxtSHA = data.content.sha;
     }
 
-    // Debounce for automatic saving of transfer.txt content
+    // 自动保存 transfer.txt 内容的防抖函数
     function debounce(fn, delay) {
       let timer = null;
       return function (...args) {
@@ -375,10 +363,9 @@
       }
     }, 800));
 
-    // `manualSaveTransfer` is no longer called by a dedicated button, its logic is part of processUploadOrSubmit if no file is selected.
-    // However, if you want a *separate* "Save transfer.txt" button explicitly, you could add one back.
-    // But based on the request "上传 / 📝 提交就是放到现在的提交位置", it suggests one button for both.
-
+    /**
+     * 从 GitHub 加载 Notes/transfer.txt 的内容。
+     */
     async function loadTransfer() {
       try {
         const token = getToken();
@@ -386,19 +373,22 @@
         const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
         if (!res.ok) {
           if (res.status === 404) {
-            document.getElementById("transferContent").value = ""; // File doesn't exist yet
+            document.getElementById("transferContent").value = "";
             return;
           }
           throw new Error(`${res.status}`);
         }
         const data = await res.json();
-        transferTxtSHA = data.sha; // Store SHA when loaded
+        transferTxtSHA = data.sha;
         document.getElementById("transferContent").value = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
       } catch (err) {
         alert("⚠️ 获取 Notes/transfer.txt 失败：" + err.message + ". 请确保文件存在或输入正确的 Token。");
       }
     }
 
+    /**
+     * 复制 transfer.txt 的内容到剪贴板。
+     */
     function copyTransfer() {
       navigator.clipboard.writeText(document.getElementById("transferContent").value)
         .then(() => alert("📋 transfer.txt 内容已复制"))
