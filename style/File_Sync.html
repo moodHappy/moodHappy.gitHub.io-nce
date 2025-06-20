@@ -104,8 +104,10 @@
   <label>上传路径:</label>
   <input id="pathInput" />
 
+  <label>删除延迟 (分钟):</label>
+  <input id="deleteTimeInput" type="number" value="720" min="20" />
   <p style="color: gray; font-size: 0.9em;">
-    文件将在上传后大约 12 小时后删除。实际删除时间取决于 GitHub Actions 的运行周期。
+    文件将在上传后至少 20 分钟删除。实际删除时间取决于 GitHub Actions 的运行周期。
   </p>
 
   <div id="savingStatus"></div>
@@ -125,8 +127,6 @@
     const GITHUB_REPO = "HelloWorld";
     const BRANCH_NAME = "master";
     const UPLOAD_PREFIX = "push_"; // Define the prefix
-    const DELETE_TIME_HOURS = 12; // Hardcode deletion time to 12 hours
-
     let currentSHA = null;
     let transferTxtSHA = null;
 
@@ -229,13 +229,14 @@
           const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
           shareDiv.innerHTML = `📎 <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br><br>📥 <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>`;
 
-          // Calculate deletion time based on hardcoded DELETE_TIME_HOURS
-          const deleteAt = Date.now() + DELETE_TIME_HOURS * 60 * 60 * 1000; // Convert hours to milliseconds
+          // 获取删除延迟（分钟）并转换为毫秒
+          const deleteTimeMinutes = parseInt(document.getElementById("deleteTimeInput").value, 10) || 720; // Changed default to 720 minutes (12 hours)
+          const deleteAt = Date.now() + deleteTimeMinutes * 60 * 1000; // 计算删除时间戳 (毫秒)
 
           try {
             await updatePendingDeletion(finalPath, deleteAt, token); // Use finalPath here
              log.textContent += `\n✅ 文件上传成功！`;
-              log.textContent += `\n⏳ 文件将在大约 ${DELETE_TIME_HOURS} 小时后被 GitHub Actions 自动删除。`;
+              log.textContent += `\n⏳ 文件将在大约 ${deleteTimeMinutes} 分钟后被 GitHub Actions 自动删除。`;
           } catch (err) {
             log.textContent += `\n❌ 文件上传成功，但无法更新删除计划：${err.message}`;
           }
