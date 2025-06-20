@@ -27,7 +27,7 @@
       --line-height: 1.6;
     }
 
-    /* Dark Theme (optional, inherited from previous example) */
+    /* Dark Theme (optional) */
     body.theme-dark {
       --bg-color: #121212;
       --text-color: #e0e0e0;
@@ -41,7 +41,7 @@
       --settings-icon-color: #ccc;
     }
 
-    /* Sepia Theme (optional, inherited from previous example) */
+    /* Sepia Theme (optional) */
     body.theme-sepia {
       --bg-color: #f4f0e8;
       --text-color: #5b4636;
@@ -84,7 +84,7 @@
       transition: background-color 0.3s, color 0.3s, border-color 0.3s;
     }
     textarea {
-      height: 150px;
+      min-height: 150px;
       resize: vertical;
     }
 
@@ -93,13 +93,15 @@
       background-color: var(--button-primary-bg);
       border: none;
       color: white;
+      padding: 10px 16px; /* Ensure consistent padding */
+      font-size: 16px; /* Ensure consistent font size */
     }
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
 
     #log {
       white-space: pre-wrap;
-      color: green; /* Adjusted for better visibility on dark theme */
+      color: var(--status-color); /* General status color for logs */
       margin-top: 10px;
       font-size: 0.9em;
     }
@@ -221,6 +223,25 @@
       cursor: pointer;
       color: var(--settings-icon-color);
     }
+
+    /* Added for text preview/rendering */
+    article.rendered-content {
+      line-height: var(--line-height);
+      font-size: var(--font-size);
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 8px;
+      padding: 12px;
+      background-color: var(--article-bg-color);
+      border: 1px solid var(--article-border-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      margin-top: 10px; /* Space from other elements */
+    }
+    article.rendered-content p {
+      margin-bottom: 1em;
+      white-space: pre-wrap; /* Preserve whitespace and line breaks */
+    }
   </style>
 </head>
 <body>
@@ -241,13 +262,15 @@
   <div id="shareLink"></div>
   <div id="log"></div>
 
-  <h3>📄 文本同步</h3>
+  <h3>📄 文本同步与预览</h3>
   <textarea id="transferContent" placeholder="在此输入需要同步的文本内容..."></textarea>
+  <article id="renderedTransferContent" class="rendered-content" style="display:none;"></article>
+
 
   <div id="fixedBar">
-    <button onclick="processUploadOrSubmit()">⬆️ 上传</button>
-    <button class="copy" onclick="copyTransfer()">📋 复制</button>
-    <button class="delete" onclick="deleteLastUploadedFile()">🗑️ 删除</button>
+    <button onclick="processUploadOrSubmit()">⬆️ 上传 / 同步文本</button>
+    <button class="copy" onclick="copyTransfer()">📋 复制文本</button>
+    <button class="delete" onclick="deleteLastUploadedFile()">🗑️ 删除文件</button>
   </div>
 
   <div id="tokenModal" class="modal">
@@ -315,6 +338,7 @@
     const logDiv = document.getElementById("log");
     const shareLinkDiv = document.getElementById("shareLink");
     const transferContentArea = document.getElementById("transferContent");
+    const renderedTransferContentDiv = document.getElementById("renderedTransferContent");
     const savingStatusDiv = document.getElementById("savingStatus");
     const rootElement = document.documentElement;
 
@@ -517,6 +541,7 @@
             logDiv.textContent = "✅ 文本已成功提交到 Notes/transfer.txt";
             const transferTxtLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodePath(transferFilePath)}`;
             shareLinkDiv.innerHTML = `📝 <b>transfer.txt 直链:</b><br><a href="${transferTxtLink}" target="_blank">${transferTxtLink}</a>`;
+            renderTransferContent(transferContentArea.value); // Render the content after successful submission
         } catch (err) {
             logDiv.textContent = `❌ 文本提交失败: ${err.message}`;
         }
@@ -660,6 +685,27 @@
       transferTxtSHA = data.content.sha; // Update cached SHA with the new one
     }
 
+    // --- UI & Content Handling ---
+    function renderTransferContent(text) {
+      renderedTransferContentDiv.innerHTML = ""; // Clear previous content
+      const paragraphs = text.split(/\n{2,}/); // Split by one or more empty lines
+      for (const para of paragraphs) {
+        if (para.trim()) {
+          const p = document.createElement("p");
+          p.textContent = para.trim();
+          renderedTransferContentDiv.appendChild(p);
+        }
+      }
+      renderedTransferContentDiv.style.display = "block";
+      transferContentArea.style.display = "none";
+    }
+
+    function editTransferContentMode() {
+      transferContentArea.style.display = "block";
+      renderedTransferContentDiv.style.display = "none";
+    }
+
+
     // --- Utility Functions ---
     function debounce(fn, delay) {
       let timer = null;
@@ -670,9 +716,12 @@
           try {
             await fn.apply(this, args);
             savingStatusDiv.textContent = ""; // Clear on success
+            // After auto-save, render the content
+            renderTransferContent(transferContentArea.value);
           } catch (e) {
             savingStatusDiv.textContent = "❌ 自动保存失败";
             console.error("Auto-save error:", e);
+            editTransferContentMode(); // Switch back to edit mode on error
           }
         }, delay);
       };
@@ -687,27 +736,32 @@
           if (res.status === 404) {
             transferContentArea.value = ""; // File doesn't exist, clear textarea
             logDiv.textContent = "ℹ️ Notes/transfer.txt 不存在，您可以输入内容创建它。";
+            editTransferContentMode(); // Stay in edit mode if file not found
             return;
           }
           throw new Error(`${res.status}`);
         }
         const data = await res.json();
         transferTxtSHA = data.sha; // Cache SHA for future updates
-        transferContentArea.value = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
-        logDiv.textContent = "✅ Notes/transfer.txt 内容已加载。";
+        const content = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+        transferContentArea.value = content;
+        renderTransferContent(content); // Render the content immediately after loading
+        logDiv.textContent = "✅ Notes/transfer.txt 内容已加载并渲染。";
       } catch (err) {
         logDiv.textContent = "⚠️ 获取 Notes/transfer.txt 失败：" + err.message + ". 请确保文件路径正确或输入正确的 Token。";
         console.error("Failed to load transfer.txt:", err);
+        editTransferContentMode(); // Switch to edit mode on load error
       }
     }
 
     function copyTransfer() {
-      if (!transferContentArea.value.trim()) {
+      const contentToCopy = renderedTransferContentDiv.style.display !== "none" ? renderedTransferContentDiv.innerText : transferContentArea.value;
+      if (!contentToCopy.trim()) {
         alert("文本内容为空，无法复制。");
         return;
       }
-      navigator.clipboard.writeText(transferContentArea.value)
-        .then(() => alert("📋 transfer.txt 内容已复制到剪贴板。"))
+      navigator.clipboard.writeText(contentToCopy)
+        .then(() => alert("📋 文本内容已复制到剪贴板。"))
         .catch(err => alert("❌ 复制失败：" + err.message));
     }
 
@@ -720,6 +774,10 @@
       } else {
         logDiv.textContent = "👋 欢迎使用！请在弹出的窗口中输入 GitHub Token 以开始。";
       }
+
+      // Add event listener to switch to edit mode when textarea is focused/clicked
+      transferContentArea.addEventListener('focus', editTransferContentMode);
+      transferContentArea.addEventListener('click', editTransferContentMode);
     };
 
     // Event listener for auto-save transfer.txt
