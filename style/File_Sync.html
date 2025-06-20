@@ -258,11 +258,8 @@
   <div id="settings-icon" title="设置" onclick="openSettingsModal()">⚙️</div>
   <h2>📦 GitHub 文件同步助手</h2>
 
-  <label>选择文件:</label>
+  <h3>文件同步</h3>
   <input id="fileInput" type="file" />
-
-  <p style="color: var(--status-color); font-size: 0.9em;">
-  </p>
 
   <div id="savingStatus"></div>
   <div id="shareLink"></div>
@@ -275,7 +272,7 @@
     <button class="delete" onclick="deleteUploadedFile()">🗑️ 删除此文件</button>
   </div>
 
-  <h3>📄 文本同步</h3>
+  <h3>文本同步</h3>
   <textarea id="transferContent"></textarea>
 
   <div id="fixedBar">
@@ -338,9 +335,9 @@
     const UPLOAD_PREFIX = "push_";
     const DEFAULT_UPLOAD_FOLDER = "Notes/";
     const PREVIEW_FILE_PATH = "Notes/Preview_and_Delete.json";
-    const TRANSFER_FILE_PATH = "Notes/transfer.txt"; // Define transfer.txt path
-    const PENDING_DELETION_FILE_NAME = "pending_deletion.json"; // New constant for pending deletion file name
-    const PENDING_DELETION_PATH = `Notes/${PENDING_DELETION_FILE_NAME}`; // New constant for full path
+    const TRANSFER_FILE_PATH = "Notes/transfer.txt";
+    const PENDING_DELETION_FILE_NAME = "pending_deletion.json";
+    const PENDING_DELETION_PATH = `Notes/${PENDING_DELETION_FILE_NAME}`;
     const SETTINGS_KEY = "github_sync_assistant_settings_v2";
 
     let transferTxtSHA = null;
@@ -454,7 +451,8 @@
 
     window.onload = async () => {
       loadSettings();
-      document.getElementById("log").textContent = "";
+      // Removed the welcome message
+      // document.getElementById("log").textContent = "👋 欢迎使用！请在右上方设置中输入 GitHub Token 以开始。";
 
       try {
         getToken();
@@ -481,12 +479,11 @@
 
       log.textContent = "";
       shareDiv.innerHTML = "";
-      // Only clear file info display if a new file is being uploaded
-      // (It's implicitly handled by `displayLastUploadedFile` when `currentLastUploadedFilePath` is null)
-
+      // Don't clear file info display unless a new file is actively being uploaded in this call.
 
       if (file) {
         // --- Handle File Upload ---
+        // Clear file sync related info display when a new file upload is initiated
         document.getElementById("lastUploadedFileInfo").style.display = 'none';
         document.getElementById("lastFileName").textContent = "";
         document.getElementById("lastFileLinks").innerHTML = "";
@@ -533,7 +530,7 @@
           const data = await confirmRes.json();
           const uploadedFileSHA = data.sha;
 
-          // Update Preview_and_Delete.json
+          // Update Preview_and_Delete.json for file uploads
           await updatePreviewFileOnGitHub(finalPath, uploadedFileSHA, token);
           currentLastUploadedFilePath = finalPath;
           currentLastUploadedFileSHA = uploadedFileSHA;
@@ -543,15 +540,13 @@
           const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
           shareDiv.innerHTML = `📎 <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br><br>📥 <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>`;
 
-          const deleteTimeHours = 12;
+          const deleteTimeHours = 12; // This is a fixed value, no need for dynamic message
           const deleteAt = Date.now() + deleteTimeHours * 60 * 60 * 1000;
 
           try {
-            // Update pending_deletion.json
+            // Update pending_deletion.json for file uploads
             await updatePendingDeletion(finalPath, deleteAt, token);
             log.textContent += `\n✅ 文件上传成功！`;
-            log.textContent += `\n⏳ 文件将在大约 ${deleteTimeHours} 小时后被 GitHub Actions 自动删除。`;
-            await displayLastUploadedFile();
           } catch (err) {
             log.textContent += `\n❌ 文件上传成功，但无法更新删除计划：${err.message}`;
           }
@@ -561,18 +556,17 @@
       } else if (transferContentArea.value.trim() !== "") {
         // --- Handle Text Synchronization ---
         log.textContent = "📝 正在提交 Notes/transfer.txt 文本...";
-        // Ensure file upload section is cleared/hidden for text sync
-        document.getElementById("lastUploadedFileInfo").style.display = 'none';
-        document.getElementById("lastFileName").textContent = "";
-        document.getElementById("lastFileLinks").innerHTML = "";
-        currentLastUploadedFilePath = null;
-        currentLastUploadedFileSHA = null;
+        // Ensure file upload section is not affected by text sync
+        // currentLastUploadedFilePath and currentLastUploadedFileSHA should retain their values
+        // or be null if no file was previously uploaded.
 
         try {
             await updateTransferFile(transferContentArea.value, token);
             log.textContent = "✅ 文本已成功提交到 Notes/transfer.txt";
             const transferTxtLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodePath(TRANSFER_FILE_PATH)}`;
             shareDiv.innerHTML = `📝 <b>transfer.txt 直链:</b><br><a href="${transferTxtLink}" target="_blank">${transferTxtLink}</a>`;
+            // Clear file input after text sync submission
+            document.getElementById("fileInput").value = "";
         } catch (err) {
             log.textContent = `❌ 文本提交失败: ${err.message}`;
         }
@@ -628,6 +622,7 @@
         document.getElementById("lastUploadedFileInfo").style.display = 'none';
         document.getElementById("lastFileName").textContent = "";
         document.getElementById("lastFileLinks").innerHTML = "";
+        document.getElementById("fileInput").value = ""; // Clear the file input field
 
       } catch (err) {
         log.textContent = `❌ 删除失败：${err.message}`;
