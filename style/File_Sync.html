@@ -342,6 +342,7 @@
 
     let transferTxtSHA = null;
     let previewFileSHA = null; // SHA for Preview_and_Delete.json
+    let pendingDeletionSHA = null; // SHA for pending_deletion.json
 
     let currentLastUploadedFilePath = null;
     let currentLastUploadedFileSHA = null;
@@ -416,6 +417,7 @@
         // Reload information after saving token from settings
         loadTransfer();
         loadLastUploadedFileInfoFromGitHub();
+        loadPendingDeletionSHA(); // Load SHA for pending_deletion.json
       } else {
         alert("⚠️ Token 不能为空，无法保存。");
       }
@@ -439,6 +441,7 @@
         document.getElementById("lastFileLinks").innerHTML = "";
         transferTxtSHA = null;
         previewFileSHA = null;
+        pendingDeletionSHA = null; // Clear SHA for pending_deletion.json
         currentLastUploadedFilePath = null;
         currentLastUploadedFileSHA = null;
       }
@@ -452,12 +455,12 @@
     window.onload = async () => {
       loadSettings();
       // Removed the welcome message
-      // document.getElementById("log").textContent = "👋 欢迎使用！请在右上方设置中输入 GitHub Token 以开始。";
 
       try {
         getToken();
         await loadTransfer();
         await loadLastUploadedFileInfoFromGitHub();
+        await loadPendingDeletionSHA(); // Load SHA for pending_deletion.json on page load
       } catch (e) {
         console.warn(e.message);
       }
@@ -545,7 +548,7 @@
 
           try {
             // Update pending_deletion.json for file uploads
-            await updatePendingDeletion(finalPath, deleteAt, token);
+            await addEntryToPendingDeletion(finalPath, deleteAt, token);
             log.textContent += `\n✅ 文件上传成功！`;
           } catch (err) {
             log.textContent += `\n❌ 文件上传成功，但无法更新删除计划：${err.message}`;
@@ -617,6 +620,8 @@
 
         log.textContent = `✅ 文件 ${currentLastUploadedFilePath} 已成功删除。`;
         await updatePreviewFileOnGitHub(null, null, token); // Clear the preview file
+        await removeEntryFromPendingDeletion(currentLastUploadedFilePath, token); // NEW: Remove from pending_deletion.json
+
         currentLastUploadedFilePath = null;
         currentLastUploadedFileSHA = null;
         document.getElementById("lastUploadedFileInfo").style.display = 'none';
@@ -749,23 +754,52 @@
       }
     }
 
-    async function updatePendingDeletion(filePath, deleteAt, token) {
+    async function loadPendingDeletionSHA() {
+        let token;
+        try {
+            token = getToken();
+        } catch (e) {
+            console.warn("Token not available, skipping loading pending deletion SHA.");
+            return;
+        }
+        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
+        try {
+            const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
+            if (res.ok) {
+                const json = await res.json();
+                pendingDeletionSHA = json.sha;
+            } else if (res.status === 404) {
+                pendingDeletionSHA = null; // File doesn't exist yet
+            } else {
+                throw new Error(`Failed to check existing ${PENDING_DELETION_FILE_NAME}: ${res.status}`);
+            }
+        } catch (e) {
+            console.error(`Error loading ${PENDING_DELETION_FILE_NAME} SHA:`, e);
+            pendingDeletionSHA = null;
+        }
+    }
+
+    async function addEntryToPendingDeletion(filePath, deleteAt, token) {
       const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
-      let sha = null;
       let data = [];
 
-      try {
-        const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
-        if (res.ok) {
-          const json = await res.json();
-          sha = json.sha;
-          data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
-        } else if (res.status !== 404) {
-          throw new Error(`无法获取 ${PENDING_DELETION_FILE_NAME}: ${res.status} - ${res.statusText}`);
-        }
-      } catch (err) {
-        console.error(`Error getting ${PENDING_DELETION_FILE_NAME}:`, err);
+      // Fetch current content and SHA first
+      if (pendingDeletionSHA) {
+          try {
+              const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
+              if (res.ok) {
+                  const json = await res.json();
+                  data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
+              } else if (res.status !== 404) {
+                  throw new Error(`无法获取 ${PENDING_DELETION_FILE_NAME}: ${res.status} - ${res.statusText}`);
+              }
+          } catch (err) {
+              console.error(`Error fetching ${PENDING_DELETION_FILE_NAME} for add:`, err);
+              // If fetching fails, proceed with an empty array, but keep the current SHA if we have it
+              data = [];
+          }
       }
+
 
       data.push({ path: filePath, deleteAt: deleteAt });
 
@@ -773,14 +807,69 @@
       const putRes = await fetch(url, {
         method: "PUT",
         headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Add deletion plan for ${filePath}`, content: base64Content, sha: sha })
+        body: JSON.stringify({ message: `Add deletion plan for ${filePath}`, content: base64Content, sha: pendingDeletionSHA })
       });
 
       if (!putRes.ok) {
         const err = await putRes.json();
         throw new Error(`无法更新 ${PENDING_DELETION_FILE_NAME}: ${putRes.status} - ${err.message || putRes.statusText}`);
       }
+      const newSha = (await putRes.json()).content.sha;
+      pendingDeletionSHA = newSha; // Update the SHA after successful write
     }
+
+    async function removeEntryFromPendingDeletion(filePathToRemove, token) {
+        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
+        let data = [];
+
+        if (!pendingDeletionSHA) {
+            console.warn(`${PENDING_DELETION_FILE_NAME} SHA is null, cannot remove entry.`);
+            return; // No file to modify or its SHA is unknown
+        }
+
+        try {
+            const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
+            if (res.ok) {
+                const json = await res.json();
+                pendingDeletionSHA = json.sha; // Ensure we have the latest SHA
+                data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
+            } else if (res.status === 404) {
+                console.log(`${PENDING_DELETION_FILE_NAME} not found, nothing to remove.`);
+                return;
+            } else {
+                throw new Error(`无法获取 ${PENDING_DELETION_FILE_NAME} 来移除条目: ${res.status} - ${res.statusText}`);
+            }
+        } catch (err) {
+            console.error(`Error fetching ${PENDING_DELETION_FILE_NAME} for removal:`, err);
+            throw err;
+        }
+
+        const initialLength = data.length;
+        const newData = data.filter(entry => entry.path !== filePathToRemove);
+
+        if (newData.length === initialLength) {
+            console.log(`文件 "${filePathToRemove}" 未在 ${PENDING_DELETION_FILE_NAME} 中找到，无需删除。`);
+            return; // File path not found in the array
+        }
+
+        const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(newData, null, 2))));
+        const message = `Remove deletion plan for ${filePathToRemove}`;
+
+        const putRes = await fetch(url, {
+            method: "PUT",
+            headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: message, content: base64Content, sha: pendingDeletionSHA })
+        });
+
+        if (!putRes.ok) {
+            const err = await putRes.json();
+            throw new Error(`无法更新 ${PENDING_DELETION_FILE_NAME} 来移除条目: ${putRes.status} - ${err.message || putRes.statusText}`);
+        }
+        const newSha = (await putRes.json()).content.sha;
+        pendingDeletionSHA = newSha; // Update the SHA after successful write
+        console.log(`文件 "${filePathToRemove}" 已从 ${PENDING_DELETION_FILE_NAME} 中移除。`);
+    }
+
 
     async function updateTransferFile(text, token) {
       const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${TRANSFER_FILE_PATH}`;
