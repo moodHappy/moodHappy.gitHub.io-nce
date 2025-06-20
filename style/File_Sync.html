@@ -128,7 +128,6 @@
       color: var(--status-color);
       margin-top: 10px; /* Aligned with log */
     }
-    /* Removed #tokenInputContainer styles as it's no longer on main page */
 
     #fixedBar {
       position: fixed;
@@ -273,7 +272,7 @@
     <h3>最近上传的文件：</h3>
     <p id="lastFileName"></p>
     <p id="lastFileLinks"></p>
-    <button class="delete" onclick="deleteLastUploadedFile(true)">🗑️ 删除此文件</button>
+    <button class="delete" onclick="deleteUploadedFile()">🗑️ 删除此文件</button>
   </div>
 
   <h3>📄 文本同步</h3>
@@ -282,7 +281,7 @@
   <div id="fixedBar">
     <button onclick="processUploadOrSubmit()">⬆️ 上传</button>
     <button class="copy" onclick="copyTransfer()">📋 复制</button>
-    <button class="delete" onclick="deleteLastUploadedFile()">🗑️ 删除</button>
+    <button class="delete" onclick="clearTransferContent()">🗑️ 清除文本</button>
   </div>
 
   <div id="settingsModal" class="modal">
@@ -339,6 +338,7 @@
     const UPLOAD_PREFIX = "push_";
     const DEFAULT_UPLOAD_FOLDER = "Notes/";
     const PREVIEW_FILE_PATH = "Notes/Preview_and_Delete.json";
+    const TRANSFER_FILE_PATH = "Notes/transfer.txt"; // Define transfer.txt path
     const SETTINGS_KEY = "github_sync_assistant_settings_v2";
 
     let transferTxtSHA = null;
@@ -405,7 +405,7 @@
     }
 
     // --- GitHub Token Management (now entirely within settings) ---
-    function saveTokenFromSettings() { // Renamed to differentiate
+    function saveTokenFromSettings() {
       const token = document.getElementById("tokenInput").value.trim();
       if (token) {
         if (!token.startsWith("ghp_") && !token.startsWith("github_pat_")) {
@@ -414,7 +414,7 @@
         }
         localStorage.setItem("github_token", token);
         document.getElementById("log").textContent = "✅ GitHub Token 已保存！";
-        // Optionally, reload information after saving token from settings
+        // Reload information after saving token from settings
         loadTransfer();
         loadLastUploadedFileInfoFromGitHub();
       } else {
@@ -432,8 +432,16 @@
       if (confirm("确定要清除已保存的 GitHub Token 并重新输入吗？")) {
         localStorage.removeItem("github_token");
         document.getElementById("tokenInput").value = ""; // Clear input in settings modal
-        // No longer closing settings modal here, user can input new token immediately
         document.getElementById("log").textContent = "✅ GitHub Token 已清除。请在设置中输入新 Token。";
+        // Clear content if token is removed
+        document.getElementById("transferContent").value = "";
+        document.getElementById("lastUploadedFileInfo").style.display = 'none';
+        document.getElementById("lastFileName").textContent = "";
+        document.getElementById("lastFileLinks").innerHTML = "";
+        transferTxtSHA = null;
+        previewFileSHA = null;
+        currentLastUploadedFilePath = null;
+        currentLastUploadedFileSHA = null;
       }
     }
 
@@ -443,18 +451,15 @@
     }
 
     window.onload = async () => {
-      loadSettings(); // Load settings first
-      // No need to check token in main onload for input field anymore
-      // Token check will happen when API calls are made, and prompt user via alert if missing.
+      loadSettings();
       document.getElementById("log").textContent = "";
 
-      // Load initial content if token is already present
       try {
-        getToken(); // This will throw if no token exists, preventing API calls
+        getToken();
         await loadTransfer();
         await loadLastUploadedFileInfoFromGitHub();
       } catch (e) {
-        console.warn(e.message); // Log the token missing message, but don't block
+        console.warn(e.message);
       }
     };
 
@@ -546,11 +551,10 @@
 
       } else if (transferContentArea.value.trim() !== "") {
         log.textContent = "📝 正在提交 Notes/transfer.txt 文本...";
-        const transferFilePath = "Notes/transfer.txt";
         try {
             await updateTransferFile(transferContentArea.value, token);
             log.textContent = "✅ 文本已成功提交到 Notes/transfer.txt";
-            const transferTxtLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodePath(transferFilePath)}`;
+            const transferTxtLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodePath(TRANSFER_FILE_PATH)}`;
             shareDiv.innerHTML = `📝 <b>transfer.txt 直链:</b><br><a href="${transferTxtLink}" target="_blank">${transferTxtLink}</a>`;
         } catch (err) {
             log.textContent = `❌ 文本提交失败: ${err.message}`;
@@ -560,7 +564,8 @@
       }
     }
 
-    async function deleteLastUploadedFile() {
+    // Function to delete uploaded files (from the "最近上传的文件" section)
+    async function deleteUploadedFile() {
       if (!currentLastUploadedFilePath || !currentLastUploadedFileSHA) {
         alert("没有最近上传的文件可以删除。");
         return;
@@ -611,6 +616,37 @@
         log.textContent = `❌ 删除失败：${err.message}`;
       }
     }
+
+    // Function to clear transfer content (from the fixed bar)
+    async function clearTransferContent() {
+      const transferContentArea = document.getElementById("transferContent");
+      if (transferContentArea.value.trim() === "") {
+        document.getElementById("log").textContent = "文本内容已经是空的了。";
+        return;
+      }
+
+      const confirmClear = confirm("确定要清除文本同步内容并同步到 GitHub 吗？");
+      if (!confirmClear) return;
+
+      let token;
+      try {
+        token = getToken();
+      } catch (e) {
+        alert(e.message);
+        return;
+      }
+
+      document.getElementById("log").textContent = "🗑️ 正在清除文本同步内容...";
+      try {
+        transferContentArea.value = ""; // Clear the textarea
+        await updateTransferFile("", token); // Update GitHub with empty content
+        document.getElementById("log").textContent = "✅ 文本同步内容已清除并同步到 GitHub。";
+        document.getElementById("shareLink").innerHTML = ""; // Clear share link if visible
+      } catch (err) {
+        document.getElementById("log").textContent = `❌ 清除文本内容失败：${err.message}`;
+      }
+    }
+
 
     async function displayLastUploadedFile() {
       const fileInfoDiv = document.getElementById("lastUploadedFileInfo");
@@ -737,8 +773,7 @@
     }
 
     async function updateTransferFile(text, token) {
-      const filePath = "Notes/transfer.txt";
-      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
+      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${TRANSFER_FILE_PATH}`;
       let sha = transferTxtSHA;
 
       if (!sha) {
@@ -751,7 +786,7 @@
             } else if (res.status === 404) {
                 sha = null;
             } else {
-                throw new Error(`Failed to check existing ${filePath}: ${res.status}`);
+                throw new Error(`Failed to check existing ${TRANSFER_FILE_PATH}: ${res.status}`);
             }
           } catch (e) {
               console.error("Error checking transfer.txt SHA:", e);
@@ -763,7 +798,7 @@
       const putRes = await fetch(url, {
         method: "PUT",
         headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text ? `Update ${filePath}` : `Clear ${filePath}`, content: base64Content, sha: sha })
+        body: JSON.stringify({ message: text ? `Update ${TRANSFER_FILE_PATH}` : `Clear ${TRANSFER_FILE_PATH}`, content: base64Content, sha: sha })
       });
 
       if (!putRes.ok) {
@@ -798,7 +833,7 @@
     async function loadTransfer() {
       try {
         const token = getToken();
-        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/Notes/transfer.txt`;
+        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${TRANSFER_FILE_PATH}`;
         const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
         if (!res.ok) {
           if (res.status === 404) {
