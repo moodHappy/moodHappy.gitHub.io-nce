@@ -267,7 +267,7 @@
   <div id="extractionCodeSection">
     <h3>提取码</h3>
     <input type="text" id="extractionCodeInput" placeholder="请输入4位提取码" maxlength="4" />
-    <button onclick="verifyExtractionCode()">提交</button>
+    <button onclick="verifyExtractionCode()">验证提取码</button>
   </div>
 
   <div id="shareLink">
@@ -277,7 +277,7 @@
   <textarea id="transferContent"></textarea>
 
   <div id="passwordSection">
-
+   
     <div id="generatedPasswordDisplay" style="font-weight: bold; margin-bottom: 10px;"></div>
   </div>
 
@@ -639,6 +639,7 @@
             // Update Preview_and_Delete.json on GitHub
             await updatePreviewFileOnGitHub(token);
 
+            // --- IMPORTANT: Clear the corresponding record from pending_deletion.json ---
             await removeEntryFromPendingDeletion(filePathToDelete, token);
 
             document.getElementById("fileInput").value = ""; // Clear the file input field
@@ -832,11 +833,7 @@
         const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
         let data = [];
 
-        if (!pendingDeletionSHA) {
-            console.warn(`${PENDING_DELETION_FILE_NAME} SHA is null, cannot remove entry.`);
-            return; // No file to modify or its SHA is unknown
-        }
-
+        // Always re-fetch the latest content and SHA before modifying
         try {
             const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
             if (res.ok) {
@@ -845,13 +842,14 @@
                 data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
             } else if (res.status === 404) {
                 console.log(`${PENDING_DELETION_FILE_NAME} not found, nothing to remove.`);
+                pendingDeletionSHA = null; // Confirm it's null if 404
                 return;
             } else {
                 throw new Error(`无法获取 ${PENDING_DELETION_FILE_NAME} 来移除条目: ${res.status} - ${res.statusText}`);
             }
         } catch (err) {
             console.error(`Error fetching ${PENDING_DELETION_FILE_NAME} for removal:`, err);
-            throw err;
+            throw err; // Re-throw to indicate failure
         }
 
         const initialLength = data.length;
@@ -859,7 +857,7 @@
 
         if (newData.length === initialLength) {
             console.log(`文件 "${filePathToRemove}" 未在 ${PENDING_DELETION_FILE_NAME} 中找到，无需删除。`);
-            return; // File path not found in the array
+            return; // File path not found in the array, no update needed
         }
 
         const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(newData, null, 2))));
@@ -868,7 +866,7 @@
         const putRes = await fetch(url, {
             method: "PUT",
             headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: message, content: base64Content, sha: pendingDeletionSHA })
+            body: JSON.stringify({ message: message, content: base64Content, sha: pendingDeletionSHA }) // Use the latest SHA
         });
 
         if (!putRes.ok) {
