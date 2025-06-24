@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -71,7 +70,7 @@
       transition: background-color 0.3s, color 0.3s;
     }
 
-    input[type="file"], textarea { /* Apply styles to specific input type and textarea */
+    input[type="file"], textarea, input[type="text"] { /* Apply styles to specific input type and textarea */
       width: 100%;
       margin: 10px 0;
       padding: 10px;
@@ -119,6 +118,7 @@
       padding-bottom: 20px;
       font-size: var(--font-size); /* Apply font size */
       line-height: var(--line-height); /* Apply line height */
+      display: none; /* Initially hidden */
     }
     #shareLink a {
       color: var(--button-secondary-bg); /* Link color from button blue */
@@ -173,18 +173,17 @@
         font-size: 14px;
       }
     }
-    #lastUploadedFileInfo {
-      margin-top: 20px;
+    .file-info-block { /* Styles for each file info block within #shareLink */
       padding: 10px;
-      border: 1px solid var(--article-border-color); /* Use border color */
-      background: var(--article-bg-color); /* Use article bg */
-      border-radius: 8px; /* Consistent radius */
-      display: none; /* Hidden by default, shown when content is available */
+      border: 1px solid var(--article-border-color);
+      background: var(--article-bg-color);
+      border-radius: 8px;
+      margin-top: 20px;
     }
-    #lastUploadedFileInfo p {
+    .file-info-block p {
       margin: 5px 0;
     }
-    #lastUploadedFileInfo a {
+    .file-info-block a {
       color: var(--button-secondary-bg); /* Consistent link color */
       word-break: break-all;
     }
@@ -263,18 +262,24 @@
   <input id="fileInput" type="file" />
 
   <div id="savingStatus"></div>
-  <div id="shareLink"></div>
   <div id="log"></div>
 
-  <div id="lastUploadedFileInfo">
-    <h3>最近上传的文件：</h3>
-    <p id="lastFileName"></p>
-    <p id="lastFileLinks"></p>
-    <button class="delete" onclick="deleteUploadedFile()">🗑️ 删除此文件</button>
+  <div id="extractionCodeSection">
+    <h3>提取码</h3>
+    <input type="text" id="extractionCodeInput" placeholder="请输入4位提取码" maxlength="4" />
+    <button onclick="verifyExtractionCode()">验证提取码</button>
   </div>
+
+  <div id="shareLink">
+    </div>
 
   <h3>文本同步</h3>
   <textarea id="transferContent"></textarea>
+
+  <div id="passwordSection">
+
+    <div id="generatedPasswordDisplay" style="font-weight: bold; margin-bottom: 10px;"></div>
+  </div>
 
   <div id="fixedBar">
     <button onclick="processUploadOrSubmit()">⬆️ 上传</button>
@@ -335,18 +340,15 @@
     const BRANCH_NAME = "master";
     const UPLOAD_PREFIX = "push_";
     const DEFAULT_UPLOAD_FOLDER = "Notes/";
-    const PREVIEW_FILE_PATH = "Notes/Preview_and_Delete.json";
+    const TRACKED_FILES_PATH = "Notes/tracked_files.json"; // Merged file for all tracked files and their deletion info
     const TRANSFER_FILE_PATH = "Notes/transfer.txt";
-    const PENDING_DELETION_FILE_NAME = "pending_deletion.json";
-    const PENDING_DELETION_PATH = `Notes/${PENDING_DELETION_FILE_NAME}`;
     const SETTINGS_KEY = "github_sync_assistant_settings_v2";
+    const AUTO_DELETE_AFTER_HOURS = 12; // 默认自动删除时间，单位小时
+
+    let trackedFilesSHA = null; // SHA for tracked_files.json
+    let allTrackedFiles = []; // Array to store all file objects (path, sha, code, deleteAt) from tracked_files.json
 
     let transferTxtSHA = null;
-    let previewFileSHA = null; // SHA for Preview_and_Delete.json
-    let pendingDeletionSHA = null; // SHA for pending_deletion.json
-
-    let currentLastUploadedFilePath = null;
-    let currentLastUploadedFileSHA = null;
 
     const rootElement = document.documentElement;
 
@@ -417,8 +419,7 @@
         document.getElementById("log").textContent = "✅ GitHub Token 已保存！";
         // Reload information after saving token from settings
         loadTransfer();
-        loadLastUploadedFileInfoFromGitHub();
-        loadPendingDeletionSHA(); // Load SHA for pending_deletion.json
+        loadTrackedFilesFromGitHub(); // This will load all file info
       } else {
         alert("⚠️ Token 不能为空，无法保存。");
       }
@@ -435,16 +436,16 @@
         localStorage.removeItem("github_token");
         document.getElementById("tokenInput").value = ""; // Clear input in settings modal
         document.getElementById("log").textContent = "✅ GitHub Token 已清除。请在设置中输入新 Token。";
-        // Clear content if token is removed
+
+        // Clear all relevant UI and state
         document.getElementById("transferContent").value = "";
-        document.getElementById("lastUploadedFileInfo").style.display = 'none';
-        document.getElementById("lastFileName").textContent = "";
-        document.getElementById("lastFileLinks").innerHTML = "";
+        document.getElementById("shareLink").style.display = 'none';
+        document.getElementById("shareLink").innerHTML = "";
+        document.getElementById("generatedPasswordDisplay").textContent = "";
+
         transferTxtSHA = null;
-        previewFileSHA = null;
-        pendingDeletionSHA = null; // Clear SHA for pending_deletion.json
-        currentLastUploadedFilePath = null;
-        currentLastUploadedFileSHA = null;
+        trackedFilesSHA = null;
+        allTrackedFiles = [];
       }
     }
 
@@ -455,15 +456,12 @@
 
     window.onload = async () => {
       loadSettings();
-      // Removed the welcome message
-
       try {
-        getToken();
-        await loadTransfer();
-        await loadLastUploadedFileInfoFromGitHub();
-        await loadPendingDeletionSHA(); // Load SHA for pending_deletion.json on page load
+        getToken(); // Check if token exists immediately
+        await loadTransfer(); // Load transfer.txt
+        await loadTrackedFilesFromGitHub(); // Load all file info
       } catch (e) {
-        console.warn(e.message);
+        console.warn(e.message); // Log error but don't alert unless user tries to upload
       }
     };
 
@@ -483,14 +481,12 @@
 
       log.textContent = "";
       shareDiv.innerHTML = "";
-      // Don't clear file info display unless a new file is actively being uploaded in this call.
+      shareDiv.style.display = 'none'; // Ensure download links are hidden
+      document.getElementById("generatedPasswordDisplay").textContent = ""; // Clear auto-generated code display
 
       if (file) {
         // --- Handle File Upload ---
-        // Clear file sync related info display when a new file upload is initiated
-        document.getElementById("lastUploadedFileInfo").style.display = 'none';
-        document.getElementById("lastFileName").textContent = "";
-        document.getElementById("lastFileLinks").innerHTML = "";
+        document.getElementById("extractionCodeInput").value = ""; // Clear extraction code input
 
         const finalPath = DEFAULT_UPLOAD_FOLDER + UPLOAD_PREFIX + file.name;
 
@@ -534,25 +530,29 @@
           const data = await confirmRes.json();
           const uploadedFileSHA = data.sha;
 
-          // Update Preview_and_Delete.json for file uploads
-          await updatePreviewFileOnGitHub(finalPath, uploadedFileSHA, token);
-          currentLastUploadedFilePath = finalPath;
-          currentLastUploadedFileSHA = uploadedFileSHA;
+          // Generate a new 4-digit code for this file
+          const newCode = generateRandomAccessCode(4);
 
-          const encodedPath = encodePath(finalPath);
-          const githubPageLink = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/blob/${BRANCH_NAME}/${encodedPath}`;
-          const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
-          shareDiv.innerHTML = `📎 <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br><br>📥 <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>`;
+          // Add this new file and its code to our tracked files
+          // Set deleteAt to AUTO_DELETE_AFTER_HOURS from now for automatic deletion
+          const deleteAt = new Date(Date.now() + AUTO_DELETE_AFTER_HOURS * 60 * 60 * 1000).toISOString();
 
-          const deleteTimeHours = 12; // This is a fixed value, no need for dynamic message
-          const deleteAt = Date.now() + deleteTimeHours * 60 * 60 * 1000;
+          const newFileEntry = {
+            path: finalPath,
+            sha: uploadedFileSHA,
+            code: newCode,
+            generatedAt: new Date().toISOString(),
+            deleteAt: deleteAt // Now part of the file entry
+          };
+          allTrackedFiles.push(newFileEntry);
 
+          // Update tracked_files.json with the new list of files
           try {
-            // Update pending_deletion.json for file uploads
-            await addEntryToPendingDeletion(finalPath, deleteAt, token);
-            log.textContent += `\n✅ 文件上传成功！`;
+            await updateTrackedFilesOnGitHub(token);
+            document.getElementById("generatedPasswordDisplay").textContent = `您的提取码为: ${newCode}`;
+            log.textContent += `\n✅ 文件上传成功！请记住上方显示的提取码。文件将在 ${AUTO_DELETE_AFTER_HOURS} 小时后自动删除。`;
           } catch (err) {
-            log.textContent += `\n❌ 文件上传成功，但无法更新删除计划：${err.message}`;
+            log.textContent += `\n❌ 文件上传成功，但无法更新文件记录：${err.message}`; // AUTO_DELETE_AFTER_HOURS is defined globally now
           }
         };
         reader.readAsDataURL(file);
@@ -560,79 +560,83 @@
       } else if (transferContentArea.value.trim() !== "") {
         // --- Handle Text Synchronization ---
         log.textContent = "📝 正在提交 Notes/transfer.txt 文本...";
-        // Ensure file upload section is not affected by text sync
-        // currentLastUploadedFilePath and currentLastUploadedFileSHA should retain their values
-        // or be null if no file was previously uploaded.
+        shareDiv.style.display = 'none'; // Hide download links for text sync
+        document.getElementById("generatedPasswordDisplay").textContent = ""; // Clear auto-generated code
 
         try {
             await updateTransferFile(transferContentArea.value, token);
             log.textContent = "✅ 文本已成功提交到 Notes/transfer.txt";
             const transferTxtLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodePath(TRANSFER_FILE_PATH)}`;
+            // For text sync, we can show the link immediately
             shareDiv.innerHTML = `📝 <b>transfer.txt 直链:</b><br><a href="${transferTxtLink}" target="_blank">${transferTxtLink}</a>`;
-            // Clear file input after text sync submission
+            shareDiv.style.display = 'block';
             document.getElementById("fileInput").value = "";
         } catch (err) {
             log.textContent = `❌ 文本提交失败: ${err.message}`;
         }
       } else {
         log.textContent = "⚠️ 请选择一个文件或在下方文本区输入要提交的文本";
+        shareDiv.style.display = 'none';
+        document.getElementById("generatedPasswordDisplay").textContent = "";
       }
     }
 
     // Function to delete uploaded files (from the "最近上传的文件" section)
-    async function deleteUploadedFile() {
-      if (!currentLastUploadedFilePath || !currentLastUploadedFileSHA) {
-        alert("没有最近上传的文件可以删除。");
-        return;
-      }
-
-      const confirmDelete = confirm(`确定要删除文件 "${currentLastUploadedFilePath}" 吗？`);
-      if (!confirmDelete) return;
-
-      let token;
-      try {
-        token = getToken();
-      } catch (e) {
-        alert(e.message);
-        return;
-      }
-
-      const log = document.getElementById("log");
-      const shareDiv = document.getElementById("shareLink");
-      log.textContent = `🗑️ 正在删除 ${currentLastUploadedFilePath}...`;
-      shareDiv.innerHTML = "";
-
-      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${currentLastUploadedFilePath}`;
-
-      try {
-        const res = await fetch(url, {
-          method: "DELETE",
-          headers: {
-            Authorization: `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ message: `Delete ${currentLastUploadedFilePath}`, sha: currentLastUploadedFileSHA })
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(`删除失败：${res.status} - ${err.message || res.statusText}`);
+    async function deleteUploadedFile(filePathToDelete, fileSHAToDelete) {
+        if (!filePathToDelete || !fileSHAToDelete) {
+            alert("无法删除文件：缺少文件路径或SHA。");
+            return;
         }
 
-        log.textContent = `✅ 文件 ${currentLastUploadedFilePath} 已成功删除。`;
-        await updatePreviewFileOnGitHub(null, null, token); // Clear the preview file
-        await removeEntryFromPendingDeletion(currentLastUploadedFilePath, token); // NEW: Remove from pending_deletion.json
+        const confirmDelete = confirm(`确定要删除文件 "${filePathToDelete.split('/').pop()}" 吗？`);
+        if (!confirmDelete) return;
 
-        currentLastUploadedFilePath = null;
-        currentLastUploadedFileSHA = null;
-        document.getElementById("lastUploadedFileInfo").style.display = 'none';
-        document.getElementById("lastFileName").textContent = "";
-        document.getElementById("lastFileLinks").innerHTML = "";
-        document.getElementById("fileInput").value = ""; // Clear the file input field
+        let token;
+        try {
+            token = getToken();
+        } catch (e) {
+            alert(e.message);
+            return;
+        }
 
-      } catch (err) {
-        log.textContent = `❌ 删除失败：${err.message}`;
-      }
+        const log = document.getElementById("log");
+        const shareDiv = document.getElementById("shareLink");
+        log.textContent = `🗑️ 正在删除 ${filePathToDelete}...`;
+        shareDiv.innerHTML = ""; // Clear displayed info
+        shareDiv.style.display = 'none';
+        document.getElementById("extractionCodeInput").value = "";
+        document.getElementById("generatedPasswordDisplay").textContent = "";
+
+        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePathToDelete}`;
+
+        try {
+            const res = await fetch(url, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `token ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message: `Delete ${filePathToDelete}`, sha: fileSHAToDelete })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(`删除失败：${res.status} - ${err.message || res.statusText}`);
+            }
+
+            log.textContent = `✅ 文件 ${filePathToDelete} 已成功删除。`;
+
+            // Remove this file from our local tracked files array
+            allTrackedFiles = allTrackedFiles.filter(f => f.path !== filePathToDelete);
+
+            // Update tracked_files.json on GitHub
+            await updateTrackedFilesOnGitHub(token);
+
+            document.getElementById("fileInput").value = ""; // Clear the file input field
+
+        } catch (err) {
+            log.textContent = `❌ 删除失败：${err.message}`;
+        }
     }
 
     // Function to clear transfer content (from the fixed bar)
@@ -660,217 +664,104 @@
         await updateTransferFile("", token); // Update GitHub with empty content
         document.getElementById("log").textContent = "✅ 文本同步内容已清除并同步到 GitHub。";
         document.getElementById("shareLink").innerHTML = ""; // Clear share link if visible
+        document.getElementById("shareLink").style.display = 'none';
+        document.getElementById("generatedPasswordDisplay").textContent = ""; // Clear auto-generated code
       } catch (err) {
         document.getElementById("log").textContent = `❌ 清除文本内容失败：${err.message}`;
       }
     }
 
+    // This function now *prepares* the HTML for a specific file entry
+    function createFileDisplayHtml(fileEntry) {
+      const encodedPath = encodePath(fileEntry.path);
+      const githubPageLink = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/blob/${BRANCH_NAME}/${encodedPath}`;
+      const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
 
-    async function displayLastUploadedFile() {
-      const fileInfoDiv = document.getElementById("lastUploadedFileInfo");
-      const fileNameP = document.getElementById("lastFileName");
-      const fileLinksP = document.getElementById("lastFileLinks");
-
-      if (currentLastUploadedFilePath && currentLastUploadedFileSHA) {
-        const encodedPath = encodePath(currentLastUploadedFilePath);
-        const githubPageLink = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/blob/${BRANCH_NAME}/${encodedPath}`;
-        const rawLink = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${BRANCH_NAME}/${encodedPath}`;
-
-        fileNameP.textContent = `文件名: ${currentLastUploadedFilePath.split('/').pop()}`;
-        fileLinksP.innerHTML = `
-          <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br>
-          <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>
-        `;
-        fileInfoDiv.style.display = 'block';
-      } else {
-        fileInfoDiv.style.display = 'none';
+      let deleteAtInfo = '';
+      if (fileEntry.deleteAt) {
+          const deleteDate = new Date(fileEntry.deleteAt);
+          deleteAtInfo = `<p>预计删除时间: ${deleteDate.toLocaleString()}</p>`;
       }
+
+      return `
+        <div class="file-info-block">
+          <h3>文件信息和下载链接：</h3>
+          <p>文件名: ${fileEntry.path.split('/').pop()}</p>
+          ${deleteAtInfo}
+          <p>
+            <b>GitHub 查看链接：</b><br><a href="${githubPageLink}" target="_blank">${githubPageLink}</a><br>
+            <b>直链下载:</b><br><a href="${rawLink}" target="_blank">${rawLink}</a>
+          </p>
+          <button class="delete" onclick="deleteUploadedFile('${fileEntry.path}', '${fileEntry.sha}')">🗑️ 删除此文件</button>
+        </div>
+      `;
     }
 
-    async function loadLastUploadedFileInfoFromGitHub() {
+    async function loadTrackedFilesFromGitHub() {
       let token;
       try {
         token = getToken();
       } catch (e) {
-        console.warn("Token not available, skipping loading last uploaded file info from GitHub.");
+        console.warn("Token not available, skipping loading tracked file info from GitHub.");
         return;
       }
 
-      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PREVIEW_FILE_PATH}`;
+      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${TRACKED_FILES_PATH}`;
       try {
         const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
         if (res.ok) {
           const data = await res.json();
-          previewFileSHA = data.sha;
+          trackedFilesSHA = data.sha;
           const content = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, "")))));
-          if (content && content.path && content.sha) {
-            currentLastUploadedFilePath = content.path;
-            currentLastUploadedFileSHA = content.sha;
-            await displayLastUploadedFile();
+
+          if (Array.isArray(content)) {
+            allTrackedFiles = content; // Store the array of file objects
           } else {
-            console.log("Preview_and_Delete.json is empty or malformed.");
-            document.getElementById("lastUploadedFileInfo").style.display = 'none';
+            console.log(`${TRACKED_FILES_PATH} is empty or malformed (expected array), initializing empty array.`);
+            allTrackedFiles = [];
           }
         } else if (res.status === 404) {
-          console.log(`${PREVIEW_FILE_PATH} not found, initializing.`);
-          document.getElementById("lastUploadedFileInfo").style.display = 'none';
+          console.log(`${TRACKED_FILES_PATH} not found, initializing empty array.`);
+          allTrackedFiles = [];
         } else {
-          console.error(`Failed to load ${PREVIEW_FILE_PATH}: ${res.status} - ${res.statusText}`);
-          document.getElementById("log").textContent = `⚠️ 获取最近上传文件信息失败: ${res.status}. 请检查Token或文件权限.`;
-          document.getElementById("lastUploadedFileInfo").style.display = 'none';
+          console.error(`Failed to load ${TRACKED_FILES_PATH}: ${res.status} - ${res.statusText}`);
+          document.getElementById("log").textContent = `⚠️ 获取文件信息失败: ${res.status}. 请检查Token或文件权限.`;
         }
+        document.getElementById("shareLink").style.display = 'none'; // Always ensure shareLink is hidden on load
+        document.getElementById("shareLink").innerHTML = ""; // Clear content too
       } catch (err) {
-        console.error(`Error loading ${PREVIEW_FILE_PATH}:`, err);
-        document.getElementById("log").textContent = `⚠️ 获取最近上传文件信息失败: ${err.message}.`;
-        document.getElementById("lastUploadedFileInfo").style.display = 'none';
+        console.error(`Error loading ${TRACKED_FILES_PATH}:`, err);
+        document.getElementById("log").textContent = `⚠️ 获取文件信息失败: ${err.message}.`;
+        document.getElementById("shareLink").style.display = 'none';
       }
     }
 
-    async function updatePreviewFileOnGitHub(filePath, fileSHA, token) {
-      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PREVIEW_FILE_PATH}`;
-      let contentToSave = {};
-      if (filePath && fileSHA) {
-        contentToSave = { path: filePath, sha: fileSHA };
-      }
+    async function updateTrackedFilesOnGitHub(token) {
+      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${TRACKED_FILES_PATH}`;
+      // Ensure allTrackedFiles is sent, even if empty
+      const contentToSave = allTrackedFiles;
 
       const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(contentToSave, null, 2))));
-      const message = filePath ? `Update last uploaded file info for ${filePath}` : `Clear last uploaded file info`;
+      const message = "Update tracked files information";
 
       try {
         const putRes = await fetch(url, {
           method: "PUT",
           headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ message: message, content: base64Content, sha: previewFileSHA })
+          body: JSON.stringify({ message: message, content: base64Content, sha: trackedFilesSHA })
         });
 
         if (!putRes.ok) {
           const err = await putRes.json();
-          throw new Error(`无法更新 ${PREVIEW_FILE_PATH}: ${putRes.status} - ${err.message || putRes.statusText}`);
+          throw new Error(`无法更新 ${TRACKED_FILES_PATH}: ${putRes.status} - ${err.message || putRes.statusText}`);
         }
         const data = await putRes.json();
-        previewFileSHA = data.content.sha;
+        trackedFilesSHA = data.content.sha;
       } catch (err) {
-        console.error(`Error updating ${PREVIEW_FILE_PATH}:`, err);
+        console.error(`Error updating ${TRACKED_FILES_PATH}:`, err);
         throw err;
       }
     }
-
-    async function loadPendingDeletionSHA() {
-        let token;
-        try {
-            token = getToken();
-        } catch (e) {
-            console.warn("Token not available, skipping loading pending deletion SHA.");
-            return;
-        }
-        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
-        try {
-            const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
-            if (res.ok) {
-                const json = await res.json();
-                pendingDeletionSHA = json.sha;
-            } else if (res.status === 404) {
-                pendingDeletionSHA = null; // File doesn't exist yet
-            } else {
-                throw new Error(`Failed to check existing ${PENDING_DELETION_FILE_NAME}: ${res.status}`);
-            }
-        } catch (e) {
-            console.error(`Error loading ${PENDING_DELETION_FILE_NAME} SHA:`, e);
-            pendingDeletionSHA = null;
-        }
-    }
-
-    async function addEntryToPendingDeletion(filePath, deleteAt, token) {
-      const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
-      let data = [];
-
-      // Fetch current content and SHA first
-      if (pendingDeletionSHA) {
-          try {
-              const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
-              if (res.ok) {
-                  const json = await res.json();
-                  data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
-              } else if (res.status !== 404) {
-                  throw new Error(`无法获取 ${PENDING_DELETION_FILE_NAME}: ${res.status} - ${res.statusText}`);
-              }
-          } catch (err) {
-              console.error(`Error fetching ${PENDING_DELETION_FILE_NAME} for add:`, err);
-              // If fetching fails, proceed with an empty array, but keep the current SHA if we have it
-              data = [];
-          }
-      }
-
-
-      data.push({ path: filePath, deleteAt: deleteAt });
-
-      const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-      const putRes = await fetch(url, {
-        method: "PUT",
-        headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Add deletion plan for ${filePath}`, content: base64Content, sha: pendingDeletionSHA })
-      });
-
-      if (!putRes.ok) {
-        const err = await putRes.json();
-        throw new Error(`无法更新 ${PENDING_DELETION_FILE_NAME}: ${putRes.status} - ${err.message || putRes.statusText}`);
-      }
-      const newSha = (await putRes.json()).content.sha;
-      pendingDeletionSHA = newSha; // Update the SHA after successful write
-    }
-
-    async function removeEntryFromPendingDeletion(filePathToRemove, token) {
-        const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PENDING_DELETION_PATH}`;
-        let data = [];
-
-        if (!pendingDeletionSHA) {
-            console.warn(`${PENDING_DELETION_FILE_NAME} SHA is null, cannot remove entry.`);
-            return; // No file to modify or its SHA is unknown
-        }
-
-        try {
-            const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
-            if (res.ok) {
-                const json = await res.json();
-                pendingDeletionSHA = json.sha; // Ensure we have the latest SHA
-                data = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
-            } else if (res.status === 404) {
-                console.log(`${PENDING_DELETION_FILE_NAME} not found, nothing to remove.`);
-                return;
-            } else {
-                throw new Error(`无法获取 ${PENDING_DELETION_FILE_NAME} 来移除条目: ${res.status} - ${res.statusText}`);
-            }
-        } catch (err) {
-            console.error(`Error fetching ${PENDING_DELETION_FILE_NAME} for removal:`, err);
-            throw err;
-        }
-
-        const initialLength = data.length;
-        const newData = data.filter(entry => entry.path !== filePathToRemove);
-
-        if (newData.length === initialLength) {
-            console.log(`文件 "${filePathToRemove}" 未在 ${PENDING_DELETION_FILE_NAME} 中找到，无需删除。`);
-            return; // File path not found in the array
-        }
-
-        const base64Content = btoa(unescape(encodeURIComponent(JSON.stringify(newData, null, 2))));
-        const message = `Remove deletion plan for ${filePathToRemove}`;
-
-        const putRes = await fetch(url, {
-            method: "PUT",
-            headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: message, content: base64Content, sha: pendingDeletionSHA })
-        });
-
-        if (!putRes.ok) {
-            const err = await putRes.json();
-            throw new Error(`无法更新 ${PENDING_DELETION_FILE_NAME} 来移除条目: ${putRes.status} - ${err.message || putRes.statusText}`);
-        }
-        const newSha = (await putRes.json()).content.sha;
-        pendingDeletionSHA = newSha; // Update the SHA after successful write
-        console.log(`文件 "${filePathToRemove}" 已从 ${PENDING_DELETION_FILE_NAME} 中移除。`);
-    }
-
 
     async function updateTransferFile(text, token) {
       const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${TRANSFER_FILE_PATH}`;
@@ -955,6 +846,65 @@
         .then(() => document.getElementById("log").textContent = "📋 transfer.txt 内容已复制")
         .catch(err => document.getElementById("log").textContent = "❌ 复制失败：" + err.message);
     }
+
+    // --- Access Code Generation and Verification Functions ---
+    function generateRandomAccessCode(length = 4) { // Fixed to 4 digits
+      let code = "";
+      for (let i = 0; i < length; i++) {
+        code += Math.floor(Math.random() * 10); // Generate a random digit (0-9)
+      }
+      return code;
+    }
+
+    async function verifyExtractionCode() {
+        const inputCode = document.getElementById('extractionCodeInput').value.trim();
+        const log = document.getElementById('log');
+        const shareDiv = document.getElementById('shareLink');
+
+        log.textContent = ""; // Clear previous log messages
+        shareDiv.innerHTML = ""; // Clear previous displayed file info
+        shareDiv.style.display = 'none';
+
+        if (inputCode.length !== 4 || !/^\d{4}$/.test(inputCode)) {
+            log.textContent = "❌ 提取码必须是4位数字。";
+            return;
+        }
+
+        let token;
+        try {
+            token = getToken();
+            // Always re-load all tracked files to get the freshest data including codes
+            await loadTrackedFilesFromGitHub();
+        } catch (e) {
+            log.textContent = "❌ 无法验证提取码：Token缺失或获取文件信息失败。";
+            return;
+        }
+
+        if (allTrackedFiles.length === 0) {
+            log.textContent = "⚠️ 目前没有需要提取码的文件。";
+            return;
+        }
+
+        let foundMatch = false;
+        let matchedFileEntry = null;
+
+        for (const fileEntry of allTrackedFiles) {
+            if (inputCode === fileEntry.code) {
+                matchedFileEntry = fileEntry;
+                foundMatch = true;
+                break; // Found a match, no need to check further
+            }
+        }
+
+        if (foundMatch && matchedFileEntry) {
+            shareDiv.innerHTML = createFileDisplayHtml(matchedFileEntry);
+            shareDiv.style.display = 'block';
+            log.textContent = "✅ 提取码正确，文件信息和下载链接已显示。";
+        } else {
+            log.textContent = "❌ 提取码不正确，请重试。";
+        }
+    }
+
   </script>
 </body>
 </html>
