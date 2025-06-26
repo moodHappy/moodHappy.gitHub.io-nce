@@ -764,6 +764,8 @@
         let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
         const itemsPerPage = 10; // Number of articles per page
         const localStoragePinnedArticleKey = 'pinnedArticleId'; // Key for localStorage
+        // 新的文章分隔符
+        const ARTICLE_DELIMITER = 'NEW_ARTICLE_SECTION'; // 更新为更简单的分隔符
 
         // Global variables for audio control
         let currentAudio = null;
@@ -794,11 +796,6 @@
             let finaltextToSpeak = trimmedText;
             // Removed HTML tags from the final text sent to TTS
             finaltextToSpeak = finaltextToSpeak.replace(/<[^>]*>/g, '');
-
-            if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
-                finaltextToSpeak = trimmedText.substring(3);
-                console.log('Detected "URL" at the beginning, reading from:', finaltextToSpeak);
-            }
 
             const queryString = new URLSearchParams({
                 text: finaltextToSpeak,
@@ -1022,7 +1019,7 @@
             paginationContainer.appendChild(ul);
         }
 
-        // --- MODIFIED: Function to split content by "URL" and render articles ---
+        // --- MODIFIED: Function to split content by NEW_ARTICLE_SECTION and render articles ---
         function renderArticles(fullContent, articleIdToDisplay = null, currentPage = 1) {
             const articlesContainer = document.getElementById('articles-container');
             articlesContainer.innerHTML = ''; // Clear existing content
@@ -1031,23 +1028,27 @@
             // Normalize line endings and trim the whole content
             fullContent = fullContent.replace(/\r\n/g, '\n').trim();
 
-            const rawParts = fullContent.split(/(URL)/i);
+            // 使用新的分隔符进行分割
+            // 由于 ARTICLE_DELIMITER 不包含特殊正则表达式字符，直接使用字符串作为 RegExp 构造器的参数
+            const rawParts = fullContent.split(new RegExp(`(${ARTICLE_DELIMITER})`, 'g'));
+
             const processedArticles = [];
             let currentContent = '';
 
             for (let i = 0; i < rawParts.length; i++) {
                 const part = rawParts[i];
 
-                if (part.toUpperCase() === 'URL') {
+                if (part === ARTICLE_DELIMITER) {
                     if (currentContent.trim() !== '') {
                         processedArticles.push(currentContent.trim());
                     }
-                    currentContent = 'URL';
+                    currentContent = ''; // Reset current content after a delimiter
                 } else {
                     currentContent += part;
                 }
             }
 
+            // Add the last part if it exists
             if (currentContent.trim() !== '') {
                 processedArticles.push(currentContent.trim());
             }
@@ -1103,9 +1104,6 @@
                 // Set main document title to the displayed article's title
                 let cleanedArticleText = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
                 let mainTitleDisplay = cleanedArticleText;
-                if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
-                    mainTitleDisplay = mainTitleDisplay.substring(3).trim();
-                }
                 const firstSentenceMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
                 if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
                     let mainTitle = firstSentenceMatch[0].trim();
@@ -1157,10 +1155,6 @@
             let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
 
             let displayTitleText = cleanedTextForTitle;
-            if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
-                displayTitleText = displayTitleText.substring(3).trim();
-            }
-
             const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
             let articleTitle = `文章 ${originalIndex + 1}`; // Default title using original index
 
