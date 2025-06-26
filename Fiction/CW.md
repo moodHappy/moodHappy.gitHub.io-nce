@@ -1,5 +1,75 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 19:The Egg Sac</strong></p>
+<p>Next morning when the first light came into the sky and the sparrows stirred in the trees, when the cows rattled their chains and the rooster crowed and the early automobiles went whispering along the road, Wilbur awoke and looked for Charlotte. He saw her up overhead in a corner near the back of his pen. She was very quiet. Her eight legs were spread wide. She seemed to have shrunk during the night. Next to her, attached to the ceiling, Wilbur saw a curious object. It was a sort of sac, or cocoon. It was peach-colored and looked as though it were made of cotton candy.</p>
+<p>"Are you awake, Charlotte?" he said softly.</p>
+<p>"What is that nifty little thing? Did you make it?"</p>
+<p>"I did indeed," replied Charlotte in a weak voice.</p>
+<p>"Plaything? I should say not. It is my egg sac, my magnum opus."</p>
+<p>"I don't know what a magnum opus (masterpiece) is," said Wilbur.</p>
+<p>"That's Latin," explained Charlotte. "It means 'great work." This egg sac is my great work - the finest thing I have ever made."</p>
+<p>"What's inside it?" asked Wilbur. "Eggs?"</p>
+<p>"Five hundred and fourteen of them," she replied.</p>
+<p>"Five hundred and fourteen?" said Wilbur. "You're kidding."</p>
+<p>"No, I'm not. I counted them. I got started counting so I kept on - just to keep my mind occupied."</p>
+<p>"It's a perfectly beautiful egg sac," said Wilbur, feeling as happy as though he had constructed it himself.</p>
+<p>"Yes, it is pretty," replied Charlotte, patting the sac with her two front legs. "Anyway, I can guarantee that it is strong. It's made out of the toughest material I have. It is also waterproof. The eggs are inside and will be warm and dry."</p>
+<p>"Charlotte," said Wilbur dreamily, "are you really going to have five hundred and fourteen children?"</p>
+<p>"If nothing happens, yes," she said. "Of course, they won't show up till next spring."</p>
+<p>Wilbur noticed that Charlotte's voice sounded sad. "What makes you sound so down-hearted? I should think you'd be terribly happy about this."</p>
+<p>"Oh, don't pay any attention to me," said Charlotte. "I just don't have much pep any more. I guess I feel sad because I won't ever see my children."</p>
+<p>"What do you mean you won't see your children! Of course you will. We'll all see them. It's going to be simply wonderful next spring in the barn cellar with five hundred and fourteen baby spiders running around all over the place. And the geese will have a new set of goslings, and the sheep will have their new lambs ..."</p>
+<p>"Maybe," said Charlotte quietly. "However, I have a feeling I'm not going to see the results of last night's efforts. I don't feel good at all. I think I'm languishing, to tell you the truth."</p>
+<p>Wilbur didn't understand the word "languish" and he hated to bother Charlotte by asking her to explain. But he was so worried he felt he had to ask.</p>
+<p>"What does 'languishing' mean?"</p>
+<p>"It means I'm slowing up, feeling my age. I'm not young any more, Wilbur. But I don't want you to worry about me. This is your big day today. Look at my web - doesn't it show up well with the dew on it?"</p>
+<p>Charlotte's web never looked more beautiful than it looked this morning. Each strand held dozens of bright drops of early morning dew. The light from the east struck it and made it all plain and clear. It was a perfect piece of designing and building. In another hour or two, a steady stream of people would pass by, admiring it, and reading it, and looking at Wilbur, and marveling at the miracle.</p>
+<p>As Wilbur was studying the web, a pair of whiskers and a sharp face appeared. Slowly Templeton dragged himself across the pen and threw himself down in a corner.</p>
+<p>"I'm back," he said in a husky voice. "What a night!"</p>
+<p>The rat was swollen to twice his normal size. His stomach was as big around as a jelly jar.</p>
+<p>"What a night!" he repeated, hoarsely. "What feasting and carousing (drink heavily, consume large quantities of alcohol)! A real gorge! I must have eaten the remains of thirty lunches. Never have I seen such leavings, and everything well-ripened and seasoned with the passage of time and the heat of the day. Oh, it was rich, my friends, rich!"</p>
+<p>"You ought to be ashamed of yourself," said Charlotte in disgust. "It would serve you right if you had an acute attack of indigestion."</p>
+<p>"Don't worry about my stomach," snarled Templeton. "It can handle anything. And by the way, I've got some bad news. As I came past that pig next door - the one that calls himself Uncle I noticed a blue tag on the front of his pen. That means he has won first prize. I guess you're licked, Wilbur. You might as well relax - nobody is going to hang any medal on you. Furthermore, I wouldn't be surprised if Zuckerman changes his mind about you. Wait till he gets hankering (strong desire) for some fresh pork and smoked ham and crisp bacon! He'll take the knife to you, my boy."</p>
+<p>"Be still, Templeton!" said Charlotte. "You're too stuffed and bloated to know what you're saying. Don't pay any attention to him, Wilbur!"</p>
+<p>Wilbur tried not to think about what the rat had just said. He decided to change the subject.</p>
+<p>"Templeton," said Wilbur, "if you weren't so dopey (drugged, stupefied; stupid), you would have noticed that Charlotte has made an egg sac. She is going to become a mother. For your information, there are five hundred and fourteen eggs in that peachy little sac."</p>
+<p>"Is this true?" asked the rat, eyeing the sac suspiciously.</p>
+<p>"Yes, it's true," sighed Charlotte.</p>
+<p>"Congratulations!" murmured Templeton. "This has been a night!" He closed his eyes, pulled some straw over himself, and dropped off into a deep sleep. Wilbur and Charlotte were glad to be rid of him for a while.</p>
+<p>At nine o'clock, Mr. Arable's truck rolled into the Fair Grounds and came to a stop at Wilbur's pen. Everybody climbed out.</p>
+<p>"Look!" cried Fern. "Look at Charlotte's web! Look what it says!"</p>
+<p>The grownups and the children joined hands and stood there, studying the new sign.</p>
+<p>"'Humble,'" said Mr. Zuckerman. "Now isn't that just the word for Wilbur!"</p>
+<p>Everyone rejoiced to find that the miracle of the web had been repeated. Wilbur gazed up lovingly into their faces. He looked very humble and very grateful. Fern winked at Charlotte. Lurvy soon got busy. He poured a bucket of warm slops into the trough, and while Wilbur ate his breakfast Lurvy scratched him gently with a smooth stick.</p>
+<p>"Wait a minute!" cried Avery. "Look at this!" He pointed to the blue tag on Uncle's pen. "This pig has won first prize already."</p>
+<p>The Zuckermans and the Arables stared at the tag. Mrs. Zuckerman began to cry. Nobody said a word. They just stared at the tag. Then they stared at Uncle. Then they stared at the tag again. Lurvy took out an enormous handkerchief and blew his nose very loud - so loud, in fact, that the noise was heard by stableboys over at the horse barn.</p>
+<p>"Can I have some money?" asked Fern. "I want to go out on the midway."</p>
+<p>"You stay right where you are!" said her mother. Tears came to Fern's eyes.</p>
+<p>"What's everybody crying about?" asked Mr. Zuckerman. "Let's get busy! Edith, bring the buttermilk!"</p>
+<p>Mrs. Zuckerman wiped her eyes with her handkerchief. She went to the truck and came back with a gallon jar of buttermilk.</p>
+<p>"Bath time!" said Zuckerman, cheerfully. He and Mrs. Zuckerman and Avery climbed into Wilbur's pen. Avery slowly poured buttermilk on Wilbur's head and back, and as it trickled down his sides and cheeks, Mr. and Mrs. Zuckerman rubbed it into his hair and skin. Passersby stopped to watch. Pretty soon quite a crowd had gathered. Wilbur grew beautifully white and smooth. The morning sun shone through his pink ears.</p>
+<p>"He isn't as big as that pig next door," remarked one bystander, "but he's cleaner. That's what I like."</p>
+<p>"He's humble, too," said a woman, reading the sign on the web.</p>
+<p>Everybody who visited the pigpen had a good word to say about Wilbur. Everyone admired the web. And of course nobody noticed Charlotte.</p>
+<p>Suddenly a voice was heard on the loud speaker.</p>
+<p>"Attention, please!" it said. "Will Mr. Homer Zuckerman bring his famous pig to the judges' booth in front of the grandstand. A special award will be made there in twenty minutes. Everyone is invited to attend. Crate your pig, please, Mr. Zuckerman, and report to the judges' booth promptly!"</p>
+<p>For a moment after this announcement, the Arables and the Zuckermans were unable to speak or move. Then Avery picked up a handful of straw and threw it high in the air and gave a loud yell. The straw fluttered down like confetti into Fern's hair. Mr. Zuckerman hugged Mrs. Zuckerman. Mr. Arable kissed Mrs. Arable. Avery kissed Wilbur. Lurvy shook hands with everybody.</p>
+<p>Fern hugged her mother. Avery hugged Fern. Mrs. Arable hugged Mrs. Zuckerman.</p>
+<p>Up overhead, in the shadows of the ceiling, Charlotte crouched unseen, her front legs encircling her egg sac. Her heart was not beating as strongly as usual and she felt weary and old, but she was sure at last that she had saved Wilbur's life, and she felt peaceful and contented.</p>
+<p>"We have no time to lose!" shouted Mr. Zuckerman. "Lurvy, help with the crate!"</p>
+<p>"Can I have some money?" asked Fern.</p>
+<p>"You wait!" said Mrs. Arable. "Can't you see everybody is busy?"</p>
+<p>"Put that empty buttermilk jar into the truck!" commanded Mr. Arable. Avery grabbed the jar and rushed to the truck.</p>
+<p>"Does my hair look all right?" asked Mrs. Zuckerman.</p>
+<p>"Looks fine," snapped Mr. Zuckerman, as he and Lurvy set the crate down in front of Wilbur.</p>
+<p>"You didn't even look at my hair!" said Mrs. Zuckerman.</p>
+<p>"You're all right, Edith," said Mrs. Arable. "Just keep calm.</p>
+<p>Templeton, asleep in the straw, heard the commotion and awoke. He didn't know exactly what was going on, but when he saw the men shoving Wilbur into the crate he made up his mind to go along. He watched his chance and when no one was looking he crept into the crate and buried himself in the straw at the bottom.</p>
+<p>"All ready, boys!" cried Mr. Zuckerman. "Let's go!" He and Mr. Arable and Lurvy and Avery grabbed the crate and boosted it over the side of the pen and up into the truck. Fern jumped aboard and sat on top of the crate. She still had straw in her hair and looked very pretty and excited. Mr. Arable started the motor. Everyone climbed in, and off they drove to the judge's booth in front of the grandstand.</p>
+<p>As they passed the Ferris wheel, Fern gazed up at it and wished she were in the topmost car with Henry Fussy at her side.</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 18:The Cool of the Evening</strong></p>
 <p>In the cool of the evening, when shadows darkened the Fair Grounds, Templeton crept from the crate and looked around. Wilbur lay asleep in the straw. Charlotte was building a web. Templeton's keen nose detected many fine smells in the air. The rat was hungry and thirsty. He decided to go exploring. Without saying anything to anybody, he started off.</p>
 <p>"Bring me back a word!" Charlotte called after him. "I shall be writing tonight for the last time."</p>
