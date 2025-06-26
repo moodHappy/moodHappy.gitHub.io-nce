@@ -1,5 +1,9 @@
 NEW_ARTICLE_SECTION
 
+
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 6:Summer Days</strong></p>
 <p>The early summer days on a farm are the happiest and fairest days of the year. Lilacs bloom and make the air sweet, and then fade. Apple blossoms come with the lilacs, and the bees visit around among the apple trees. The days grow warm and soft. School ends, and children have time to play and to fish for trouts in the brook. Avery often brought a trout home in his pocket, warm and stiff and ready to be fried for supper.</p>
 <p>Now that school was over, Fern visited the barn almost every day, to sit quietly on her stool. The animals treated her as an equal. The sheep lay calmly at her feet.</p>
