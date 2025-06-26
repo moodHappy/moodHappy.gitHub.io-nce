@@ -1,5 +1,55 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 11:The Miracle</strong></p>
+<p>The next day was foggy. Everything on the farm was dripping wet. The grass looked like a magic carpet. The asparagus patch looked like a silver forest.</p>
+<p>On foggy mornings, Charlotte's web was truly a thing of beauty. This morning each thin strand was decorated with dozens of tiny beads of water. The web glistened in the light and made a pattern of loveliness and mystery, like a delicate veil. Even Lurvy, who wasn't particularly interested in beauty, noticed the web when he came with the pig's breakfast. He noted how clearly it showed up and he noted how big and carefully built it was. And then he took another look and he saw something that made him set his pail down. There, in the center of the web, neatly woven in block letters, was a message. It said:</p>
+<p>Lurvy felt weak. He brushed his hand across his eyes and stared harder at Charlotte's web.</p>
+<p>"I'm seeing things," he whispered. He dropped to his knees and uttered a short prayer. Then, forgetting all about Wilbur's breakfast, he walked back to the house and called Mr. Zuckerman.</p>
+<p>"I think you'd better come down to the pigpen," he said.</p>
+<p>"What's the trouble?" asked Mr .Zuckerman. "Anything wrong with the pig?"</p>
+<p>"N-not exactly," said Lurvy. "Come and see for yourself."</p>
+<p>The two men walked silently down to Wilbur's yard. Lurvy pointed to the spider's web. "Do you see what I see?" he asked.</p>
+<p>Zuckerman stared at the writing on the web. Then he murmured the words "Some Pig." Then he looked at Lurvy. Then they both began to tremble. Charlotte, sleepy after her night's exertions, smiled as she watched. Wilbur came and stood directly under the web.</p>
+<p>"Some pig!" muttered Lurvy in a low voice.</p>
+<p>"Some pig!" whispered Mr. Zuckerman. They stared and stared for a long time at Wilbur. Then they stared at Charlotte.</p>
+<p>"You don't suppose that that spider ..." began Mr. Zuckerman - but he shook his head and didn't finish the sentence. Instead, he walked solemnly back up to the house and spoke to his wife. "Edith, something has happened," he said, in a weak voice. He went into the living room and sat down, and Mrs. Zuckerman followed.</p>
+<p>"I've got something to tell you, Edith," he said. "You better sit down."</p>
+<p>Mrs. Zuckerman sank into a chair. She looked pale and frightened.</p>
+<p>"Edith," he said, trying to keep his voice steady, "I think you had best be told that we have a very unusual pig."</p>
+<p>A look of complete bewilderment came over Mrs. Zuckerman's face. "Homer Zuckerman, what in the world are you talking about?" she said.</p>
+<p>"This is a very serious thing, Edith," he replied. "Our pig is completely out of the ordinary."</p>
+<p>"What's unusual about the pig?" asked Mrs. Zuckerman, who was beginning to recover from her scare.</p>
+<p>"Well, I don't really know yet," said Mr. Zuckerman. "But we have received a sign, Edith - a mysterious sign. A miracle has happened on this farm. There is a large spider's web in the doorway of the barn cellar, right over the pigpen, and when Lurvy went to feed the pig this morning, he noticed the web because it was foggy, and you know how a spider's web looks very distinct in a fog. And right spang (precisely (Slang) in the middle of the web there were the words 'Some Pig." The words were woven right into the web. They were actual part of the web, Edith. I know because I have been down there and seen them. It says, 'Some Pig,' just as clear as clear can be. There can be no mistake about it. A miracle has happened and a sign has occurred here on earth, right on our farm, and we have no ordinary pig."</p>
+<p>"Well," said Mrs. Zuckerman, "it seems to me you're a little off. It seems to me we have no ordinary spider."</p>
+<p>"Oh, no," said Zuckerman. "It's the pig that's unusual. It says so, right there in the middle of the web."</p>
+<p>"Maybe so," said Mrs. Zuckerman. "Just the same, I intend to have a look at that spider."</p>
+<p>"It's just a common grey spider," said Zuckerman.</p>
+<p>They got up, and together they walked down to Wilbur's yard.</p>
+<p>"You see, Edith? It's just a common grey spider."</p>
+<p>Wilbur was pleased to receive so much attention. Lurvy was still standing there, and Mr. and Mrs. Zuckerman all three, stood for about an hour, reading the words on the web over and over, and watching Wilbur.</p>
+<p>Charlotte was delighted with the way her trick was working.</p>
+<p>She sat without moving a muscle, and listened to the conversation of the people. When a small fly blundered into the web, just beyond the word pig," Charlotte dropped quickly down, rolled the fly up, and carried it out of the way.</p>
+<p>After a while the fog lifted. The web dried off and the words didn't show up so plainly. The Zuckermans and Lurvy walked back to the house. Just before they left the pigpen, Mr. Zuckerman took one last look at Wilbur.</p>
+<p>"You know," he said, in an important voice, "I've thought all along that that pig of ours was an extra good one. He's a solid pig. That pig is as solid as they come. You notice how solid he is around the shoulders, Lurvy?"</p>
+<p>"Sure. Sure I do," said Lurvy. "I've always noticed that pig. He's quite a pig."</p>
+<p>"He's long, and he's smooth," said Zuckerman.</p>
+<p>"That's right," agreed Lurvy. "He's as smooth as they come. He's some pig."</p>
+<p>When Mr. Zuckerman got back to the house, he took off his work clothes and put on his best suit. Then he got into his car and drove to the minister's house. He stayed for an hour and explained to the minister that a miracle had happened on the farm.</p>
+<p>"So far," said Zuckerman, "only four people on earth know about this miracle - myself, my wife Edith, my hired man Lurvy, and you."</p>
+<p>"Don't tell anybody else," said the minister. "We don't know what it means yet, but perhaps if I give thought to it, I can explain it in my sermon next Sunday. There can be no doubt that you have a most unusual pig. I intend to speak about it in my sermon and point out the fact that this community has been visited with a wondrous animal. By the way, does the pig have a name?"</p>
+<p>"Why, yes," said Mr. Zuckerman. "My little niece calls him Wilbur.</p>
+<p>She's a rather queer child - full of notions. She raised the pig on a bottle and I bought him from her when he was a month old."</p>
+<p>He shook hands with the minister, and left.</p>
+<p>Secrets are hard to keep. Long before Sunday came, the news spread all over the county. Everybody knew that a sign had appeared in a spider's web on the Zuckerman place. Everybody knew that the Zuckermans had a wondrous pig. People came from miles around to look at Wilbur and to read the words on Charlotte's web. The Zuckermans' driveway was full of cars and trucks from morning till night - Fords and Chevvies and Buick roadmasters and GMC pickups and Plymouths and Studebakers and Packards and De Sotos with gyromatic transmissions and Oldsmobiles with rocket engines and Jeep station wagons and Pontiacs. The news of the wonderful pig spread clear up into the hills, and farmers came rattling down in buggies and buckboards, to stand hour after hour at Wilbur's pen admiring the miraculous animal. All said they had never seen such a pig before in their lives.</p>
+<p>When Fern told her mother that Avery had tried to hit the Zuckermans' spider with a stick, Mrs. Arable was so shocked that she sent Avery to bed without any supper as punishment.</p>
+<p>In the days that followed, Mr. Zuckerman was so busy entertaining visitors that he neglected his farm work. He wore his good clothes all the time now -got right into them when he got up in the morning. Mrs. Zuckerman prepared special meals for Wilbur. Lurvy shaved and got a haircut; and his principal farm duty was to feed the pig while people looked on.</p>
+<p>Mr. Zuckerman ordered Lurvy to increase Wilbur's feedings from three meals a day to four meals a day. The Zuckermans were so busy with visitors they forgot about other things on the farm.</p>
+<p>The blackberries got ripe, and Mrs. Zuckerman failed to put up any blackberry jam. The corn needed hoeing, and Lurvy didn't find time to hoe it.</p>
+<p>On Sunday the church was full. The minister explained the miracle. He said that the words on the spider's web proved that human beings must always be on the watch for the coming of wonders.</p>
+<p>All in all, the Zuckermans' pigpen was the center of attraction. Fern was happy, for she felt that Charlotte's trick was working and that Wilbur's life would be saved. But she found that the barn was not nearly as pleasant - too many people. She liked it better when she could be all alone with her friends the animals.</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 10:An Explosion</strong></p>
 <p>Day after day the spider waited, head-down, for an idea to come to her. Hour by hour she sat motionless, deep in thought.</p>
 <p>Having promised Wilbur that she would save his life, she was determined to keep her promise. Charlotte was naturally patient.</p>
