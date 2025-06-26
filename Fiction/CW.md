@@ -1,4 +1,4 @@
-<p><strong>URL：Chapter II: Wilbur</strong></p>
+<p><strong>URL Chapter II: Wilbur</strong></p>
 <p>FERN loved Wilbur more than anything. She loved to stroke him, to feed him, to put him to bed. Every morning, as soon as she got up, she warmed his milk, tied his bib on, and held the bottle for him. Every afternoon, when the school bus stopped in front of her house, she jumped out and ran to the kitchen to fix another bottle for him. She fed him again at suppertime, and again just before going to bed. Mrs. Arable gave him a feeding around noontime each day, when Fern was away in school. Wilbur loved his milk, and he was never happier than when Fern was warming up a bottle for him. He would stand and gaze up at her with adoring eyes.</p>
 <p>For the first few days of his life, Wilbur was allowed to live in a box near the stove in the kitchen. Then, when Mrs. Arable complained, he was moved to a bigger box in the woodshed. At two weeks of age, he was moved outdoors. It was apple-blossom time, and the days were getting warmer. Mr. Arable fixed a small yard specially for Wilbur under an apple tree, and gave him a large wooden box full of straw, with a doorway cut in it so he could walk in and out as he pleased.</p>
 <p>“Won’t he be cold at night?” asked Fern.</p>
@@ -14,7 +14,7 @@
 <p>“Well,” said her father, “he’s a runt. Tell your Uncle Homer you’ve got a pig you’ll sell for six dollars, and see what he says.”</p>
 <p>It was soon arranged. Fern phoned and got her Aunt Edith, and her Aunt Edith hollered for Uncle Homer, and Uncle Homer came in from the barn and talked to Fern. When he heard that the price was only six dollars, he said he would buy the pig. Next day Wilbur was taken from his home under the apple tree and went to live in a manure pile in the cellar of Zuckerman’s barn.</p>
 
-<p><strong>URL：Chapter I: Before Breakfast</strong></p>
+<p><strong>URL Chapter I: Before Breakfast</strong></p>
 <p>WHERE’S Papa going with that ax?” said Fern to her mother as they were setting the table for breakfast.</p>
 <p>“Out to the hoghouse,” replied Mrs. Arable. “Some pigs were born last night.”</p>
 <p>“I don’t see why he needs an ax,” continued Fern, who was only eight.</p>
