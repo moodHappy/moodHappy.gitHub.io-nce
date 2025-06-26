@@ -1,5 +1,34 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 8:A Talk At Home</strong></p>
+<p>On Sunday morning Mr. and Mrs. Arable and Fern were sitting at breakfast in the kitchen. Avery had finished and was upstairs looking for his slingshot.</p>
+<p>"Did you know that Uncle Homer's goslings had hatched?" asked Fern.</p>
+<p>"Seven," replied Fern. "There were eight eggs but one egg didn't hatch and the goose told Templeton she didn't want it any more, so he took it away."</p>
+<p>"The goose did what?" asked Mrs. Arable, gazing at her daughter with a queer, worried look.</p>
+<p>"Told Templeton she didn't want the egg any more," repeated Fern.</p>
+<p>"Who is Templeton?" asked Mrs. Arable.</p>
+<p>"He's the rat," replied Fern. "None of us like him much."</p>
+<p>"Who's 'us'?" asked Mr. Arable.</p>
+<p>"Oh, everybody in the barn cellar. Wilbur and the sheep and the lambs and the goose and the gander and the goslings and Charlotte and me."</p>
+<p>"Charlotte?" said Mrs. Arable. "Who's Charlotte?"</p>
+<p>"She's Wilbur's best friend. She's terribly clever."</p>
+<p>"What does she look like?" asked Mrs. Arable.</p>
+<p>"Well-l," said Fern, thoughtfully, "she has eight legs. All spiders do, I guess."</p>
+<p>"Charlotte is a spider?" asked Fern's mother.</p>
+<p>Fern nodded. "A big grey one. She has a web across the top of Wilbur's doorway. She catches flies and sucks their blood. Wilbur adores her."</p>
+<p>"Does he really?" said Mrs. Arable, rather vaguely. She was staring at Fern with a worried expression on her face.</p>
+<p>"Oh, yes, Wilbur adores Charlotte," said Fern. "Do you know what Charlotte said when the goslings hatched?"</p>
+<p>"I haven't the faintest idea," said Mr. Arable. "Tell us."</p>
+<p>"Well, when the first gosling stuck its little head out from under the goose, I was sitting on my stool in the corner and Charlotte was on her web. She made a speech. She said: 'I am sure that every one of us here in the barn cellar will be gratified to learn that after four weeks of unremitting effort and patience on the part of the goose, she now has something to show for it." Don't you think that was a pleasant thing for her to say?"</p>
+<p>"Yes, I do," said Mrs. Arable. "And now, Fern, it's time to get ready for Sunday School. And tell Avery to get ready. And this afternoon you can tell me more about what goes on in Uncle Homer's barn. Aren't you spending quite a lot of time there? You go there almost every afternoon, don't you?"</p>
+<p>"I like it there," replied Fern. She wiped her mouth and ran upstairs. After she had left the room, Mrs. Arable spoke in a low voice to her husband.</p>
+<p>"I worry about Fern," she said. "Did you hear the way she rambled on about the animals, pretending that they talked?"</p>
+<p>"Maybe they do talk," he said. "I've sometimes wondered. At any rate, don't worry about Fern - she's just got a lively imagination. Kids think they hear all sorts of things."</p>
+<p>"Just the same, I do worry about her," replied Mrs. Arable. "I think I shall ask Dr. Dorian about her the next time I see him. He loves Fern almost as much as we do, and I want him to know how queerly she is acting about that pig and everything. I don't think it's normal. You know perfectly well animals don't talk."</p>
+<p>Mr. Arable grinned. "Maybe our ears aren't as sharp as Fern's," he said.</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 7:Bad News</strong></p>
 <p>Wilbur liked Charlotte better and better each day. Her campaign against insects seemed sensible and useful. Hardly anybody around the farm had a good word to say for a fly. Flies spent their time pestering others. The cows hated them. The horses detested them. The sheep loathed them. Mr. and Mrs. Zuckerman were always complaining about them, and putting up screens.</p>
 <p>Wilbur admired the way Charlotte managed. He was particularly glad that she always put her victim to sleep before eating it.</p>
