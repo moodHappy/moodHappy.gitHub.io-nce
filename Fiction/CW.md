@@ -1,5 +1,49 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 18:The Cool of the Evening</strong></p>
+<p>In the cool of the evening, when shadows darkened the Fair Grounds, Templeton crept from the crate and looked around. Wilbur lay asleep in the straw. Charlotte was building a web. Templeton's keen nose detected many fine smells in the air. The rat was hungry and thirsty. He decided to go exploring. Without saying anything to anybody, he started off.</p>
+<p>"Bring me back a word!" Charlotte called after him. "I shall be writing tonight for the last time."</p>
+<p>The rat mumbled something to himself and disappeared into the shadows. He did not like being treated like a messenger boy.</p>
+<p>After the heat of the day, the evening came as a welcome relief to all. The Ferris wheel was lighted now. It went round and round in the sky and seemed twice as high as by day. There were lights on the midway, and you could hear the crackle of the gambling machines and the music of the merry-go-round and the voice of the man in the beano bingo (game of chance) booth calling numbers. The children felt refreshed after their nap. Fern met her friend Henry Fussy, and he invited her to ride with him in the Ferris wheel. He even bought a ticket for her, so it didn't cost her anything. When Mrs. Arable happened to look up into the starry sky and saw her little daughter sitting with Henry Fussy and going higher and higher into the air, and saw how happy Fern looked, she just shook her head. "My, my!" she said. "Henry Fussy. Think of that!"</p>
+<p>Templeton kept out of sight. In the tall grass behind the cattle barn he found a folded newspaper. Inside it were leftovers from somebody's lunch: a deviled ham sandwich, a piece of Swiss cheese, part of a hard-boiled egg, and the core of a wormy apple.</p>
+<p>The rat crawled in and ate everything. Then he tore a word out of the paper, rolled it up, and started back to Wilbur's pen.</p>
+<p>Charlotte had her web almost finished when Templeton returned, carrying the newspaper clipping. She had left a space in the middle of the web. At this hour, no people were around the pigpen, so the rat and the spider and the pig were by themselves.</p>
+<p>"I hope you brought a good one," Charlotte said. "It is the last word I shall ever write."</p>
+<p>"Here," said Templeton, unrolling the paper.</p>
+<p>"What does it say?" asked Charlotte. "You'll have to read it for me."</p>
+<p>"It says 'Humble,'" replied the rat.</p>
+<p>"Humble?" said Charlotte. "'Humble' has two meanings. It means 'not proud' and it means 'near the ground." That's Wilbur all over. He's not proud and he's near the ground."</p>
+<p>"Well, I hope you're satisfied," sneered the rat. "I'm not going to spend all my time fetching and carrying. I came to this Fair to enjoy myself, not to deliver papers."</p>
+<p>"You've been very helpful," Charlotte said. "Run along, if you want to see more of the Fair."</p>
+<p>The rat grinned. "I'm going to make a night of it," he said. "The old sheep was right - this Fair is a rat's paradise. What eating! And what drinking! And everywhere good hiding and good hunting. Bye, bye, my humble Wilbur! Fare thee well, Charlotte, you old schemer! This will be a night to remember in a rat's life."</p>
+<p>Charlotte went back to her work. It was quite dark now. In the distance, fireworks began going off - rockets, scattering fiery balls in the sky. By the time the Arables and the Zuckermans and Lurvy returned from the grandstand, Charlotte had finished her web. The word HUMBLE was woven neatly in the center. Nobody noticed it in the darkness. Everyone was tired and happy.</p>
+<p>Fern and Avery climbed into the truck and lay down. They pulled the Indian blanket over them. Lurvy gave Wilbur a forkful of fresh straw. Mr. Arable patted him. "Time for us to go home," he said to the pig. "See you tomorrow."</p>
+<p>The grownups climbed slowly into the truck and Wilbur heard the engine start and then heard the truck moving away in low speed. He would have felt lonely and homesick, had Charlotte not been with him. He never felt lonely when she was near. In the distance he could still hear the music of the merry-go-round.</p>
+<p>As he was dropping off to sleep he spoke to Charlotte.</p>
+<p>"Sing me that song again, about the dung and the dark," he begged.</p>
+<p>"Not tonight," she said in a low voice. "I'm too tired."</p>
+<p>Her voice didn't seem to come from her web.</p>
+<p>"Where are you?" asked Wilbur. "I can't see you. Are you on your web?"</p>
+<p>"I'm back here," she answered. "Up in this back corner."</p>
+<p>"Why aren't you on your web?" asked Wilbur. "You almost never leave your web."</p>
+<p>"I've left it tonight," she said.</p>
+<p>Wilbur closed his eyes. "Charlotte," he said, after a while, "do you really think Zuckerman will let me live and not kill me when the cold weather comes? Do you really think so?"</p>
+<p>"Of course," said Charlotte. "You are a famous pig and you are a good pig. Tomorrow you will probably win a prize. The whole world will hear about you. Zuckerman will be proud and happy to own such a pig. You have nothing to fear, Wilbur nothing to worry about. Maybe you'll live forever - who knows? And now, go to sleep."</p>
+<p>For a while there was no sound. Then Wilbur's voice:</p>
+<p>"What are you doing up there, Charlotte?"</p>
+<p>"Oh, making something," she said. "Making something, as usual."</p>
+<p>"Is it something for me?" asked Wilbur.</p>
+<p>"No," said Charlotte. "It's something for me, for a change."</p>
+<p>"Please tell me what it is," begged Wilbur.</p>
+<p>"I'll tell you in the morning," she said. "When the first light comes into the sky and the sparrows stir and the cows rattle their chains, when the rooster crows and the stars fade, when early cars whisper along the highway, you look up here and I'll show you something. I will show you my masterpiece."</p>
+<p>Before she finished the sentence, Wilbur was asleep. She could tell by the sound of his breathing that he was sleeping peacefully, deep in the straw.</p>
+<p>Miles away, at the Arables' house, the men sat around the kitchen table eating a dish of canned peaches and talking over the events of the day. Upstairs, Avery was already in bed and asleep. Mrs. Arable was tucking Fern into bed.</p>
+<p>"Did you have a good time at the Fair?" she asked as she kissed her daughter.</p>
+<p>Fern nodded. "I had the best time I have ever had anywhere or any time in all of my whole life."</p>
+<p>"Well!" said Mrs. Arable. "Isn't that nice!"</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 17:Uncle</strong></p>
 <p>When they pulled into the Fair Grounds, they could hear music and see the Ferris wheel turning in the sky. They could smell the dust of the race track where the sprinkling cart had moistened it; and they could smell hamburgers frying and see balloons aloft. They could hear sheep blatting in their pens. An enormous voice over the loudspeaker said: "Attention, please! Will the owner of a Pontiac car, license number H-2439, please move your car away from the fireworks shed!"</p>
 <p>"Can I have some money?" asked Fern.</p>
