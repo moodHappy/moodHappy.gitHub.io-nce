@@ -21,7 +21,7 @@
             --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
             --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
-            --shadow-xl: 0 1.5rem 3rem rgba(0, 0, 0, 0.2);
+            --shadow-xl: 0 1.5rem 3rem rgba(0, 15, 0, 0.2);
             --border-radius: 8px; /* Slightly smaller border-radius for cleaner look */
             --transition: all 0.3s ease-in-out;
             --base-font-size: 16px;
@@ -109,7 +109,7 @@
             box-shadow: var(--shadow-sm);
         }
 
-        /* NEW: Settings Gear Button */
+        /* Settings Gear Button */
         #settingsGearButton {
             width: 38px; /* Make it a square for the icon */
             height: 38px;
@@ -281,13 +281,22 @@
             cursor: pointer;
             transition: var(--transition);
             border-bottom: 1px solid var(--card-border);
-            display: block;
+            display: flex; /* Use flexbox for header to align title and pin button */
+            justify-content: space-between; /* Space out title and pin button */
+            align-items: center;
             text-decoration: none;
             position: relative;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
             max-width: 100%;
+        }
+
+        .article-header-title {
+            flex-grow: 1; /* Allow title to take up available space */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .article-header::before {
@@ -310,7 +319,7 @@
             left: 100%;
         }
 
-        /* Added style for the pinned article header */
+        /* Style for the pinned article header */
         .article-header.pinned-article {
             background: var(--accent-color); /* Green for pinned article */
             color: white;
@@ -322,6 +331,10 @@
             z-index: 990;
             padding: 15px 20px;
             animation: none; /* Removed pulse animation for a cleaner look */
+        }
+
+        .article-header.pinned-article .article-header-title {
+            color: white; /* Ensure title is white in pinned state */
         }
 
         .article-header.pinned-article:hover {
@@ -352,6 +365,44 @@
         .article-content a:hover {
             color: var(--primary-hover);
             text-decoration: underline;
+        }
+
+        /* NEW: Pin Button Style */
+        .pin-button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted); /* Muted color for unpinned */
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: color 0.3s ease-in-out, transform 0.2s ease-in-out;
+            padding: 5px;
+            line-height: 1; /* Ensure icon is vertically centered */
+        }
+
+        .pin-button.pinned {
+            color: gold; /* Gold color when pinned */
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+        }
+
+        .pin-button:hover {
+            color: var(--primary-color); /* Primary color on hover */
+            transform: scale(1.1);
+        }
+
+        .pin-button.pinned:hover {
+            color: rgb(255, 230, 0); /* Brighter gold on hover when pinned */
+            transform: scale(1.1);
+        }
+
+        .article-header.pinned-article .pin-button {
+            color: white; /* White pin icon in pinned header */
+            text-shadow: none;
+        }
+
+        .article-header.pinned-article .pin-button.pinned {
+            color: gold; /* Still gold if pinned *and* in the pinned header */
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
         }
 
         /* Read Aloud Button - Modern Floating Design */
@@ -455,7 +506,7 @@
             text-shadow: none;
         }
 
-        /* --- NEW: Pagination Styles --- */
+        /* Pagination Styles */
         #pagination-container {
             display: flex;
             justify-content: center;
@@ -530,6 +581,11 @@
             .speed-slider,
             .font-size-slider {
                 height: 120px;
+            }
+
+            .speed-label, .speed-value-display,
+            .font-size-label, .font-size-value-display {
+                font-size: 0.9em;
             }
 
             .content-container {
@@ -658,7 +714,8 @@
         .speed-slider:focus,
         .home-button:focus,
         .font-size-slider:focus,
-        #settingsGearButton:focus {
+        #settingsGearButton:focus,
+        .pin-button:focus { /* Added pin button focus */
             outline: 2px solid var(--primary-color); /* Highlight with primary color */
             outline-offset: 3px;
         }
@@ -706,11 +763,7 @@
         ];
         let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
         const itemsPerPage = 10; // Number of articles per page
-        // Define the pinned article URL
-        const pinnedArticleUrl = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/Texttohtml.html';
-        // Define the title for the pinned article
-        const pinnedArticleTitle = '置顶文章';
-
+        const localStoragePinnedArticleKey = 'pinnedArticleId'; // Key for localStorage
 
         // Global variables for audio control
         let currentAudio = null;
@@ -721,6 +774,7 @@
         let currentPosition = 0;
         let currentArticleIndex = -1; // To track which article is being read
         let allArticles = []; // To store all parsed articles
+        let pinnedArticleId = null; // Stores the ID of the manually pinned article
 
         // --- Summary Functions ---
         function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
@@ -917,7 +971,7 @@
             console.log("URL updated with new hash:", currentUrl.toString());
         }
 
-        // --- NEW: Function to render pagination controls ---
+        // --- Function to render pagination controls ---
         function renderPagination(totalPages, currentPage) {
             const paginationContainer = document.getElementById('pagination-container');
             paginationContainer.innerHTML = ''; // Clear old pagination
@@ -1009,18 +1063,24 @@
                 return;
             }
 
-            // Always add the pinned article at the top
-            const pinnedArticleSection = document.createElement('div');
-            pinnedArticleSection.classList.add('article-section');
-            const pinnedArticleHeaderLink = document.createElement('a');
-            pinnedArticleHeaderLink.classList.add('article-header', 'pinned-article');
-            // Set the text content to '置顶文章'
-            pinnedArticleHeaderLink.textContent = pinnedArticleTitle;
-            pinnedArticleHeaderLink.href = pinnedArticleUrl;
-            pinnedArticleHeaderLink.target = '_blank'; // Open in new tab
-            pinnedArticleHeaderLink.rel = 'noopener noreferrer'; // Security best practice
-            pinnedArticleSection.appendChild(pinnedArticleHeaderLink);
-            articlesContainer.appendChild(pinnedArticleSection);
+            // Retrieve pinned article ID from localStorage
+            const storedPinnedArticleId = localStorage.getItem(localStoragePinnedArticleKey);
+            if (storedPinnedArticleId !== null) {
+                pinnedArticleId = parseInt(storedPinnedArticleId, 10);
+                if (isNaN(pinnedArticleId) || !allArticles[pinnedArticleId]) {
+                    pinnedArticleId = null; // Invalidate if not a valid ID
+                    localStorage.removeItem(localStoragePinnedArticleKey);
+                }
+            } else {
+                pinnedArticleId = null;
+            }
+
+            // If there's a pinned article and we're not viewing a specific article via URL, render it first
+            if (pinnedArticleId !== null && articleIdToDisplay === null) {
+                const pinnedArticleText = allArticles[pinnedArticleId];
+                const pinnedArticleSection = createArticleElement(pinnedArticleText, pinnedArticleId, true);
+                articlesContainer.appendChild(pinnedArticleSection);
+            }
 
 
             // Determine which articles to render
@@ -1069,43 +1129,19 @@
                 const totalPages = Math.ceil(allArticles.length / itemsPerPage);
                 const startIndex = (currentPage - 1) * itemsPerPage;
                 const endIndex = startIndex + itemsPerPage;
-                const paginatedArticles = allArticles.slice(startIndex, endIndex);
+                let paginatedArticles = allArticles.slice(startIndex, endIndex);
+
+                // Filter out the pinned article from the main list if it's already rendered
+                if (pinnedArticleId !== null) {
+                     paginatedArticles = paginatedArticles.filter(
+                        (article, idx) => (startIndex + idx) !== pinnedArticleId
+                    );
+                }
 
                 paginatedArticles.forEach((articleText, index) => {
                     const originalIndex = startIndex + index; // Get the index from the original allArticles array
-
-                    let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
-
-                    let displayTitleText = cleanedTextForTitle;
-                    if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
-                        displayTitleText = displayTitleText.substring(3).trim();
-                    }
-
-                    const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
-                    let articleTitle = `文章 ${originalIndex + 1}`; // Default title using original index
-
-                    if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
-                        articleTitle = firstSentenceMatch[0].trim();
-                        if (articleTitle.length > 70) {
-                            articleTitle = articleTitle.substring(0, 67) + '...';
-                        }
-                    } else if (displayTitleText.length > 0) {
-                        articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
-                        if (displayTitleText.length > 70) {
-                             articleTitle += '...';
-                        }
-                    }
-
-                    const articleSection = document.createElement('div');
-                    articleSection.classList.add('article-section');
-
-                    const articleHeaderLink = document.createElement('a');
-                    articleHeaderLink.classList.add('article-header');
-                    articleHeaderLink.textContent = articleTitle;
-                    articleHeaderLink.href = `?articleId=${originalIndex}`; // Link to the specific article using original index
-                    articleHeaderLink.dataset.articleIndex = originalIndex; // Store original index
-
-                    articleSection.appendChild(articleHeaderLink);
+                    const isCurrentArticlePinned = (originalIndex === pinnedArticleId);
+                    const articleSection = createArticleElement(articleText, originalIndex, isCurrentArticlePinned);
                     articlesContainer.appendChild(articleSection);
                 });
 
@@ -1116,9 +1152,92 @@
             applyFontSize(parseFloat(localStorage.getItem('fontSize') || '1.0')); // Apply saved font size after rendering
         }
 
+        // NEW: Function to create an article DOM element
+        function createArticleElement(articleText, originalIndex, isPinned = false) {
+            let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
+
+            let displayTitleText = cleanedTextForTitle;
+            if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
+                displayTitleText = displayTitleText.substring(3).trim();
+            }
+
+            const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
+            let articleTitle = `文章 ${originalIndex + 1}`; // Default title using original index
+
+            if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
+                articleTitle = firstSentenceMatch[0].trim();
+                if (articleTitle.length > 70) {
+                    articleTitle = articleTitle.substring(0, 67) + '...';
+                }
+            } else if (displayTitleText.length > 0) {
+                articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
+                if (displayTitleText.length > 70) {
+                     articleTitle += '...';
+                }
+            }
+
+            const articleSection = document.createElement('div');
+            articleSection.classList.add('article-section');
+            if (isPinned) {
+                articleSection.classList.add('pinned-section'); // Add class to the section too for potential styling
+            }
+
+
+            const articleHeaderLink = document.createElement('a');
+            articleHeaderLink.classList.add('article-header');
+            if (isPinned) {
+                articleHeaderLink.classList.add('pinned-article');
+            }
+            articleHeaderLink.href = `?articleId=${originalIndex}`; // Link to the specific article using original index
+            articleHeaderLink.dataset.articleIndex = originalIndex; // Store original index
+
+            const articleTitleSpan = document.createElement('span');
+            articleTitleSpan.classList.add('article-header-title');
+            articleTitleSpan.textContent = articleTitle;
+
+            const pinButton = document.createElement('button');
+            pinButton.classList.add('pin-button');
+            pinButton.innerHTML = '<i class="fas fa-thumbtack"></i>';
+            pinButton.title = isPinned ? '取消置顶' : '置顶此文章';
+            pinButton.dataset.articleIndex = originalIndex;
+            if (isPinned) {
+                pinButton.classList.add('pinned');
+            }
+
+            pinButton.addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent navigating to the article link
+                event.stopPropagation(); // Stop event from bubbling up to articleHeaderLink
+                togglePinArticle(originalIndex);
+            });
+
+
+            articleHeaderLink.appendChild(articleTitleSpan);
+            articleHeaderLink.appendChild(pinButton);
+            articleSection.appendChild(articleHeaderLink);
+
+            return articleSection;
+        }
+
+        // NEW: Function to toggle article pin state
+        function togglePinArticle(indexToPin) {
+            if (pinnedArticleId === indexToPin) {
+                // Unpin
+                localStorage.removeItem(localStoragePinnedArticleKey);
+                pinnedArticleId = null;
+                console.log(`Article ${indexToPin} unpinned.`);
+            } else {
+                // Pin
+                localStorage.setItem(localStoragePinnedArticleKey, indexToPin);
+                pinnedArticleId = indexToPin;
+                console.log(`Article ${indexToPin} pinned.`);
+            }
+            // Re-render articles to reflect the change
+            loadContent();
+        }
+
         // --- Function to clean titles ---
         function cleanAllTitles() {
-            const elementsWithTitles = document.querySelectorAll('.article-header, title');
+            const elementsWithTitles = document.querySelectorAll('.article-header-title, title'); // Changed selector
 
             elementsWithTitles.forEach(element => {
                 let originalText = element.textContent;
@@ -1134,7 +1253,7 @@
             });
         }
 
-        // NEW: Font Size functions
+        // Font Size functions
         function applyFontSize(scale) {
             document.documentElement.style.setProperty('--font-scale', scale);
             document.getElementById('currentFontSizeValue').textContent = `${scale.toFixed(1)}x`;
@@ -1149,14 +1268,11 @@
             const speedSliderWrapper = document.getElementById('speedSliderWrapper');
             const homeButton = document.getElementById('homeButton');
             const toggleSpeedSliderButton = document.getElementById('toggleSpeedSliderButton');
-            const settingsGearButton = document.getElementById('settingsGearButton'); // NEW
-            const fontSizeSliderWrapper = document.getElementById('fontSizeSliderWrapper'); // NEW
-            const fontSizeRange = document.getElementById('fontSizeRange'); // NEW
-            const currentFontSizeValueDisplay = document.getElementById('currentFontSizeValue'); // NEW
+            const settingsGearButton = document.getElementById('settingsGearButton');
+            const fontSizeSliderWrapper = document.getElementById('fontSizeSliderWrapper');
+            const fontSizeRange = document.getElementById('fontSizeRange');
+            const currentFontSizeValueDisplay = document.getElementById('currentFontSizeValue');
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/Fiction/CW.md';
-
-            // Don't add hash on initial load to keep URL clean for pagination
-            // updateUrlWithHash();
 
             // Initialize speed slider
             currentSpeedValueDisplay.textContent = speedRange.value;
@@ -1179,7 +1295,7 @@
                 restartTTSWithNewSpeed();
             });
 
-            // NEW: Font size slider event listeners
+            // Font size slider event listeners
             fontSizeRange.addEventListener('input', function() {
                 const newScale = parseFloat(this.value);
                 applyFontSize(newScale);
@@ -1219,7 +1335,7 @@
                 fontSizeSliderWrapper.classList.remove('visible');
             });
 
-            // NEW: Toggle Font Size Slider button functionality
+            // Toggle Font Size Slider button functionality
             settingsGearButton.addEventListener('click', function() {
                 fontSizeSliderWrapper.classList.toggle('visible'); // Toggle visibility
                 if (fontSizeSliderWrapper.classList.contains('visible')) {
@@ -1285,28 +1401,37 @@
                     // If a specific article is currently being viewed, read that one
                     if (currentArticleIndex !== -1 && document.getElementById(`article-content-${currentArticleIndex}`)) {
                         articleToRead = document.getElementById(`article-content-${currentArticleIndex}`);
-                    } else {
-                        // If on the main listing page, read the pinned article's title
-                        const pinnedArticleLink = document.querySelector('.article-header.pinned-article');
-                        if (pinnedArticleLink) {
-                            // Read the *text content* of the pinned article header, not its href
-                            playSummaryTTS(pinnedArticleLink.textContent);
-                            return; // Stop here as the pinned link is read
+                    } else if (pinnedArticleId !== null) {
+                        // If no specific article is viewed, and there's a pinned article, read that one
+                        currentArticleIndex = pinnedArticleId;
+                        // Navigate to the pinned article's single view if not already there
+                        if (window.location.search.indexOf(`articleId=${pinnedArticleId}`) === -1) {
+                            const newUrl = new URL(window.location.href);
+                            newUrl.searchParams.set('articleId', pinnedArticleId);
+                            newUrl.searchParams.delete('page');
+                            window.location.href = newUrl.toString();
+                            return; // Exit to prevent immediate TTS before re-render
                         }
-                        // If no pinned article or pinned article already read, read the first regular article
-                        if (allArticles.length > 0) {
-                            currentArticleIndex = 0;
-                            articleToRead = document.getElementById(`article-content-0`);
-                            // If on the main page and clicking read, navigate to the first article
-                            if (window.location.search.indexOf('articleId=') === -1) {
-                                const newUrl = new URL(window.location.href);
-                                newUrl.searchParams.set('articleId', currentArticleIndex);
-                                newUrl.searchParams.delete('page'); // remove page param when viewing single article
-                                window.location.href = newUrl.toString();
-                                return; // Exit to prevent immediate TTS before re-render
+                        articleToRead = document.getElementById(`article-content-${pinnedArticleId}`);
+                    }
+                    // If still no article to read (e.g., no pinned article, and not on an article page), read the first article on the current paginated list.
+                    // This logic is slightly adjusted to always prefer the actual displayed content.
+                    if (!articleToRead && allArticles.length > 0) {
+                         // Find the first visible article content div
+                        const firstArticleContentDiv = document.querySelector('.article-content');
+                        if (firstArticleContentDiv) {
+                            articleToRead = firstArticleContentDiv;
+                            const idMatch = firstArticleContentDiv.id.match(/article-content-(\d+)/);
+                            if (idMatch) {
+                                currentArticleIndex = parseInt(idMatch[1], 10);
                             }
+                        } else if (allArticles.length > 0 && document.getElementById(`article-content-0`)) {
+                            // Fallback if no visible .article-content, but articles exist
+                            articleToRead = document.getElementById(`article-content-0`);
+                            currentArticleIndex = 0;
                         }
                     }
+
 
                     if (articleToRead) {
                         playSummaryTTS(articleToRead.innerText);
