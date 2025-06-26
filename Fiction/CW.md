@@ -1,4 +1,4 @@
----ARTICLE_BREAK---
+NEW_ARTICLE_SECTION
 
 <p><strong>Chapter IV: Loneliness</strong></p>
 <p>THE NEXT day was rainy and dark. Rain fell on the roof of the barn and dripped steadily from the eaves. Rain fell in the barnyard and ran in crooked courses down into the lane where thistles and pigweed grew. Rain spattered against Mrs. Zuckerman’s kitchen windows and came gushing out of the downspouts. Rain fell on the backs of the sheep as they grazed in the meadow. When the sheep tired of standing in the rain, they walked slowly up the lane and into the fold.</p>
@@ -43,7 +43,7 @@
 <p>“But I can’t see you,” said Wilbur, jumping to his feet. “Where are you? And who are you?”</p>
 <p>“I’m right up here,” said the voice. “Go to sleep. You’ll see me in the morning.”</p>
 
----ARTICLE_BREAK---
+NEW_ARTICLE_SECTION
 
 <p><strong>Chapter III: Escape</strong></p>
 <p>THE BARN was very large. It was very old. It smelled of hay and it smelled of manure. It smelled of the perspiration of tired horses and the wonderful sweet breath of patient cows. It often had a sort of peaceful smell—as though nothing bad could happen ever again in the world. It smelled of grain and of harness dressing and of axle grease and of rubber boots and of new rope. And whenever the cat was given a fish-head to eat, the barn would smell of fish. But mostly it smelled of hay, for there was always hay in the great loft up overhead. And there was always hay being pitched down to the cows and the horses and the sheep.</p>
