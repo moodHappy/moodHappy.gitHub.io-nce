@@ -1,7 +1,7 @@
 # **NCE Notes**  
 ## **目录**
 
-[B1](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/style%2FTexttohtml.html)
+[临时文章](https://github.com/moodHappy/HelloWorld/blob/master/Notes%2FB1.md)
 
 
 [英语简易教程](https://github.com/moodHappy/HelloWorld/tree/master/English%20tutorial)
