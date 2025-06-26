@@ -1,5 +1,61 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 21:Last Day</strong></p>
+<p>Charlotte and Wilbur were alone. The families had gone to look for Fern. Templeton was asleep. Wilbur lay resting after the excitement and strain of the ceremony. His medal still hung from his neck; by looking out of the corner of his eye he could see it.</p>
+<p>"Charlotte," said Wilbur after a while, "why are you so quiet?"</p>
+<p>"I like to sit still," she said. "I've always been rather quiet."</p>
+<p>"Yes, but you seem specially so today. Do you feel all right?"</p>
+<p>"A little tired, perhaps. But I feel peaceful. Your success in the ring this morning was, to a small degree, any success. Your future is assured. You will live, secure and safe, Wilbur. Nothing can harm you now. These autumn days will shorten and grow cold. The leaves will shake loose from the trees and fall. Christmas will come, then the snows of winter. You will live to enjoy the beauty of the frozen world, for you mean a great deal to Zuckerman and he will not harm you, ever. Winter will pass, the days will lengthen, the ice will melt in the pasture pond. The song sparrow will return and sing, the frogs will awake, the warm wind will blow again. All these sights and sounds and smells will be yours to enjoy, Wilbur - this lovely world, these precious days ..."</p>
+<p>Charlotte stopped. A moment later a tear came to Wilbur's eye. "Oh, Charlotte," he said. "To think that when I first met you I thought you were cruel and bloodthirsty!"</p>
+<p>When he recovered from his emotion, he spoke again. "Why did you do all this for me?" he asked. "I don't deserve it. I've never done anything for you."</p>
+<p>"You have been my friend," replied Charlotte. "That in itself is a tremendous thing. I wove my webs for you because I liked you. After all, what's a life, anyway? We're born, we live a little while, we die. A spider's life can't help being something of a mess, with all this trapping and eating flies. By helping you, perhaps I was trying to lift up my life a trifle. Heaven knows anyone's life can stand a little of that."</p>
+<p>"Well," said Wilbur. "I'm no good at making speeches. I haven't got your gift for words. But you have saved me, Charlotte, and I would gladly give my life for you - I really would."</p>
+<p>"I'm sure you would. And I thank you for your generous sentiments."</p>
+<p>"Charlotte," said Wilbur. "We're all going home today. The Fair is almost over. Won't it be wonderful to be back home in the barn cellar again with the sheep and the geese? Aren't you anxious to get home?"</p>
+<p>For a moment Charlotte said nothing. Then she spoke in a voice so low Wilbur could hardly hear the words.</p>
+<p>"I will not be going back to the barn," she said.</p>
+<p>Wilbur leapt to his feet. "Not going back?" he cried. "Charlotte, what are you talking about?"</p>
+<p>"I'm done for," she replied. "In a day or two I'll be dead. I haven't even strength enough to climb down into the crate. I doubt if I have enough silk in my spinnerets to lower me to the ground."</p>
+<p>Hearing this, Wilbur threw himself down in an agony of pain and sorrow. Great sobs racked his body. He heaved and grunted with desolation. "Charlotte," he moaned. "Charlotte! My true friend!"</p>
+<p>"Come now, let's not make a scene," said the spider. "Be quiet, Wilbur. Stop thrashing about!"</p>
+<p>"But I can't stand it," shouted Wilbur. "I won't leave you here alone</p>
+<p>to die. If you're going to stay here I shall stay, too."</p>
+<p>"Don't be ridiculous," said Charlotte. "You can't stay here. Zuckerman and Lurvy and John Arable and the others will be back any minute now, and they'll shove you into that crate and away you'll go. Besides, it wouldn't make any sense for you to stay. There would be no one to feed you. The Fair Grounds will soon be empty and deserted."</p>
+<p>Wilbur was in a panic. He raced round and round the pen. Suddenly he had an idea - he thought of the egg sac and the five hundred and fourteen little spiders that would hatch in the spring. If Charlotte herself was unable to go home to the barn, at least he must take her children along.</p>
+<p>Wilbur rushed to the front of his pen. He put his front feet up on the top board and gazed around. In the distance he saw the Arables and the Zuckermans approaching. He knew he would have to act quickly.</p>
+<p>"Where's Templeton?" he demanded.</p>
+<p>"He's in that corner, under the straw, asleep," said Charlotte.</p>
+<p>Wilbur rushed over, pushed his strong snout under the rat, and tossed him into the air.</p>
+<p>"Templeton!" screamed Wilbur. "Pay attention!"</p>
+<p>The rat, surprised out of a sound sleep, looked first dazed then disgusted.</p>
+<p>"What kind of monkeyshine is this?" he growled. "Can't a rat catch a wink of sleep without being rudely popped into the air?"</p>
+<p>"Listen to me!" cried Wilbur. "Charlotte is very ill. She has only a short time to live. She cannot accompany us home, because of her condition. Therefore, it is absolutely necessary that I take her egg sac with me. I can't reach it, and I can't climb. You are the only one that can get it. There's not a second to be lost. The people are coming - they'll be here in no time. Please, please, please, Templeton, climb up and get the egg sac."</p>
+<p>The rat yawned. He straightened his whiskers. Then he looked up at the egg sac.</p>
+<p>"So!" he said, in disgust. "So it's old Templeton to the rescue again, is it? Templeton do this, Templeton do that, Templeton please run down to the dump and get me a magazine clipping, Templeton please lend me a piece of string so I can spin a web."</p>
+<p>"Oh, hurry!" said Wilbur. "Hurry up, Templeton!"</p>
+<p>But the rat was in no hurry. He began imitating Wilbur's voice.</p>
+<p>"So it's 'Hurry up, Templeton,' is it?" He said. "Ho, ho. And what thanks do I ever get for these services, I would like to know? Never a kind word for old Templeton, only abuse and wisecracks (joke; sarcastic remark) and side remarks. Never a kind word for a rat."</p>
+<p>"Templeton," said Wilbur in desperation, "if you don't stop talking and get busy, all will be lost, and I will die of a broken heart. Please climb up!"</p>
+<p>Templeton lay back in the straw. Lazily he placed his forepaws behind his head and crossed his knees, in an attitude of complete relaxation.</p>
+<p>"Die of a broken heart," he mimicked. "How touching! My, my! I notice that it's always me you come to when in trouble. But I've never heard of anyone's heart breaking on my account. Oh, no. Who cares anything about old Templeton?"</p>
+<p>"Get up!" screamed Wilbur. "Stop acting like a spoiled child!</p>
+<p>Templeton grinned and lay still. "Who made trip after trip to the dump?" he asked. "Why, it was old Templeton! Who saved Charlotte's life by scaring that Arable boy away with a rotten goose egg? Bless my soul, I believe it was old Templeton. Who bit your tail and got you back on your feet this morning after you had fainted in front of the crowd? Old Templeton. Has it ever occurred to you that I'm sick of running errands and doing favors? What do you think I am, anyway, a rat-of-all-work?"</p>
+<p>Wilbur was desperate. The people were coming. And the rat was failing him. Suddenly he remembered Templeton's fondness for food.</p>
+<p>"Templeton," he said, "I will make you a solemn promise. Get Charlotte's egg sac for me, and from now on I will let you eat first, when Lurvy slops me. I will let you have your choice of everything in the trough and I won't touch a thing until you're through."</p>
+<p>The rat sat up. "You mean that?" he said.</p>
+<p>"All right, it's a deal," said the rat. He walked to the wall and started to climb. His stomach was still swollen from last night's gorge. Groaning and complaining, he pulled himself slowly to the ceiling. He crept along till he reached the egg sac. Charlotte moved aside for him. She was dying, but she still had strength enough to move a little. Then Templeton bared his long ugly teeth and began snipping the threads that fastened the sac to the ceiling. Wilbur watched from below.</p>
+<p>"Use extreme care!" he said. "I don't want a single one of those eggs harmed."</p>
+<p>"Thith thtuff thticks in my mouth," complained the rat. "It'th worth than caramel candy."</p>
+<p>But Templeton worked away at the job, and managed to cut the sac adrift and carry it to the ground, where he dropped it in front of Wilbur. Wilbur heaved a great sigh of relief.</p>
+<p>"Thank you, Templeton," he said. "I will never forget this as long as I live."</p>
+<p>"Neither will I," said the rat, picking his teeth. "I feel as though I'd eaten a spool of thread. Well, home we go!"</p>
+<p>Templeton crept into the crate and buried himself in the straw. He got out of sight just in time. Lurvy and John Arable and Mr. Zuckerman came along at that moment, followed by Mrs. Arable and Mrs. Zuckerman and Avery and Fern. Wilbur had already decided how he would carry the egg sac - there was only one way possible. He carefully took the little bundle in his mouth and held it there on top of his tongue. He remembered what Charlotte had told him - that the sac was waterproof and strong. It felt funny on his tongue and made him drool a bit. And of course he couldn't say anything. But as he was being shoved into the crate, he looked up at Charlotte and gave her a wink. She knew he was saying good-bye in the only way he could. And she knew her children were safe.</p>
+<p>"Good-bye!" she whispered. Then she summoned all her strength and waved one of her front legs at him.</p>
+<p>She never moved again. Next day, as the Ferris wheel was being taken apart and the race horses were being loaded into vans and the entertainers were packing up their belongings and driving away in their trailers, Charlotte died. The Fair Grounds were soon deserted. The sheds and buildings were empty and forlorn.</p>
+<p>The infield was littered with bottles and trash. Nobody, of the hundreds of people that had visited the Fair, knew that a grey spider had played the most important part of all. No one was with her when she died.</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 20:The Hour of Triumph</strong></p>
 <p>"Special announcement!" said the loud speaker in a pompous voice. "The management of the fair takes great pleasure in presenting Mr. Homer L. Zuckerman and his famous pig. The truck bearing this extraordinary animal is now approaching the infield. Kindly stand back and give the truck room to proceed! In a few moments the pig will be unloaded in the special judging ring in front of the grandstand, where a special award will be made. Will the crowd please make way and let the truck pass. Thank you."</p>
 <p>Wilbur trembled when he heard this speech. He felt happy but dizzy. The truck crept along slowly in low speed. Crowds of people surrounded it, and Mr. Arable had to drive very carefully in order not to run over anybody. At last he managed to reach the judges' stand. Avery jumped out and lowered the tailgate.</p>
