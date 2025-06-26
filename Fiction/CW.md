@@ -1,5 +1,38 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 6:Summer Days</strong></p>
+<p>The early summer days on a farm are the happiest and fairest days of the year. Lilacs bloom and make the air sweet, and then fade. Apple blossoms come with the lilacs, and the bees visit around among the apple trees. The days grow warm and soft. School ends, and children have time to play and to fish for trouts in the brook. Avery often brought a trout home in his pocket, warm and stiff and ready to be fried for supper.</p>
+<p>Now that school was over, Fern visited the barn almost every day, to sit quietly on her stool. The animals treated her as an equal. The sheep lay calmly at her feet.</p>
+<p>Around the first of July, the work horses were hitched to the mowing machine, and Mr. Zuckerman climbed into the seat and drove into the field. All morning you could hear the rattle of the machine as it went round and round, while the tall grass fell down behind the cutter bar in long green swathes. Next day, if there was no thunder shower, all hands would help rake and pitch and load, and the hay would be hauled to the barn in the high hay wagon, with Fern and Avery riding at the top of the load. Then the hay would be hoisted, sweet and warm, into the big loft, until the whole barn seemed like a wonderful bed of timothy and clover. It was fine to jump in, and perfect to hide in. And sometimes Avery would find a little grass snake in the hay, and would add it to the other things in his pocket.</p>
+<p>Early summer days are a jubilee (time of celebration and rejoicing) time for birds. In the fields, around the house, in the barn, in the woods, in the swamp - everywhere love and songs and nests and eggs. From the edge of the woods, the white-throated sparrow (which must come all the way from Boston) calls, "Oh, Peabody, Peabody, Peabody!" On an apple bough, the phoebe teeters and wags its tail and says, "Phoebe, phoe-bee!" The song sparrow, who knows how brief and lovely life is, says, "Sweet, sweet, sweet interlude; sweet, sweet, sweet interlude." If you enter the barn, the swallows swoop down from their nests and scold. "Cheeky, cheeky!" they say.</p>
+<p>In early summer there are plenty of things for a child to eat and drink and suck and chew. Dandelion stems are full of milk, clover heads are loaded with nectar, the Frigidaire is full of ice-cold drinks. Everywhere you look is life; even the little ball of spit on the weed stalk, if you poke it apart, has a green worm inside it. And on the under side of the leaf of the potato vine are the bright orange eggs of the potato bug.</p>
+<p>It was on a day in early summer that the goose eggs hatched.</p>
+<p>This was an important event in the barn cellar. Fern was there, sitting on her stool, when it happened.</p>
+<p>Except for the goose herself, Charlotte was the first to know that the goslings had at last arrived. The goose knew a day in advance that they were coming - she could hear their weak voices calling from inside the egg. She knew that they were in a desperately cramped position inside the shell and were most anxious to break through and get out. So she sat quite still, and talked less than usual.</p>
+<p>When the first gosling poked its grey-green head through the goose's feathers and looked around, Charlotte spied it and made the announcement.</p>
+<p>"I am sure," she said, "that every one of us here will be gratified to learn that after four weeks of unremitting effort and patience on the part of our friend the goose, she now has something to show for it. The goslings have arrived. May I offer my sincere congratulations!"</p>
+<p>"Thank you, thank you, thank you!" said the goose, nodding and bowing shamelessly.</p>
+<p>"Congratulations!" shouted Wilbur. "How many goslings are there? I can only see one."</p>
+<p>"There are seven," said the goose.</p>
+<p>"Fine!" said Charlotte. "Seven is a lucky number."</p>
+<p>"Luck had nothing to do with this," said the goose. "It was good management and hard work."</p>
+<p>At this point, Templeton showed his nose from his hiding place under Wilbur's trough. He glanced at Fern, then crept cautiously toward the goose, keeping close to the wall. Everyone watched him, for he was not well liked, not trusted.</p>
+<p>"Look," he began in his sharp voice, "you say you have seven goslings. There were eight eggs. What happened to the other egg? Why didn't it hatch?"</p>
+<p>"It's a dud, I guess," said the goose.</p>
+<p>"What are you going to do with it?" continued Templeton, his little round beady eyes fixed on the goose.</p>
+<p>"You can have it," replied the goose. "Roll it away and add it to that nasty collection of yours." (Templeton had a habit of picking up unusual objects around the farm and storing them in his home. He saved everything.)</p>
+<p>"Certainly-ertainly-ertainly," said the gander. "You may have the egg. But I'll tell you one thing, Templeton, if I ever catch you poking-oking-oking your ugly nose around our goslings, I'll give you the worst pounding a rat ever took." And the gander opened his strong wings and beat the air with them to show his power. He was strong and brave, but the truth is, both the goose and the gander were worried about Templeton. And with good reason. The rat had no morals, no conscience, no scruples, no consideration, no decency, no milk of rodent kindness, no compunctions (uneasiness of conscience, remorse), no higher feeling, no friendliness, no anything. He would kill a gosling if he could get away with it - the goose knew that.</p>
+<p>With her broad bill the goose pushed the unhatched egg out of the nest, and the entire company watched in disgust while the rat rolled it away. Even Wilbur, who could eat almost anything, was appalled. "Imagine wanting a junky old rotten egg!" he muttered.</p>
+<p>"A rat is a rat," said Charlotte. She laughed a tinkling little laugh. "But, my friends, if that ancient egg ever breaks, this barn will be untenable."</p>
+<p>"What's that mean?" asked Wilbur.</p>
+<p>"It means nobody will be able to live here on account of the smell. A rotten egg is a regular stink bomb."</p>
+<p>"I won't break it," snarled Templeton. "I know what I'm doing. I handle stuff like this all the time."</p>
+<p>He disappeared into his tunnel, pushing the goose egg in front of him. He pushed and nudged till he succeeded in rolling it to his lair under the trough.</p>
+<p>That afternoon, when the wind had died down and the barnyard was quiet and warm, the grey goose led her seven goslings off the nest and out into the world. Mr. Zuckerman spied them when he came with Wilbur's supper.</p>
+<p>"Well, hello there!" he said, smiling all over. "Let's see ... one, two, three, four, five, six, seven. Seven baby geese.</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 5:Charlotte</strong></p>
 <p>The night seemed long. Wilbur's stomach was empty and his mind was full. And when your stomach is empty and your mind is full, it's always hard to sleep.</p>
 <p>A dozen times during the night Wilbur woke and stared into the blackness, listening to the sounds and trying to figure out what time it was. A barn is never perfectly quiet. Even at midnight there is usually something stirring.</p>
