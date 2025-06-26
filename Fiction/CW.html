@@ -1,1 +1,1331 @@
-1
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中转站</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Modern CSS Variables - Updated for Light Theme */
+        :root {
+            --primary-color: #007bff; /* Standard Blue */
+            --primary-hover: #0056b3;
+            --secondary-color: #6c757d; /* Gray */
+            --accent-color: #28a745; /* Green for highlights/links */
+            --background-color: #f8f9fa; /* Light Gray/Off-white background */
+            --card-bg: #ffffff; /* White card background */
+            --card-border: #e0e0e0; /* Light gray border */
+            --text-primary: #212529; /* Dark text for primary content */
+            --text-secondary: #495057; /* Slightly lighter dark text for secondary content */
+            --text-muted: #6c757d; /* Muted gray for less important text */
+            --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+            --shadow-xl: 0 1.5rem 3rem rgba(0, 0, 0, 0.2);
+            --border-radius: 8px; /* Slightly smaller border-radius for cleaner look */
+            --transition: all 0.3s ease-in-out;
+            --base-font-size: 16px;
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6; /* Adjusted line height for better readability on light background */
+            color: var(--text-primary);
+            background: var(--background-color); /* Use the new background color variable */
+            min-height: 100vh;
+            padding-top: 90px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background elements - Removed or simplified for a plain background */
+        body::before {
+            content: none; /* Remove animated background elements */
+        }
+
+        @keyframes float {
+            /* No longer needed */
+        }
+
+        /* Speed Control Container - Plain White with subtle shadow */
+        .speed-control-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: var(--card-bg); /* White background */
+            border-bottom: 1px solid var(--card-border);
+            padding: 15px 25px; /* Slightly adjusted padding */
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 15px; /* Adjusted gap */
+            box-shadow: var(--shadow-sm);
+        }
+
+        .speed-label {
+            font-size: 1em; /* Slightly smaller */
+            color: var(--text-primary); /* Dark text */
+            font-weight: 500; /* Regular font weight */
+            text-shadow: none; /* No text shadow */
+            white-space: nowrap;
+        }
+
+        /* Home Button Style - Applied to "语速" and "齿轮" buttons as well */
+        .home-button {
+            background: var(--primary-color); /* Solid primary color */
+            color: white;
+            padding: 8px 16px; /* Smaller padding */
+            border: none;
+            border-radius: var(--border-radius); /* Use common border-radius */
+            font-size: 0.9em; /* Slightly smaller font */
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            text-decoration: none;
+            display: inline-block;
+            backdrop-filter: none; /* No backdrop filter for plain background */
+            -webkit-backdrop-filter: none;
+            white-space: nowrap;
+        }
+
+        .home-button:hover {
+            transform: translateY(-1px); /* Subtle lift */
+            box-shadow: var(--shadow-md);
+            background: var(--primary-hover); /* Darker primary color on hover */
+        }
+
+        .home-button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* NEW: Settings Gear Button */
+        #settingsGearButton {
+            width: 38px; /* Make it a square for the icon */
+            height: 38px;
+            padding: 0;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1em;
+            box-shadow: var(--shadow-sm);
+            margin-left: auto;
+        }
+        #settingsGearButton:hover {
+            transform: rotate(30deg) translateY(-1px);
+        }
+        #settingsGearButton i {
+            color: white;
+            transition: var(--transition);
+        }
+
+        /* Speed Slider Wrapper */
+        .speed-slider-wrapper,
+        .font-size-slider-wrapper { /* Apply similar styles to both wrappers */
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 8px; /* Adjusted padding */
+            background: var(--card-bg); /* White background */
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            gap: 8px; /* Adjusted gap */
+            transition: opacity 0.3s, visibility 0.3s, transform 0.3s ease-in-out;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .speed-slider-wrapper {
+            left: 20px;
+            transform: translateY(-50%) translateX(-100%);
+        }
+        .font-size-slider-wrapper {
+            right: 20px;
+            transform: translateY(-50%) translateX(100%);
+        }
+
+        .speed-slider-wrapper.visible,
+        .font-size-slider-wrapper.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(-50%) translateX(0);
+        }
+
+        .speed-slider,
+        .font-size-slider { /* Apply similar styles to both sliders */
+            -webkit-appearance: none;
+            appearance: none;
+            width: 6px; /* Thinner slider track */
+            height: 160px; /* Slightly shorter */
+            background: var(--card-border); /* Light gray track */
+            outline: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: var(--transition);
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+        }
+
+        .speed-slider::-webkit-slider-thumb,
+        .font-size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px; /* Smaller thumb */
+            height: 20px;
+            background: var(--primary-color); /* Blue thumb */
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border: 2px solid white; /* White border */
+        }
+
+        .speed-slider::-moz-range-thumb,
+        .font-size-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border: 2px solid white;
+        }
+
+        .speed-slider:hover::-webkit-slider-thumb,
+        .font-size-slider:hover::-webkit-slider-thumb {
+            transform: scale(1.1) rotate(-180deg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .speed-slider:active::-webkit-slider-thumb,
+        .font-size-slider:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            transform: scale(0.95) rotate(-180deg);
+        }
+
+        .speed-value-display,
+        .font-size-value-display {
+            font-weight: 600;
+            color: var(--text-primary); /* Dark text */
+            min-width: 40px;
+            text-align: center;
+            font-size: 1em;
+            text-shadow: none; /* No text shadow */
+        }
+
+        /* Content Container */
+        .content-container {
+            max-width: 800px; /* Slightly narrower content area */
+            margin: 0 auto;
+            padding: 20px; /* Adjusted padding */
+            padding-top: 0;
+            min-height: 50vh;
+        }
+
+        /* Article Sections - Modern Card Design */
+        .article-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md); /* Use md shadow */
+            margin-bottom: 20px; /* Smaller margin */
+            overflow: hidden;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .article-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px; /* Thinner accent bar */
+            background: var(--primary-color); /* Primary color for accent */
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .article-section:hover {
+            transform: translateY(-4px); /* Less dramatic lift */
+            box-shadow: var(--shadow-lg);
+        }
+
+        .article-section:hover::before {
+            opacity: 1;
+        }
+
+        .article-header {
+            padding: 18px 20px; /* Adjusted padding */
+            color: var(--text-primary);
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 1px solid var(--card-border);
+            display: block;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.05); /* Light shimmer for hover effect */
+            transition: var(--transition);
+        }
+
+        .article-header:hover {
+            background: #f0f0f0; /* Light background on hover */
+            color: var(--primary-color);
+        }
+
+        .article-header:hover::before {
+            left: 100%;
+        }
+
+        /* Added style for the pinned article header */
+        .article-header.pinned-article {
+            background: var(--accent-color); /* Green for pinned article */
+            color: white;
+            font-size: 1.05em;
+            border-bottom: none;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 90px;
+            z-index: 990;
+            padding: 15px 20px;
+            animation: none; /* Removed pulse animation for a cleaner look */
+        }
+
+        .article-header.pinned-article:hover {
+            background: #218838; /* Darker green on hover */
+            transform: none;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .article-content {
+            padding: 30px; /* Adjusted padding */
+            font-size: 1em; /* Base font size for content */
+            line-height: 1.7; /* Adjusted line height */
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            font-size: calc(var(--base-font-size) * var(--font-scale, 1));
+            transition: font-size 0.2s ease-in-out;
+        }
+
+        .article-content a {
+            text-decoration: none;
+            color: var(--primary-color); /* Primary color for links */
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .article-content a:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        /* Read Aloud Button - Modern Floating Design */
+        .read-aloud-container {
+            position: fixed;
+            bottom: 30px; /* Adjusted */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out, transform 0.4s ease-in-out;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .read-aloud-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-50%) translateY(20px);
+        }
+
+        .read-aloud-button {
+            background: var(--primary-color);
+            color: white;
+            padding: 12px 24px; /* Adjusted padding */
+            border: none;
+            border-radius: 30px; /* More standard pill shape */
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .read-aloud-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3); /* White shimmer */
+            transition: var(--transition);
+        }
+
+        .read-aloud-button:hover {
+            transform: translateY(-2px) scale(1.02); /* Less dramatic hover */
+            box-shadow: var(--shadow-lg);
+        }
+
+        .read-aloud-button:active {
+            transform: translateY(0) scale(1);
+        }
+
+        .read-aloud-button.reading {
+            background: #dc3545; /* Red for reading state */
+            animation: pulse-red 1.5s infinite; /* Custom pulse for red button */
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: var(--shadow-md); }
+            50% { box-shadow: var(--shadow-lg), 0 0 20px rgba(220, 53, 69, 0.4); }
+        }
+
+        .read-aloud-button.reading:hover {
+            background: #c82333; /* Darker red on hover */
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .loading-spinner {
+            width: 40px; /* Smaller spinner */
+            height: 40px;
+            border: 3px solid rgba(0, 0, 0, 0.1); /* Lighter border for light theme */
+            border-top: 3px solid var(--primary-color); /* Primary color for spinner */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-muted); /* Muted text color */
+            font-size: 1em;
+            font-weight: 500;
+            text-shadow: none;
+        }
+
+        /* --- NEW: Pagination Styles --- */
+        #pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0 40px 0;
+        }
+        .pagination {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            gap: 6px; /* Smaller gap */
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pagination li a {
+            display: block;
+            padding: 8px 14px; /* Adjusted padding */
+            text-decoration: none;
+            color: var(--text-secondary);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            font-weight: 500;
+        }
+        .pagination li a:hover {
+            background: #f0f0f0; /* Lighter hover background */
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+        .pagination li.active a {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+            cursor: default;
+        }
+        .pagination li.disabled a {
+            opacity: 0.6; /* Slightly more opaque for disabled */
+            cursor: not-allowed;
+            background: #f8f9fa; /* Lighter background for disabled */
+            color: var(--text-muted);
+        }
+        .pagination li.disabled a:hover {
+            transform: none;
+        }
+
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+
+            .speed-control-container {
+                padding: 12px 18px;
+                gap: 12px;
+            }
+
+            .speed-slider-wrapper,
+            .font-size-slider-wrapper {
+                padding: 8px 6px;
+            }
+            .speed-slider-wrapper {
+                left: 10px;
+            }
+            .font-size-slider-wrapper {
+                right: 10px;
+            }
+
+            .speed-slider,
+            .font-size-slider {
+                height: 120px;
+            }
+
+            .content-container {
+                padding: 15px;
+            }
+
+            .article-header {
+                font-size: 0.9em;
+                padding: 15px 18px;
+            }
+            .article-header.pinned-article {
+                top: 70px;
+                font-size: 1em;
+                padding: 14px 18px;
+            }
+
+            .article-content {
+                padding: 25px;
+                font-size: calc(var(--base-font-size) * var(--font-scale, 1) * 0.95);
+            }
+
+            .read-aloud-button {
+                padding: 10px 20px;
+                font-size: 0.95em;
+            }
+
+            .home-button {
+                padding: 7px 14px;
+                font-size: 0.85em;
+            }
+
+            #settingsGearButton {
+                width: 35px;
+                height: 35px;
+                font-size: 1.1em;
+            }
+
+            .pagination li a {
+                padding: 7px 12px;
+                font-size: 0.85em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding-top: 60px;
+            }
+
+            .speed-control-container {
+                padding: 10px 12px;
+                gap: 10px;
+            }
+
+            .speed-slider-wrapper {
+                left: 5px;
+                padding: 6px 4px;
+            }
+            .font-size-slider-wrapper {
+                right: 5px;
+                padding: 6px 4px;
+            }
+
+            .speed-slider,
+            .font-size-slider {
+                height: 90px;
+            }
+
+            .speed-label, .speed-value-display,
+            .font-size-label, .font-size-value-display {
+                font-size: 0.9em;
+            }
+
+            .content-container {
+                padding: 10px;
+            }
+
+            .article-header {
+                font-size: 0.8em;
+                padding: 12px 15px;
+            }
+            .article-header.pinned-article {
+                top: 60px;
+                font-size: 0.9em;
+                padding: 10px 15px;
+            }
+
+            .article-content {
+                padding: 20px;
+                font-size: calc(var(--base-font-size) * var(--font-scale, 1) * 0.9);
+            }
+
+            .read-aloud-button {
+                padding: 8px 16px;
+                font-size: 0.85em;
+            }
+
+            .home-button {
+                padding: 5px 10px;
+                font-size: 0.8em;
+            }
+
+            #settingsGearButton {
+                width: 30px;
+                height: 30px;
+                font-size: 1em;
+            }
+
+            .pagination li a {
+                padding: 5px 10px;
+                font-size: 0.8em;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus styles for accessibility */
+        .article-header:focus,
+        .read-aloud-button:focus,
+        .speed-slider:focus,
+        .home-button:focus,
+        .font-size-slider:focus,
+        #settingsGearButton:focus {
+            outline: 2px solid var(--primary-color); /* Highlight with primary color */
+            outline-offset: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="speed-control-container">
+        <a href="?" id="homeButton" class="home-button" aria-label="返回首页">首页</a>
+        <button id="toggleSpeedSliderButton" class="home-button" aria-label="切换语速控制条">语速</button>
+        <button id="settingsGearButton" class="home-button" aria-label="切换字体大小控制条">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+
+    <div class="speed-slider-wrapper" id="speedSliderWrapper">
+        <span class="speed-label">语速</span>
+        <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20" aria-label="调整语速">
+        <span id="currentSpeedValue" class="speed-value-display">-20</span>
+    </div>
+
+    <div class="font-size-slider-wrapper" id="fontSizeSliderWrapper">
+        <span class="font-size-label">字体大小</span>
+        <input type="range" id="fontSizeRange" class="font-size-slider" min="0.7" max="1.5" step="0.1" value="1.0" aria-label="调整字体大小">
+        <span id="currentFontSizeValue" class="font-size-value-display">1.0x</span>
+    </div>
+
+    <div class="read-aloud-container" id="readAloudContainer">
+        <button id="readAloudButton" class="read-aloud-button" aria-label="朗读或暂停朗读">朗读页面</button>
+    </div>
+
+    <div class="content-container" id="articles-container">
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">加载中...</p>
+        </div>
+    </div>
+
+    <div id="pagination-container"></div>
+
+
+    <script>
+        // --- Configuration ---
+        const ttsDomains = [
+            'https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/',
+        ];
+        let summaryVoice = 'en-US-EricNeural'; // Force using en-US-EricNeural
+        const itemsPerPage = 10; // Number of articles per page
+        // Define the pinned article URL
+        const pinnedArticleUrl = 'https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/Texttohtml.html';
+        // Define the title for the pinned article
+        const pinnedArticleTitle = '置顶文章';
+
+
+        // Global variables for audio control
+        let currentAudio = null;
+        let isReading = false;
+        let isPaused = false;
+        let currentTextToSpeak = ''; // Stores the text of the *currently playing* article
+        let currentSpeed = -20;
+        let currentPosition = 0;
+        let currentArticleIndex = -1; // To track which article is being read
+        let allArticles = []; // To store all parsed articles
+
+        // --- Summary Functions ---
+        function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
+            if (!textToSpeak || textToSpeak.trim() === '') {
+                console.warn('Text to speak is empty.');
+                return;
+            }
+
+            if (currentAudio && !currentAudio.paused && !currentAudio.ended) { // Check if audio is actively playing
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            currentTextToSpeak = textToSpeak;
+
+            const trimmedText = textToSpeak.trim();
+            let finaltextToSpeak = trimmedText;
+            // Removed HTML tags from the final text sent to TTS
+            finaltextToSpeak = finaltextToSpeak.replace(/<[^>]*>/g, '');
+
+            if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
+                finaltextToSpeak = trimmedText.substring(3);
+                console.log('Detected "URL" at the beginning, reading from:', finaltextToSpeak);
+            }
+
+            const queryString = new URLSearchParams({
+                text: finaltextToSpeak,
+                voiceName: summaryVoice,
+                speed: currentSpeed,
+            }).toString();
+
+            currentAudio = new Audio();
+            let played = false;
+
+            for (const url of ttsDomains) {
+                const ttsUrl = `${url}api/aiyue?${queryString}`;
+                console.log('Attempting to play TTS from:', ttsUrl);
+
+                currentAudio.src = ttsUrl;
+
+                if (fromCurrentPosition && currentPosition > 0) {
+                    currentAudio.currentTime = currentPosition;
+                } else {
+                    currentPosition = 0;
+                }
+
+                currentAudio.play()
+                    .then(() => {
+                        console.log('TTS started playing successfully from:', ttsUrl);
+                        played = true;
+                        isReading = true;
+                        isPaused = false;
+                        updateButtonState();
+                    })
+                    .catch(e => {
+                        console.error('Error playing TTS from ' + ttsUrl + ':', e);
+                        // Try next domain if available, or handle error
+                    });
+
+                if (played) break;
+            }
+
+            if (currentAudio) {
+                currentAudio.addEventListener('ended', function() {
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    currentArticleIndex = -1; // Reset article index when done
+                    updateButtonState();
+                });
+
+                currentAudio.addEventListener('error', function(e) {
+                    console.error('Audio playback error:', e);
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    currentArticleIndex = -1; // Reset article index on error
+                    updateButtonState();
+                    // Optionally show an error message to the user
+                });
+
+                currentAudio.addEventListener('timeupdate', function() {
+                    if (!currentAudio.paused) {
+                        currentPosition = currentAudio.currentTime;
+                    }
+                });
+            }
+        }
+
+        function pauseTTS() {
+            if (currentAudio && !currentAudio.paused) {
+                currentPosition = currentAudio.currentTime;
+                currentAudio.pause();
+                isPaused = true;
+                isReading = false;
+                updateButtonState();
+            }
+        }
+
+        function resumeTTS() {
+            if (currentAudio && isPaused) {
+                currentAudio.play()
+                    .then(() => {
+                        isReading = true;
+                        isPaused = false;
+                        updateButtonState();
+                    })
+                    .catch(e => {
+                        console.error('Error resuming TTS:', e);
+                        // If resume fails, restart the specific article from beginning
+                        if (currentArticleIndex !== -1 && allArticles[currentArticleIndex]) {
+                            // Fetch the innerText of the article content div directly
+                            const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
+                            if (articleContentDiv) {
+                                playSummaryTTS(articleContentDiv.innerText);
+                            }
+                        } else {
+                            // If no specific article, try to get the first one if available
+                            if (allArticles.length > 0) {
+                                const articleContentDiv = document.getElementById(`article-content-0`);
+                                if (articleContentDiv) {
+                                    playSummaryTTS(articleContentDiv.innerText);
+                                }
+                            }
+                        }
+                    });
+            } else if (!currentAudio || currentAudio.ended) {
+                // If no audio or audio ended, start reading from the current active article or first one
+                currentPosition = 0;
+                let articleToReadIndex = currentArticleIndex !== -1 ? currentArticleIndex : 0;
+
+                if (allArticles[articleToReadIndex]) {
+                    const articleContentDiv = document.getElementById(`article-content-${articleToReadIndex}`);
+                    if (articleContentDiv) {
+                        currentArticleIndex = articleToReadIndex; // Ensure it's set
+                        playSummaryTTS(articleContentDiv.innerText);
+                    }
+                } else {
+                    console.warn("No articles found to read or active article not found.");
+                }
+            }
+        }
+
+        function restartTTSWithNewSpeed() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            currentPosition = 0; // Always restart from the beginning when speed changes
+
+            // If an article was being read, restart that specific article
+            if (currentArticleIndex !== -1 && allArticles[currentArticleIndex] && (isReading || isPaused)) {
+                const articleContentDiv = document.getElementById(`article-content-${currentArticleIndex}`);
+                if (articleContentDiv) {
+                    playSummaryTTS(articleContentDiv.innerText);
+                }
+            } else {
+                // If no specific article was being read, reset state
+                isReading = false;
+                isPaused = false;
+                updateButtonState();
+            }
+        }
+
+        function updateButtonState() {
+            const readAloudButton = document.getElementById('readAloudButton');
+            if (isReading) {
+                readAloudButton.textContent = '暂停朗读';
+                readAloudButton.classList.add('reading');
+                readAloudButton.setAttribute('aria-label', '暂停朗读');
+            } else if (isPaused) {
+                readAloudButton.textContent = '继续朗读';
+                readAloudButton.classList.remove('reading');
+                readAloudButton.setAttribute('aria-label', '继续朗读');
+            } else {
+                readAloudButton.textContent = '朗读页面';
+                readAloudButton.classList.remove('reading');
+                readAloudButton.setAttribute('aria-label', '朗读页面');
+            }
+        }
+
+        function generateRandomHash() {
+            return (Math.random().toString(36).substring(2, 10) + Date.now().toString(36)).toUpperCase();
+        }
+
+        function updateUrlWithHash() {
+            const currentUrl = new URL(window.location.href);
+            const newHash = generateRandomHash();
+            // Only add hash if not already present or if we are on the main page (no articleId)
+            if (!currentUrl.searchParams.has('hash') || !currentUrl.searchParams.has('articleId')) {
+                currentUrl.searchParams.set('hash', newHash);
+            }
+            window.history.replaceState({}, '', currentUrl.toString());
+            console.log("URL updated with new hash:", currentUrl.toString());
+        }
+
+        // --- NEW: Function to render pagination controls ---
+        function renderPagination(totalPages, currentPage) {
+            const paginationContainer = document.getElementById('pagination-container');
+            paginationContainer.innerHTML = ''; // Clear old pagination
+
+            if (totalPages <= 1) return; // Don't render if only one page
+
+            const ul = document.createElement('ul');
+            ul.classList.add('pagination');
+
+            // Previous button
+            const prevLi = document.createElement('li');
+            const prevA = document.createElement('a');
+            prevA.href = `?page=${currentPage - 1}`;
+            prevA.textContent = '« 上一页';
+            if (currentPage === 1) {
+                prevLi.classList.add('disabled');
+                prevA.removeAttribute('href');
+            }
+            prevLi.appendChild(prevA);
+            ul.appendChild(prevLi);
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `?page=${i}`;
+                a.textContent = i;
+                if (i === currentPage) {
+                    li.classList.add('active');
+                    a.removeAttribute('href');
+                }
+                li.appendChild(a);
+                ul.appendChild(li);
+            }
+
+            // Next button
+            const nextLi = document.createElement('li');
+            const nextA = document.createElement('a');
+            nextA.href = `?page=${currentPage + 1}`;
+            nextA.textContent = '下一页 »';
+            if (currentPage === totalPages) {
+                nextLi.classList.add('disabled');
+                nextA.removeAttribute('href');
+            }
+            nextLi.appendChild(nextA);
+            ul.appendChild(nextLi);
+
+            paginationContainer.appendChild(ul);
+        }
+
+        // --- MODIFIED: Function to split content by "URL" and render articles ---
+        function renderArticles(fullContent, articleIdToDisplay = null, currentPage = 1) {
+            const articlesContainer = document.getElementById('articles-container');
+            articlesContainer.innerHTML = ''; // Clear existing content
+            document.getElementById('pagination-container').innerHTML = ''; // Clear pagination
+
+            // Normalize line endings and trim the whole content
+            fullContent = fullContent.replace(/\r\n/g, '\n').trim();
+
+            const rawParts = fullContent.split(/(URL)/i);
+            const processedArticles = [];
+            let currentContent = '';
+
+            for (let i = 0; i < rawParts.length; i++) {
+                const part = rawParts[i];
+
+                if (part.toUpperCase() === 'URL') {
+                    if (currentContent.trim() !== '') {
+                        processedArticles.push(currentContent.trim());
+                    }
+                    currentContent = 'URL';
+                } else {
+                    currentContent += part;
+                }
+            }
+
+            if (currentContent.trim() !== '') {
+                processedArticles.push(currentContent.trim());
+            }
+
+            allArticles = processedArticles.filter(article => {
+                const textOnly = article.replace(/<\/?[^>]+(>|$)/g, '').trim();
+                return textOnly !== '';
+            });
+
+            if (allArticles.length === 0) {
+                articlesContainer.innerHTML = '<div class="article-section"><div class="article-content" style="text-align: center; color: var(--text-muted); padding: 40px;">没有内容可显示。</div></div>';
+                document.title = '无内容 - 中转站';
+                return;
+            }
+
+            // Always add the pinned article at the top
+            const pinnedArticleSection = document.createElement('div');
+            pinnedArticleSection.classList.add('article-section');
+            const pinnedArticleHeaderLink = document.createElement('a');
+            pinnedArticleHeaderLink.classList.add('article-header', 'pinned-article');
+            // Set the text content to '置顶文章'
+            pinnedArticleHeaderLink.textContent = pinnedArticleTitle;
+            pinnedArticleHeaderLink.href = pinnedArticleUrl;
+            pinnedArticleHeaderLink.target = '_blank'; // Open in new tab
+            pinnedArticleHeaderLink.rel = 'noopener noreferrer'; // Security best practice
+            pinnedArticleSection.appendChild(pinnedArticleHeaderLink);
+            articlesContainer.appendChild(pinnedArticleSection);
+
+
+            // Determine which articles to render
+            if (articleIdToDisplay !== null && !isNaN(articleIdToDisplay) && allArticles[articleIdToDisplay]) {
+                // SINGLE ARTICLE VIEW (no pagination)
+                const articleText = allArticles[articleIdToDisplay];
+                currentArticleIndex = articleIdToDisplay; // Set the current reading index
+
+                const articleSection = document.createElement('div');
+                articleSection.classList.add('article-section');
+
+                const articleContent = document.createElement('div');
+                articleContent.classList.add('article-content');
+                articleContent.id = `article-content-${articleIdToDisplay}`; // Unique ID
+                articleContent.innerHTML = articleText;
+
+                articleSection.appendChild(articleContent);
+                articlesContainer.appendChild(articleSection);
+
+                // Set main document title to the displayed article's title
+                let cleanedArticleText = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
+                let mainTitleDisplay = cleanedArticleText;
+                if (mainTitleDisplay.length >= 3 && mainTitleDisplay.substring(0, 3).toUpperCase() === 'URL') {
+                    mainTitleDisplay = mainTitleDisplay.substring(3).trim();
+                }
+                const firstSentenceMatch = mainTitleDisplay.match(/^.*?[.?!。？！\n]/);
+                if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
+                    let mainTitle = firstSentenceMatch[0].trim();
+                    if (mainTitle.length > 70) {
+                        mainTitle = mainTitle.substring(0, 67) + '...';
+                    }
+                    document.title = mainTitle;
+                } else if (mainTitleDisplay.length > 0) {
+                    let mainTitle = mainTitleDisplay.substring(0, Math.min(mainTitleDisplay.length, 70)).trim();
+                    if (mainTitleDisplay.length > 70) {
+                         mainTitle += '...';
+                    }
+                    document.title = mainTitle;
+                } else {
+                    document.title = `文章 ${articleIdToDisplay + 1} - 中转站`;
+                }
+
+            } else { // PAGINATED LIST VIEW
+                document.title = `新闻列表 (第 ${currentPage} 页) - 中转站`;
+
+                const totalPages = Math.ceil(allArticles.length / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedArticles = allArticles.slice(startIndex, endIndex);
+
+                paginatedArticles.forEach((articleText, index) => {
+                    const originalIndex = startIndex + index; // Get the index from the original allArticles array
+
+                    let cleanedTextForTitle = articleText.replace(/<\/?[^>]+(>|$)/g, "").trim();
+
+                    let displayTitleText = cleanedTextForTitle;
+                    if (displayTitleText.length >= 3 && displayTitleText.substring(0, 3).toUpperCase() === 'URL') {
+                        displayTitleText = displayTitleText.substring(3).trim();
+                    }
+
+                    const firstSentenceMatch = displayTitleText.match(/^.*?[.?!。？！\n]/);
+                    let articleTitle = `文章 ${originalIndex + 1}`; // Default title using original index
+
+                    if (firstSentenceMatch && firstSentenceMatch[0].trim() !== '') {
+                        articleTitle = firstSentenceMatch[0].trim();
+                        if (articleTitle.length > 70) {
+                            articleTitle = articleTitle.substring(0, 67) + '...';
+                        }
+                    } else if (displayTitleText.length > 0) {
+                        articleTitle = displayTitleText.substring(0, Math.min(displayTitleText.length, 70)).trim();
+                        if (displayTitleText.length > 70) {
+                             articleTitle += '...';
+                        }
+                    }
+
+                    const articleSection = document.createElement('div');
+                    articleSection.classList.add('article-section');
+
+                    const articleHeaderLink = document.createElement('a');
+                    articleHeaderLink.classList.add('article-header');
+                    articleHeaderLink.textContent = articleTitle;
+                    articleHeaderLink.href = `?articleId=${originalIndex}`; // Link to the specific article using original index
+                    articleHeaderLink.dataset.articleIndex = originalIndex; // Store original index
+
+                    articleSection.appendChild(articleHeaderLink);
+                    articlesContainer.appendChild(articleSection);
+                });
+
+                // Render pagination controls
+                renderPagination(totalPages, currentPage);
+            }
+            cleanAllTitles();
+            applyFontSize(parseFloat(localStorage.getItem('fontSize') || '1.0')); // Apply saved font size after rendering
+        }
+
+        // --- Function to clean titles ---
+        function cleanAllTitles() {
+            const elementsWithTitles = document.querySelectorAll('.article-header, title');
+
+            elementsWithTitles.forEach(element => {
+                let originalText = element.textContent;
+
+                if (originalText.startsWith('Title: "') && originalText.endsWith('"')) {
+                    let newText = originalText.substring(8, originalText.length - 1);
+                    element.textContent = newText;
+                }
+                if (element.tagName.toLowerCase() === 'title') {
+                    // This specifically updates the browser tab title
+                    document.title = element.textContent;
+                }
+            });
+        }
+
+        // NEW: Font Size functions
+        function applyFontSize(scale) {
+            document.documentElement.style.setProperty('--font-scale', scale);
+            document.getElementById('currentFontSizeValue').textContent = `${scale.toFixed(1)}x`;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const articlesContainer = document.getElementById('articles-container');
+            const readAloudButton = document.getElementById('readAloudButton');
+            const speedRange = document.getElementById('speedRange');
+            const currentSpeedValueDisplay = document.getElementById('currentSpeedValue');
+            const readAloudContainer = document.getElementById('readAloudContainer');
+            const speedSliderWrapper = document.getElementById('speedSliderWrapper');
+            const homeButton = document.getElementById('homeButton');
+            const toggleSpeedSliderButton = document.getElementById('toggleSpeedSliderButton');
+            const settingsGearButton = document.getElementById('settingsGearButton'); // NEW
+            const fontSizeSliderWrapper = document.getElementById('fontSizeSliderWrapper'); // NEW
+            const fontSizeRange = document.getElementById('fontSizeRange'); // NEW
+            const currentFontSizeValueDisplay = document.getElementById('currentFontSizeValue'); // NEW
+            const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1_copy.md';
+
+            // Don't add hash on initial load to keep URL clean for pagination
+            // updateUrlWithHash();
+
+            // Initialize speed slider
+            currentSpeedValueDisplay.textContent = speedRange.value;
+            currentSpeed = parseInt(speedRange.value);
+
+            // Initialize font size slider from localStorage or default
+            const savedFontSize = parseFloat(localStorage.getItem('fontSize'));
+            if (!isNaN(savedFontSize)) {
+                fontSizeRange.value = savedFontSize;
+            }
+            applyFontSize(parseFloat(fontSizeRange.value));
+
+
+            speedRange.addEventListener('input', function() {
+                currentSpeedValueDisplay.textContent = this.value;
+            });
+
+            speedRange.addEventListener('change', function() {
+                currentSpeed = parseInt(this.value);
+                restartTTSWithNewSpeed();
+            });
+
+            // NEW: Font size slider event listeners
+            fontSizeRange.addEventListener('input', function() {
+                const newScale = parseFloat(this.value);
+                applyFontSize(newScale);
+            });
+
+            fontSizeRange.addEventListener('change', function() {
+                localStorage.setItem('fontSize', this.value); // Save font size to localStorage
+            });
+
+            let lastScrollTop = 0;
+            window.addEventListener('scroll', function() {
+                let st = window.pageYOffset || document.documentElement.scrollTop;
+                if (st > lastScrollTop) {
+                    readAloudContainer.classList.add('hidden');
+                } else {
+                    readAloudContainer.classList.remove('hidden');
+                }
+                lastScrollTop = st <= 0 ? 0 : st;
+            }, false);
+
+            // Home button functionality
+            homeButton.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default link behavior
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('articleId'); // Remove articleId
+                currentUrl.searchParams.set('page', '1'); // Go to page 1
+                window.location.href = currentUrl.pathname + currentUrl.search;
+            });
+
+            // Toggle Speed Slider button functionality
+            toggleSpeedSliderButton.addEventListener('click', function() {
+                speedSliderWrapper.classList.toggle('visible'); // Toggle visibility
+                if (speedSliderWrapper.classList.contains('visible')) {
+                    speedRange.focus(); // Focus slider
+                }
+                // Ensure other sliders are hidden
+                fontSizeSliderWrapper.classList.remove('visible');
+            });
+
+            // NEW: Toggle Font Size Slider button functionality
+            settingsGearButton.addEventListener('click', function() {
+                fontSizeSliderWrapper.classList.toggle('visible'); // Toggle visibility
+                if (fontSizeSliderWrapper.classList.contains('visible')) {
+                    fontSizeRange.focus(); // Focus slider
+                }
+                // Ensure other sliders are hidden
+                speedSliderWrapper.classList.remove('visible');
+            });
+
+            const loadContent = () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const articleIdFromUrl = urlParams.get('articleId');
+                const pageFromUrl = urlParams.get('page');
+
+                let initialArticleId = null;
+                if (articleIdFromUrl !== null) {
+                    const parsedId = parseInt(articleIdFromUrl, 10);
+                    if (!isNaN(parsedId)) {
+                        initialArticleId = parsedId;
+                    }
+                }
+
+                let currentPage = 1;
+                if (pageFromUrl !== null) {
+                    const parsedPage = parseInt(pageFromUrl, 10);
+                    if (!isNaN(parsedPage) && parsedPage > 0) {
+                        currentPage = parsedPage;
+                    }
+                }
+
+                fetch(contentUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(data => {
+                        // Pass current page to renderArticles
+                        renderArticles(data, initialArticleId, currentPage);
+                        // If an article is being displayed directly, scroll to top
+                        if (initialArticleId !== null) {
+                            window.scrollTo(0, 0);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching content:', error);
+                        articlesContainer.innerHTML = '<div class="article-section"><div class="article-content" style="text-align: center; color: var(--text-muted); padding: 40px;">无法加载内容。请检查网络或链接。</div></div>';
+                        document.title = '加载失败 - 中转站';
+                    });
+            };
+
+            loadContent(); // Initial content load
+
+            readAloudButton.addEventListener('click', function() {
+                if (isReading) {
+                    pauseTTS();
+                } else if (isPaused) {
+                    resumeTTS();
+                } else {
+                    // Determine which article to read
+                    let articleToRead = null;
+                    // If a specific article is currently being viewed, read that one
+                    if (currentArticleIndex !== -1 && document.getElementById(`article-content-${currentArticleIndex}`)) {
+                        articleToRead = document.getElementById(`article-content-${currentArticleIndex}`);
+                    } else {
+                        // If on the main listing page, read the pinned article's title
+                        const pinnedArticleLink = document.querySelector('.article-header.pinned-article');
+                        if (pinnedArticleLink) {
+                            // Read the *text content* of the pinned article header, not its href
+                            playSummaryTTS(pinnedArticleLink.textContent);
+                            return; // Stop here as the pinned link is read
+                        }
+                        // If no pinned article or pinned article already read, read the first regular article
+                        if (allArticles.length > 0) {
+                            currentArticleIndex = 0;
+                            articleToRead = document.getElementById(`article-content-0`);
+                            // If on the main page and clicking read, navigate to the first article
+                            if (window.location.search.indexOf('articleId=') === -1) {
+                                const newUrl = new URL(window.location.href);
+                                newUrl.searchParams.set('articleId', currentArticleIndex);
+                                newUrl.searchParams.delete('page'); // remove page param when viewing single article
+                                window.location.href = newUrl.toString();
+                                return; // Exit to prevent immediate TTS before re-render
+                            }
+                        }
+                    }
+
+                    if (articleToRead) {
+                        playSummaryTTS(articleToRead.innerText);
+                    } else {
+                        console.warn("No articles found to read on button click.");
+                    }
+                }
+            });
+
+            // Handle browser back/forward buttons to reload content based on URL
+            window.addEventListener('popstate', function(event) {
+                // When popstate occurs, reload content based on the new URL
+                loadContent();
+                // Stop TTS on navigation change
+                if (currentAudio && (isReading || isPaused)) {
+                    pauseTTS();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
