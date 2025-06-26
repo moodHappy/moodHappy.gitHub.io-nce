@@ -1,5 +1,46 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 12:A Meeting</strong></p>
+<p>One evening, a few days after the writing had appeared in Charlotte's web, the spider called a meeting of all the animals in the barn cellar.</p>
+<p>"I shall begin by calling the roll. Wilbur?"</p>
+<p>"Here, here, here!" said the gander.</p>
+<p>"You sound like three ganders," muttered Charlotte. "Why can't you just say 'here'? Why do you have to repeat everything?"</p>
+<p>"It's my idio-idio-idiosyncrasy (individual quality, unique characteristic)," replied the gander.</p>
+<p>"Here, here, here!" said the goose. Charlotte glared at her.</p>
+<p>"Bee-bee-bee!" said the goslings.</p>
+<p>"This is getting to be quite a meeting," said Charlotte.</p>
+<p>"Anybody would think we had three ganders, three geese, and twenty-one goslings. Sheep?"</p>
+<p>"He-aa-aa!" answered the sheep all together.</p>
+<p>"He-aa-aa!" answered the lambs all together.</p>
+<p>"Well, we are all here except the rat," said Charlotte. "I guess we can proceed without him. Now, all of you must have noticed what's been going on around here the last few days. The message I wrote in my web, praising Wilbur, has been received. The Zuckermans have fallen for it, and so has everybody else. Zuckerman thinks Wilbur is an unusual pig, and therefore he won't want to kill him and eat him. I dare say my trick will work and Wilbur's life can be saved.</p>
+<p>"Thank you very much," said Charlotte. "Now I called this meeting in order to get suggestions. I need new ideas for the web. People are already getting sick of reading the words 'Some Pig!". If anybody can think of another message, or remark, I'll be glad to weave it into the web. Any suggestions for a new slogan?"</p>
+<p>"How about 'Pig Supreme'?" asked one of the lambs.</p>
+<p>"No good," said Charlotte. "It sounds like a rich dessert."</p>
+<p>"How about 'Terrific, terrific, terrific'?" asked the goose.</p>
+<p>"Cut that down to one 'terrific' and it will do very nicely," said Charlotte. "I think 'terrific' might impress Zuckerman."</p>
+<p>"But Charlotte," said Wilbur, "I'm not terrific."</p>
+<p>"That doesn't make a particle of difference," replied Charlotte. "Not a particle. People believe almost anything they see in print. Does anybody here know how to spell 'terrific'?"</p>
+<p>"I think," said the gander, "it's tee double ee double rr double rr double eye double ff double eye double see see see see see."</p>
+<p>"What kind of an acrobat do you think I am?" said Charlotte in disgust. "I would have to have St. Vitus's Dance to weave a word like that into my web."</p>
+<p>"Sorry, sorry, sorry," said the gander.</p>
+<p>Then the oldest sheep spoke up. "I agree that there should be something new written in the web if Wilbur's life is to be saved. And if Charlotte needs help in finding words, I think she can get it from our friend Templeton. The rat visits the dump regularly and has access to old magazines. He can tear out bits of advertisements and bring them up here to the barn cellar, so that Charlotte can have something to copy."</p>
+<p>"Good idea," said Charlotte. "But I'm not sure Templeton will be willing to help. You know how he is - always looking out for himself, never thinking of the other fellow."</p>
+<p>"I bet I can get him to help," said the old sheep. "I'll appeal to his baser instincts, of which he has plenty. Here he comes now. Everybody keep quiet while I put the matter up to him!"</p>
+<p>The rat entered the barn the way he always did - creeping along close to the wall.</p>
+<p>"What's up?" he asked, seeing the animals assembled.</p>
+<p>"We're holding a directors' meeting," replied the old sheep.</p>
+<p>"Well, break it up! " said Templeton. "Meetings bore me."</p>
+<p>And the rat began to climb a rope that hung against the wall.</p>
+<p>"Look," said the old sheep, "next time you go to the dump, Templeton, bring back a clipping from a magazine. Charlotte needs new ideas so she can write messages in her web and save Wilbur's life."</p>
+<p>"Let him die," said the rat. "I should worry."</p>
+<p>"You'll worry all right when next winter comes," said the sheep. "You'll worry all right on a zero morning next January when Wilbur is dead and nobody comes down here with a nice pail of warm slops to pour into the trough. Wilbur's leftover food is your chief source of supply, Templeton. You know that. Wilbur's food is your food; therefore Wilbur's destiny and your destiny are closely linked. If Wilbur is killed and his trough stands empty day after day, you'll grow so thin we can look right through your stomach and see objects on the other side."</p>
+<p>"Maybe you're right," he said gruffly. "I'm making a trip to the dump tomorrow afternoon. I'll bring back a magazine clipping if I can find one."</p>
+<p>"Thanks," said Charlotte. "The meeting is now adjourned. I have a busy evening ahead of me. I've got to tear my web apart and write 'Terrific.' "</p>
+<p>Wilbur blushed. "But I'm not terrific, Charlotte. I'm just about average for a pig."</p>
+<p>"You're terrific as far as I'm concerned," replied Charlotte, sweetly, "and that's what counts. You're my best friend, and I think you're sensational. Now stop arguing and go get some sleep!"</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 11:The Miracle</strong></p>
 <p>The next day was foggy. Everything on the farm was dripping wet. The grass looked like a magic carpet. The asparagus patch looked like a silver forest.</p>
 <p>On foggy mornings, Charlotte's web was truly a thing of beauty. This morning each thin strand was decorated with dozens of tiny beads of water. The web glistened in the light and made a pattern of loveliness and mystery, like a delicate veil. Even Lurvy, who wasn't particularly interested in beauty, noticed the web when he came with the pig's breakfast. He noted how clearly it showed up and he noted how big and carefully built it was. And then he took another look and he saw something that made him set his pail down. There, in the center of the web, neatly woven in block letters, was a message. It said:</p>
