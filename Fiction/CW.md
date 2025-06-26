@@ -1,5 +1,74 @@
 NEW_ARTICLE_SECTION
 
+<p><strong>CHAPTER 10:An Explosion</strong></p>
+<p>Day after day the spider waited, head-down, for an idea to come to her. Hour by hour she sat motionless, deep in thought.</p>
+<p>Having promised Wilbur that she would save his life, she was determined to keep her promise. Charlotte was naturally patient.</p>
+<p>She knew from experience that if she waited long enough, a fly would come to her web; and she felt sure that if she thought long enough about Wilbur's problem, an idea would come to her mind.</p>
+<p>Finally, one morning toward the middle of July, the idea came. "Why, how perfectly simple!" she said to herself. "The way to save Wilbur's life is to play a trick on Zuckerman. If I can fool a bug," thought Charlotte, "I can surely fool a man. People are not as smart as bugs."</p>
+<p>Wilbur walked into his yard just at that moment.</p>
+<p>"What are you thinking about, Charlotte?" he asked.</p>
+<p>"I was just thinking," said the spider, "that people are very gullible."</p>
+<p>"Easy to fool," said Charlotte.</p>
+<p>"That's a mercy," replied Wilbur, and he lay down in the shade of his fence and went fast asleep. The spider, however, stayed wide awake, gazing affectionately at him and making plans for his future. Summer was half gone. She knew she didn't have much time.</p>
+<p>That morning, just as Wilbur fell asleep, Avery Arable wandered into the Zuckerman's front yard, followed by Fern. Avery carried a live frog in his hand. Fern had a crown of daisies in her hair. The children ran for the kitchen.</p>
+<p>"Just in time for a piece of blueberry pie," said Mrs. Zuckerman.</p>
+<p>"Look at my frog!" said Avery, placing the frog on the drainboard and holding out his hand for pie.</p>
+<p>"Take that thing out of here!" said Mrs. Zuckerman.</p>
+<p>"He's hot," said Fern. "He's almost dead, that frog."</p>
+<p>"He is not," said Avery. "He lets me scratch him between the eyes." The frog jumped and landed in Mrs. Zuckerman's dishpan full of soapy water.</p>
+<p>"You're getting your pie on you," said Fern. "Can I look for eggs in the henhouse, Aunt Edith?"</p>
+<p>"Run outdoors, both of you! And don't bother the hens!"</p>
+<p>"It's getting all over everything," shouted Fern. "His pie is all over his front."</p>
+<p>"Come on, frog!" cried Avery. He scooped up his frog. The frog kicked, splashing soapy water onto the blueberry pie.</p>
+<p>"Another crisis!" groaned Fern.</p>
+<p>"Let's swing in the swing!" said Avery.</p>
+<p>Mr. Zuckerman had the best swing in the county. It was a single long piece of heavy rope tied to the beam over the north doorway. At the bottom end of the rope was a fat knot to sit on.</p>
+<p>It was arranged so that you could swing without being pushed. You climbed a ladder to the hayloft. Then, holding the rope, you stood at the edge and looked down, and were scared and dizzy. Then you straddled the knot, so that it acted as a seat. Then you got up all your nerve, took a deep breath, and jumped. For a second you seemed to be falling to the barn floor far below, but then suddenly the rope would begin to catch you, and you would sail through the barn door going a mile a minute, with the wind whistling in your eyes and ears and hair. Then you would zoom upward into the sky, and look up at the clouds, and the rope would twist and you would twist and turn with the rope. Then you would drop down, down, down out of the sky and come sailing back into the barn almost into the hayloft, then sail out again (not quite so far this time), then in again (not quite so high), then out again, then in again, then out, then in; and then you'd jump off and fall down and let somebody else try it.</p>
+<p>Mothers for miles around worried about Zuckerman's swing. They feared some child would fall off. But no child ever did. Children almost always hang onto things tighter than their parents think they will.</p>
+<p>Avery put the frog in his pocket and climbed to the hayloft.</p>
+<p>"The last time I swang in this swing, I almost crashed into a barn swallow," he yelled.</p>
+<p>"Take that frog out!" ordered Fern.</p>
+<p>Avery straddled the rope and jumped. He sailed out through the door, frog and all, and into the sky, frog and all. Then he sailed back into the barn.</p>
+<p>"Your tongue is purple!" screamed Fern.</p>
+<p>"So is yours!" cried Avery, sailing out again with the frog.</p>
+<p>"I have hay inside my dress! It itches!" called Fern.</p>
+<p>"Scratch it!" yelled Avery, as he sailed back.</p>
+<p>"It's my turn," said Fern. "Jump off!"</p>
+<p>"Fern's got the itch!" sang Avery.</p>
+<p>When he jumped off, he threw the swing up to his sister. She shut her eyes tight and jumped. She felt the dizzy drop, then the supporting lift of the swing. When she opened her eyes she was looking up into the blue sky and was about to fly back through the door.</p>
+<p>When the children grew tired of swinging they went down toward the pasture and picked wild raspberries and ate them.</p>
+<p>Their tongues turned from purple to red. Fern bit into a raspberry that had a bad-tasting bug inside it, and got discouraged. Avery found an empty candy box and put his frog in it. The frog seemed tired after his morning in the swing. The children walked slowly up toward the barn. They, too, were tired and hardly had energy enough to walk.</p>
+<p>"Let's build a tree house," suggested Avery. "I want to live in a tree, with my frog."</p>
+<p>"I'm going to visit Wilbur," Fern announced.</p>
+<p>They climbed the fence into the lane and walked lazily toward the pigpen. Wilbur heard them coming and got up.</p>
+<p>Avery noticed the spider web, and, coming closer, he saw Charlotte.</p>
+<p>"Hey, look at that big spider!" he said. "It's tremenjus."</p>
+<p>"Leave it alone!" commanded Fern. "You've got a frog - isn't that enough?"</p>
+<p>"That's a fine spider and I'm going to capture it," said Avery. He took the cover off the candy box. Then he picked up a stick. "I'm going to knock that ol' spider into this box," he said.</p>
+<p>Wilbur's heart almost stopped when he saw what was going on.</p>
+<p>This might be the end of Charlotte if the boy succeeded in catching her.</p>
+<p>"You stop it, Avery!" cried Fern.</p>
+<p>Avery put one leg over the fence of the pigpen. He was just about to raise his stick to hit Charlotte when he lost his balance. He swayed and toppled and landed on the edge of Wilbur's trough. The trough tipped up and then came down with a slap. The goose egg was right underneath. There was a dull explosion as the egg broke, and then a horrible smell.</p>
+<p>Fern screamed. Avery jumped to his feet. The air was filled with the terrible gases and smells from the rotten egg. Templeton, who had been resting in his home, scuttled away into the barn.</p>
+<p>"Good night!" screamed Avery. "Good night! What a stink! Let's get out of here!"</p>
+<p>Fern was crying. She held her nose and ran toward the house. Avery ran after her, holding his nose.</p>
+<p>Charlotte felt greatly relieved to see him go. It had been a narrow escape.</p>
+<p>Later on that morning, the animals came up from the pasture - the sheep, the lambs, the gander, the goose, and the seven goslings. There were many complaints about the awful smell, and Wilbur had to tell the story over and over again, of how the Arable boy had tried to capture Charlotte, and how the smell of the broken egg drove him away just in time. "It was that rotten goose egg that saved Charlotte's life," said Wilbur.</p>
+<p>The goose was proud of her share in the adventure. "I'm delighted that the egg never hatched," she gabbled.</p>
+<p>Templeton, of course, was miserable over the loss of his beloved egg. But he couldn't resist boasting. "It pays to save things," he said in his surly voice. "A rat never knows when something is going to come in handy. I never throw anything away."</p>
+<p>"Well," said one of the lambs, "this whole business is all well and good for Charlotte, but what about the rest of us? The smell is unbearable. Who wants to live in a barn that is perfumed with rotten egg?"</p>
+<p>"Don't worry, you'll get used to it," said Templeton. He sat up and pulled wisely at his long whiskers, then crept away to pay a visit to the dump.</p>
+<p>When Lurvy showed up at lunchtime carrying a pail of food for Wilbur, he stopped short a few paces from the pigpen. He sniffed the air and made a face.</p>
+<p>"What in thunder?" he said. Setting the pail down, he picked up the stick that Avery had dropped and pried the trough up. "Rats!" he said. "Fhew! I mighta known a rat would make a nest under this trough. How I hate a rat!"</p>
+<p>And Lurvy dragged Wilbur's trough across the yard and kicked some dirt into the rat's nest, burying the broken egg and all Templeton's other possessions. Then he picked up the pail. Wilbur stood in the trough, drooling with hunger. Lurvy poured. The slops ran creamily down around the pig's eyes and ears. Wilbur grunted. He gulped and sucked, and sucked and gulped, making swishing and swooshing noises, anxious to get everything at once. It was a delicious meal - skim milk, wheat middlings, leftover pancakes, half a doughnut, the rind of a summer squash, two pieces of stale toast, a third of a gingersnap, a fish tail, one orange peel, several noodles from a noodle soup, the scum off a cup of cocoa, an ancient jelly roll, a strip of paper from the lining of the garbage pail, and a spoonful of raspberry jello.</p>
+<p>Wilbur ate heartily. He planned to leave half a noodle and a few drops of milk for Templeton. Then he remembered that the rat had been useful in saving Charlotte's life, and that Charlotte was trying to save his life. So he left a whole noodle, instead of a half.</p>
+<p>Now that the broken egg was buried, the air cleared and the barn smelled good again. The afternoon passed, and evening came.</p>
+<p>Shadows lengthened. The cool and kindly breath of evening entered through doors and windows. Astride her web, Charlotte sat moodily eating a horsefly and thinking about the future. After a while she bestirred herself.</p>
+<p>She descended to the center of the web and there she began to cut some of her lines. She worked slowly but steadily while the other creatures drowsed. None of the others, not even the goose, noticed that she was at work. Deep in his soft bed, Wilbur snoozed. Over in their favorite corner, the goslings whistled a night song.</p>
+<p>Charlotte tore quite a section out of her web, leaving an open space in the middle. Then she started weaving something to take the place of the threads she had removed. When Templeton got back from the dump, around midnight, the spider was still at work.</p>
+
+NEW_ARTICLE_SECTION
+
 <p><strong>CHAPTER 9:Wilbur's Boast</strong></p>
 <p>A spider's web is stronger than it looks. Although it is made of thin, delicate strands, the web is not easily broken. However, a web gets torn every day by the insects that kick around in it, and a spider must rebuild it when it gets full of holes. Charlotte liked to do her weaving during the late afternoon, and Fern liked to sit nearby and watch. One afternoon she heard a most interesting conversation and witnessed a strange event.</p>
 <p>"You have awfully hairy legs, Charlotte," said Wilbur, as the spider busily worked at her task.</p>
