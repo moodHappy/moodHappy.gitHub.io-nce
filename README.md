@@ -1,11 +1,10 @@
 # **NCE Notes**  
 ## **目录**
 
-[英语简易教程](https://github.com/moodHappy/HelloWorld/tree/master/English%20tutorial)
-
-[Prompt](https://github.com/moodHappy/HelloWorld/blob/master/other%20%2FPrompt.md)
-
 [B1](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/style%2FTexttohtml.html)
+
+
+[英语简易教程](https://github.com/moodHappy/HelloWorld/tree/master/English%20tutorial)
 
 [NCE1](https://moodhappy.github.io/moodHappy.gitHub.io-nce/nce1/NCE1.html)
 
