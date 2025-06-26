@@ -103,7 +103,7 @@ NEW_ARTICLE_SECTION
 <p>Wilbur heard the words of praise. He felt the warm milk inside his stomach. He felt the pleasant rubbing of the stick along his itchy back. He felt peaceful and happy and sleepy. This had been a tiring afternoon. It was still only about four o’clock but Wilbur was ready for bed.</p>
 <p>“I’m really too young to go out into the world alone,” he thought as he lay down.</p>
 
-URL
+NEW_ARTICLE_SECTION
 
 <p><strong>Chapter II: Wilbur</strong></p>
 <p>FERN loved Wilbur more than anything. She loved to stroke him, to feed him, to put him to bed. Every morning, as soon as she got up, she warmed his milk, tied his bib on, and held the bottle for him. Every afternoon, when the school bus stopped in front of her house, she jumped out and ran to the kitchen to fix another bottle for him. She fed him again at suppertime, and again just before going to bed. Mrs. Arable gave him a feeding around noontime each day, when Fern was away in school. Wilbur loved his milk, and he was never happier than when Fern was warming up a bottle for him. He would stand and gaze up at her with adoring eyes.</p>
@@ -121,7 +121,7 @@ URL
 <p>“Well,” said her father, “he’s a runt. Tell your Uncle Homer you’ve got a pig you’ll sell for six dollars, and see what he says.”</p>
 <p>It was soon arranged. Fern phoned and got her Aunt Edith, and her Aunt Edith hollered for Uncle Homer, and Uncle Homer came in from the barn and talked to Fern. When he heard that the price was only six dollars, he said he would buy the pig. Next day Wilbur was taken from his home under the apple tree and went to live in a manure pile in the cellar of Zuckerman’s barn.</p>
 
-URL
+NEW_ARTICLE_SECTION
 
 <p><strong>Chapter I: Before Breakfast</strong></p>
 <p>WHERE’S Papa going with that ax?” said Fern to her mother as they were setting the table for breakfast.</p>
