@@ -17,7 +17,7 @@
       --button-primary-bg: #4CAF50;
       --button-secondary-bg: #2196F3;
       --button-danger-bg: #f44336;
-      --button-generate-bg: #800080; /* 新增生成按钮的颜色 */
+      --button-generate-bg: #800080;
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -97,7 +97,7 @@
     }
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
-    button.generate { background-color: var(--button-generate-bg); } /* 新增按钮样式 */
+    button.generate { background-color: var(--button-generate-bg); }
 
     #status {
       margin-top: 10px;
@@ -172,7 +172,8 @@
     <button onclick="submitContent()">提交</button>
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
-    <button class="generate" onclick="generateStory()">生成</button> </div>
+    <button class="generate" onclick="generateStory()">生成</button>
+  </div>
 
   <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
   <article id="renderedContent" class="immersive-content" style="display:none;"></article>
@@ -184,6 +185,15 @@
       <h3>🔐 请输入你的 GitHub Token：</h3>
       <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
       <button style="margin-top:10px;" onclick="saveToken()">保存 Token</button>
+    </div>
+  </div>
+
+  <div id="storyThemeModal" class="modal">
+    <div class="modal-content">
+      <h3>📚 请输入微小说的创作主题：</h3>
+      <input type="text" id="themeInput" placeholder="例如：太空旅行、古老的图书馆..." />
+      <button style="margin-top:10px;" onclick="startGeneration()">确定</button>
+      <button style="margin-top:10px; background-color: #6c757d;" onclick="closeThemeModal()">取消</button>
     </div>
   </div>
 
@@ -246,6 +256,8 @@
     const statusDiv = document.getElementById("status");
     const tokenModal = document.getElementById("tokenModal");
     const settingsModal = document.getElementById("settingsModal");
+    const storyThemeModal = document.getElementById("storyThemeModal"); // 新增弹窗
+    const themeInput = document.getElementById("themeInput"); // 新增输入框
     const rootElement = document.documentElement;
 
     // --- Settings Management ---
@@ -409,10 +421,28 @@
       }
     }
 
-    // --- AI Generation Function ---
-    async function generateStory() {
+    // --- AI Generation Functions (Updated) ---
+    function generateStory() {
+      // 点击生成按钮时，显示主题输入弹窗
+      storyThemeModal.style.display = "flex";
+      themeInput.focus();
+    }
+    
+    function closeThemeModal() {
+        storyThemeModal.style.display = "none";
+    }
+
+    async function startGeneration() {
+      const theme = themeInput.value.trim();
+      closeThemeModal(); // 关闭弹窗
+
+      if (!theme) {
+        statusDiv.textContent = "❌ 请输入微小说主题！";
+        return;
+      }
+
       statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
-      editMode(); // 切换到编辑模式，以便用户能看到生成的内容
+      editMode();
 
       try {
         const response = await fetch(MOONSHOT_API_URL, {
@@ -425,7 +455,7 @@
             model: MOONSHOT_MODEL,
             messages: [
               { role: "system", content: "You are a helpful assistant." },
-              { role: "user", content: "Write a short story in English, about 100 words." }
+              { role: "user", content: `Write a short story in English, about 100 words, with the theme of: ${theme}.` } // 插入用户输入的主题
             ],
             temperature: 0.7
           })
@@ -440,7 +470,7 @@
         textarea.value = storyContent;
         
         statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
-        await submitContent(); // 自动提交到 GitHub，实现刷新可见
+        await submitContent();
       } catch (error) {
         statusDiv.textContent = `❌ 生成失败: ${error.message}`;
         console.error("生成失败:", error);
@@ -459,8 +489,8 @@
     }
 
     function renderMode(text) {
-      renderedDiv.innerHTML = ""; // Clear previous content
-      const paragraphs = text.split(/\n{2,}/); // Split by one or more empty lines
+      renderedDiv.innerHTML = "";
+      const paragraphs = text.split(/\n{2,}/);
       for (const para of paragraphs) {
         if (para.trim()) {
           const p = document.createElement("p");
@@ -481,7 +511,7 @@
       statusDiv.textContent = "⏳ 正在加载 GitHub 内容...";
       const { content } = await getCurrentFileShaAndContent();
       if (content.trim()) {
-        textarea.value = content; // Pre-fill textarea in case user wants to edit
+        textarea.value = content;
         renderMode(content);
         statusDiv.textContent = "✅ GitHub 内容已加载并渲染。";
       } else {
