@@ -17,6 +17,7 @@
       --button-primary-bg: #4CAF50;
       --button-secondary-bg: #2196F3;
       --button-danger-bg: #f44336;
+      --button-generate-bg: #800080; /* 新增生成按钮的颜色 */
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -96,6 +97,7 @@
     }
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
+    button.generate { background-color: var(--button-generate-bg); } /* 新增按钮样式 */
 
     #status {
       margin-top: 10px;
@@ -170,7 +172,7 @@
     <button onclick="submitContent()">提交</button>
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
-  </div>
+    <button class="generate" onclick="generateStory()">生成</button> </div>
 
   <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
   <article id="renderedContent" class="immersive-content" style="display:none;"></article>
@@ -232,6 +234,10 @@
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
     const SETTINGS_KEY = "github_sync_assistant_settings";
 
+    const MOONSHOT_API_URL = "https://api.moonshot.cn/v1/chat/completions";
+    const MOONSHOT_API_KEY = "sk-uGcqq3JspZjg5ZszUp8ZHep6sFspvRtA7NmrzHzrCWC3ne5h";
+    const MOONSHOT_MODEL = "moonshot-v1-8k";
+
     let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
 
@@ -288,7 +294,6 @@
         closeSettingsModal();
         statusDiv.textContent = "⚙️ 设置已保存。";
     }
-
 
     // --- GitHub Token Management ---
     function ensureToken() {
@@ -401,6 +406,44 @@
         statusDiv.textContent = "✅ GitHub 内容已清空。";
       } else {
         statusDiv.textContent = "❌ 删除失败：" + (await res.json()).message;
+      }
+    }
+
+    // --- AI Generation Function ---
+    async function generateStory() {
+      statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
+      editMode(); // 切换到编辑模式，以便用户能看到生成的内容
+
+      try {
+        const response = await fetch(MOONSHOT_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${MOONSHOT_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: MOONSHOT_MODEL,
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              { role: "user", content: "Write a short story in English, about 100 words." }
+            ],
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API 请求失败，状态码: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const storyContent = data.choices[0].message.content.trim();
+        textarea.value = storyContent;
+        
+        statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
+        await submitContent(); // 自动提交到 GitHub，实现刷新可见
+      } catch (error) {
+        statusDiv.textContent = `❌ 生成失败: ${error.message}`;
+        console.error("生成失败:", error);
       }
     }
 
