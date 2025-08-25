@@ -421,7 +421,7 @@
       }
     }
 
-    // --- AI Generation Functions (Fixed) ---
+    // --- AI Generation Functions (Updated) ---
     function generateStory() {
       storyThemeModal.style.display = "flex";
       themeInput.focus();
@@ -433,49 +433,50 @@
 
     async function startGeneration() {
       const theme = themeInput.value.trim();
-      
-      // 修复：如果主题为空，则不关闭弹窗，并给出提示
+      closeThemeModal();
+
       if (!theme) {
         statusDiv.textContent = "❌ 请输入微小说主题！";
         return;
       }
 
-      // 只有在输入有效后，才关闭弹窗并开始生成
-      closeThemeModal();
       statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
       editMode();
 
-      try {
-        const response = await fetch(MOONSHOT_API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${MOONSHOT_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: MOONSHOT_MODEL,
-            messages: [
-              { role: "system", content: "You are a helpful assistant." },
-              { role: "user", content: `Write a short story in English, about 100 words, with the theme of: ${theme}.` }
-            ],
-            temperature: 0.7
-          })
-        });
+      // ** 修复点：添加 setTimeout 延迟，确保移动端键盘收起事件已处理完毕 **
+      setTimeout(async () => {
+        try {
+            const response = await fetch(MOONSHOT_API_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${MOONSHOT_API_KEY}`
+              },
+              body: JSON.stringify({
+                model: MOONSHOT_MODEL,
+                messages: [
+                  { role: "system", content: "You are a helpful assistant." },
+                  { role: "user", content: `Write a short story in English, about 100 words, with the theme of: ${theme}.` }
+                ],
+                temperature: 0.7
+              })
+            });
 
-        if (!response.ok) {
-          throw new Error(`API 请求失败，状态码: ${response.status}`);
-        }
+            if (!response.ok) {
+              throw new Error(`API 请求失败，状态码: ${response.status}`);
+            }
 
-        const data = await response.json();
-        const storyContent = data.choices[0].message.content.trim();
-        textarea.value = storyContent;
-        
-        statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
-        await submitContent();
-      } catch (error) {
-        statusDiv.textContent = `❌ 生成失败: ${error.message}`;
-        console.error("生成失败:", error);
-      }
+            const data = await response.json();
+            const storyContent = data.choices[0].message.content.trim();
+            textarea.value = storyContent;
+            
+            statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
+            await submitContent();
+          } catch (error) {
+            statusDiv.textContent = `❌ 生成失败: ${error.message}`;
+            console.error("生成失败:", error);
+          }
+      }, 300); // 300毫秒的延迟通常足够
     }
 
     // --- UI & Content Handling ---
