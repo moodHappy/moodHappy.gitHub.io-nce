@@ -94,6 +94,9 @@
       color: white;
       cursor: pointer;
       background-color: var(--button-primary-bg);
+      /* 移动端优化：增加触摸目标大小 */
+      min-height: 44px;
+      min-width: 44px;
     }
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
@@ -192,7 +195,7 @@
     <div class="modal-content">
       <h3>📚 请输入微小说的创作主题：</h3>
       <input type="text" id="themeInput" placeholder="例如：太空旅行、古老的图书馆..." />
-      <button style="margin-top:10px;" onmousedown="startGeneration()">确定</button>
+      <button style="margin-top:10px;" onclick="handleStartGeneration(event)">确定</button>
       <button style="margin-top:10px; background-color: #6c757d;" onclick="closeThemeModal()">取消</button>
     </div>
   </div>
@@ -421,19 +424,40 @@
       }
     }
 
-    // --- AI Generation Functions (Updated) ---
+    // --- AI Generation Functions (Updated with Mobile Fix) ---
     function generateStory() {
+      // 点击生成按钮时，显示主题输入弹窗
       storyThemeModal.style.display = "flex";
-      themeInput.focus();
+      // 延迟聚焦以确保弹窗完全显示
+      setTimeout(() => {
+        themeInput.focus();
+      }, 100);
     }
     
     function closeThemeModal() {
         storyThemeModal.style.display = "none";
     }
 
+    // 修复移动端点击问题的核心函数
+    function handleStartGeneration(event) {
+      // 阻止默认行为和事件冒泡
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      // 先失焦输入框，确保键盘收起
+      themeInput.blur();
+      
+      // 添加延迟确保键盘完全收起后再执行
+      setTimeout(() => {
+        startGeneration();
+      }, 200);
+    }
+
     async function startGeneration() {
       const theme = themeInput.value.trim();
-      closeThemeModal();
+      closeThemeModal(); // 关闭弹窗
 
       if (!theme) {
         statusDiv.textContent = "❌ 请输入微小说主题！";
@@ -444,36 +468,36 @@
       editMode();
 
       try {
-          const response = await fetch(MOONSHOT_API_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${MOONSHOT_API_KEY}`
-            },
-            body: JSON.stringify({
-              model: MOONSHOT_MODEL,
-              messages: [
-                { role: "system", content: "You are a helpful assistant." },
-                { role: "user", content: `Write a short story in English, about 100 words, with the theme of: ${theme}.` }
-              ],
-              temperature: 0.7
-            })
-          });
+        const response = await fetch(MOONSHOT_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${MOONSHOT_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: MOONSHOT_MODEL,
+            messages: [
+              { role: "system", content: "You are a helpful assistant." },
+              { role: "user", content: `Write a short story in English, about 100 words, with the theme of: ${theme}.` }
+            ],
+            temperature: 0.7
+          })
+        });
 
-          if (!response.ok) {
-            throw new Error(`API 请求失败，状态码: ${response.status}`);
-          }
-
-          const data = await response.json();
-          const storyContent = data.choices[0].message.content.trim();
-          textarea.value = storyContent;
-          
-          statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
-          await submitContent();
-        } catch (error) {
-          statusDiv.textContent = `❌ 生成失败: ${error.message}`;
-          console.error("生成失败:", error);
+        if (!response.ok) {
+          throw new Error(`API 请求失败，状态码: ${response.status}`);
         }
+
+        const data = await response.json();
+        const storyContent = data.choices[0].message.content.trim();
+        textarea.value = storyContent;
+        
+        statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
+        await submitContent();
+      } catch (error) {
+        statusDiv.textContent = `❌ 生成失败: ${error.message}`;
+        console.error("生成失败:", error);
+      }
     }
 
     // --- UI & Content Handling ---
@@ -519,6 +543,25 @@
         statusDiv.textContent = "✅ GitHub 内容为空，请编辑。";
       }
     }
+
+    // --- Enhanced Mobile Support ---
+    // 添加回车键支持
+    themeInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleStartGeneration(event);
+      }
+    });
+
+    // 模态窗口点击外部关闭
+    window.addEventListener('click', function(event) {
+      if (event.target === storyThemeModal) {
+        closeThemeModal();
+      }
+      if (event.target === settingsModal) {
+        closeSettingsModal();
+      }
+    });
 
     // --- Initial Load ---
     window.onload = () => {
