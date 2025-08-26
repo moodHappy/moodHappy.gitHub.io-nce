@@ -338,22 +338,34 @@
             token: localStorage.getItem('githubToken') || ''
         };
 
+        const corsProxyUrl = 'https://api.allorigins.win/raw?url=';
         const githubApiUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.path}`;
         let fileSha = '';
 
+        async function fetchWithCorsProxy(url, options = {}) {
+            const proxyUrl = corsProxyUrl + encodeURIComponent(url);
+            const response = await fetch(proxyUrl, {
+                method: options.method || 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                body: options.body
+            });
+            return response;
+        }
+
         async function fetchAndSortApps() {
             let clickData = {};
-            const appGrid = document.getElementById('appGrid');
-            appGrid.innerHTML = ''; // Clear grid before fetching
 
             if (!githubConfig.token) {
-                renderApps(allApps.sort((a, b) => a.id.localeCompare(b.id)));
+                renderApps(allApps.sort((a,b) => a.id.localeCompare(b.id)));
                 console.warn("GitHub Token not found in local storage. Click counts will not be tracked.");
                 return;
             }
 
             try {
-                const response = await fetch(githubApiUrl, {
+                let response = await fetch(githubApiUrl, {
                     headers: {
                         'Authorization': `token ${githubConfig.token}`,
                         'Accept': 'application/vnd.github.v3.raw'
@@ -369,9 +381,10 @@
                         }
                     });
 
-                    const fileInfoResponse = await fetch(githubApiUrl, {
+                    let fileInfoResponse = await fetch(githubApiUrl, {
                         headers: { 'Authorization': `token ${githubConfig.token}` }
                     });
+                    
                     if (fileInfoResponse.ok) {
                         const fileInfo = await fileInfoResponse.json();
                         fileSha = fileInfo.sha;
@@ -393,7 +406,6 @@
             });
 
             allApps.sort((a, b) => b.count - a.count);
-
             renderApps(allApps);
         }
         
@@ -403,54 +415,45 @@
                 return;
             }
             
-            // Re-fetch current counts and SHA to prevent race conditions, especially on mobile networks
             let currentCounts = {};
-            let currentSha = '';
+            let currentSha = fileSha;
 
-            try {
-                const response = await fetch(githubApiUrl, {
-                    headers: {
-                        'Authorization': `token ${githubConfig.token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const fileInfo = await response.json();
-                    currentSha = fileInfo.sha;
-                    const text = atob(fileInfo.content);
-                    text.split('\n').forEach(line => {
-                        const [id, count] = line.split(':');
-                        if (id && count) {
-                            currentCounts[id.trim()] = parseInt(count.trim(), 10);
-                        }
+            if (!currentSha) {
+                try {
+                    const fileInfoResponse = await fetch(githubApiUrl, {
+                        headers: { 'Authorization': `token ${githubConfig.token}` }
                     });
-                } else if (response.status === 404) {
-                    console.log("File not found, creating a new one.");
-                } else {
-                    console.error("Failed to get current file info. Status:", response.status);
+                    if (fileInfoResponse.ok) {
+                        const fileInfo = await fileInfoResponse.json();
+                        currentSha = fileInfo.sha;
+                        const text = atob(fileInfo.content);
+                        text.split('\n').forEach(line => {
+                            const [id, count] = line.split(':');
+                            if (id && count) {
+                                currentCounts[id.trim()] = parseInt(count.trim(), 10);
+                            }
+                        });
+                    } else if (fileInfoResponse.status !== 404) {
+                        console.error("Failed to get current counts for update.");
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Error during pre-update fetch:", error);
                     return;
                 }
-            } catch (error) {
-                console.error("Error fetching file info for update:", error);
-                return;
+            } else {
+                allApps.forEach(app => currentCounts[app.id] = app.count);
             }
 
             currentCounts[appId] = (currentCounts[appId] || 0) + 1;
             
-            // Update the in-memory array for a smooth user experience
-            const appToUpdate = allApps.find(app => app.id === appId);
-            if (appToUpdate) {
-                appToUpdate.count = currentCounts[appId];
-            }
-
-            // Generate the new content string
             const newData = allApps.map(app => `${app.id}:${currentCounts[app.id] || 0}`).join('\n');
             const contentBase64 = btoa(unescape(encodeURIComponent(newData)));
             
             const body = JSON.stringify({
                 message: `Update click count for ${appId}`,
                 content: contentBase64,
-                sha: currentSha || undefined // Pass SHA for update, undefined for create
+                sha: currentSha || undefined
             });
             
             try {
@@ -467,7 +470,9 @@
                     const errorData = await response.json();
                     console.error("Failed to update click count on GitHub:", errorData);
                 } else {
-                    // Re-render apps to show the new count
+                    const updatedFileInfo = await response.json();
+                    fileSha = updatedFileInfo.content.sha;
+                    // Re-fetch and re-render to update the display
                     await fetchAndSortApps();
                 }
             } catch (error) {
@@ -574,32 +579,33 @@
         
         fetchAndSortApps();
 
-        document.querySelectorAll('.app-item').forEach(item => {
-            item.addEventListener('touchstart', function(e) {
-                this.style.transform = 'scale(0.97)';
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.app-item').forEach(item => {
+                item.addEventListener('touchstart', function(e) {
+                    this.style.transform = 'scale(0.97)';
+                }, { passive: true });
+
+                item.addEventListener('touchend', function(e) {
+                    setTimeout(() => {
+                        if (this.style.transform !== 'scale(0.95)') {
+                            this.style.transform = '';
+                        }
+                    }, 100);
+                }, { passive: true });
+            });
+            let startY;
+            document.addEventListener('touchstart', function(e) {
+                startY = e.touches[0].clientY;
             }, { passive: true });
 
-            item.addEventListener('touchend', function(e) {
-                setTimeout(() => {
-                    if (this.style.transform !== 'scale(0.95)') {
-                        this.style.transform = '';
-                    }
-                }, 100);
+            document.addEventListener('touchmove', function(e) {
+                if (Math.abs(e.touches[0].clientY - startY) > 10) {
+                    document.querySelectorAll('.app-item').forEach(item => {
+                        item.style.transform = '';
+                    });
+                }
             }, { passive: true });
         });
-
-        let startY;
-        document.addEventListener('touchstart', function(e) {
-            startY = e.touches[0].clientY;
-        }, { passive: true });
-
-        document.addEventListener('touchmove', function(e) {
-            if (Math.abs(e.touches[0].clientY - startY) > 10) {
-                document.querySelectorAll('.app-item').forEach(item => {
-                    item.style.transform = '';
-                });
-            }
-        }, { passive: true });
     </script>
 </body>
 </html>
