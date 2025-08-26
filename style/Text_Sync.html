@@ -18,7 +18,7 @@
       --button-secondary-bg: #2196F3;
       --button-danger-bg: #f44336;
       --button-generate-bg: #800080;
-      --button-read-bg: #ff6347; /* New Read button color */
+      --button-read-bg: #e6b800; /* New color for read button */
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -86,8 +86,15 @@
       border-color: var(--textarea-border-color);
     }
 
+    /* Button Container Styles */
+    .button-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px; /* Adjust spacing between buttons */
+        margin-bottom: 10px;
+    }
+    
     button {
-      margin: 6px 6px 6px 0;
       padding: 10px 16px;
       font-size: 16px;
       border-radius: 6px;
@@ -98,11 +105,26 @@
       /* 移动端优化：增加触摸目标大小 */
       min-height: 44px;
       min-width: 44px;
+      flex: 1 1 auto; /* Flex property for equal width and wrapping */
     }
+
+    /* Specific button colors */
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
     button.generate { background-color: var(--button-generate-bg); }
     button.read { background-color: var(--button-read-bg); }
+
+    /* Media query for mobile devices */
+    @media (max-width: 600px) {
+        .button-container {
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        button {
+            flex: 1 1 calc(20% - 8px); /* 20% width minus a bit for the gap */
+        }
+    }
+
 
     #status {
       margin-top: 10px;
@@ -137,6 +159,9 @@
       border-radius: 8px;
       width: 90%;
       max-width: 400px;
+      /* 修复无法滚动到底部的问题 */
+      max-height: 90vh; 
+      overflow-y: auto;
     }
     .modal-content h3 {
       margin-top: 0;
@@ -168,8 +193,23 @@
       white-space: pre-wrap;
     }
 
-    .ai-inputs, .tts-inputs {
+    .ai-inputs {
         display: none;
+    }
+    
+    /* 修复按钮无法点击的问题 */
+    .modal-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid var(--textarea-border-color);
+    }
+
+    .modal-buttons button {
+      flex: 1 1 auto;
+      margin-top: 0;
     }
   </style>
 </head>
@@ -177,12 +217,12 @@
   <div id="settings-icon" title="设置" onclick="openSettingsModal()">⚙️</div>
   <h2>📤 GitHub 同步助手</h2>
 
-  <div>
+  <div class="button-container">
     <button onclick="submitContent()">提交</button>
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
     <button class="generate" onclick="generateStory()">生成</button>
-    <button class="read" onclick="readAloud()">朗读</button>
+    <button class="read" onclick="readContent()">朗读</button>
   </div>
 
   <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
@@ -271,22 +311,20 @@
         <label for="ai-custom-model-name">自定义 模型名称</label>
         <input type="text" id="ai-custom-model-name" placeholder="例如：gpt-3.5-turbo" />
       </div>
-      
+
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
       
-      <label>TTS 语音朗读</label>
-      <div id="tts-inputs" class="tts-inputs" style="display: block;">
-        <label for="tts-url-input">TTS API URL</label>
-        <input type="text" id="tts-url-input" placeholder="例如：https://api.example.com/tts" />
-        <label for="tts-voice-input">TTS 语音类型</label>
-        <input type="text" id="tts-voice-input" placeholder="例如：zh-CN-XiaoxiaoNeural" />
-        <label style="margin-top: 5px; font-size: 12px;">提示: 常见类型如 en-US-AriaNeural (女声), en-US-GuyNeural (男声), zh-CN-XiaoxiaoNeural (中文女声)</label>
+      <h4>朗读设置</h4>
+      <label for="tts-urls">TTS API URLs (多个用逗号分隔)</label>
+      <input type="text" id="tts-urls" placeholder="例如: https://your-tts-api.com/api/aiyue" />
+      
+      <label for="tts-voice-name">TTS 语音名称</label>
+      <input type="text" id="tts-voice-name" placeholder="例如: en-US-EricNeural" />
+      
+      <div class="modal-buttons">
+          <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
+          <button onclick="saveAndApplySettings()">保存并关闭</button>
       </div>
-
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
-
-      <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
-      <button style="margin-top:10px; float: right;" onclick="saveAndApplySettings()">保存并关闭</button>
     </div>
   </div>
 
@@ -302,10 +340,10 @@
 
     const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     const DEFAULT_ZHIPU_MODEL = "glm-4";
-
-    // New TTS Defaults
-    const DEFAULT_TTS_URL = "https://libre-tts-nu.vercel.app/api/tts?t=%TEXT%&v=%VOICE%";
-    const DEFAULT_TTS_VOICE = "zh-CN-XiaoxiaoNeural";
+    
+    // Default TTS settings
+    const DEFAULT_TTS_URLS = 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/';
+    const DEFAULT_TTS_VOICE = 'en-US-EricNeural';
 
     let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
@@ -324,24 +362,17 @@
     const aiKimiInputsDiv = document.getElementById('ai-kimi-inputs');
     const aiZhipuInputsDiv = document.getElementById('ai-zhipu-inputs');
     const aiCustomInputsDiv = document.getElementById('ai-custom-inputs');
-
-    // Kimi Inputs
     const aiKimiApiKeyInput = document.getElementById('ai-kimi-api-key');
     const aiKimiModelNameInput = document.getElementById('ai-kimi-model-name');
-
-    // Zhipu Inputs
     const aiZhipuApiKeyInput = document.getElementById('ai-zhipu-api-key');
     const aiZhipuModelNameInput = document.getElementById('ai-zhipu-model-name');
-
-    // Custom Inputs
     const aiApiUrlInput = document.getElementById('ai-api-url');
     const aiCustomApiKeyInput = document.getElementById('ai-custom-api-key');
     const aiCustomModelNameInput = document.getElementById('ai-custom-model-name');
 
-    // New TTS Settings Elements
-    const ttsUrlInput = document.getElementById('tts-url-input');
-    const ttsVoiceInput = document.getElementById('tts-voice-input');
-
+    // TTS Settings Elements
+    const ttsUrlsInput = document.getElementById('tts-urls');
+    const ttsVoiceNameInput = document.getElementById('tts-voice-name');
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -357,9 +388,8 @@
         aiApiUrl: '',
         aiCustomApiKey: '',
         aiCustomModelName: '',
-        // New TTS defaults
-        ttsUrl: DEFAULT_TTS_URL,
-        ttsVoice: DEFAULT_TTS_VOICE
+        ttsUrls: DEFAULT_TTS_URLS,
+        ttsVoiceName: DEFAULT_TTS_VOICE,
     };
 
     function applySettings(settings) {
@@ -386,9 +416,9 @@
         aiCustomApiKeyInput.value = currentSettings.aiCustomApiKey;
         aiCustomModelNameInput.value = currentSettings.aiCustomModelName;
         
-        // Load new TTS values into inputs
-        ttsUrlInput.value = currentSettings.ttsUrl;
-        ttsVoiceInput.value = currentSettings.ttsVoice;
+        // Load TTS values into inputs
+        ttsUrlsInput.value = currentSettings.ttsUrls;
+        ttsVoiceNameInput.value = currentSettings.ttsVoiceName;
     }
 
     function updateAIInputsVisibility(provider) {
@@ -418,9 +448,9 @@
         aiCustomApiKeyInput.value = savedSettings.aiCustomApiKey;
         aiCustomModelNameInput.value = savedSettings.aiCustomModelName;
         
-        // Load new TTS settings into modal
-        ttsUrlInput.value = savedSettings.ttsUrl;
-        ttsVoiceInput.value = savedSettings.ttsVoice;
+        // Load TTS settings into modal
+        ttsUrlsInput.value = savedSettings.ttsUrls;
+        ttsVoiceNameInput.value = savedSettings.ttsVoiceName;
 
         updateAIInputsVisibility(savedSettings.aiProvider);
 
@@ -445,9 +475,8 @@
             aiApiUrl: aiApiUrlInput.value,
             aiCustomApiKey: aiCustomApiKeyInput.value,
             aiCustomModelName: aiCustomModelNameInput.value,
-            // New TTS settings to save
-            ttsUrl: ttsUrlInput.value,
-            ttsVoice: ttsVoiceInput.value
+            ttsUrls: ttsUrlsInput.value,
+            ttsVoiceName: ttsVoiceNameInput.value,
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
         applySettings(newSettings);
@@ -674,46 +703,6 @@
         console.error("生成失败:", error);
       }
     }
-    
-    // --- New TTS Read Aloud Function ---
-    function readAloud() {
-        const textToRead = renderedDiv.style.display !== "none" ? renderedDiv.innerText : textarea.value;
-        if (!textToRead.trim()) {
-            statusDiv.textContent = "🤷‍♀️ 内容为空，无法朗读。";
-            return;
-        }
-
-        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-        const ttsUrl = settings.ttsUrl || DEFAULT_TTS_URL;
-        const ttsVoice = settings.ttsVoice || DEFAULT_TTS_VOICE;
-
-        // 替换 URL 模板中的占位符
-        const finalUrl = ttsUrl
-            .replace(/%TEXT%/g, encodeURIComponent(textToRead))
-            .replace(/%VOICE%/g, encodeURIComponent(ttsVoice));
-
-        statusDiv.textContent = "🔊 正在朗读中...";
-        
-        // 使用 Audio 对象播放音频流
-        const audio = new Audio(finalUrl);
-        audio.play().then(() => {
-            statusDiv.textContent = "✅ 朗读开始。";
-        }).catch(error => {
-            statusDiv.textContent = `❌ 朗读失败: ${error.message}`;
-            console.error("TTS 朗读失败:", error);
-        });
-
-        // 朗读结束或中断时恢复状态
-        audio.onended = () => {
-            statusDiv.textContent = "✅ 朗读完成。";
-        };
-        audio.onpause = () => {
-            statusDiv.textContent = "✅ 朗读已暂停。";
-        };
-        audio.onerror = (e) => {
-            statusDiv.textContent = `❌ 朗读失败: ${e.message || "未知错误"}`;
-        };
-    }
 
     // --- UI & Content Handling ---
     function copyContent() {
@@ -757,6 +746,160 @@
         editMode();
         statusDiv.textContent = "✅ GitHub 内容为空，请编辑。";
       }
+    }
+    
+    // --- Text-to-Speech Functionality ---
+    let currentAudio = null;
+    let isReading = false;
+    let isPaused = false;
+    let currentTextToSpeak = '';
+    let currentPosition = 0;
+    const currentSpeed = -20; // Keep speed constant for simplicity
+
+    function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
+      if (!textToSpeak || textToSpeak.trim() === '') {
+          console.warn('Text to speak is empty.');
+          return;
+      }
+      
+      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+      const ttsUrls = savedSettings.ttsUrls.split(',').map(url => url.trim()).filter(url => url !== '');
+      const ttsVoiceName = savedSettings.ttsVoiceName;
+      
+      if (ttsUrls.length === 0 || !ttsVoiceName) {
+        statusDiv.textContent = "❌ 请在设置中配置 TTS API URL 和语音名称。";
+        console.error("TTS configuration is missing.");
+        return;
+      }
+
+      if (currentAudio && !currentAudio.paused) {
+          currentAudio.pause();
+      }
+
+      currentTextToSpeak = textToSpeak;
+      const finaltextToSpeak = textToSpeak.trim();
+
+      const queryString = new URLSearchParams({
+          text: finaltextToSpeak,
+          voiceName: ttsVoiceName,
+          speed: currentSpeed,
+      }).toString();
+
+      let played = false;
+      for (const url of ttsUrls) {
+          const ttsUrl = `${url}api/aiyue?${queryString}`;
+          console.log('Attempting to play TTS from:', ttsUrl);
+
+          currentAudio = new Audio(ttsUrl);
+
+          if (fromCurrentPosition && currentPosition > 0) {
+              currentAudio.currentTime = currentPosition;
+          } else {
+              currentPosition = 0;
+          }
+
+          currentAudio.play()
+              .then(() => {
+                  console.log('TTS started playing successfully from:', ttsUrl);
+                  played = true;
+                  isReading = true;
+                  isPaused = false;
+                  updateButtonState();
+              })
+              .catch(e => {
+                  console.error('Error playing TTS from ' + ttsUrl + ':', e);
+              });
+          
+          if (played) break;
+      }
+      
+      if (!played) {
+          statusDiv.textContent = "❌ 所有 TTS 服务都无法连接，请检查 URL。";
+          isReading = false;
+          isPaused = false;
+          updateButtonState();
+      }
+
+      if (currentAudio) {
+          currentAudio.addEventListener('ended', function() {
+              isReading = false;
+              isPaused = false;
+              currentPosition = 0;
+              updateButtonState();
+          });
+
+          currentAudio.addEventListener('error', function() {
+              isReading = false;
+              isPaused = false;
+              currentPosition = 0;
+              updateButtonState();
+          });
+
+          currentAudio.addEventListener('timeupdate', function() {
+              if (!currentAudio.paused) {
+                  currentPosition = currentAudio.currentTime;
+              }
+          });
+      }
+    }
+
+    function pauseTTS() {
+        if (currentAudio && !currentAudio.paused) {
+            currentPosition = currentAudio.currentTime;
+            currentAudio.pause();
+            isPaused = true;
+            isReading = false;
+            updateButtonState();
+        }
+    }
+
+    function resumeTTS() {
+        if (currentAudio && isPaused) {
+            currentAudio.play()
+                .then(() => {
+                    isReading = true;
+                    isPaused = false;
+                    updateButtonState();
+                })
+                .catch(e => {
+                    console.error('Error resuming TTS:', e);
+                    currentPosition = 0;
+                    playSummaryTTS(currentTextToSpeak);
+                });
+        } else if (!currentAudio || currentAudio.ended) {
+            const dynamicContentDiv = renderedDiv;
+            const textToRead = dynamicContentDiv.innerText;
+            currentPosition = 0;
+            playSummaryTTS(textToRead);
+        }
+    }
+
+    function updateButtonState() {
+        const readAloudButton = document.querySelector('.read');
+        if (isReading) {
+            readAloudButton.textContent = '暂停朗读';
+        } else if (isPaused) {
+            readAloudButton.textContent = '继续朗读';
+        } else {
+            readAloudButton.textContent = '朗读';
+        }
+    }
+
+    function readContent() {
+        const textToRead = renderedDiv.innerText.trim();
+        if (!textToRead) {
+            statusDiv.textContent = "🤷‍♀️ 没有内容可以朗读。";
+            return;
+        }
+
+        if (isReading) {
+            pauseTTS();
+        } else if (isPaused) {
+            resumeTTS();
+        } else {
+            currentPosition = 0;
+            playSummaryTTS(textToRead);
+        }
     }
 
     // --- Enhanced Mobile Support ---
