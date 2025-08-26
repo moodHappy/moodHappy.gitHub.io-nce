@@ -28,7 +28,7 @@
             text-align: center;
             margin-bottom: 25px;
             animation: fadeInDown 0.6s ease-out;
-            position: relative;
+            position: relative; /* 为设置按钮定位 */
         }
 
         .header h1 {
@@ -166,6 +166,7 @@
         .app-item[data-id="password-generator"] .app-icon { background: linear-gradient(135deg, #c0392b, #e74c3c); }
         .app-item[data-id="moon-tv"] .app-icon { background: linear-gradient(135deg, #00cec9, #81ecec); }
 
+        /* --- Media Queries for Responsive Layout --- */
         @media (min-width: 320px) {
             .container { padding-left: 10px; padding-right: 10px; max-width: 360px; }
             .app-grid { gap: 12px; }
@@ -190,13 +191,14 @@
             .app-name { font-size: 0.85rem; }
             .app-desc { font-size: 0.7rem; display: block; overflow: visible; }
         }
-
+        /* Animations and Ripple Effect (Keep unchanged) */
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .ripple { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.6); transform: scale(0); animation: ripple-animation 0.6s linear; }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
+        /* --- Settings Button & Dialog Styles --- */
         .settings-button {
             position: absolute;
             top: 0;
@@ -287,7 +289,7 @@
 
         <h2 class="category-title">所有应用 (All Apps)</h2>
         <div class="app-grid" id="appGrid">
-        </div>
+            </div>
 
         <div class="visitor-stats">
             <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
@@ -336,22 +338,8 @@
             token: localStorage.getItem('githubToken') || ''
         };
 
-        const corsProxyUrl = 'https://api.allorigins.win/raw?url=';
         const githubApiUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.path}`;
         let fileSha = '';
-
-        async function fetchWithCorsProxy(url, options = {}) {
-            const proxyUrl = corsProxyUrl + encodeURIComponent(url);
-            const response = await fetch(proxyUrl, {
-                method: options.method || 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                body: options.body
-            });
-            return response;
-        }
 
         async function fetchAndSortApps() {
             let clickData = {};
@@ -363,24 +351,12 @@
             }
 
             try {
-                // Try direct fetch first, fallback to CORS proxy
-                let response;
-                try {
-                    response = await fetch(githubApiUrl, {
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Accept': 'application/vnd.github.v3.raw'
-                        }
-                    });
-                } catch (corsError) {
-                    console.log('Direct fetch failed, trying CORS proxy...');
-                    response = await fetchWithCorsProxy(githubApiUrl, {
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Accept': 'application/vnd.github.v3.raw'
-                        }
-                    });
-                }
+                const response = await fetch(githubApiUrl, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3.raw'
+                    }
+                });
                 
                 if (response.ok) {
                     const text = await response.text();
@@ -391,18 +367,9 @@
                         }
                     });
 
-                    // Get SHA for file
-                    let fileInfoResponse;
-                    try {
-                        fileInfoResponse = await fetch(githubApiUrl, {
-                            headers: { 'Authorization': `token ${githubConfig.token}` }
-                        });
-                    } catch (corsError) {
-                        fileInfoResponse = await fetchWithCorsProxy(githubApiUrl, {
-                            headers: { 'Authorization': `token ${githubConfig.token}` }
-                        });
-                    }
-                    
+                    const fileInfoResponse = await fetch(githubApiUrl, {
+                        headers: { 'Authorization': `token ${githubConfig.token}` }
+                    });
                     if (fileInfoResponse.ok) {
                         const fileInfo = await fileInfoResponse.json();
                         fileSha = fileInfo.sha;
@@ -424,6 +391,7 @@
             });
 
             allApps.sort((a, b) => b.count - a.count);
+
             renderApps(allApps);
         }
         
@@ -433,42 +401,31 @@
                 return;
             }
             
+            // Re-fetch current counts and SHA to ensure the latest state
             let currentCounts = {};
-            let currentSha = fileSha;
+            let currentSha = '';
 
-            if (!currentSha) {
-                try {
-                    let fileInfoResponse;
-                    try {
-                        fileInfoResponse = await fetch(githubApiUrl, {
-                            headers: { 'Authorization': `token ${githubConfig.token}` }
-                        });
-                    } catch (corsError) {
-                        fileInfoResponse = await fetchWithCorsProxy(githubApiUrl, {
-                            headers: { 'Authorization': `token ${githubConfig.token}` }
-                        });
-                    }
-                    
-                    if (fileInfoResponse.ok) {
-                        const fileInfo = await fileInfoResponse.json();
-                        currentSha = fileInfo.sha;
-                        const text = atob(fileInfo.content);
-                        text.split('\n').forEach(line => {
-                            const [id, count] = line.split(':');
-                            if (id && count) {
-                                currentCounts[id.trim()] = parseInt(count.trim(), 10);
-                            }
-                        });
-                    } else if (fileInfoResponse.status !== 404) {
-                        console.error("Failed to get current counts for update.");
-                        return;
-                    }
-                } catch (error) {
-                    console.error("Error during pre-update fetch:", error);
+            try {
+                const fileInfoResponse = await fetch(githubApiUrl, {
+                    headers: { 'Authorization': `token ${githubConfig.token}` }
+                });
+                if (fileInfoResponse.ok) {
+                    const fileInfo = await fileInfoResponse.json();
+                    currentSha = fileInfo.sha;
+                    const text = atob(fileInfo.content);
+                    text.split('\n').forEach(line => {
+                        const [id, count] = line.split(':');
+                        if (id && count) {
+                            currentCounts[id.trim()] = parseInt(count.trim(), 10);
+                        }
+                    });
+                } else if (fileInfoResponse.status !== 404) {
+                    console.error("Failed to get current counts for update.");
                     return;
                 }
-            } else {
-                allApps.forEach(app => currentCounts[app.id] = app.count);
+            } catch (error) {
+                console.error("Error during pre-update fetch:", error);
+                return;
             }
 
             currentCounts[appId] = (currentCounts[appId] || 0) + 1;
@@ -483,35 +440,23 @@
             });
             
             try {
-                let response;
-                try {
-                    response = await fetch(githubApiUrl, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: body
-                    });
-                } catch (corsError) {
-                    console.log('Direct PUT failed, trying CORS proxy...');
-                    response = await fetchWithCorsProxy(githubApiUrl, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: body
-                    });
-                }
+                const response = await fetch(githubApiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: body
+                });
 
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error("Failed to update click count on GitHub:", errorData);
                 } else {
-                    const updatedFileInfo = await response.json();
-                    fileSha = updatedFileInfo.content.sha;
-                    await fetchAndSortApps();
+                    // Wait for a few seconds to let GitHub process the update
+                    setTimeout(() => {
+                        fetchAndSortApps(); // Re-fetch and render with the new count
+                    }, 3000); // 延迟3秒
                 }
             } catch (error) {
                 console.error("Failed to update click count:", error);
@@ -584,27 +529,18 @@
             githubConfig.token = token;
 
             try {
-                let response;
-                try {
-                    response = await fetch(githubApiUrl, {
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`
-                        }
-                    });
-                } catch (corsError) {
-                    response = await fetchWithCorsProxy(githubApiUrl, {
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`
-                        }
-                    });
-                }
+                const response = await fetch(githubApiUrl, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`
+                    }
+                });
 
                 if (response.ok || response.status === 404) {
                     statusMessage.textContent = '连接成功！';
                     statusMessage.className = 'status-message success';
                     setTimeout(() => {
                         document.getElementById('settingsModal').style.display = 'none';
-                        fetchAndSortApps();
+                        fetchAndSortApps(); // Re-fetch and render with the new token
                     }, 1000);
                 } else {
                     statusMessage.textContent = '连接失败，请检查 Token。';
@@ -626,34 +562,32 @@
         
         fetchAndSortApps();
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.app-item').forEach(item => {
-                item.addEventListener('touchstart', function(e) {
-                    this.style.transform = 'scale(0.97)';
-                }, { passive: true });
-
-                item.addEventListener('touchend', function(e) {
-                    setTimeout(() => {
-                        if (this.style.transform !== 'scale(0.95)') {
-                            this.style.transform = '';
-                        }
-                    }, 100);
-                }, { passive: true });
-            });
-
-            let startY;
-            document.addEventListener('touchstart', function(e) {
-                startY = e.touches[0].clientY;
+        document.querySelectorAll('.app-item').forEach(item => {
+            item.addEventListener('touchstart', function(e) {
+                this.style.transform = 'scale(0.97)';
             }, { passive: true });
 
-            document.addEventListener('touchmove', function(e) {
-                if (Math.abs(e.touches[0].clientY - startY) > 10) {
-                    document.querySelectorAll('.app-item').forEach(item => {
-                        item.style.transform = '';
-                    });
-                }
+            item.addEventListener('touchend', function(e) {
+                setTimeout(() => {
+                    if (this.style.transform !== 'scale(0.95)') {
+                        this.style.transform = '';
+                    }
+                }, 100);
             }, { passive: true });
         });
+
+        let startY;
+        document.addEventListener('touchstart', function(e) {
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', function(e) {
+            if (Math.abs(e.touches[0].clientY - startY) > 10) {
+                document.querySelectorAll('.app-item').forEach(item => {
+                    item.style.transform = '';
+                });
+            }
+        }, { passive: true });
     </script>
 </body>
 </html>
