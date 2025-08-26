@@ -18,6 +18,7 @@
       --button-secondary-bg: #2196F3;
       --button-danger-bg: #f44336;
       --button-generate-bg: #800080;
+      --button-read-bg: #ff6347; /* New Read button color */
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -101,6 +102,7 @@
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
     button.generate { background-color: var(--button-generate-bg); }
+    button.read { background-color: var(--button-read-bg); }
 
     #status {
       margin-top: 10px;
@@ -166,7 +168,7 @@
       white-space: pre-wrap;
     }
 
-    .ai-inputs {
+    .ai-inputs, .tts-inputs {
         display: none;
     }
   </style>
@@ -180,6 +182,7 @@
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
     <button class="generate" onclick="generateStory()">生成</button>
+    <button class="read" onclick="readAloud()">朗读</button>
   </div>
 
   <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
@@ -238,7 +241,7 @@
       </select>
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
-      
+
       <label for="ai-provider-select">AI 模型服务商</label>
       <select id="ai-provider-select">
         <option value="kimi">Kimi</option>
@@ -268,6 +271,17 @@
         <label for="ai-custom-model-name">自定义 模型名称</label>
         <input type="text" id="ai-custom-model-name" placeholder="例如：gpt-3.5-turbo" />
       </div>
+      
+      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
+      
+      <label>TTS 语音朗读</label>
+      <div id="tts-inputs" class="tts-inputs" style="display: block;">
+        <label for="tts-url-input">TTS API URL</label>
+        <input type="text" id="tts-url-input" placeholder="例如：https://api.example.com/tts" />
+        <label for="tts-voice-input">TTS 语音类型</label>
+        <input type="text" id="tts-voice-input" placeholder="例如：zh-CN-XiaoxiaoNeural" />
+        <label style="margin-top: 5px; font-size: 12px;">提示: 常见类型如 en-US-AriaNeural (女声), en-US-GuyNeural (男声), zh-CN-XiaoxiaoNeural (中文女声)</label>
+      </div>
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
@@ -285,9 +299,13 @@
 
     const DEFAULT_KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions";
     const DEFAULT_KIMI_MODEL = "moonshot-v1-8k";
-    
+
     const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     const DEFAULT_ZHIPU_MODEL = "glm-4";
+
+    // New TTS Defaults
+    const DEFAULT_TTS_URL = "https://libre-tts-nu.vercel.app/api/tts?t=%TEXT%&v=%VOICE%";
+    const DEFAULT_TTS_VOICE = "zh-CN-XiaoxiaoNeural";
 
     let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
@@ -300,25 +318,29 @@
     const storyThemeModal = document.getElementById("storyThemeModal");
     const themeInput = document.getElementById("themeInput");
     const rootElement = document.documentElement;
-    
+
     // AI Settings Elements
     const aiProviderSelect = document.getElementById('ai-provider-select');
     const aiKimiInputsDiv = document.getElementById('ai-kimi-inputs');
     const aiZhipuInputsDiv = document.getElementById('ai-zhipu-inputs');
     const aiCustomInputsDiv = document.getElementById('ai-custom-inputs');
-    
+
     // Kimi Inputs
     const aiKimiApiKeyInput = document.getElementById('ai-kimi-api-key');
     const aiKimiModelNameInput = document.getElementById('ai-kimi-model-name');
-    
+
     // Zhipu Inputs
     const aiZhipuApiKeyInput = document.getElementById('ai-zhipu-api-key');
     const aiZhipuModelNameInput = document.getElementById('ai-zhipu-model-name');
-    
+
     // Custom Inputs
     const aiApiUrlInput = document.getElementById('ai-api-url');
     const aiCustomApiKeyInput = document.getElementById('ai-custom-api-key');
     const aiCustomModelNameInput = document.getElementById('ai-custom-model-name');
+
+    // New TTS Settings Elements
+    const ttsUrlInput = document.getElementById('tts-url-input');
+    const ttsVoiceInput = document.getElementById('tts-voice-input');
 
 
     // --- Settings Management ---
@@ -334,7 +356,10 @@
         aiZhipuModelName: DEFAULT_ZHIPU_MODEL,
         aiApiUrl: '',
         aiCustomApiKey: '',
-        aiCustomModelName: ''
+        aiCustomModelName: '',
+        // New TTS defaults
+        ttsUrl: DEFAULT_TTS_URL,
+        ttsVoice: DEFAULT_TTS_VOICE
     };
 
     function applySettings(settings) {
@@ -342,16 +367,16 @@
         rootElement.style.setProperty('--primary-font', settings.fontFamily);
         rootElement.style.setProperty('--font-size', settings.fontSize);
         rootElement.style.setProperty('--line-height', settings.lineHeight);
-        
+
         aiProviderSelect.value = settings.aiProvider;
         updateAIInputsVisibility(settings.aiProvider);
     }
-    
+
     function loadSettings() {
         const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
         const currentSettings = { ...defaultSettings, ...savedSettings };
         applySettings(currentSettings);
-        
+
         // Load AI values into inputs
         aiKimiApiKeyInput.value = currentSettings.aiKimiApiKey;
         aiKimiModelNameInput.value = currentSettings.aiKimiModelName;
@@ -360,8 +385,12 @@
         aiApiUrlInput.value = currentSettings.aiApiUrl;
         aiCustomApiKeyInput.value = currentSettings.aiCustomApiKey;
         aiCustomModelNameInput.value = currentSettings.aiCustomModelName;
+        
+        // Load new TTS values into inputs
+        ttsUrlInput.value = currentSettings.ttsUrl;
+        ttsVoiceInput.value = currentSettings.ttsVoice;
     }
-    
+
     function updateAIInputsVisibility(provider) {
         aiKimiInputsDiv.style.display = provider === 'kimi' ? 'block' : 'none';
         aiZhipuInputsDiv.style.display = provider === 'zhipu' ? 'block' : 'none';
@@ -389,6 +418,10 @@
         aiCustomApiKeyInput.value = savedSettings.aiCustomApiKey;
         aiCustomModelNameInput.value = savedSettings.aiCustomModelName;
         
+        // Load new TTS settings into modal
+        ttsUrlInput.value = savedSettings.ttsUrl;
+        ttsVoiceInput.value = savedSettings.ttsVoice;
+
         updateAIInputsVisibility(savedSettings.aiProvider);
 
         settingsModal.style.display = "flex";
@@ -397,7 +430,7 @@
     function closeSettingsModal() {
         settingsModal.style.display = "none";
     }
-    
+
     function saveAndApplySettings() {
         const newSettings = {
             theme: document.getElementById('theme-select').value,
@@ -411,7 +444,10 @@
             aiZhipuModelName: aiZhipuModelNameInput.value,
             aiApiUrl: aiApiUrlInput.value,
             aiCustomApiKey: aiCustomApiKeyInput.value,
-            aiCustomModelName: aiCustomModelNameInput.value
+            aiCustomModelName: aiCustomModelNameInput.value,
+            // New TTS settings to save
+            ttsUrl: ttsUrlInput.value,
+            ttsVoice: ttsVoiceInput.value
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
         applySettings(newSettings);
@@ -532,7 +568,7 @@
         statusDiv.textContent = "❌ 删除失败：" + (await res.json()).message;
       }
     }
-    
+
     // --- AI Generation Functions (Updated with Mobile Fix) ---
     function generateStory() {
       // 点击生成按钮时，显示主题输入弹窗
@@ -542,7 +578,7 @@
         themeInput.focus();
       }, 100);
     }
-    
+
     function closeThemeModal() {
         storyThemeModal.style.display = "none";
     }
@@ -637,6 +673,46 @@
         statusDiv.textContent = `❌ 生成失败: ${error.message}`;
         console.error("生成失败:", error);
       }
+    }
+    
+    // --- New TTS Read Aloud Function ---
+    function readAloud() {
+        const textToRead = renderedDiv.style.display !== "none" ? renderedDiv.innerText : textarea.value;
+        if (!textToRead.trim()) {
+            statusDiv.textContent = "🤷‍♀️ 内容为空，无法朗读。";
+            return;
+        }
+
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+        const ttsUrl = settings.ttsUrl || DEFAULT_TTS_URL;
+        const ttsVoice = settings.ttsVoice || DEFAULT_TTS_VOICE;
+
+        // 替换 URL 模板中的占位符
+        const finalUrl = ttsUrl
+            .replace(/%TEXT%/g, encodeURIComponent(textToRead))
+            .replace(/%VOICE%/g, encodeURIComponent(ttsVoice));
+
+        statusDiv.textContent = "🔊 正在朗读中...";
+        
+        // 使用 Audio 对象播放音频流
+        const audio = new Audio(finalUrl);
+        audio.play().then(() => {
+            statusDiv.textContent = "✅ 朗读开始。";
+        }).catch(error => {
+            statusDiv.textContent = `❌ 朗读失败: ${error.message}`;
+            console.error("TTS 朗读失败:", error);
+        });
+
+        // 朗读结束或中断时恢复状态
+        audio.onended = () => {
+            statusDiv.textContent = "✅ 朗读完成。";
+        };
+        audio.onpause = () => {
+            statusDiv.textContent = "✅ 朗读已暂停。";
+        };
+        audio.onerror = (e) => {
+            statusDiv.textContent = `❌ 朗读失败: ${e.message || "未知错误"}`;
+        };
     }
 
     // --- UI & Content Handling ---
