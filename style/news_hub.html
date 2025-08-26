@@ -377,7 +377,7 @@
                 } else if (response.status === 404) {
                     console.warn('Click count file not found. A new one will be created on the first click.');
                 } else {
-                    console.error("Failed to fetch click counts from GitHub. Status:", response.status, await response.text());
+                    console.error("Failed to fetch click counts from GitHub. Status:", response.status, "Error details:", await response.text());
                 }
 
             } catch (error) {
@@ -401,15 +401,21 @@
                 return;
             }
             
-            // Re-fetch current counts and SHA to prevent race conditions
-            let currentCounts = {};
-            let currentSha = '';
-
             try {
+                // First, fetch the latest state of the file
                 const fileInfoResponse = await fetch(githubApiUrl, {
                     headers: { 'Authorization': `token ${githubConfig.token}` }
                 });
-                if (fileInfoResponse.ok) {
+
+                if (!fileInfoResponse.ok && fileInfoResponse.status !== 404) {
+                    console.error("Failed to get current counts before update. Status:", fileInfoResponse.status, "Error details:", await fileInfoResponse.text());
+                    return;
+                }
+
+                let currentCounts = {};
+                let currentSha = '';
+
+                if (fileInfoResponse.status === 200) {
                     const fileInfo = await fileInfoResponse.json();
                     currentSha = fileInfo.sha;
                     const text = atob(fileInfo.content);
@@ -419,27 +425,27 @@
                             currentCounts[id.trim()] = parseInt(count.trim(), 10);
                         }
                     });
-                } else if (fileInfoResponse.status !== 404) {
-                    console.error("Failed to get current counts for update. Status:", fileInfoResponse.status, await fileInfoResponse.text());
-                    return;
                 }
-            } catch (error) {
-                console.error("Error during pre-update fetch:", error);
-                return;
-            }
-
-            currentCounts[appId] = (currentCounts[appId] || 0) + 1;
-            
-            const newData = allApps.map(app => `${app.id}:${currentCounts[app.id] || 0}`).join('\n');
-            const contentBase64 = btoa(unescape(encodeURIComponent(newData)));
-            
-            const body = JSON.stringify({
-                message: `Update click count for ${appId}`,
-                content: contentBase64,
-                sha: currentSha || undefined
-            });
-            
-            try {
+                
+                // Increment the click count for the specific app
+                currentCounts[appId] = (currentCounts[appId] || 0) + 1;
+                
+                // Prepare the new file content
+                const updatedAppData = allApps.map(app => {
+                    const count = currentCounts[app.id] || 0;
+                    return `${app.id}:${count}`;
+                }).join('\n');
+                
+                const contentBase64 = btoa(unescape(encodeURIComponent(updatedAppData)));
+                
+                // Prepare the PUT request body
+                const body = JSON.stringify({
+                    message: `Update click count for ${appId}`,
+                    content: contentBase64,
+                    sha: currentSha || undefined
+                });
+                
+                // Send the PUT request to update the file
                 const response = await fetch(githubApiUrl, {
                     method: 'PUT',
                     headers: {
@@ -451,12 +457,14 @@
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error("Failed to update click count on GitHub:", response.status, errorData);
+                    console.error("Failed to update click count on GitHub. Status:", response.status, "Error details:", errorData);
                 } else {
-                    // Update SHA for subsequent updates and re-render
                     const updatedFileInfo = await response.json();
                     fileSha = updatedFileInfo.content.sha;
-                    await fetchAndSortApps(); // Re-fetch and render with the new count
+                    console.log("Successfully updated GitHub file. Re-fetching data...");
+                    
+                    // Re-fetch and render with the new count
+                    await fetchAndSortApps();
                 }
             } catch (error) {
                 console.error("Failed to update click count:", error);
@@ -543,12 +551,15 @@
                         fetchAndSortApps(); // Re-fetch and render with the new token
                     }, 1000);
                 } else {
+                    const errorText = await response.text();
                     statusMessage.textContent = '连接失败，请检查 Token。';
                     statusMessage.className = 'status-message error';
+                    console.error("Failed to connect with token. Status:", response.status, "Error details:", errorText);
                 }
             } catch (error) {
                 statusMessage.textContent = '连接失败，请检查网络或 Token。';
                 statusMessage.className = 'status-message error';
+                console.error("Failed to connect with token:", error);
             }
             statusMessage.style.opacity = '1';
         }
