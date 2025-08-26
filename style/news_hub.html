@@ -343,40 +343,47 @@
 
         async function fetchAndSortApps() {
             let clickData = {};
+            const appGrid = document.getElementById('appGrid');
+            appGrid.innerHTML = ''; // Clear grid before fetching
 
             if (!githubConfig.token) {
-                renderApps(allApps.sort((a,b) => a.id.localeCompare(b.id)));
+                renderApps(allApps.sort((a, b) => a.id.localeCompare(b.id)));
                 console.warn("GitHub Token not found in local storage. Click counts will not be tracked.");
                 return;
             }
 
             try {
-                const fileInfoResponse = await fetch(githubApiUrl, {
-                    headers: { 'Authorization': `token ${githubConfig.token}` }
+                const response = await fetch(githubApiUrl, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3.raw'
+                    }
                 });
-
-                if (fileInfoResponse.ok) {
-                    const fileInfo = await fileInfoResponse.json();
-                    fileSha = fileInfo.sha;
-                    const text = atob(fileInfo.content);
+                
+                if (response.ok) {
+                    const text = await response.text();
                     text.split('\n').forEach(line => {
                         const [id, count] = line.split(':');
                         if (id && count) {
                             clickData[id.trim()] = parseInt(count.trim(), 10);
                         }
                     });
-                } else if (fileInfoResponse.status === 404) {
+
+                    const fileInfoResponse = await fetch(githubApiUrl, {
+                        headers: { 'Authorization': `token ${githubConfig.token}` }
+                    });
+                    if (fileInfoResponse.ok) {
+                        const fileInfo = await fileInfoResponse.json();
+                        fileSha = fileInfo.sha;
+                    }
+                } else if (response.status === 404) {
                     console.warn('Click count file not found. A new one will be created on the first click.');
-                    fileSha = ''; // Ensure SHA is cleared
                 } else {
-                    console.error("Failed to fetch click counts from GitHub. Status:", fileInfoResponse.status);
-                    renderApps(allApps); // Render with initial data on failure
-                    return;
+                    console.error("Failed to fetch click counts from GitHub. Status:", response.status);
                 }
+
             } catch (error) {
                 console.error("Failed to fetch click counts from GitHub:", error);
-                renderApps(allApps); // Render with initial data on network error
-                return;
             }
 
             allApps.forEach(app => {
@@ -386,6 +393,7 @@
             });
 
             allApps.sort((a, b) => b.count - a.count);
+
             renderApps(allApps);
         }
         
@@ -394,16 +402,21 @@
                 console.warn("No GitHub Token available. Skipping update.");
                 return;
             }
-
+            
+            // Re-fetch current counts and SHA to prevent race conditions, especially on mobile networks
             let currentCounts = {};
+            let currentSha = '';
+
             try {
                 const response = await fetch(githubApiUrl, {
-                    headers: { 'Authorization': `token ${githubConfig.token}` }
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`
+                    }
                 });
 
                 if (response.ok) {
                     const fileInfo = await response.json();
-                    fileSha = fileInfo.sha;
+                    currentSha = fileInfo.sha;
                     const text = atob(fileInfo.content);
                     text.split('\n').forEach(line => {
                         const [id, count] = line.split(':');
@@ -412,30 +425,32 @@
                         }
                     });
                 } else if (response.status === 404) {
-                    console.log('File not found, creating a new one.');
-                    fileSha = ''; // New file, no SHA
+                    console.log("File not found, creating a new one.");
                 } else {
-                    console.error('Failed to get file info before update.');
+                    console.error("Failed to get current file info. Status:", response.status);
                     return;
                 }
             } catch (error) {
-                console.error('Error fetching file info before update:', error);
+                console.error("Error fetching file info for update:", error);
                 return;
             }
 
             currentCounts[appId] = (currentCounts[appId] || 0) + 1;
             
-            const newData = allApps.map(app => {
-                const updatedCount = currentCounts[app.id] || 0;
-                return `${app.id}:${updatedCount}`;
-            }).join('\n');
-            
+            // Update the in-memory array for a smooth user experience
+            const appToUpdate = allApps.find(app => app.id === appId);
+            if (appToUpdate) {
+                appToUpdate.count = currentCounts[appId];
+            }
+
+            // Generate the new content string
+            const newData = allApps.map(app => `${app.id}:${currentCounts[app.id] || 0}`).join('\n');
             const contentBase64 = btoa(unescape(encodeURIComponent(newData)));
             
             const body = JSON.stringify({
                 message: `Update click count for ${appId}`,
                 content: contentBase64,
-                sha: fileSha || undefined
+                sha: currentSha || undefined // Pass SHA for update, undefined for create
             });
             
             try {
@@ -452,8 +467,7 @@
                     const errorData = await response.json();
                     console.error("Failed to update click count on GitHub:", errorData);
                 } else {
-                    const updatedFileInfo = await response.json();
-                    fileSha = updatedFileInfo.content.sha;
+                    // Re-render apps to show the new count
                     await fetchAndSortApps();
                 }
             } catch (error) {
