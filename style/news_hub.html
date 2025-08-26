@@ -23,7 +23,7 @@
             max-width: 400px;
             margin: 0 auto;
         }
-        
+
         .header {
             text-align: center;
             margin-bottom: 25px;
@@ -56,7 +56,7 @@
             transform: translateY(-10px);
             animation-fill-mode: forwards;
         }
-        
+
         .app-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -80,7 +80,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .app-item:nth-child(1) { animation-delay: 0.0s; }
         .app-item:nth-child(2) { animation-delay: 0.05s; }
         .app-item:nth-child(3) { animation-delay: 0.1s; }
@@ -131,7 +131,7 @@
             color: #718096;
             line-height: 1.3;
         }
-        
+
         .click-count {
             font-size: 0.65rem;
             color: #718096;
@@ -197,6 +197,118 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .ripple { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.6); transform: scale(0); animation: ripple-animation 0.6s linear; }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            animation: modal-anim 0.3s ease-out;
+            border: 1px solid #ccc;
+        }
+
+        .modal-content h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        .modal-content p {
+            font-size: 0.8rem;
+            color: #d9534f;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 25px;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        #saveBtn {
+            background-color: #667eea;
+            color: white;
+            border: none;
+        }
+
+        #saveBtn:hover {
+            background-color: #5a6acb;
+        }
+
+        #cancelBtn {
+            background-color: #f0f0f0;
+            color: #555;
+            border: 1px solid #ddd;
+        }
+
+        #cancelBtn:hover {
+            background-color: #e0e0e0;
+        }
+
+        #connectionStatus {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        @keyframes modal-anim {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -216,6 +328,32 @@
             </div>
         </div>
     </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>GitHub 同步设置</h3>
+            <p style="color:red; font-size: 0.75rem;">⚠️ 安全警告：您的个人访问令牌 (PAT) 将存储在浏览器中。这可能存在安全风险，仅建议用于个人非公开项目。</p>
+            <label for="githubUsername">GitHub 用户名:</label>
+            <input type="text" id="githubUsername" placeholder="moodHappy">
+
+            <label for="githubRepo">仓库名称:</label>
+            <input type="text" id="githubRepo" placeholder="HelloWorld">
+
+            <label for="githubPat">个人访问令牌 (PAT):</label>
+            <input type="password" id="githubPat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxx">
+
+            <label for="dataPath">数据文件路径 (例如: Notes/):</label>
+            <input type="text" id="dataPath" placeholder="Notes/" value="Notes/">
+
+            <div id="connectionStatus"></div>
+
+            <div class="modal-buttons">
+                <button id="cancelBtn">取消</button>
+                <button id="saveBtn">保存并连接</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const allApps = [
             { id: "fiction", name: "Fiction", desc: "英文小说阅读", icon: "📚", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/Fiction/index.html", count: 0 },
@@ -237,23 +375,187 @@
             { id: "moon-tv", name: "Moon TV", desc: "电影聚合", icon: "📺", url: "https://moon-tv-ten-sable-46.vercel.app/login?redirect=%2F", count: 0 }
         ];
 
-        const localStorageKey = 'appClickCounts';
+        // New GitHub-related variables
+        let githubConfig = {};
+        const GITHUB_CONFIG_KEY = 'githubConfig';
+        const GITHUB_DATA_FILE_NAME = 'app_click_counts.json';
 
-        function fetchAndSortApps() {
-            // 从本地存储中获取点击次数数据
-            const storedCounts = localStorage.getItem(localStorageKey);
-            let clickData = {};
-            if (storedCounts) {
-                try {
-                    clickData = JSON.parse(storedCounts);
-                } catch (e) {
-                    console.error("Failed to parse local storage data.", e);
-                    // 如果解析失败，清空数据以避免后续错误
-                    localStorage.removeItem(localStorageKey);
-                }
+        const settingsModal = document.getElementById('settingsModal');
+        const githubUsernameInput = document.getElementById('githubUsername');
+        const githubRepoInput = document.getElementById('githubRepo');
+        const githubPatInput = document.getElementById('githubPat');
+        const dataPathInput = document.getElementById('dataPath');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        function showSettingsModal() {
+            const config = JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY));
+            if (config) {
+                githubUsernameInput.value = config.username;
+                githubRepoInput.value = config.repo;
+                githubPatInput.value = config.pat;
+                dataPathInput.value = config.path;
+            }
+            settingsModal.style.display = 'flex';
+        }
+
+        function hideSettingsModal() {
+            settingsModal.style.display = 'none';
+        }
+
+        saveBtn.onclick = async () => {
+            const username = githubUsernameInput.value.trim();
+            const repo = githubRepoInput.value.trim();
+            const pat = githubPatInput.value.trim();
+            let path = dataPathInput.value.trim();
+            if (!path.endsWith('/')) {
+                path += '/';
             }
 
-            // 更新应用数据中的点击次数
+            if (!username || !repo || !pat) {
+                connectionStatus.style.color = 'red';
+                connectionStatus.innerText = '所有字段都必须填写！';
+                return;
+            }
+
+            const newConfig = { username, repo, pat, path };
+            
+            connectionStatus.style.color = '#5cb85c';
+            connectionStatus.innerText = '正在连接...';
+
+            try {
+                const isConnected = await testGitHubConnection(newConfig);
+                if (isConnected) {
+                    localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(newConfig));
+                    githubConfig = newConfig;
+                    connectionStatus.style.color = '#5cb85c';
+                    connectionStatus.innerText = '连接成功！';
+                    setTimeout(() => {
+                        hideSettingsModal();
+                        fetchAndSortApps();
+                    }, 1000);
+                } else {
+                    connectionStatus.style.color = 'red';
+                    connectionStatus.innerText = '连接失败，请检查您的设置。';
+                }
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                connectionStatus.style.color = 'red';
+                connectionStatus.innerText = '连接失败，请检查您的设置。';
+            }
+        };
+
+        cancelBtn.onclick = () => {
+            hideSettingsModal();
+        };
+
+        async function testGitHubConnection(config) {
+            const url = `https://api.github.com/repos/${config.username}/${config.repo}/commits`;
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `token ${config.pat}`
+                    }
+                });
+                return response.ok;
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        async function fetchGitHubData() {
+            if (!githubConfig.pat) {
+                return {};
+            }
+            const fileUrl = `https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/${githubConfig.path}${GITHUB_DATA_FILE_NAME}`;
+            try {
+                const response = await fetch(fileUrl, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.pat}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const content = atob(data.content);
+                    return JSON.parse(content);
+                } else if (response.status === 404) {
+                    console.warn('Data file not found on GitHub. Initializing a new one.');
+                    return {};
+                } else {
+                    console.error('Failed to fetch data from GitHub:', response.statusText);
+                    return {};
+                }
+            } catch (error) {
+                console.error('Error fetching data from GitHub:', error);
+                return {};
+            }
+        }
+
+        async function saveGitHubData(data) {
+            if (!githubConfig.pat) {
+                console.error('GitHub configuration not set.');
+                return;
+            }
+
+            const fileUrl = `https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/${githubConfig.path}${GITHUB_DATA_FILE_NAME}`;
+            const fileContent = JSON.stringify(data, null, 2);
+            const base64Content = btoa(unescape(encodeURIComponent(fileContent)));
+
+            // First, get the current SHA of the file to update it
+            let currentSha = null;
+            try {
+                const response = await fetch(fileUrl, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.pat}`
+                    }
+                });
+                if (response.ok) {
+                    const fileData = await response.json();
+                    currentSha = fileData.sha;
+                }
+            } catch (error) {
+                console.error('Failed to get file SHA:', error);
+            }
+
+            const payload = {
+                message: `Update click counts for ${new Date().toISOString()}`,
+                content: base64Content,
+                sha: currentSha
+            };
+
+            try {
+                const response = await fetch(fileUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.pat}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    console.log('Successfully saved data to GitHub.');
+                } else {
+                    console.error('Failed to save data to GitHub:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error saving data to GitHub:', error);
+            }
+        }
+
+        async function fetchAndSortApps() {
+            const appGrid = document.getElementById('appGrid');
+            appGrid.innerHTML = '';
+            
+            let clickData = {};
+            if (githubConfig.pat) {
+                clickData = await fetchGitHubData();
+            } else {
+                console.log('GitHub not configured. Using temporary local data.');
+            }
+            
             allApps.forEach(app => {
                 if (clickData[app.id]) {
                     app.count = clickData[app.id];
@@ -262,28 +564,21 @@
                 }
             });
 
-            // 按点击次数降序排序
             allApps.sort((a, b) => b.count - a.count);
-
             renderApps(allApps);
         }
-        
+
         function updateClickCount(appId) {
-            // 获取当前点击次数数据
-            const storedCounts = localStorage.getItem(localStorageKey);
-            let clickData = {};
-            if (storedCounts) {
-                clickData = JSON.parse(storedCounts);
+            const app = allApps.find(a => a.id === appId);
+            if (app) {
+                app.count = (app.count || 0) + 1;
+                const clickData = {};
+                allApps.forEach(a => clickData[a.id] = a.count);
+                if (githubConfig.pat) {
+                    saveGitHubData(clickData);
+                }
+                renderApps(allApps);
             }
-
-            // 增加指定应用的点击次数
-            clickData[appId] = (clickData[appId] || 0) + 1;
-
-            // 将更新后的数据保存到本地存储
-            localStorage.setItem(localStorageKey, JSON.stringify(clickData));
-
-            // 重新获取并渲染应用列表，以显示新的排序
-            fetchAndSortApps();
         }
 
         function renderApps(apps) {
@@ -295,18 +590,18 @@
                 appItem.className = 'app-item';
                 appItem.setAttribute('data-id', app.id);
                 appItem.setAttribute('onclick', `openApp('${app.url}', this, '${app.id}')`);
-                
+
                 appItem.innerHTML = `
                     <div class="app-icon">${app.icon}</div>
                     <div class="app-name">${app.name}</div>
                     <div class="app-desc">${app.desc}</div>
                     <div class="click-count">点击：${app.count}</div>
                 `;
-                
+
                 appGrid.appendChild(appItem);
             });
         }
-        
+
         function openApp(url, element, appId) {
             createRipple(event, element);
             element.style.transform = 'scale(0.95)';
@@ -335,11 +630,19 @@
                 ripple.remove();
             }, 600);
         }
-        
-        // 初始加载和渲染应用列表
-        fetchAndSortApps();
 
-        // 其他事件监听器
+        // --- Initialization and Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const storedConfig = localStorage.getItem(GITHUB_CONFIG_KEY);
+            if (!storedConfig) {
+                showSettingsModal();
+            } else {
+                githubConfig = JSON.parse(storedConfig);
+                fetchAndSortApps();
+            }
+        });
+
+        // Other event listeners
         document.querySelectorAll('.app-item').forEach(item => {
             item.addEventListener('touchstart', function(e) {
                 this.style.transform = 'scale(0.97)';
