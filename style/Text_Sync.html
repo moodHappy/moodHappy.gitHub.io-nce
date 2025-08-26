@@ -165,6 +165,10 @@
       margin-bottom: 1em;
       white-space: pre-wrap;
     }
+
+    .ai-inputs {
+        display: none;
+    }
   </style>
 </head>
 <body>
@@ -234,6 +238,38 @@
       </select>
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
+      
+      <label for="ai-provider-select">AI 模型服务商</label>
+      <select id="ai-provider-select">
+        <option value="kimi">Kimi</option>
+        <option value="zhipu">智谱 (Zhipu)</option>
+        <option value="custom">自定义</option>
+      </select>
+
+      <div id="ai-kimi-inputs" class="ai-inputs">
+        <label for="ai-kimi-api-key">Kimi API Key</label>
+        <input type="password" id="ai-kimi-api-key" placeholder="sk-xxx" />
+        <label for="ai-kimi-model-name">Kimi 模型名称</label>
+        <input type="text" id="ai-kimi-model-name" placeholder="moonshot-v1-8k" />
+      </div>
+
+      <div id="ai-zhipu-inputs" class="ai-inputs">
+        <label for="ai-zhipu-api-key">智谱 API Key</label>
+        <input type="password" id="ai-zhipu-api-key" placeholder="sk-xxx" />
+        <label for="ai-zhipu-model-name">智谱 模型名称</label>
+        <input type="text" id="ai-zhipu-model-name" placeholder="glm-4" />
+      </div>
+
+      <div id="ai-custom-inputs" class="ai-inputs">
+        <label for="ai-api-url">自定义 API URL</label>
+        <input type="text" id="ai-api-url" placeholder="例如：https://api.example.com/v1/chat/completions" />
+        <label for="ai-custom-api-key">自定义 API Key</label>
+        <input type="password" id="ai-custom-api-key" placeholder="sk-xxx" />
+        <label for="ai-custom-model-name">自定义 模型名称</label>
+        <input type="text" id="ai-custom-model-name" placeholder="例如：gpt-3.5-turbo" />
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
       <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
       <button style="margin-top:10px; float: right;" onclick="saveAndApplySettings()">保存并关闭</button>
@@ -247,9 +283,11 @@
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
     const SETTINGS_KEY = "github_sync_assistant_settings";
 
-    const MOONSHOT_API_URL = "https://api.moonshot.cn/v1/chat/completions";
-    const MOONSHOT_API_KEY = "sk-uGcqq3JspZjg5ZszUp8ZHep6sFspvRtA7NmrzHzrCWC3ne5h";
-    const MOONSHOT_MODEL = "moonshot-v1-8k";
+    const DEFAULT_KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions";
+    const DEFAULT_KIMI_MODEL = "moonshot-v1-8k";
+    
+    const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+    const DEFAULT_ZHIPU_MODEL = "glm-4";
 
     let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
@@ -262,13 +300,41 @@
     const storyThemeModal = document.getElementById("storyThemeModal");
     const themeInput = document.getElementById("themeInput");
     const rootElement = document.documentElement;
+    
+    // AI Settings Elements
+    const aiProviderSelect = document.getElementById('ai-provider-select');
+    const aiKimiInputsDiv = document.getElementById('ai-kimi-inputs');
+    const aiZhipuInputsDiv = document.getElementById('ai-zhipu-inputs');
+    const aiCustomInputsDiv = document.getElementById('ai-custom-inputs');
+    
+    // Kimi Inputs
+    const aiKimiApiKeyInput = document.getElementById('ai-kimi-api-key');
+    const aiKimiModelNameInput = document.getElementById('ai-kimi-model-name');
+    
+    // Zhipu Inputs
+    const aiZhipuApiKeyInput = document.getElementById('ai-zhipu-api-key');
+    const aiZhipuModelNameInput = document.getElementById('ai-zhipu-model-name');
+    
+    // Custom Inputs
+    const aiApiUrlInput = document.getElementById('ai-api-url');
+    const aiCustomApiKeyInput = document.getElementById('ai-custom-api-key');
+    const aiCustomModelNameInput = document.getElementById('ai-custom-model-name');
+
 
     // --- Settings Management ---
     const defaultSettings = {
         theme: '',
         fontFamily: "'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
         fontSize: '17px',
-        lineHeight: '1.6'
+        lineHeight: '1.6',
+        aiProvider: 'kimi',
+        aiKimiApiKey: '',
+        aiKimiModelName: DEFAULT_KIMI_MODEL,
+        aiZhipuApiKey: '',
+        aiZhipuModelName: DEFAULT_ZHIPU_MODEL,
+        aiApiUrl: '',
+        aiCustomApiKey: '',
+        aiCustomModelName: ''
     };
 
     function applySettings(settings) {
@@ -276,13 +342,35 @@
         rootElement.style.setProperty('--primary-font', settings.fontFamily);
         rootElement.style.setProperty('--font-size', settings.fontSize);
         rootElement.style.setProperty('--line-height', settings.lineHeight);
+        
+        aiProviderSelect.value = settings.aiProvider;
+        updateAIInputsVisibility(settings.aiProvider);
     }
-
+    
     function loadSettings() {
         const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
         const currentSettings = { ...defaultSettings, ...savedSettings };
         applySettings(currentSettings);
+        
+        // Load AI values into inputs
+        aiKimiApiKeyInput.value = currentSettings.aiKimiApiKey;
+        aiKimiModelNameInput.value = currentSettings.aiKimiModelName;
+        aiZhipuApiKeyInput.value = currentSettings.aiZhipuApiKey;
+        aiZhipuModelNameInput.value = currentSettings.aiZhipuModelName;
+        aiApiUrlInput.value = currentSettings.aiApiUrl;
+        aiCustomApiKeyInput.value = currentSettings.aiCustomApiKey;
+        aiCustomModelNameInput.value = currentSettings.aiCustomModelName;
     }
+    
+    function updateAIInputsVisibility(provider) {
+        aiKimiInputsDiv.style.display = provider === 'kimi' ? 'block' : 'none';
+        aiZhipuInputsDiv.style.display = provider === 'zhipu' ? 'block' : 'none';
+        aiCustomInputsDiv.style.display = provider === 'custom' ? 'block' : 'none';
+    }
+
+    aiProviderSelect.addEventListener('change', (event) => {
+        updateAIInputsVisibility(event.target.value);
+    });
 
     function openSettingsModal() {
         const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
@@ -290,19 +378,40 @@
         document.getElementById('font-family-select').value = savedSettings.fontFamily;
         document.getElementById('font-size-select').value = savedSettings.fontSize;
         document.getElementById('line-height-select').value = savedSettings.lineHeight;
+
+        // Load AI settings into modal
+        aiProviderSelect.value = savedSettings.aiProvider;
+        aiKimiApiKeyInput.value = savedSettings.aiKimiApiKey;
+        aiKimiModelNameInput.value = savedSettings.aiKimiModelName;
+        aiZhipuApiKeyInput.value = savedSettings.aiZhipuApiKey;
+        aiZhipuModelNameInput.value = savedSettings.aiZhipuModelName;
+        aiApiUrlInput.value = savedSettings.aiApiUrl;
+        aiCustomApiKeyInput.value = savedSettings.aiCustomApiKey;
+        aiCustomModelNameInput.value = savedSettings.aiCustomModelName;
+        
+        updateAIInputsVisibility(savedSettings.aiProvider);
+
         settingsModal.style.display = "flex";
     }
 
     function closeSettingsModal() {
         settingsModal.style.display = "none";
     }
-
+    
     function saveAndApplySettings() {
         const newSettings = {
             theme: document.getElementById('theme-select').value,
             fontFamily: document.getElementById('font-family-select').value,
             fontSize: document.getElementById('font-size-select').value,
-            lineHeight: document.getElementById('line-height-select').value
+            lineHeight: document.getElementById('line-height-select').value,
+            aiProvider: aiProviderSelect.value,
+            aiKimiApiKey: aiKimiApiKeyInput.value,
+            aiKimiModelName: aiKimiModelNameInput.value,
+            aiZhipuApiKey: aiZhipuApiKeyInput.value,
+            aiZhipuModelName: aiZhipuModelNameInput.value,
+            aiApiUrl: aiApiUrlInput.value,
+            aiCustomApiKey: aiCustomApiKeyInput.value,
+            aiCustomModelName: aiCustomModelNameInput.value
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
         applySettings(newSettings);
@@ -423,7 +532,7 @@
         statusDiv.textContent = "❌ 删除失败：" + (await res.json()).message;
       }
     }
-
+    
     // --- AI Generation Functions (Updated with Mobile Fix) ---
     function generateStory() {
       // 点击生成按钮时，显示主题输入弹窗
@@ -433,7 +542,7 @@
         themeInput.focus();
       }, 100);
     }
-
+    
     function closeThemeModal() {
         storyThemeModal.style.display = "none";
     }
@@ -459,20 +568,53 @@
       const theme = themeInput.value.trim();
       closeThemeModal(); // 关闭弹窗
 
+      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+      let aiApiUrl, aiApiKey, aiModelName;
+
+      switch (savedSettings.aiProvider) {
+        case 'kimi':
+            aiApiUrl = DEFAULT_KIMI_API_URL;
+            aiApiKey = savedSettings.aiKimiApiKey;
+            aiModelName = savedSettings.aiKimiModelName || DEFAULT_KIMI_MODEL;
+            if (!aiApiKey) {
+                statusDiv.textContent = "❌ 请在设置中输入 Kimi 的 API Key！";
+                return;
+            }
+            break;
+        case 'zhipu':
+            aiApiUrl = DEFAULT_ZHIPU_API_URL;
+            aiApiKey = savedSettings.aiZhipuApiKey;
+            aiModelName = savedSettings.aiZhipuModelName || DEFAULT_ZHIPU_MODEL;
+            if (!aiApiKey) {
+                statusDiv.textContent = "❌ 请在设置中输入 智谱 的 API Key！";
+                return;
+            }
+            break;
+        case 'custom':
+            aiApiUrl = savedSettings.aiApiUrl;
+            aiApiKey = savedSettings.aiCustomApiKey;
+            aiModelName = savedSettings.aiCustomModelName;
+            if (!aiApiUrl || !aiApiKey || !aiModelName) {
+                statusDiv.textContent = "❌ 请在设置中补全自定义 AI 的所有信息！";
+                return;
+            }
+            break;
+      }
+
       const prompt = theme ? `Write a short story in English, about 100 words, with the theme of: ${theme}.` : `Write a short story in English, about 100 words, with a random, creative theme.`;
 
       statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
       editMode();
 
       try {
-        const response = await fetch(MOONSHOT_API_URL, {
+        const response = await fetch(aiApiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${MOONSHOT_API_KEY}`
+            "Authorization": `Bearer ${aiApiKey}`
           },
           body: JSON.stringify({
-            model: MOONSHOT_MODEL,
+            model: aiModelName,
             messages: [
               { role: "system", content: "You are a helpful assistant." },
               { role: "user", content: prompt }
@@ -482,7 +624,7 @@
         });
 
         if (!response.ok) {
-          throw new Error(`API 请求失败，状态码: ${response.status}`);
+          throw new Error(`API 请求失败，状态码: ${response.status} - ${await response.text()}`);
         }
 
         const data = await response.json();
