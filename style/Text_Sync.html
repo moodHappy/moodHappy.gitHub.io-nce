@@ -785,62 +785,68 @@
           speed: currentSpeed,
       }).toString();
 
-      let played = false;
-      for (const url of ttsUrls) {
-          const ttsUrl = `${url}api/aiyue?${queryString}`;
-          console.log('Attempting to play TTS from:', ttsUrl);
+      // Use a recursive function to try each URL until one works
+      function tryPlay(urls) {
+        if (urls.length === 0) {
+            statusDiv.textContent = "❌ 所有 TTS 服务都无法连接，请检查 URL。";
+            isReading = false;
+            isPaused = false;
+            updateButtonState();
+            return;
+        }
 
-          currentAudio = new Audio(ttsUrl);
+        const url = urls.shift();
+        const ttsUrl = `${url}api/aiyue?${queryString}`;
+        console.log('Attempting to play TTS from:', ttsUrl);
 
-          if (fromCurrentPosition && currentPosition > 0) {
-              currentAudio.currentTime = currentPosition;
-          } else {
-              currentPosition = 0;
-          }
+        currentAudio = new Audio(ttsUrl);
 
-          currentAudio.play()
-              .then(() => {
-                  console.log('TTS started playing successfully from:', ttsUrl);
-                  played = true;
-                  isReading = true;
-                  isPaused = false;
-                  updateButtonState();
-              })
-              .catch(e => {
-                  console.error('Error playing TTS from ' + ttsUrl + ':', e);
-              });
-          
-          if (played) break;
+        if (fromCurrentPosition && currentPosition > 0) {
+            currentAudio.currentTime = currentPosition;
+        } else {
+            currentPosition = 0;
+        }
+        
+        currentAudio.play()
+            .then(() => {
+                console.log('TTS started playing successfully from:', ttsUrl);
+                isReading = true;
+                isPaused = false;
+                updateButtonState();
+                statusDiv.textContent = '🔊 正在朗读...';
+
+                currentAudio.addEventListener('ended', function() {
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    updateButtonState();
+                    statusDiv.textContent = '✅ 朗读已完成。';
+                }, { once: true });
+
+                currentAudio.addEventListener('error', function() {
+                    console.error('TTS playback error:', this.error);
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    updateButtonState();
+                    statusDiv.textContent = `❌ 朗读失败: ${this.error.message}`;
+                }, { once: true });
+                
+                currentAudio.addEventListener('timeupdate', function() {
+                    if (!currentAudio.paused) {
+                        currentPosition = currentAudio.currentTime;
+                    }
+                });
+            })
+            .catch(e => {
+                console.error('Error playing TTS from ' + ttsUrl + ':', e);
+                // Try the next URL in the list
+                tryPlay(urls);
+            });
       }
-      
-      if (!played) {
-          statusDiv.textContent = "❌ 所有 TTS 服务都无法连接，请检查 URL。";
-          isReading = false;
-          isPaused = false;
-          updateButtonState();
-      }
 
-      if (currentAudio) {
-          currentAudio.addEventListener('ended', function() {
-              isReading = false;
-              isPaused = false;
-              currentPosition = 0;
-              updateButtonState();
-          });
-
-          currentAudio.addEventListener('error', function() {
-              isReading = false;
-              isPaused = false;
-              currentPosition = 0;
-              updateButtonState();
-          });
-
-          currentAudio.addEventListener('timeupdate', function() {
-              if (!currentAudio.paused) {
-                  currentPosition = currentAudio.currentTime;
-              }
-          });
-      }
+      // Start the process
+      tryPlay([...ttsUrls]);
     }
 
     function pauseTTS() {
@@ -850,6 +856,7 @@
             isPaused = true;
             isReading = false;
             updateButtonState();
+            statusDiv.textContent = '⏸️ 朗读已暂停。';
         }
     }
 
@@ -860,6 +867,7 @@
                     isReading = true;
                     isPaused = false;
                     updateButtonState();
+                    statusDiv.textContent = '🔊 正在朗读...';
                 })
                 .catch(e => {
                     console.error('Error resuming TTS:', e);
