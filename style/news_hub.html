@@ -166,7 +166,6 @@
         .app-item[data-id="password-generator"] .app-icon { background: linear-gradient(135deg, #c0392b, #e74c3c); }
         .app-item[data-id="moon-tv"] .app-icon { background: linear-gradient(135deg, #00cec9, #81ecec); }
 
-        /* --- Media Queries for Responsive Layout --- */
         @media (min-width: 320px) {
             .container { padding-left: 10px; padding-right: 10px; max-width: 360px; }
             .app-grid { gap: 12px; }
@@ -191,14 +190,13 @@
             .app-name { font-size: 0.85rem; }
             .app-desc { font-size: 0.7rem; display: block; overflow: visible; }
         }
-        /* Animations and Ripple Effect (Keep unchanged) */
+
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .ripple { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.6); transform: scale(0); animation: ripple-animation 0.6s linear; }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
-        /* --- Settings Button & Dialog Styles --- */
         .settings-button {
             position: absolute;
             top: 0;
@@ -289,7 +287,7 @@
 
         <h2 class="category-title">所有应用 (All Apps)</h2>
         <div class="app-grid" id="appGrid">
-            </div>
+        </div>
 
         <div class="visitor-stats">
             <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
@@ -365,12 +363,24 @@
             }
 
             try {
-                let response = await fetch(githubApiUrl, {
-                    headers: {
-                        'Authorization': `token ${githubConfig.token}`,
-                        'Accept': 'application/vnd.github.v3.raw'
-                    }
-                });
+                // Try direct fetch first, fallback to CORS proxy
+                let response;
+                try {
+                    response = await fetch(githubApiUrl, {
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`,
+                            'Accept': 'application/vnd.github.v3.raw'
+                        }
+                    });
+                } catch (corsError) {
+                    console.log('Direct fetch failed, trying CORS proxy...');
+                    response = await fetchWithCorsProxy(githubApiUrl, {
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`,
+                            'Accept': 'application/vnd.github.v3.raw'
+                        }
+                    });
+                }
                 
                 if (response.ok) {
                     const text = await response.text();
@@ -381,9 +391,17 @@
                         }
                     });
 
-                    let fileInfoResponse = await fetch(githubApiUrl, {
-                        headers: { 'Authorization': `token ${githubConfig.token}` }
-                    });
+                    // Get SHA for file
+                    let fileInfoResponse;
+                    try {
+                        fileInfoResponse = await fetch(githubApiUrl, {
+                            headers: { 'Authorization': `token ${githubConfig.token}` }
+                        });
+                    } catch (corsError) {
+                        fileInfoResponse = await fetchWithCorsProxy(githubApiUrl, {
+                            headers: { 'Authorization': `token ${githubConfig.token}` }
+                        });
+                    }
                     
                     if (fileInfoResponse.ok) {
                         const fileInfo = await fileInfoResponse.json();
@@ -420,9 +438,17 @@
 
             if (!currentSha) {
                 try {
-                    const fileInfoResponse = await fetch(githubApiUrl, {
-                        headers: { 'Authorization': `token ${githubConfig.token}` }
-                    });
+                    let fileInfoResponse;
+                    try {
+                        fileInfoResponse = await fetch(githubApiUrl, {
+                            headers: { 'Authorization': `token ${githubConfig.token}` }
+                        });
+                    } catch (corsError) {
+                        fileInfoResponse = await fetchWithCorsProxy(githubApiUrl, {
+                            headers: { 'Authorization': `token ${githubConfig.token}` }
+                        });
+                    }
+                    
                     if (fileInfoResponse.ok) {
                         const fileInfo = await fileInfoResponse.json();
                         currentSha = fileInfo.sha;
@@ -457,14 +483,27 @@
             });
             
             try {
-                const response = await fetch(githubApiUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${githubConfig.token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: body
-                });
+                let response;
+                try {
+                    response = await fetch(githubApiUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: body
+                    });
+                } catch (corsError) {
+                    console.log('Direct PUT failed, trying CORS proxy...');
+                    response = await fetchWithCorsProxy(githubApiUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: body
+                    });
+                }
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -472,7 +511,6 @@
                 } else {
                     const updatedFileInfo = await response.json();
                     fileSha = updatedFileInfo.content.sha;
-                    // Re-fetch and re-render to update the display
                     await fetchAndSortApps();
                 }
             } catch (error) {
@@ -546,11 +584,20 @@
             githubConfig.token = token;
 
             try {
-                const response = await fetch(githubApiUrl, {
-                    headers: {
-                        'Authorization': `token ${githubConfig.token}`
-                    }
-                });
+                let response;
+                try {
+                    response = await fetch(githubApiUrl, {
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`
+                        }
+                    });
+                } catch (corsError) {
+                    response = await fetchWithCorsProxy(githubApiUrl, {
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`
+                        }
+                    });
+                }
 
                 if (response.ok || response.status === 404) {
                     statusMessage.textContent = '连接成功！';
@@ -593,6 +640,7 @@
                     }, 100);
                 }, { passive: true });
             });
+
             let startY;
             document.addEventListener('touchstart', function(e) {
                 startY = e.touches[0].clientY;
