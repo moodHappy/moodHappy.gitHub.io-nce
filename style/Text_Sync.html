@@ -211,6 +211,44 @@
       flex: 1 1 auto;
       margin-top: 0;
     }
+
+    /* New styles for the theme modal buttons */
+    #storyThemeModal .modal-buttons-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    #storyThemeModal .modal-buttons-container button {
+        flex: 1;
+    }
+    
+    #storyThemeModal .modal-buttons-container button:nth-child(2) {
+        background-color: #6c757d; /* grey for cancel */
+    }
+
+    #storyThemeModal .modal-buttons-container button:nth-child(3) {
+        background-color: #ff5722; /* orange for random */
+    }
+
+    /* Styles for the random topics list */
+    #randomTopicsList {
+        margin-top: 20px;
+        padding: 0;
+        list-style: none;
+    }
+    #randomTopicsList li {
+        padding: 10px;
+        border: 1px solid var(--textarea-border-color);
+        border-radius: 5px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+    #randomTopicsList li:hover {
+        background-color: var(--textarea-border-color);
+    }
+    
   </style>
 </head>
 <body>
@@ -242,8 +280,12 @@
     <div class="modal-content">
       <h3>📚 请输入微小说的创作主题：</h3>
       <input type="text" id="themeInput" placeholder="例如：太空旅行、古老的图书馆..." />
-      <button style="margin-top:10px;" onclick="handleStartGeneration(event)">确定</button>
-      <button style="margin-top:10px; background-color: #6c757d;" onclick="closeThemeModal()">取消</button>
+      <div class="modal-buttons-container">
+          <button onclick="handleStartGeneration(event)">确定</button>
+          <button onclick="closeThemeModal()">取消</button>
+          <button onclick="generateRandomTopics()">随机</button>
+      </div>
+      <ul id="randomTopicsList"></ul>
     </div>
   </div>
 
@@ -355,6 +397,7 @@
     const settingsModal = document.getElementById("settingsModal");
     const storyThemeModal = document.getElementById("storyThemeModal");
     const themeInput = document.getElementById("themeInput");
+    const randomTopicsList = document.getElementById("randomTopicsList");
     const rootElement = document.documentElement;
 
     // AI Settings Elements
@@ -599,10 +642,68 @@
     }
 
     // --- AI Generation Functions (Updated with Mobile Fix) ---
+    function getAIConfig() {
+      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+      let aiApiUrl, aiApiKey, aiModelName;
+
+      switch (savedSettings.aiProvider) {
+        case 'kimi':
+            aiApiUrl = DEFAULT_KIMI_API_URL;
+            aiApiKey = savedSettings.aiKimiApiKey;
+            aiModelName = savedSettings.aiKimiModelName || DEFAULT_KIMI_MODEL;
+            break;
+        case 'zhipu':
+            aiApiUrl = DEFAULT_ZHIPU_API_URL;
+            aiApiKey = savedSettings.aiZhipuApiKey;
+            aiModelName = savedSettings.aiZhipuModelName || DEFAULT_ZHIPU_MODEL;
+            break;
+        case 'custom':
+            aiApiUrl = savedSettings.aiApiUrl;
+            aiApiKey = savedSettings.aiCustomApiKey;
+            aiModelName = savedSettings.aiCustomModelName;
+            break;
+      }
+      return { aiApiUrl, aiApiKey, aiModelName };
+    }
+
+    async function callAI(prompt) {
+      const { aiApiUrl, aiApiKey, aiModelName } = getAIConfig();
+      if (!aiApiKey) {
+          throw new Error("❌ 请在设置中输入 AI 的 API Key！");
+      }
+      if (!aiApiUrl || !aiModelName) {
+          throw new Error("❌ 请在设置中补全自定义 AI 的所有信息！");
+      }
+
+      const response = await fetch(aiApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${aiApiKey}`
+        },
+        body: JSON.stringify({
+          model: aiModelName,
+          messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API 请求失败，状态码: ${response.status} - ${await response.text()}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content.trim();
+    }
+
+
     function generateStory() {
-      // 点击生成按钮时，显示主题输入弹窗
       storyThemeModal.style.display = "flex";
-      // 延迟聚焦以确保弹窗完全显示
+      themeInput.value = "";
+      randomTopicsList.innerHTML = "";
       setTimeout(() => {
         themeInput.focus();
       }, 100);
@@ -614,88 +715,69 @@
 
     // 修复移动端点击问题的核心函数
     function handleStartGeneration(event) {
-      // 阻止默认行为和事件冒泡
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
 
-      // 先失焦输入框，确保键盘收起
       themeInput.blur();
-
-      // 添加延迟确保键盘完全收起后再执行
       setTimeout(() => {
-        startGeneration();
+        const theme = themeInput.value.trim();
+        if (theme === "") {
+            statusDiv.textContent = "🤔 请输入一个主题或点击‘随机’生成主题。";
+            return;
+        }
+        closeThemeModal();
+        startGeneration(theme);
       }, 200);
     }
 
-    async function startGeneration() {
-      const theme = themeInput.value.trim();
-      closeThemeModal(); // 关闭弹窗
+    async function generateRandomTopics() {
+        statusDiv.textContent = "✨ 正在调用 AI 生成随机主题...";
+        randomTopicsList.innerHTML = ""; // Clear existing list
 
-      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-      let aiApiUrl, aiApiKey, aiModelName;
+        try {
+            const prompt = `Generate a list of 10 creative and unique short story titles or themes in English. Separate each theme with a newline character. Example:
+1. A forgotten memory in a jar
+2. The last star's light
+3. A city powered by dreams
+4. The whisper of an ancient tree
+5. The coffee shop at the end of the world
+6. A clock that ticks backward
+7. The color that no one can see
+8. The library that holds unwritten stories
+9. A letter from a future self
+10. The bridge made of lost time`;
+            const topicsText = await callAI(prompt);
+            const topics = topicsText.split('\n').filter(t => t.trim() !== '');
 
-      switch (savedSettings.aiProvider) {
-        case 'kimi':
-            aiApiUrl = DEFAULT_KIMI_API_URL;
-            aiApiKey = savedSettings.aiKimiApiKey;
-            aiModelName = savedSettings.aiKimiModelName || DEFAULT_KIMI_MODEL;
-            if (!aiApiKey) {
-                statusDiv.textContent = "❌ 请在设置中输入 Kimi 的 API Key！";
-                return;
-            }
-            break;
-        case 'zhipu':
-            aiApiUrl = DEFAULT_ZHIPU_API_URL;
-            aiApiKey = savedSettings.aiZhipuApiKey;
-            aiModelName = savedSettings.aiZhipuModelName || DEFAULT_ZHIPU_MODEL;
-            if (!aiApiKey) {
-                statusDiv.textContent = "❌ 请在设置中输入 智谱 的 API Key！";
-                return;
-            }
-            break;
-        case 'custom':
-            aiApiUrl = savedSettings.aiApiUrl;
-            aiApiKey = savedSettings.aiCustomApiKey;
-            aiModelName = savedSettings.aiCustomModelName;
-            if (!aiApiUrl || !aiApiKey || !aiModelName) {
-                statusDiv.textContent = "❌ 请在设置中补全自定义 AI 的所有信息！";
-                return;
-            }
-            break;
-      }
+            topics.forEach(topic => {
+                const li = document.createElement('li');
+                li.textContent = topic.replace(/^\d+\.\s*/, ''); // Remove leading numbers and dots
+                li.onclick = () => {
+                    themeInput.value = li.textContent;
+                    handleStartGeneration(); // Use the selected topic
+                };
+                randomTopicsList.appendChild(li);
+            });
+            statusDiv.textContent = "✅ 随机主题生成成功！请选择一个或手动输入。";
 
-      const prompt = theme ? `Write a short story in English, about 100 words, with the theme of: ${theme}.` : `Write a short story in English, about 100 words, with a random, creative theme.`;
+        } catch (error) {
+            statusDiv.textContent = `❌ 生成主题失败: ${error.message}`;
+            console.error("生成主题失败:", error);
+        }
+    }
+
+
+    async function startGeneration(theme) {
+      const prompt = `Write a short story in English, about 100 words, with the theme of: ${theme}.`;
 
       statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
       editMode();
 
       try {
-        const response = await fetch(aiApiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${aiApiKey}`
-          },
-          body: JSON.stringify({
-            model: aiModelName,
-            messages: [
-              { role: "system", content: "You are a helpful assistant." },
-              { role: "user", content: prompt }
-            ],
-            temperature: 0.7
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`API 请求失败，状态码: ${response.status} - ${await response.text()}`);
-        }
-
-        const data = await response.json();
-        const storyContent = data.choices[0].message.content.trim();
+        const storyContent = await callAI(prompt);
         textarea.value = storyContent;
-
         statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
         await submitContent();
       } catch (error) {
@@ -796,7 +878,7 @@
         }
 
         const url = urls.shift();
-        const ttsUrl = `${url}api/aiyue?${queryString}`;
+        const ttsUrl = `${url.endsWith('/') ? url : url + '/'}api/aiyue?${queryString}`;
         console.log('Attempting to play TTS from:', ttsUrl);
 
         currentAudio = new Audio(ttsUrl);
