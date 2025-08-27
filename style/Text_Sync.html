@@ -106,6 +106,12 @@
       min-height: 44px;
       min-width: 44px;
       flex: 1 1 auto; /* Flex property for equal width and wrapping */
+      transition: background-color 0.3s;
+    }
+    
+    button:disabled {
+        background-color: #999;
+        cursor: not-allowed;
     }
 
     /* Specific button colors */
@@ -227,7 +233,7 @@
         background-color: #6c757d; /* grey for cancel */
     }
 
-    #storyThemeModal .modal-buttons-container button:nth-child(3) {
+    #storyThemeModal .modal-buttons-container button.random-btn {
         background-color: #ff5722; /* orange for random */
     }
 
@@ -283,7 +289,7 @@
       <div class="modal-buttons-container">
           <button onclick="handleStartGeneration(event)">确定</button>
           <button onclick="closeThemeModal()">取消</button>
-          <button onclick="generateRandomTopics()">随机</button>
+          <button class="random-btn" onclick="generateRandomTopics()">随机</button>
       </div>
       <ul id="randomTopicsList"></ul>
     </div>
@@ -398,6 +404,7 @@
     const storyThemeModal = document.getElementById("storyThemeModal");
     const themeInput = document.getElementById("themeInput");
     const randomTopicsList = document.getElementById("randomTopicsList");
+    const randomButton = document.querySelector('.random-btn');
     const rootElement = document.documentElement;
 
     // AI Settings Elements
@@ -733,21 +740,23 @@
     }
 
     async function generateRandomTopics() {
-        statusDiv.textContent = "✨ 正在调用 AI 生成随机主题...";
+        randomButton.textContent = "生成中...";
+        randomButton.disabled = true;
+        statusDiv.textContent = "✨ 正在调用 AI 生成随机标题...";
         randomTopicsList.innerHTML = ""; // Clear existing list
 
         try {
-            const prompt = `Generate a list of 10 creative and unique short story titles or themes in English. Separate each theme with a newline character. Example:
-1. A forgotten memory in a jar
-2. The last star's light
-3. A city powered by dreams
-4. The whisper of an ancient tree
-5. The coffee shop at the end of the world
-6. A clock that ticks backward
-7. The color that no one can see
-8. The library that holds unwritten stories
-9. A letter from a future self
-10. The bridge made of lost time`;
+            const prompt = `Generate a list of 10 creative and unique short story titles or themes in simplified Chinese. Separate each theme with a newline character. Example:
+1. 瓶中被遗忘的记忆
+2. 最后一颗星的光芒
+3. 一个由梦想驱动的城市
+4. 古树的低语
+5. 世界尽头的咖啡馆
+6. 倒着走的钟
+7. 誰も見ることができない色
+8. 收藏未完成故事的图书馆
+9. 来自未来自己的信
+10. 由逝去时间组成的桥`;
             const topicsText = await callAI(prompt);
             const topics = topicsText.split('\n').filter(t => t.trim() !== '');
 
@@ -760,16 +769,20 @@
                 };
                 randomTopicsList.appendChild(li);
             });
-            statusDiv.textContent = "✅ 随机主题生成成功！请选择一个或手动输入。";
+            statusDiv.textContent = "✅ 随机标题生成成功！请选择一个或手动输入。";
 
         } catch (error) {
-            statusDiv.textContent = `❌ 生成主题失败: ${error.message}`;
-            console.error("生成主题失败:", error);
+            statusDiv.textContent = `❌ 生成标题失败: ${error.message}`;
+            console.error("生成标题失败:", error);
+        } finally {
+            randomButton.textContent = "随机";
+            randomButton.disabled = false;
         }
     }
 
 
     async function startGeneration(theme) {
+      // Prompt for English story
       const prompt = `Write a short story in English, about 100 words, with the theme of: ${theme}.`;
 
       statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
