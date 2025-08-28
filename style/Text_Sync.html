@@ -228,6 +228,10 @@
     #storyThemeModal .modal-buttons-container button {
         flex: 1;
     }
+    
+    #storyThemeModal .modal-buttons-container button.confirm-btn {
+        background-color: var(--button-primary-bg);
+    }
 
     #storyThemeModal .modal-buttons-container button:nth-child(2) {
         background-color: #6c757d; /* grey for cancel */
@@ -235,6 +239,10 @@
 
     #storyThemeModal .modal-buttons-container button.random-btn {
         background-color: #ff5722; /* orange for random */
+    }
+    
+    #storyThemeModal .modal-buttons-container button.generate-topics-btn {
+        background-color: #800080;
     }
 
     /* Styles for the random topics list */
@@ -297,6 +305,7 @@
       <input type="text" id="themeInput" placeholder="或手动输入..." />
       <div class="modal-buttons-container">
           <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
+          <button class="confirm-btn" onclick="confirmGenerate(event)">确定</button>
           <button onclick="closeThemeModal()">取消</button>
       </div>
       <p style="margin-top: 20px;">💡 点击下面列表中的题目来生成微小说：</p>
@@ -414,6 +423,7 @@
     const themeInput = document.getElementById("themeInput");
     const randomTopicsList = document.getElementById("randomTopicsList");
     const generateTopicsBtn = document.querySelector('.generate-topics-btn');
+    const confirmBtn = document.querySelector('.confirm-btn');
     const rootElement = document.documentElement;
 
     // AI Settings Elements
@@ -847,6 +857,21 @@
             generateTopicsBtn.disabled = false;
         }
     }
+    
+    // --- Confirm direct generation from title input ---
+    function confirmGenerate(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const topic = themeInput.value.trim();
+        if (topic === "") {
+            statusDiv.textContent = "🤔 请在输入框中输入一个题目，或者先生成一个题目列表。";
+            return;
+        }
+        startGeneration(topic);
+    }
 
     async function startGeneration(topic) {
         const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}".`;
@@ -1076,8 +1101,8 @@
     themeInput.addEventListener('keypress', function(event) {
       if (event.key === 'Enter') {
         event.preventDefault();
-        // Since the button is now for generating titles, this will trigger that action
-        generateRandomTopics(event);
+        // Trigger direct generation from input
+        confirmGenerate(event);
       }
     });
 
