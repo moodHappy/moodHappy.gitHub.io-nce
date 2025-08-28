@@ -270,7 +270,7 @@
     <button onclick="submitContent()">提交</button>
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
-    <button class="generate" onclick="generateStory()">生成</button>
+    <button class="generate" onclick="openThemeModal()">生成</button>
     <button class="read" onclick="readContent()">朗读</button>
   </div>
 
@@ -289,18 +289,18 @@
 
   <div id="storyThemeModal" class="modal">
     <div class="modal-content">
-      <h3>📚 选择或输入微小说的创作主题：</h3>
+      <h3>📚 请选择或输入创作主题：</h3>
       <div class="select-container">
         <select id="themeCategorySelect"></select>
         <select id="themeSubtopicSelect"></select>
       </div>
       <input type="text" id="themeInput" placeholder="或手动输入..." />
       <div class="modal-buttons-container">
-          <button onclick="handleStartGeneration(event)">确定</button>
+          <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
           <button onclick="closeThemeModal()">取消</button>
-          <button class="random-btn" onclick="generateRandomThemeFromLibrary()">随机</button>
       </div>
-      <ul id="randomTopicsList" style="display: none;"></ul>
+      <p style="margin-top: 20px;">💡 点击下面列表中的题目来生成微小说：</p>
+      <ul id="randomTopicsList"></ul>
     </div>
   </div>
 
@@ -413,7 +413,7 @@
     const storyThemeModal = document.getElementById("storyThemeModal");
     const themeInput = document.getElementById("themeInput");
     const randomTopicsList = document.getElementById("randomTopicsList");
-    const randomButton = document.querySelector('.random-btn');
+    const generateTopicsBtn = document.querySelector('.generate-topics-btn');
     const rootElement = document.documentElement;
 
     // AI Settings Elements
@@ -437,7 +437,7 @@
     const themeCategorySelect = document.getElementById('themeCategorySelect');
     const themeSubtopicSelect = document.getElementById('themeSubtopicSelect');
 
-    // --- NEW: THEME LIBRARY ---
+    // --- THEME LIBRARY ---
     const THEME_LIBRARY = {
         '日常生活类': ['小确幸', '失落/孤独', '家庭与亲情', '爱情/友情'],
         '悬疑与推理类': ['谋杀/罪案', '失踪/神秘事件', '心理推理', '反转结局'],
@@ -449,7 +449,6 @@
         '幽默与讽刺类': ['搞笑日常', '黑色幽默', '社会讽刺'],
         '奇遇与冒险类': ['意外巧合', '小冒险', '奇异事件'],
     };
-
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -733,25 +732,22 @@
       return data.choices[0].message.content.trim();
     }
 
-
-    function generateStory() {
+    function openThemeModal() {
       storyThemeModal.style.display = "flex";
       themeInput.value = "";
       randomTopicsList.innerHTML = "";
-      randomTopicsList.style.display = 'none'; // Hide the old list
-      populateThemeSelectors(); // Populate the new dropdowns
-      setTimeout(() => {
-        themeInput.focus();
-      }, 100);
+      populateThemeSelectors(); // Populate the dropdowns
+    }
+
+    function closeThemeModal() {
+        storyThemeModal.style.display = "none";
     }
     
-    // --- NEW: Populate Theme Selectors ---
+    // --- Populate Theme Selectors ---
     function populateThemeSelectors() {
-        // Clear existing options
         themeCategorySelect.innerHTML = '';
         themeSubtopicSelect.innerHTML = '';
 
-        // Add a default "Select Category" option
         const defaultCategoryOption = document.createElement('option');
         defaultCategoryOption.textContent = '选择分类';
         defaultCategoryOption.value = '';
@@ -759,7 +755,6 @@
         defaultCategoryOption.selected = true;
         themeCategorySelect.appendChild(defaultCategoryOption);
 
-        // Populate category dropdown
         for (const category in THEME_LIBRARY) {
             const option = document.createElement('option');
             option.value = category;
@@ -767,7 +762,6 @@
             themeCategorySelect.appendChild(option);
         }
 
-        // Add a default "Select Subtopic" option
         const defaultSubtopicOption = document.createElement('option');
         defaultSubtopicOption.textContent = '选择主题';
         defaultSubtopicOption.value = '';
@@ -775,89 +769,101 @@
         defaultSubtopicOption.selected = true;
         themeSubtopicSelect.appendChild(defaultSubtopicOption);
 
-        // Event listener for category change
         themeCategorySelect.onchange = (event) => {
             const selectedCategory = event.target.value;
             populateSubtopics(selectedCategory);
+            themeInput.value = '';
+        };
+
+        themeSubtopicSelect.onchange = (event) => {
+            themeInput.value = event.target.value;
         };
     }
 
     function populateSubtopics(category) {
         themeSubtopicSelect.innerHTML = '';
         const subtopics = THEME_LIBRARY[category] || [];
+        const defaultSubtopicOption = document.createElement('option');
+        defaultSubtopicOption.textContent = '选择主题';
+        defaultSubtopicOption.value = '';
+        defaultSubtopicOption.disabled = true;
+        defaultSubtopicOption.selected = true;
+        themeSubtopicSelect.appendChild(defaultSubtopicOption);
         subtopics.forEach(subtopic => {
             const option = document.createElement('option');
             option.value = subtopic;
             option.textContent = subtopic;
             themeSubtopicSelect.appendChild(option);
         });
-        
-        // When a subtopic is selected, update the themeInput
-        themeSubtopicSelect.onchange = (event) => {
-            themeInput.value = event.target.value;
-        };
     }
 
+    // --- Generate a list of Chinese story titles ---
+    async function generateRandomTopics(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
 
-    function closeThemeModal() {
-        storyThemeModal.style.display = "none";
-    }
-
-    function handleStartGeneration(event) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-
-      themeInput.blur();
-      setTimeout(() => {
         const theme = themeInput.value.trim() || themeSubtopicSelect.value;
         if (theme === "" || theme === '选择主题') {
-            statusDiv.textContent = "🤔 请选择一个主题或手动输入。";
+            statusDiv.textContent = "🤔 请选择一个主题或手动输入，然后点击'生成题目'。";
             return;
         }
+
+        generateTopicsBtn.textContent = "生成中...";
+        generateTopicsBtn.disabled = true;
+        randomTopicsList.innerHTML = "";
+        statusDiv.textContent = `✨ 正在根据“${theme}”生成微小说题目...`;
+
+        try {
+            const prompt = `Based on the theme "${theme}", generate a list of 10 creative and unique short story titles in simplified Chinese. Separate each title with a newline character. Example:
+1. 瓶中被遗忘的记忆
+2. 最后一颗星的光芒
+3. 一个由梦想驱动的城市
+4. 古树的低语
+5. 世界尽头的咖啡馆
+6. 倒着走的钟
+7. 看不见的色彩
+8. 收藏未完成故事的图书馆
+9. 来自未来自己的信
+10. 由逝去时间组成的桥`;
+            const topicsText = await callAI(prompt);
+            const topics = topicsText.split('\n').filter(t => t.trim() !== '');
+
+            topics.forEach(topic => {
+                const li = document.createElement('li');
+                li.textContent = topic.replace(/^\d+\.\s*/, ''); // Remove leading numbers and dots
+                li.onclick = () => {
+                    startGeneration(li.textContent);
+                };
+                randomTopicsList.appendChild(li);
+            });
+            statusDiv.textContent = "✅ 题目列表生成成功！点击一个题目来生成微小说。";
+        } catch (error) {
+            statusDiv.textContent = `❌ 生成题目失败: ${error.message}`;
+            console.error("生成题目失败:", error);
+        } finally {
+            generateTopicsBtn.textContent = "生成题目";
+            generateTopicsBtn.disabled = false;
+        }
+    }
+
+    async function startGeneration(topic) {
+        const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}".`;
+
+        statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说...`;
+        editMode();
         closeThemeModal();
-        startGeneration(theme);
-      }, 200);
-    }
-    
-    // --- NEW: Generate Random Theme from Library ---
-    function generateRandomThemeFromLibrary() {
-      const allCategories = Object.keys(THEME_LIBRARY);
-      if (allCategories.length === 0) {
-        statusDiv.textContent = "❌ 主题库为空，请手动输入。";
-        return;
-      }
-      
-      const randomCategory = allCategories[Math.floor(Math.random() * allCategories.length)];
-      const subtopics = THEME_LIBRARY[randomCategory];
-      const randomSubtopic = subtopics[Math.floor(Math.random() * subtopics.length)];
 
-      // Update selectors and input field
-      themeCategorySelect.value = randomCategory;
-      populateSubtopics(randomCategory);
-      themeSubtopicSelect.value = randomSubtopic;
-      themeInput.value = randomSubtopic;
-      
-      statusDiv.textContent = `✨ 已随机选择主题：${randomSubtopic}`;
-    }
-
-    async function startGeneration(theme) {
-      // Prompt for English story
-      const prompt = `Write a short story in English, about 100 words, with the theme of: ${theme}.`;
-
-      statusDiv.textContent = "✨ 正在调用 AI 生成微小说...";
-      editMode();
-
-      try {
-        const storyContent = await callAI(prompt);
-        textarea.value = storyContent;
-        statusDiv.textContent = "✅ 微小说生成成功！正在自动提交到 GitHub...";
-        await submitContent();
-      } catch (error) {
-        statusDiv.textContent = `❌ 生成失败: ${error.message}`;
-        console.error("生成失败:", error);
-      }
+        try {
+            const storyContent = await callAI(prompt);
+            textarea.value = storyContent;
+            statusDiv.textContent = "✅ 微小说创作成功！正在自动提交到 GitHub...";
+            await submitContent();
+        } catch (error) {
+            statusDiv.textContent = `❌ 创作失败: ${error.message}`;
+            console.error("创作失败:", error);
+        }
     }
 
     // --- UI & Content Handling ---
@@ -1067,15 +1073,14 @@
     }
 
     // --- Enhanced Mobile Support ---
-    // 添加回车键支持
     themeInput.addEventListener('keypress', function(event) {
       if (event.key === 'Enter') {
         event.preventDefault();
-        handleStartGeneration(event);
+        // Since the button is now for generating titles, this will trigger that action
+        generateRandomTopics(event);
       }
     });
 
-    // 模态窗口点击外部关闭
     window.addEventListener('click', function(event) {
       if (event.target === storyThemeModal) {
         closeThemeModal();
