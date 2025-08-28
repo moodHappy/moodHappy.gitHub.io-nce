@@ -108,7 +108,7 @@
       flex: 1 1 auto; /* Flex property for equal width and wrapping */
       transition: background-color 0.3s;
     }
-    
+
     button:disabled {
         background-color: #999;
         cursor: not-allowed;
@@ -228,7 +228,7 @@
     #storyThemeModal .modal-buttons-container button {
         flex: 1;
     }
-    
+
     #storyThemeModal .modal-buttons-container button:nth-child(2) {
         background-color: #6c757d; /* grey for cancel */
     }
@@ -255,6 +255,11 @@
         background-color: var(--textarea-border-color);
     }
     
+    .select-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -284,14 +289,18 @@
 
   <div id="storyThemeModal" class="modal">
     <div class="modal-content">
-      <h3>📚 请输入微小说的创作主题：</h3>
-      <input type="text" id="themeInput" placeholder="例如：太空旅行、古老的图书馆..." />
+      <h3>📚 选择或输入微小说的创作主题：</h3>
+      <div class="select-container">
+        <select id="themeCategorySelect"></select>
+        <select id="themeSubtopicSelect"></select>
+      </div>
+      <input type="text" id="themeInput" placeholder="或手动输入..." />
       <div class="modal-buttons-container">
           <button onclick="handleStartGeneration(event)">确定</button>
           <button onclick="closeThemeModal()">取消</button>
-          <button class="random-btn" onclick="generateRandomTopics()">随机</button>
+          <button class="random-btn" onclick="generateRandomThemeFromLibrary()">随机</button>
       </div>
-      <ul id="randomTopicsList"></ul>
+      <ul id="randomTopicsList" style="display: none;"></ul>
     </div>
   </div>
 
@@ -423,6 +432,24 @@
     // TTS Settings Elements
     const ttsUrlsInput = document.getElementById('tts-urls');
     const ttsVoiceNameInput = document.getElementById('tts-voice-name');
+    
+    // New theme modal elements
+    const themeCategorySelect = document.getElementById('themeCategorySelect');
+    const themeSubtopicSelect = document.getElementById('themeSubtopicSelect');
+
+    // --- NEW: THEME LIBRARY ---
+    const THEME_LIBRARY = {
+        '日常生活类': ['小确幸', '失落/孤独', '家庭与亲情', '爱情/友情'],
+        '悬疑与推理类': ['谋杀/罪案', '失踪/神秘事件', '心理推理', '反转结局'],
+        '科幻与奇幻类': ['未来世界', '超能力/异能', '魔法/幻想生物', '平行世界/时间旅行'],
+        '历史与现实主义类': ['历史小故事', '战争/革命', '社会问题'],
+        '哲理与寓言类': ['生活哲理', '动物寓言', '反思/讽刺'],
+        '爱情与情感类': ['失恋/暗恋', '初恋/重逢', '婚姻/家庭'],
+        '心理与情绪类': ['焦虑/恐惧', '欣喜/悔恨', '内心独白'],
+        '幽默与讽刺类': ['搞笑日常', '黑色幽默', '社会讽刺'],
+        '奇遇与冒险类': ['意外巧合', '小冒险', '奇异事件'],
+    };
+
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -648,7 +675,7 @@
       }
     }
 
-    // --- AI Generation Functions (Updated with Mobile Fix) ---
+    // --- AI Generation Functions ---
     function getAIConfig() {
       const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
       let aiApiUrl, aiApiKey, aiModelName;
@@ -711,16 +738,71 @@
       storyThemeModal.style.display = "flex";
       themeInput.value = "";
       randomTopicsList.innerHTML = "";
+      randomTopicsList.style.display = 'none'; // Hide the old list
+      populateThemeSelectors(); // Populate the new dropdowns
       setTimeout(() => {
         themeInput.focus();
       }, 100);
     }
+    
+    // --- NEW: Populate Theme Selectors ---
+    function populateThemeSelectors() {
+        // Clear existing options
+        themeCategorySelect.innerHTML = '';
+        themeSubtopicSelect.innerHTML = '';
+
+        // Add a default "Select Category" option
+        const defaultCategoryOption = document.createElement('option');
+        defaultCategoryOption.textContent = '选择分类';
+        defaultCategoryOption.value = '';
+        defaultCategoryOption.disabled = true;
+        defaultCategoryOption.selected = true;
+        themeCategorySelect.appendChild(defaultCategoryOption);
+
+        // Populate category dropdown
+        for (const category in THEME_LIBRARY) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            themeCategorySelect.appendChild(option);
+        }
+
+        // Add a default "Select Subtopic" option
+        const defaultSubtopicOption = document.createElement('option');
+        defaultSubtopicOption.textContent = '选择主题';
+        defaultSubtopicOption.value = '';
+        defaultSubtopicOption.disabled = true;
+        defaultSubtopicOption.selected = true;
+        themeSubtopicSelect.appendChild(defaultSubtopicOption);
+
+        // Event listener for category change
+        themeCategorySelect.onchange = (event) => {
+            const selectedCategory = event.target.value;
+            populateSubtopics(selectedCategory);
+        };
+    }
+
+    function populateSubtopics(category) {
+        themeSubtopicSelect.innerHTML = '';
+        const subtopics = THEME_LIBRARY[category] || [];
+        subtopics.forEach(subtopic => {
+            const option = document.createElement('option');
+            option.value = subtopic;
+            option.textContent = subtopic;
+            themeSubtopicSelect.appendChild(option);
+        });
+        
+        // When a subtopic is selected, update the themeInput
+        themeSubtopicSelect.onchange = (event) => {
+            themeInput.value = event.target.value;
+        };
+    }
+
 
     function closeThemeModal() {
         storyThemeModal.style.display = "none";
     }
 
-    // 修复移动端点击问题的核心函数
     function handleStartGeneration(event) {
       if (event) {
         event.preventDefault();
@@ -729,57 +811,36 @@
 
       themeInput.blur();
       setTimeout(() => {
-        const theme = themeInput.value.trim();
-        if (theme === "") {
-            statusDiv.textContent = "🤔 请输入一个主题或点击‘随机’生成主题。";
+        const theme = themeInput.value.trim() || themeSubtopicSelect.value;
+        if (theme === "" || theme === '选择主题') {
+            statusDiv.textContent = "🤔 请选择一个主题或手动输入。";
             return;
         }
         closeThemeModal();
         startGeneration(theme);
       }, 200);
     }
+    
+    // --- NEW: Generate Random Theme from Library ---
+    function generateRandomThemeFromLibrary() {
+      const allCategories = Object.keys(THEME_LIBRARY);
+      if (allCategories.length === 0) {
+        statusDiv.textContent = "❌ 主题库为空，请手动输入。";
+        return;
+      }
+      
+      const randomCategory = allCategories[Math.floor(Math.random() * allCategories.length)];
+      const subtopics = THEME_LIBRARY[randomCategory];
+      const randomSubtopic = subtopics[Math.floor(Math.random() * subtopics.length)];
 
-    async function generateRandomTopics() {
-        randomButton.textContent = "生成中...";
-        randomButton.disabled = true;
-        statusDiv.textContent = "✨ 正在调用 AI 生成随机标题...";
-        randomTopicsList.innerHTML = ""; // Clear existing list
-
-        try {
-            const prompt = `Generate a list of 10 creative and unique short story titles or themes in simplified Chinese. Separate each theme with a newline character. Example:
-1. 瓶中被遗忘的记忆
-2. 最后一颗星的光芒
-3. 一个由梦想驱动的城市
-4. 古树的低语
-5. 世界尽头的咖啡馆
-6. 倒着走的钟
-7. 誰も見ることができない色
-8. 收藏未完成故事的图书馆
-9. 来自未来自己的信
-10. 由逝去时间组成的桥`;
-            const topicsText = await callAI(prompt);
-            const topics = topicsText.split('\n').filter(t => t.trim() !== '');
-
-            topics.forEach(topic => {
-                const li = document.createElement('li');
-                li.textContent = topic.replace(/^\d+\.\s*/, ''); // Remove leading numbers and dots
-                li.onclick = () => {
-                    themeInput.value = li.textContent;
-                    handleStartGeneration(); // Use the selected topic
-                };
-                randomTopicsList.appendChild(li);
-            });
-            statusDiv.textContent = "✅ 随机标题生成成功！请选择一个或手动输入。";
-
-        } catch (error) {
-            statusDiv.textContent = `❌ 生成标题失败: ${error.message}`;
-            console.error("生成标题失败:", error);
-        } finally {
-            randomButton.textContent = "随机";
-            randomButton.disabled = false;
-        }
+      // Update selectors and input field
+      themeCategorySelect.value = randomCategory;
+      populateSubtopics(randomCategory);
+      themeSubtopicSelect.value = randomSubtopic;
+      themeInput.value = randomSubtopic;
+      
+      statusDiv.textContent = `✨ 已随机选择主题：${randomSubtopic}`;
     }
-
 
     async function startGeneration(theme) {
       // Prompt for English story
