@@ -228,7 +228,7 @@
     #storyThemeModal .modal-buttons-container button {
         flex: 1;
     }
-    
+
     #storyThemeModal .modal-buttons-container button.confirm-btn {
         background-color: var(--button-primary-bg);
     }
@@ -240,7 +240,7 @@
     #storyThemeModal .modal-buttons-container button.random-btn {
         background-color: #ff5722; /* orange for random */
     }
-    
+
     #storyThemeModal .modal-buttons-container button.generate-topics-btn {
         background-color: #800080;
     }
@@ -262,7 +262,7 @@
     #randomTopicsList li:hover {
         background-color: var(--textarea-border-color);
     }
-    
+
     .select-container {
         display: flex;
         gap: 10px;
@@ -301,7 +301,7 @@
       <div class="select-container">
         <select id="themeCategorySelect"></select>
         <select id="themeSubtopicSelect"></select>
-      </div>
+        <select id="styleSelect"></select> </div>
       <input type="text" id="themeInput" placeholder="或手动输入..." />
       <div class="modal-buttons-container">
           <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
@@ -442,12 +442,13 @@
     // TTS Settings Elements
     const ttsUrlsInput = document.getElementById('tts-urls');
     const ttsVoiceNameInput = document.getElementById('tts-voice-name');
-    
+
     // New theme modal elements
     const themeCategorySelect = document.getElementById('themeCategorySelect');
     const themeSubtopicSelect = document.getElementById('themeSubtopicSelect');
+    const styleSelect = document.getElementById('styleSelect');
 
-    // --- THEME LIBRARY ---
+    // --- THEME & STYLE LIBRARY ---
     const THEME_LIBRARY = {
         '日常生活类': ['小确幸', '失落/孤独', '家庭与亲情', '爱情/友情'],
         '悬疑与推理类': ['谋杀/罪案', '失踪/神秘事件', '心理推理', '反转结局'],
@@ -459,6 +460,20 @@
         '幽默与讽刺类': ['搞笑日常', '黑色幽默', '社会讽刺'],
         '奇遇与冒险类': ['意外巧合', '小冒险', '奇异事件'],
     };
+
+    const STYLE_LIST = [
+        '口语风格',
+        '简洁风格',
+        '叙事风格',
+        '书面风格',
+        '新闻风格',
+        '幽默风格',
+        '文学风格',
+        '哲理风格',
+        '商业风格',
+        '学术风格'
+    ];
+
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -747,12 +762,13 @@
       themeInput.value = "";
       randomTopicsList.innerHTML = "";
       populateThemeSelectors(); // Populate the dropdowns
+      populateStyleSelector(); // Populate the style dropdown
     }
 
     function closeThemeModal() {
         storyThemeModal.style.display = "none";
     }
-    
+
     // --- Populate Theme Selectors ---
     function populateThemeSelectors() {
         themeCategorySelect.innerHTML = '';
@@ -807,6 +823,23 @@
         });
     }
 
+    // --- Populate Style Selector ---
+    function populateStyleSelector() {
+        styleSelect.innerHTML = '';
+        const defaultStyleOption = document.createElement('option');
+        defaultStyleOption.textContent = '选择风格';
+        defaultStyleOption.value = '';
+        defaultStyleOption.selected = true;
+        styleSelect.appendChild(defaultStyleOption);
+
+        STYLE_LIST.forEach(style => {
+            const option = document.createElement('option');
+            option.value = style;
+            option.textContent = style;
+            styleSelect.appendChild(option);
+        });
+    }
+
     // --- Generate a list of Chinese story titles ---
     async function generateRandomTopics(event) {
         if (event) {
@@ -857,7 +890,7 @@
             generateTopicsBtn.disabled = false;
         }
     }
-    
+
     // --- Confirm direct generation from title input ---
     function confirmGenerate(event) {
         if (event) {
@@ -874,7 +907,9 @@
     }
 
     async function startGeneration(topic) {
-        const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}".`;
+        const style = styleSelect.value;
+        const stylePrompt = style && style !== '选择风格' ? ` in a ${style} style.` : '.';
+        const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}"${stylePrompt}`;
 
         statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说...`;
         editMode();
