@@ -183,6 +183,12 @@
       color: var(--text-color);
       box-sizing: border-box;
     }
+
+    /* Multi-select styling */
+    .modal-content select[multiple] {
+        height: 100px; /* Adjust height for multiple options */
+    }
+
     .modal-content label {
       display: block;
       margin-top: 15px;
@@ -267,6 +273,11 @@
         display: flex;
         gap: 10px;
         margin-top: 10px;
+        flex-wrap: wrap; /* Allow wrapping on small screens */
+    }
+
+    .select-container select {
+      flex: 1 1 30%; /* Adjust flex-basis for better layout */
     }
   </style>
 </head>
@@ -301,7 +312,7 @@
       <div class="select-container">
         <select id="themeCategorySelect"></select>
         <select id="themeSubtopicSelect"></select>
-        <select id="styleSelect"></select> </div>
+        <select id="styleSelect" multiple></select> </div>
       <input type="text" id="themeInput" placeholder="或手动输入..." />
       <div class="modal-buttons-container">
           <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
@@ -468,6 +479,7 @@
         '书面风格',
         '新闻风格',
         '幽默风格',
+        '讽刺风格', // ADDED '讽刺风格' HERE
         '文学风格',
         '哲理风格',
         '商业风格',
@@ -826,12 +838,6 @@
     // --- Populate Style Selector ---
     function populateStyleSelector() {
         styleSelect.innerHTML = '';
-        const defaultStyleOption = document.createElement('option');
-        defaultStyleOption.textContent = '选择风格';
-        defaultStyleOption.value = '';
-        defaultStyleOption.selected = true;
-        styleSelect.appendChild(defaultStyleOption);
-
         STYLE_LIST.forEach(style => {
             const option = document.createElement('option');
             option.value = style;
@@ -907,23 +913,25 @@
     }
 
     async function startGeneration(topic) {
-        const style = styleSelect.value;
-        const stylePrompt = style && style !== '选择风格' ? ` in a ${style} style.` : '.';
-        const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}"${stylePrompt}`;
+      const selectedStyles = Array.from(styleSelect.selectedOptions).map(option => option.value);
+      const stylePrompt = selectedStyles.length > 0
+          ? ` in a ${selectedStyles.join(' and ')} style.`
+          : '.';
+      const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}"${stylePrompt}`;
 
-        statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说...`;
-        editMode();
-        closeThemeModal();
+      statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说...`;
+      editMode();
+      closeThemeModal();
 
-        try {
-            const storyContent = await callAI(prompt);
-            textarea.value = storyContent;
-            statusDiv.textContent = "✅ 微小说创作成功！正在自动提交到 GitHub...";
-            await submitContent();
-        } catch (error) {
-            statusDiv.textContent = `❌ 创作失败: ${error.message}`;
-            console.error("创作失败:", error);
-        }
+      try {
+          const storyContent = await callAI(prompt);
+          textarea.value = storyContent;
+          statusDiv.textContent = "✅ 微小说创作成功！正在自动提交到 GitHub...";
+          await submitContent();
+      } catch (error) {
+          statusDiv.textContent = `❌ 创作失败: ${error.message}`;
+          console.error("创作失败:", error);
+      }
     }
 
     // --- UI & Content Handling ---
