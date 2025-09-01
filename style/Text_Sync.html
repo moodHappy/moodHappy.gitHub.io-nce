@@ -279,6 +279,63 @@
     .select-container select {
       flex: 1 1 30%; /* Adjust flex-basis for better layout */
     }
+
+    .custom-styles-section {
+        margin-top: 20px;
+    }
+
+    .custom-styles-section ul {
+        list-style-type: none;
+        padding: 0;
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid var(--textarea-border-color);
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    .custom-styles-section li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 0;
+        border-bottom: 1px solid var(--textarea-border-color);
+    }
+
+    .custom-styles-section li:last-child {
+        border-bottom: none;
+    }
+
+    .custom-styles-section button {
+        background-color: var(--button-danger-bg);
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        min-width: unset;
+        min-height: unset;
+    }
+
+    .add-style-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .add-style-container input {
+        flex: 1;
+        margin-top: 0;
+    }
+
+    .add-style-container button {
+        flex-grow: 0;
+        width: auto;
+        padding: 0 16px;
+        background-color: var(--button-primary-bg);
+    }
+
   </style>
 </head>
 <body>
@@ -359,6 +416,19 @@
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
+      <h4>创作风格管理</h4>
+      <div class="add-style-container">
+          <input type="text" id="newStyleInput" placeholder="输入新的风格名称" />
+          <button onclick="addCustomStyle()">添加</button>
+      </div>
+      <div class="custom-styles-section">
+          <p>已添加的自定义风格：</p>
+          <ul id="customStylesList"></ul>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
+
+      <h4>AI 模型服务商</h4>
       <label for="ai-provider-select">AI 模型服务商</label>
       <select id="ai-provider-select">
         <option value="kimi">Kimi</option>
@@ -411,6 +481,7 @@
     const GITHUB_REPO = "HelloWorld";
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
     const SETTINGS_KEY = "github_sync_assistant_settings";
+    const CUSTOM_STYLES_KEY = "github_sync_assistant_custom_styles";
 
     const DEFAULT_KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions";
     const DEFAULT_KIMI_MODEL = "moonshot-v1-8k";
@@ -459,6 +530,10 @@
     const themeSubtopicSelect = document.getElementById('themeSubtopicSelect');
     const styleSelect = document.getElementById('styleSelect');
 
+    // Custom Style Elements
+    const newStyleInput = document.getElementById('newStyleInput');
+    const customStylesList = document.getElementById('customStylesList');
+
     // --- THEME & STYLE LIBRARY ---
     const THEME_LIBRARY = {
         '日常生活类': ['小确幸', '失落/孤独', '家庭与亲情', '爱情/友情'],
@@ -472,7 +547,7 @@
         '奇遇与冒险类': ['意外巧合', '小冒险', '奇异事件'],
     };
 
-    const STYLE_LIST = [
+    const DEFAULT_STYLES = [
         '口语风格',
         '简洁风格',
         '叙事风格',
@@ -480,14 +555,57 @@
         '新闻风格',
         '幽默风格',
         '讽刺风格', 
-        '黑镜风格', // ADDED '黑镜风格' HERE
-        '克苏鲁风格', // ADDED '克苏鲁风格' HERE
+        '黑镜风格',
         '文学风格',
         '哲理风格',
         '商业风格',
         '学术风格'
     ];
+    let customStyles = [];
 
+    // --- Custom Styles Management ---
+    function loadCustomStyles() {
+        const savedStyles = localStorage.getItem(CUSTOM_STYLES_KEY);
+        customStyles = savedStyles ? JSON.parse(savedStyles) : [];
+        renderCustomStylesList();
+    }
+
+    function saveCustomStyles() {
+        localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(customStyles));
+        // Also re-populate the story theme modal style list
+        populateStyleSelector();
+    }
+
+    function addCustomStyle() {
+        const newStyle = newStyleInput.value.trim();
+        if (newStyle && !DEFAULT_STYLES.includes(newStyle) && !customStyles.includes(newStyle)) {
+            customStyles.push(newStyle);
+            saveCustomStyles();
+            renderCustomStylesList();
+            newStyleInput.value = '';
+        } else {
+            alert('风格名称无效或已存在！');
+        }
+    }
+
+    function removeCustomStyle(styleToRemove) {
+        customStyles = customStyles.filter(style => style !== styleToRemove);
+        saveCustomStyles();
+        renderCustomStylesList();
+    }
+
+    function renderCustomStylesList() {
+        customStylesList.innerHTML = '';
+        customStyles.forEach(style => {
+            const li = document.createElement('li');
+            li.textContent = style;
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '删除';
+            deleteBtn.onclick = () => removeCustomStyle(style);
+            li.appendChild(deleteBtn);
+            customStylesList.appendChild(li);
+        });
+    }
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -568,7 +686,7 @@
         ttsVoiceNameInput.value = savedSettings.ttsVoiceName;
 
         updateAIInputsVisibility(savedSettings.aiProvider);
-
+        loadCustomStyles(); // Load custom styles for display
         settingsModal.style.display = "flex";
     }
 
@@ -840,7 +958,8 @@
     // --- Populate Style Selector ---
     function populateStyleSelector() {
         styleSelect.innerHTML = '';
-        STYLE_LIST.forEach(style => {
+        const allStyles = [...DEFAULT_STYLES, ...customStyles];
+        allStyles.forEach(style => {
             const option = document.createElement('option');
             option.value = style;
             option.textContent = style;
@@ -1163,6 +1282,7 @@
     // --- Initial Load ---
     window.onload = () => {
       loadSettings();
+      loadCustomStyles();
       ensureToken();
       if (GITHUB_TOKEN) {
         loadContent();
