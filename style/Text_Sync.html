@@ -280,66 +280,61 @@
       flex: 1 1 30%; /* Adjust flex-basis for better layout */
     }
 
-    .custom-styles-section {
-        margin-top: 20px;
-        padding: 10px;
-        border: 1px solid var(--textarea-border-color);
-        border-radius: 8px;
-    }
-
-    .custom-styles-section h4 {
+    /* Style Management Modal Specifics */
+    #styleManagementModal h4 {
         margin-top: 0;
+        margin-bottom: 15px;
+        color: var(--text-color);
     }
 
-    .custom-styles-section ul {
-        list-style-type: none;
+    #customStyleList {
         padding: 0;
+        list-style: none;
         max-height: 150px;
         overflow-y: auto;
+        border: 1px solid var(--textarea-border-color);
         border-radius: 5px;
+        margin-top: 10px;
     }
 
-    .custom-styles-section li {
+    #customStyleList li {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 0;
+        padding: 8px;
         border-bottom: 1px solid var(--textarea-border-color);
     }
 
-    .custom-styles-section li:last-child {
+    #customStyleList li:last-child {
         border-bottom: none;
     }
 
-    .custom-styles-section button {
-        background-color: var(--button-danger-bg);
+    #customStyleList .delete-style-btn {
+        background: var(--button-danger-bg);
         color: white;
         border: none;
+        border-radius: 4px;
         padding: 4px 8px;
-        border-radius: 3px;
         cursor: pointer;
         font-size: 12px;
-        min-width: unset;
-        min-height: unset;
     }
 
-    .add-style-container {
+    .style-input-container {
         display: flex;
         gap: 10px;
         margin-top: 10px;
     }
 
-    .add-style-container input {
+    .style-input-container input {
         flex: 1;
+    }
+    
+    .style-input-container button {
+        flex: none;
+        width: 100px;
         margin-top: 0;
     }
 
-    .add-style-container button {
-        flex-grow: 0;
-        width: auto;
-        padding: 0 16px;
-        background-color: var(--button-primary-bg);
-    }
   </style>
 </head>
 <body>
@@ -373,7 +368,8 @@
       <div class="select-container">
         <select id="themeCategorySelect"></select>
         <select id="themeSubtopicSelect"></select>
-        <select id="styleSelect" multiple></select> </div>
+        <select id="styleSelect" multiple></select>
+      </div>
       <input type="text" id="themeInput" placeholder="或手动输入..." />
       <div class="modal-buttons-container">
           <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
@@ -420,19 +416,6 @@
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
-      <div class="custom-styles-section">
-          <h4>创作风格管理</h4>
-          <div class="add-style-container">
-              <input type="text" id="newStyleInput" placeholder="输入新的风格名称" />
-              <button onclick="addCustomStyle()">添加</button>
-          </div>
-          <p>已添加的自定义风格：</p>
-          <ul id="customStylesList"></ul>
-      </div>
-
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
-
-      <h4>AI 模型服务商</h4>
       <label for="ai-provider-select">AI 模型服务商</label>
       <select id="ai-provider-select">
         <option value="kimi">Kimi</option>
@@ -476,6 +459,18 @@
           <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
           <button onclick="saveAndApplySettings()">保存并关闭</button>
       </div>
+    </div>
+  </div>
+
+  <div id="styleManagementModal" class="modal">
+    <div class="modal-content">
+      <h3>🎨 管理创作风格</h3>
+      <div class="style-input-container">
+        <input type="text" id="addStyleInput" placeholder="输入新风格名称..." />
+        <button onclick="addCustomStyle()">添加</button>
+      </div>
+      <ul id="customStyleList"></ul>
+      <button style="margin-top: 20px;" onclick="closeStyleManagementModal()">完成</button>
     </div>
   </div>
 
@@ -533,10 +528,12 @@
     const themeCategorySelect = document.getElementById('themeCategorySelect');
     const themeSubtopicSelect = document.getElementById('themeSubtopicSelect');
     const styleSelect = document.getElementById('styleSelect');
+    
+    // Style Management Elements
+    const styleManagementModal = document.getElementById('styleManagementModal');
+    const addStyleInput = document.getElementById('addStyleInput');
+    const customStyleList = document.getElementById('customStyleList');
 
-    // Custom Style Elements
-    const newStyleInput = document.getElementById('newStyleInput');
-    const customStylesList = document.getElementById('customStylesList');
 
     // --- THEME & STYLE LIBRARY ---
     const THEME_LIBRARY = {
@@ -551,7 +548,7 @@
         '奇遇与冒险类': ['意外巧合', '小冒险', '奇异事件'],
     };
 
-    const DEFAULT_STYLES = [
+    const BUILT_IN_STYLES = [
         '口语风格',
         '简洁风格',
         '叙事风格',
@@ -565,51 +562,6 @@
         '商业风格',
         '学术风格'
     ];
-    let customStyles = [];
-
-    // --- Custom Styles Management ---
-    function loadCustomStyles() {
-        const savedStyles = localStorage.getItem(CUSTOM_STYLES_KEY);
-        customStyles = savedStyles ? JSON.parse(savedStyles) : [];
-        renderCustomStylesList();
-    }
-
-    function saveCustomStyles() {
-        localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(customStyles));
-        // Also re-populate the story theme modal style list
-        populateStyleSelector();
-    }
-
-    function addCustomStyle() {
-        const newStyle = newStyleInput.value.trim();
-        if (newStyle && !DEFAULT_STYLES.includes(newStyle) && !customStyles.includes(newStyle)) {
-            customStyles.push(newStyle);
-            saveCustomStyles();
-            renderCustomStylesList();
-            newStyleInput.value = '';
-        } else {
-            alert('风格名称无效或已存在！');
-        }
-    }
-
-    function removeCustomStyle(styleToRemove) {
-        customStyles = customStyles.filter(style => style !== styleToRemove);
-        saveCustomStyles();
-        renderCustomStylesList();
-    }
-
-    function renderCustomStylesList() {
-        customStylesList.innerHTML = '';
-        customStyles.forEach(style => {
-            const li = document.createElement('li');
-            li.textContent = style;
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '删除';
-            deleteBtn.onclick = () => removeCustomStyle(style);
-            li.appendChild(deleteBtn);
-            customStylesList.appendChild(li);
-        });
-    }
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -690,7 +642,7 @@
         ttsVoiceNameInput.value = savedSettings.ttsVoiceName;
 
         updateAIInputsVisibility(savedSettings.aiProvider);
-        loadCustomStyles(); // Load custom styles for display
+
         settingsModal.style.display = "flex";
     }
 
@@ -897,8 +849,8 @@
       storyThemeModal.style.display = "flex";
       themeInput.value = "";
       randomTopicsList.innerHTML = "";
-      populateThemeSelectors(); // Populate the dropdowns
-      populateStyleSelector(); // Populate the style dropdown
+      populateThemeSelectors();
+      populateStyleSelector();
     }
 
     function closeThemeModal() {
@@ -959,16 +911,106 @@
         });
     }
 
-    // --- Populate Style Selector ---
+    // --- Style Management Functions ---
+    function getCustomStyles() {
+      try {
+        return JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
+      } catch (e) {
+        console.error("Failed to parse custom styles from localStorage:", e);
+        return [];
+      }
+    }
+
+    function saveCustomStyles(styles) {
+      localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
+    }
+
+    function addCustomStyle() {
+      const newStyle = addStyleInput.value.trim();
+      if (newStyle === "") return;
+
+      const customStyles = getCustomStyles();
+      if (!customStyles.includes(newStyle) && !BUILT_IN_STYLES.includes(newStyle)) {
+        customStyles.push(newStyle);
+        saveCustomStyles(customStyles);
+        addStyleInput.value = "";
+        populateCustomStyleList();
+        statusDiv.textContent = "✅ 新风格已添加！";
+      } else {
+        statusDiv.textContent = "🤔 风格已存在，无需重复添加。";
+      }
+    }
+
+    function deleteCustomStyle(styleToDelete) {
+      const customStyles = getCustomStyles();
+      const newStyles = customStyles.filter(style => style !== styleToDelete);
+      saveCustomStyles(newStyles);
+      populateCustomStyleList();
+      statusDiv.textContent = "🗑️ 风格已删除。";
+    }
+
+    function populateCustomStyleList() {
+      const customStyles = getCustomStyles();
+      customStyleList.innerHTML = "";
+      if (customStyles.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = "尚无自定义风格";
+        li.style.color = 'var(--status-color)';
+        customStyleList.appendChild(li);
+        return;
+      }
+      customStyles.forEach(style => {
+        const li = document.createElement('li');
+        li.textContent = style;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '删除';
+        deleteBtn.className = 'delete-style-btn';
+        deleteBtn.onclick = () => deleteCustomStyle(style);
+        li.appendChild(deleteBtn);
+        customStyleList.appendChild(li);
+      });
+    }
+
+    function openStyleManagementModal() {
+        populateCustomStyleList();
+        styleManagementModal.style.display = "flex";
+        storyThemeModal.style.display = "none";
+    }
+
+    function closeStyleManagementModal() {
+        styleManagementModal.style.display = "none";
+        // Re-populate the main style selector when closing this modal
+        populateStyleSelector();
+    }
+
+    // --- Populate Style Selector in main modal ---
     function populateStyleSelector() {
         styleSelect.innerHTML = '';
-        const allStyles = [...DEFAULT_STYLES, ...customStyles];
+        const allStyles = [...BUILT_IN_STYLES, ...getCustomStyles()];
+        
+        // Add "管理风格" option
+        const manageOption = document.createElement('option');
+        manageOption.textContent = '管理风格...';
+        manageOption.value = 'manage';
+        styleSelect.appendChild(manageOption);
+
         allStyles.forEach(style => {
             const option = document.createElement('option');
             option.value = style;
             option.textContent = style;
             styleSelect.appendChild(option);
         });
+
+        styleSelect.onchange = (event) => {
+            const selectedOption = event.target.selectedOptions[0];
+            if (selectedOption && selectedOption.value === 'manage') {
+                event.preventDefault();
+                event.stopPropagation();
+                openStyleManagementModal();
+                // De-select the "manage" option to prevent it from being submitted
+                selectedOption.selected = false;
+            }
+        };
     }
 
     // --- Generate a list of Chinese story titles ---
@@ -1038,7 +1080,9 @@
     }
 
     async function startGeneration(topic) {
-      const selectedStyles = Array.from(styleSelect.selectedOptions).map(option => option.value);
+      const selectedStyles = Array.from(styleSelect.selectedOptions)
+                                 .map(option => option.value)
+                                 .filter(value => value !== 'manage'); // Filter out the "manage" option
       const stylePrompt = selectedStyles.length > 0
           ? ` in a ${selectedStyles.join(' and ')} style.`
           : '.';
@@ -1274,6 +1318,13 @@
       }
     });
 
+    addStyleInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addCustomStyle();
+        }
+    });
+
     window.addEventListener('click', function(event) {
       if (event.target === storyThemeModal) {
         closeThemeModal();
@@ -1281,12 +1332,14 @@
       if (event.target === settingsModal) {
         closeSettingsModal();
       }
+      if (event.target === styleManagementModal) {
+        closeStyleManagementModal();
+      }
     });
 
     // --- Initial Load ---
     window.onload = () => {
       loadSettings();
-      loadCustomStyles();
       ensureToken();
       if (GITHUB_TOKEN) {
         loadContent();
