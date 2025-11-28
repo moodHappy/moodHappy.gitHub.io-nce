@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GitHub 同步助手</title>
+  <title>GitHub 同步助手 - A1-C2版</title>
   <style>
     /* CSS Variables for theming and typography */
     :root {
@@ -18,7 +18,7 @@
       --button-secondary-bg: #2196F3;
       --button-danger-bg: #f44336;
       --button-generate-bg: #800080;
-      --button-read-bg: #e6b800; /* New color for read button */
+      --button-read-bg: #e6b800;
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -81,7 +81,7 @@
     textarea {
       min-height: 150px;
       resize: vertical;
-      overflow: hidden; /* Hide scrollbar, but still scrollable */
+      overflow: hidden;
       background-color: var(--textarea-bg-color);
       border-color: var(--textarea-border-color);
     }
@@ -90,7 +90,7 @@
     .button-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px; /* Adjust spacing between buttons */
+        gap: 10px;
         margin-bottom: 10px;
     }
 
@@ -102,10 +102,9 @@
       color: white;
       cursor: pointer;
       background-color: var(--button-primary-bg);
-      /* 移动端优化：增加触摸目标大小 */
       min-height: 44px;
       min-width: 44px;
-      flex: 1 1 auto; /* Flex property for equal width and wrapping */
+      flex: 1 1 auto;
       transition: background-color 0.3s;
     }
 
@@ -114,23 +113,20 @@
         cursor: not-allowed;
     }
 
-    /* Specific button colors */
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
     button.generate { background-color: var(--button-generate-bg); }
     button.read { background-color: var(--button-read-bg); }
 
-    /* Media query for mobile devices */
     @media (max-width: 600px) {
         .button-container {
             flex-wrap: wrap;
             justify-content: space-between;
         }
         button {
-            flex: 1 1 calc(20% - 8px); /* 20% width minus a bit for the gap */
+            flex: 1 1 calc(20% - 8px);
         }
     }
-
 
     #status {
       margin-top: 10px;
@@ -153,7 +149,7 @@
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: var(--modal-bg);
-      display: none; /* Initially hidden */
+      display: none;
       justify-content: center;
       align-items: center;
       z-index: 999;
@@ -165,7 +161,6 @@
       border-radius: 8px;
       width: 90%;
       max-width: 400px;
-      /* 修复无法滚动到底部的问题 */
       max-height: 90vh; 
       overflow-y: auto;
     }
@@ -184,9 +179,8 @@
       box-sizing: border-box;
     }
 
-    /* Multi-select styling */
     .modal-content select[multiple] {
-        height: 100px; /* Adjust height for multiple options */
+        height: 100px;
     }
 
     .modal-content label {
@@ -209,7 +203,6 @@
         display: none;
     }
 
-    /* 修复按钮无法点击的问题 */
     .modal-buttons {
       display: flex;
       justify-content: space-between;
@@ -224,7 +217,6 @@
       margin-top: 0;
     }
 
-    /* New styles for the theme modal buttons */
     #storyThemeModal .modal-buttons-container {
       display: flex;
       gap: 10px;
@@ -240,18 +232,17 @@
     }
 
     #storyThemeModal .modal-buttons-container button:nth-child(2) {
-        background-color: #6c757d; /* grey for cancel */
+        background-color: #6c757d;
     }
 
     #storyThemeModal .modal-buttons-container button.random-btn {
-        background-color: #ff5722; /* orange for random */
+        background-color: #ff5722;
     }
 
     #storyThemeModal .modal-buttons-container button.generate-topics-btn {
         background-color: #800080;
     }
 
-    /* Styles for the random topics list */
     #randomTopicsList {
         margin-top: 20px;
         padding: 0;
@@ -273,11 +264,11 @@
         display: flex;
         gap: 10px;
         margin-top: 10px;
-        flex-wrap: wrap; /* Allow wrapping on small screens */
+        flex-wrap: wrap;
     }
 
     .select-container select {
-      flex: 1 1 30%; /* Adjust flex-basis for better layout */
+      flex: 1 1 30%;
     }
 
     /* Style Management Modal Specifics */
@@ -328,7 +319,7 @@
     .style-input-container input {
         flex: 1;
     }
-    
+
     .style-input-container button {
         flex: none;
         width: 100px;
@@ -367,7 +358,7 @@
       <h3>📚 请选择或输入创作主题：</h3>
       <div class="select-container">
         <select id="themeCategorySelect"></select>
-        <select id="themeSubtopicSelect"></select>
+        <select id="difficultySelect"></select>
         <select id="styleSelect" multiple></select>
       </div>
       <input type="text" id="themeInput" placeholder="或手动输入..." />
@@ -524,11 +515,11 @@
     const ttsUrlsInput = document.getElementById('tts-urls');
     const ttsVoiceNameInput = document.getElementById('tts-voice-name');
 
-    // New theme modal elements
+    // Theme & Difficulty Elements
     const themeCategorySelect = document.getElementById('themeCategorySelect');
-    const themeSubtopicSelect = document.getElementById('themeSubtopicSelect');
+    const difficultySelect = document.getElementById('difficultySelect');
     const styleSelect = document.getElementById('styleSelect');
-    
+
     // Style Management Elements
     const styleManagementModal = document.getElementById('styleManagementModal');
     const addStyleInput = document.getElementById('addStyleInput');
@@ -537,16 +528,25 @@
 
     // --- THEME & STYLE LIBRARY ---
     const THEME_LIBRARY = {
-        '日常生活类': ['小确幸', '失落/孤独', '家庭与亲情', '爱情/友情'],
-        '悬疑与推理类': ['谋杀/罪案', '失踪/神秘事件', '心理推理', '反转结局'],
-        '科幻与奇幻类': ['未来世界', '超能力/异能', '魔法/幻想生物', '平行世界/时间旅行'],
-        '历史与现实主义类': ['历史小故事', '战争/革命', '社会问题'],
-        '哲理与寓言类': ['生活哲理', '动物寓言', '反思/讽刺'],
-        '爱情与情感类': ['失恋/暗恋', '初恋/重逢', '婚姻/家庭'],
-        '心理与情绪类': ['焦虑/恐惧', '欣喜/悔恨', '内心独白'],
-        '幽默与讽刺类': ['搞笑日常', '黑色幽默', '社会讽刺'],
-        '奇遇与冒险类': ['意外巧合', '小冒险', '奇异事件'],
+        '日常生活类': [], // Keep keys for categories, values ignored since subtopics are removed
+        '悬疑与推理类': [],
+        '科幻与奇幻类': [],
+        '历史与现实主义类': [],
+        '哲理与寓言类': [],
+        '爱情与情感类': [],
+        '心理与情绪类': [],
+        '幽默与讽刺类': [],
+        '奇遇与冒险类': [],
     };
+
+    const DIFFICULTY_LEVELS = [
+        'A1 (入门)', 
+        'A2 (初级)', 
+        'B1 (中级)', 
+        'B2 (中高级)', 
+        'C1 (高级)', 
+        'C2 (精通)'
+    ];
 
     const BUILT_IN_STYLES = [
         '口语风格',
@@ -857,11 +857,12 @@
         storyThemeModal.style.display = "none";
     }
 
-    // --- Populate Theme Selectors ---
+    // --- Populate Theme Selectors (Updated: Difficulty instead of Subtopics) ---
     function populateThemeSelectors() {
         themeCategorySelect.innerHTML = '';
-        themeSubtopicSelect.innerHTML = '';
+        difficultySelect.innerHTML = '';
 
+        // Populate Categories
         const defaultCategoryOption = document.createElement('option');
         defaultCategoryOption.textContent = '选择分类';
         defaultCategoryOption.value = '';
@@ -876,39 +877,21 @@
             themeCategorySelect.appendChild(option);
         }
 
-        const defaultSubtopicOption = document.createElement('option');
-        defaultSubtopicOption.textContent = '选择主题';
-        defaultSubtopicOption.value = '';
-        defaultSubtopicOption.disabled = true;
-        defaultSubtopicOption.selected = true;
-        themeSubtopicSelect.appendChild(defaultSubtopicOption);
+        // Populate Difficulty Levels
+        DIFFICULTY_LEVELS.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level.split(' ')[0]; // Store "A1" from "A1 (入门)"
+            option.textContent = level;
+            if (level.startsWith('B1')) { // Default to B1
+                option.selected = true;
+            }
+            difficultySelect.appendChild(option);
+        });
 
+        // When category changes, we can clear the input, but no subtopic to populate now
         themeCategorySelect.onchange = (event) => {
-            const selectedCategory = event.target.value;
-            populateSubtopics(selectedCategory);
             themeInput.value = '';
         };
-
-        themeSubtopicSelect.onchange = (event) => {
-            themeInput.value = event.target.value;
-        };
-    }
-
-    function populateSubtopics(category) {
-        themeSubtopicSelect.innerHTML = '';
-        const subtopics = THEME_LIBRARY[category] || [];
-        const defaultSubtopicOption = document.createElement('option');
-        defaultSubtopicOption.textContent = '选择主题';
-        defaultSubtopicOption.value = '';
-        defaultSubtopicOption.disabled = true;
-        defaultSubtopicOption.selected = true;
-        themeSubtopicSelect.appendChild(defaultSubtopicOption);
-        subtopics.forEach(subtopic => {
-            const option = document.createElement('option');
-            option.value = subtopic;
-            option.textContent = subtopic;
-            themeSubtopicSelect.appendChild(option);
-        });
     }
 
     // --- Style Management Functions ---
@@ -987,7 +970,7 @@
     function populateStyleSelector() {
         styleSelect.innerHTML = '';
         const allStyles = [...BUILT_IN_STYLES, ...getCustomStyles()];
-        
+
         // Add "管理风格" option
         const manageOption = document.createElement('option');
         manageOption.textContent = '管理风格...';
@@ -1020,9 +1003,10 @@
             event.stopPropagation();
         }
 
-        const theme = themeInput.value.trim() || themeSubtopicSelect.value;
-        if (theme === "" || theme === '选择主题') {
-            statusDiv.textContent = "🤔 请选择一个主题或手动输入，然后点击'生成题目'。";
+        // Use Category if Input is empty
+        const theme = themeInput.value.trim() || themeCategorySelect.value;
+        if (theme === "" || theme === '选择分类') {
+            statusDiv.textContent = "🤔 请选择一个分类或手动输入，然后点击'生成题目'。";
             return;
         }
 
@@ -1079,16 +1063,20 @@
         startGeneration(topic);
     }
 
+    // --- Start Generation (Updated with Difficulty) ---
     async function startGeneration(topic) {
+      const difficulty = difficultySelect.value || 'B1'; // Get selected difficulty
       const selectedStyles = Array.from(styleSelect.selectedOptions)
                                  .map(option => option.value)
-                                 .filter(value => value !== 'manage'); // Filter out the "manage" option
+                                 .filter(value => value !== 'manage');
       const stylePrompt = selectedStyles.length > 0
           ? ` in a ${selectedStyles.join(' and ')} style.`
           : '.';
-      const prompt = `Write a short story in English, about 100 words, based on the Chinese title: "${topic}"${stylePrompt}`;
+      
+      // Update Prompt to include Difficulty Level
+      const prompt = `Write a short story in English, about 100 words, **CEFR Level ${difficulty}**, based on the Chinese title: "${topic}"${stylePrompt}`;
 
-      statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说...`;
+      statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说 (Level ${difficulty})...`;
       editMode();
       closeThemeModal();
 
