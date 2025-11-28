@@ -228,17 +228,18 @@
     }
 
     #storyThemeModal .modal-buttons-container button.confirm-btn {
-        background-color: var(--button-primary-bg);
+        background-color: #6c757d; /* Default to greyish until ready, or use CSS logic. Here used simpler color */
+        background-color: var(--button-primary-bg); /* Keep primary */
     }
 
     #storyThemeModal .modal-buttons-container button:nth-child(2) {
-        background-color: #6c757d;
+        /* confirm button */
     }
 
-    #storyThemeModal .modal-buttons-container button.random-btn {
-        background-color: #ff5722;
+    #storyThemeModal .modal-buttons-container button:nth-child(3) {
+        background-color: #6c757d; /* cancel button */
     }
-
+    
     #storyThemeModal .modal-buttons-container button.generate-topics-btn {
         background-color: #800080;
     }
@@ -528,7 +529,7 @@
 
     // --- THEME & STYLE LIBRARY ---
     const THEME_LIBRARY = {
-        '日常生活类': [], // Keep keys for categories, values ignored since subtopics are removed
+        '日常生活类': [], 
         '悬疑与推理类': [],
         '科幻与奇幻类': [],
         '历史与现实主义类': [],
@@ -857,7 +858,7 @@
         storyThemeModal.style.display = "none";
     }
 
-    // --- Populate Theme Selectors (Updated: Difficulty instead of Subtopics) ---
+    // --- Populate Theme Selectors ---
     function populateThemeSelectors() {
         themeCategorySelect.innerHTML = '';
         difficultySelect.innerHTML = '';
@@ -888,7 +889,7 @@
             difficultySelect.appendChild(option);
         });
 
-        // When category changes, we can clear the input, but no subtopic to populate now
+        // When category changes, we can clear the input
         themeCategorySelect.onchange = (event) => {
             themeInput.value = '';
         };
@@ -1048,18 +1049,28 @@
         }
     }
 
-    // --- Confirm direct generation from title input ---
+    // --- Confirm direct generation from title input OR category ---
     function confirmGenerate(event) {
         if (event) {
             event.preventDefault();
             event.stopPropagation();
         }
 
-        const topic = themeInput.value.trim();
+        let topic = themeInput.value.trim();
+        
+        // 逻辑修改：如果输入框为空，尝试使用选中的分类
         if (topic === "") {
-            statusDiv.textContent = "🤔 请在输入框中输入一个题目，或者先生成一个题目列表。";
+            const selectedCategory = themeCategorySelect.value;
+            if (selectedCategory && selectedCategory !== '选择分类') {
+                topic = selectedCategory;
+            }
+        }
+
+        if (topic === "") {
+            statusDiv.textContent = "🤔 请在输入框中输入一个题目，或者选择一个分类。";
             return;
         }
+
         startGeneration(topic);
     }
 
@@ -1074,7 +1085,7 @@
           : '.';
       
       // Update Prompt to include Difficulty Level
-      const prompt = `Write a short story in English, about 100 words, **CEFR Level ${difficulty}**, based on the Chinese title: "${topic}"${stylePrompt}`;
+      const prompt = `Write a short story in English, about 100 words, **CEFR Level ${difficulty}**, based on the Chinese title or theme: "${topic}"${stylePrompt}`;
 
       statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说 (Level ${difficulty})...`;
       editMode();
