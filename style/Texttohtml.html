@@ -101,13 +101,13 @@
             color: #8b7355; position: relative; top: -2px; transition: all 0.2s;
         }
         .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
-        /* [新增] 上一次点击的分析按钮样式：红色高亮 */
+        /* 红色高亮样式 - 持久化 */
         .ai-analyze-btn.last-clicked {
-            background-color: #d32f2f !important; /* 鲜艳的红色 */
+            background-color: #d32f2f !important;
             color: white !important;
             border-color: #d32f2f !important;
-            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5); /* 添加一点红色光晕 */
-            transform: scale(1.15); /* 稍微放大一点以便识别 */
+            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5);
+            transform: scale(1.15);
             z-index: 10;
         }
         .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
@@ -338,6 +338,7 @@
         const API_URL = "https://api.groq.com/openai/v1/chat/completions";
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const ttsDomains = ['https://ms-ra-forwarder-for-ifreetime-2.vercel.app/'];
+        const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index'; // [新增] 用于存储位置的 Key
 
         // --- GitHub 配置 ---
         const GH_CONFIG = {
@@ -438,11 +439,16 @@
             const btn = target.closest('.ai-analyze-btn');
             if (!btn) return;
 
-            // [新增] 移除所有旧的高亮标记，并给当前按钮添加标记
-            document.querySelectorAll('.ai-analyze-btn.last-clicked').forEach(b => {
-                b.classList.remove('last-clicked');
-            });
+            // [修改] 视觉更新：移除所有高亮，高亮当前
+            const allBtns = document.querySelectorAll('.ai-analyze-btn');
+            allBtns.forEach(b => b.classList.remove('last-clicked'));
             btn.classList.add('last-clicked');
+
+            // [新增] 保存状态：找到当前按钮是第几个，存入 localStorage
+            const btnIndex = Array.from(allBtns).indexOf(btn);
+            if (btnIndex !== -1) {
+                localStorage.setItem(LAST_CLICKED_KEY, btnIndex);
+            }
 
             const sentence = extractSentenceBefore(btn);
             if (!sentence || sentence.length < 2) return;
@@ -554,6 +560,9 @@
                 statusDiv.innerText = "创作完成，正在同步到 GitHub...";
                 await uploadToGitHub(story, ghToken);
 
+                // [新增] 成功生成新故事后，清除旧的阅读位置记录，避免错位
+                localStorage.removeItem(LAST_CLICKED_KEY);
+
                 // 3. 更新界面
                 statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
@@ -630,7 +639,20 @@
                     n.parentNode.replaceChild(f, n);
                 }
             });
+
+            // [新增] 注入按钮后，立即从 localStorage 恢复上一次的点击状态
+            const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
+            if (lastClickedIndex !== null) {
+                const allBtns = div.querySelectorAll('.ai-analyze-btn');
+                const idx = parseInt(lastClickedIndex);
+                if (allBtns[idx]) {
+                    allBtns[idx].classList.add('last-clicked');
+                    // 可选：如果希望自动滚动到上次的位置，可以取消下面这行的注释
+                    // allBtns[idx].scrollIntoView({behavior: "smooth", block: "center"}); 
+                }
+            }
         }
+
         function extractSentenceBefore(node) {
             let t = "", c = node.previousSibling;
             while(c) {
