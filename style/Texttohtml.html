@@ -68,6 +68,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center;
+            flex-shrink: 0; /* 防止被挤压 */
         }
         .icon-btn:hover { 
             background: rgba(139, 115, 85, 0.12); 
@@ -93,6 +94,7 @@
             cursor: pointer; 
             transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             box-shadow: 0 4px 12px rgba(139, 115, 85, 0.25);
+            flex-shrink: 0;
         }
         .read-btn-top:hover { 
             background: #6b5b4f; 
@@ -192,9 +194,35 @@
             border-bottom: 1px solid rgba(139, 115, 85, 0.1); border-radius: 16px 16px 0 0;
             z-index: 2;
         }
-        .modal-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .modal-title { font-size: 1.2em; color: #5a4a3f; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .modal-actions { display: flex; gap: 12px; }
+        .modal-header-top { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 12px; 
+        }
+        
+        /* --- 关键修复：模态框标题样式 --- */
+        .modal-title { 
+            font-size: 1.2em; 
+            color: #5a4a3f; 
+            font-weight: 600; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            
+            /* 强制水平排列，不换行，不收缩 */
+            white-space: nowrap; 
+            flex-shrink: 0; 
+            flex-direction: row; 
+        }
+        /* 强制图标不收缩，固定大小 */
+        .modal-title svg {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .modal-actions { display: flex; gap: 12px; flex-shrink: 0; }
 
         .modal-scroll-body { 
             flex: 1; 
@@ -202,11 +230,10 @@
             padding: 24px; 
             background: #fff; 
             border-radius: 0 0 16px 16px; 
-            /* 平滑滚动 */
             -webkit-overflow-scrolling: touch;
         }
 
-        /* --- AI 分析框样式优化 --- */
+        /* --- AI 分析框样式 --- */
         .original-sentence-box {
             background: #f4f0ec; 
             padding: 16px 20px; 
@@ -216,7 +243,6 @@
             font-style: italic; 
             font-size: 1em; 
             line-height: 1.6; 
-            /* 关键修改：移除固定高度，让内容自动撑开，无滚动条 */
             height: auto;
             max-height: none; 
             overflow: visible; 
@@ -256,51 +282,19 @@
             .content-container { padding: 15px; }
             .text-placeholder { padding: 10px 5px; font-size: 1.25em; }
 
-            /* --- 移动端弹窗核心修改 --- */
-            .modal-overlay {
-                /* 移动端改为底部对齐 */
-                align-items: flex-end;
-            }
-            
+            /* 移动端弹窗 */
+            .modal-overlay { align-items: flex-end; }
             .modal-card {
-                /* 宽度铺满 */
-                width: 100% !important;
-                max-width: 100%;
-                /* 贴底，去掉左右边距 */
-                margin: 0;
-                /* 上方圆角，下方直角 */
+                width: 100% !important; max-width: 100%; margin: 0;
                 border-radius: 24px 24px 0 0;
-                /* 增加高度占比，提升沉浸感 */
-                max-height: 85vh;
-                height: auto; 
-                /* 修正底部动画 */
+                max-height: 85vh; height: auto; 
                 transform: translateY(100%);
                 transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
             }
-            
-            .modal-overlay.active .modal-card {
-                transform: translateY(0);
-                scale: 1;
-            }
-
-            .modal-sticky-header {
-                padding: 20px 20px 10px;
-                border-radius: 24px 24px 0 0;
-            }
-            
-            .modal-scroll-body {
-                padding: 20px;
-                /* 确保内容底部有足够的阅读缓冲空间 */
-                padding-bottom: 40px;
-            }
-
-            /* 移动端原句框微调 */
-            .original-sentence-box {
-                padding: 14px;
-                font-size: 0.95em;
-                /* 确保移动端也是自适应高度 */
-                height: auto;
-            }
+            .modal-overlay.active .modal-card { transform: translateY(0); scale: 1; }
+            .modal-sticky-header { padding: 20px 20px 10px; border-radius: 24px 24px 0 0; }
+            .modal-scroll-body { padding: 20px; padding-bottom: 40px; }
+            .original-sentence-box { padding: 14px; font-size: 0.95em; height: auto; }
         }
     </style>
 </head>
@@ -349,7 +343,7 @@
                 <div class="modal-header-top">
                     <div class="modal-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        AI 分析
+                        <span>AI 分析</span>
                     </div>
                     <div class="modal-actions">
                         <button id="copyAiContentBtn" class="icon-btn" title="复制结果">
@@ -510,7 +504,6 @@
             const w = document.createTreeWalker(document.getElementById('dynamic-content'), NodeFilter.SHOW_TEXT);
             const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
             nodes.forEach(n => {
-                // 简单的句号分割逻辑，可根据需要增强
                 if (n.nodeValue.includes('.')) {
                     const f = document.createDocumentFragment();
                     n.nodeValue.split(/(\.)/).forEach(p => {
@@ -632,7 +625,7 @@
             // 点击遮罩关闭
             document.querySelectorAll('.modal-overlay').forEach(o => o.onclick = e => { if(e.target===o) closeModal(o.id) });
 
-            // 双击弹窗关闭 (智能判断，避免选中文本时误触)
+            // 双击弹窗关闭
             document.querySelectorAll('.modal-card').forEach(c => {
                 c.addEventListener('dblclick', (e) => {
                     if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
