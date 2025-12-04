@@ -12,7 +12,7 @@
 
         body {
             font-family: 'Noto Serif SC', 'Inter', serif;
-            line-height: 1.75;
+            line-height: 1.8; /* 稍微增加行高，更像阅读类App */
             color: #2c2c2c;
             background: linear-gradient(135deg, #f8f4f0 0%, #e8e4e0 25%, #f2ede8 50%, #ebe6e1 75%, #f5f1ec 100%);
             background-attachment: fixed;
@@ -96,33 +96,31 @@
         
         .ai-analyze-btn {
             display: inline-flex; align-items: center; justify-content: center;
-            background-color: rgba(139, 115, 85, 0.08); border: 1px solid rgba(139, 115, 85, 0.15);
-            border-radius: 50%; width: 20px; height: 20px; margin: 0 3px; cursor: pointer;
-            color: #8b7355; position: relative; top: -2px; transition: all 0.2s;
+            background-color: rgba(139, 115, 85, 0.1); /* 稍微调淡背景，更像图标 */
+            border-radius: 50%; width: 18px; height: 18px; margin: 0 4px; cursor: pointer;
+            color: #8b7355; position: relative; top: -1px; transition: all 0.2s;
         }
         .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
         .ai-analyze-btn.last-clicked {
             background-color: #d32f2f !important;
             color: white !important;
-            border-color: #d32f2f !important;
-            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5);
             transform: scale(1.15);
             z-index: 10;
         }
         .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
 
-        /* --- [新增] 高亮单词样式 --- */
+        /* --- [修改] 高亮单词样式 (仿图片效果：纯文字颜色) --- */
         .highlight-blue {
-            background-color: rgba(66, 165, 245, 0.25);
-            border-bottom: 2px solid #42a5f5;
-            color: inherit;
-            border-radius: 2px;
+            background-color: transparent; /* 去掉背景 */
+            border-bottom: none;          /* 去掉下划线 */
+            color: #1967d2;               /* 谷歌风格的蓝色 */
+            font-weight: 500;             /* 稍微加粗一点点，增强辨识度 */
         }
         .highlight-red {
-            background-color: rgba(239, 83, 80, 0.25);
-            border-bottom: 2px solid #ef5350;
-            color: inherit;
-            border-radius: 2px;
+            background-color: transparent; /* 去掉背景 */
+            border-bottom: none;          /* 去掉下划线 */
+            color: #d93025;               /* 谷歌风格的红色 */
+            font-weight: 500;             /* 稍微加粗一点点，增强辨识度 */
         }
 
         /* --- 通用模态框结构 --- */
@@ -328,11 +326,11 @@
                     <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
                 </div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#42a5f5;">高亮词表 URL (蓝色)</label>
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#1967d2;">高亮词表 URL (蓝色)</label>
                     <input type="text" id="blueUrlInput" class="settings-input" placeholder="https://raw.github.../one.txt">
                 </div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#ef5350;">高亮词表 URL (红色)</label>
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#d93025;">高亮词表 URL (红色)</label>
                     <input type="text" id="redUrlInput" class="settings-input" placeholder="https://raw.github.../two.txt">
                 </div>
                 <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
@@ -375,7 +373,7 @@
         let isReading = false;
         let currentSpeed = -20;
         
-        // [新增] 高亮词表集合
+        // 高亮词表集合
         let blueWords = new Set();
         let redWords = new Set();
 
@@ -407,7 +405,7 @@
         }
         function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
 
-        // --- [新增] 词表获取函数 ---
+        // --- 词表获取函数 ---
         async function fetchWords(url) {
             if (!url) return new Set();
             try {
@@ -668,10 +666,8 @@
 
         // --- 文本处理与注入 (核心) ---
 
-        // [新增] 单词高亮处理函数
+        // 单词高亮处理函数
         function highlightText(text, container) {
-            // 使用正则分割单词，同时保留分隔符
-            // 匹配: [单词] 或 [非单词字符]
             const parts = text.split(/([a-zA-Z0-9\u00C0-\u024F]+)/g); 
             
             parts.forEach(part => {
@@ -706,7 +702,6 @@
             const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
             
             nodes.forEach(n => {
-                // 如果节点已经在 highligh span 内部，跳过 (虽然 treeWalker 通常不进 span 除非设置了，但为了安全)
                 if(n.parentElement && (n.parentElement.classList.contains('highlight-blue') || n.parentElement.classList.contains('highlight-red'))) return;
 
                 if (n.nodeValue.includes('.')) {
@@ -717,10 +712,9 @@
                             b.className = 'ai-analyze-btn';
                             b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
                             b.onclick = (e) => handleAIAnalyzeClick(e.target);
-                            f.appendChild(document.createTextNode('.')); // 保持句号
+                            f.appendChild(document.createTextNode('.')); 
                             f.appendChild(b);
                         } else if (p.length > 0) {
-                            // [修改] 调用高亮处理，而不是直接添加纯文本
                             highlightText(p, f);
                         }
                     });
@@ -728,7 +722,6 @@
                 }
             });
 
-            // 恢复点击状态
             const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
             if (lastClickedIndex !== null) {
                 const allBtns = div.querySelectorAll('.ai-analyze-btn');
@@ -742,7 +735,7 @@
         function extractSentenceBefore(node) {
             let t = "", c = node.previousSibling;
             while(c) {
-                if(c.nodeType === 3) { // Text Node
+                if(c.nodeType === 3) { 
                     t = c.nodeValue + t; 
                     if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { t=t.substring(t.lastIndexOf('.')+1); break; } 
                 }
@@ -750,7 +743,6 @@
                     break;
                 }
                 else {
-                    // [修改] 对于 span 元素 (高亮词)，获取 innerText 并拼接
                     t = c.innerText + t;
                 }
                 c = c.previousSibling;
@@ -796,13 +788,13 @@
             document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-            // [新增] 载入 URL 设置
+            // 载入 URL 设置
             document.getElementById('blueUrlInput').value = localStorage.getItem('highlight_url_blue') || '';
             document.getElementById('redUrlInput').value = localStorage.getItem('highlight_url_red') || '';
 
             updateCacheDisplay();
 
-            // [新增] 先加载词表，再加载内容
+            // 先加载词表，再加载内容
             await updateWordLists();
 
             // 初始加载内容
@@ -827,7 +819,7 @@
                 localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
                 localStorage.setItem('groq_model', document.getElementById('modelSelect').value);
                 localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
-                // [新增] 保存 URL 设置
+                // 保存 URL 设置
                 localStorage.setItem('highlight_url_blue', document.getElementById('blueUrlInput').value.trim());
                 localStorage.setItem('highlight_url_red', document.getElementById('redUrlInput').value.trim());
 
