@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中转站 - AI 增强版</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -54,7 +55,7 @@
             z-index: 1000;
             display: flex;
             align-items: center;
-            justify-content: center; /* 居中 */
+            justify-content: center;
             gap: 25px;
             border-bottom: 1px solid rgba(198, 167, 130, 0.15);
         }
@@ -253,7 +254,7 @@
         .modal-card {
             background: #fcfbf9;
             width: 90%;
-            max-width: 600px;
+            max-width: 650px; /* 稍微加宽以适应更好的排版 */
             border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             padding: 30px;
@@ -277,22 +278,41 @@
             padding-bottom: 15px;
         }
 
+        .modal-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .modal-title {
             font-size: 1.3em;
             color: #6b5b4f;
             font-weight: 600;
         }
 
-        .modal-close {
+        .modal-close, .modal-copy-btn {
             background: none;
             border: none;
-            font-size: 1.5em;
             cursor: pointer;
             color: #999;
-            transition: color 0.2s;
+            transition: color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .modal-close:hover { color: #555; }
+        .modal-close:hover, .modal-copy-btn:hover { color: #555; }
+        
+        .modal-copy-btn svg, .modal-close svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* 复制成功的提示效果 */
+        .copy-success {
+            color: #8b7355 !important;
+            transform: scale(1.1);
+        }
 
         /* --- 设置面板样式 --- */
         .settings-group { margin-bottom: 20px; }
@@ -326,24 +346,64 @@
         }
         .save-btn:hover { background: #6b5b4f; }
 
-        /* --- AI 结果样式 --- */
+        /* --- AI 结果 & Markdown 渲染样式 --- */
         .ai-result-content {
             font-family: 'Noto Serif SC', serif;
             line-height: 1.8;
             color: #333;
             font-size: 1.05em;
         }
+        
+        /* Markdown 特定样式 */
+        .ai-result-content h1, 
+        .ai-result-content h2, 
+        .ai-result-content h3 {
+            color: #6b5b4f;
+            margin-top: 1.2em;
+            margin-bottom: 0.8em;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        .ai-result-content h1 { font-size: 1.4em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        .ai-result-content h2 { font-size: 1.25em; }
+        .ai-result-content h3 { font-size: 1.1em; }
+        
         .ai-result-content p { margin-bottom: 1em; }
-        .ai-result-content strong { color: #8b7355; }
+        
+        .ai-result-content strong {
+            color: #8b7355;
+            font-weight: 600;
+        }
+        
+        .ai-result-content ul, .ai-result-content ol {
+            padding-left: 20px;
+            margin-bottom: 1em;
+        }
+        
+        .ai-result-content li {
+            margin-bottom: 0.5em;
+        }
+        
+        .ai-result-content code {
+            background: rgba(139, 115, 85, 0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Inter', monospace;
+            font-size: 0.9em;
+            color: #6b5b4f;
+        }
+
         .ai-loading { text-align: center; color: #8b7355; padding: 20px; }
+        
         .original-sentence {
             background: rgba(139, 115, 85, 0.08);
-            padding: 10px 15px;
+            padding: 12px 18px;
             border-left: 3px solid #8b7355;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             font-style: italic;
             color: #555;
-            font-size: 0.9em;
+            font-size: 0.95em;
+            border-radius: 0 8px 8px 0;
         }
 
         @media (max-width: 768px) {
@@ -385,7 +445,9 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3 class="modal-title">AI 配置</h3>
-                <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
+                <button class="modal-close" onclick="closeModal('settingsModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <div class="settings-group">
                 <label class="settings-label">GROQ API Key</label>
@@ -410,7 +472,17 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3 class="modal-title">AI 分析</h3>
-                <button class="modal-close" onclick="closeModal('aiResultModal')">&times;</button>
+                <div class="modal-header-actions">
+                    <button id="copyAiContentBtn" class="modal-copy-btn" title="复制内容">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                    <button class="modal-close" onclick="closeModal('aiResultModal')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
             </div>
             <div class="original-sentence" id="aiOriginalSentence"></div>
             <div id="aiResultContent" class="ai-result-content">
@@ -428,9 +500,12 @@
         let currentTextToSpeak = '';
         let currentSpeed = -20;
         let currentPosition = 0;
+        
+        // 保存当前的 AI 响应原始内容以便复制
+        let currentRawAIResponse = "";
 
         // --- AI 配置默认值 ---
-        const DEFAULT_PROMPT = "Explain the grammar and meaning of the following sentence in simple Chinese.";
+        const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式清晰地输出。";
         const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
         // --- TTS 功能 ---
@@ -446,7 +521,6 @@
             const trimmedText = textToSpeak.trim();
             let finaltextToSpeak = trimmedText;
             
-            // 简单处理 URL 开头的文本
             if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
                 finaltextToSpeak = trimmedText.substring(3);
             }
@@ -526,12 +600,9 @@
             }
         }
 
-        // 专门用于获取纯净文本（去除 AI 按钮文本）
         function getCleanTextForTTS() {
             const contentDiv = document.getElementById('dynamic-content');
-            // 克隆节点以避免修改页面显示
             const clone = contentDiv.cloneNode(true);
-            // 移除所有 AI 按钮
             const buttons = clone.querySelectorAll('.ai-analyze-btn');
             buttons.forEach(btn => btn.remove());
             return clone.innerText;
@@ -559,14 +630,12 @@
         // --- 内容处理与 AI 按钮注入 ---
         function injectAIButtons() {
             const container = document.getElementById('dynamic-content');
-            // 使用 TreeWalker 遍历所有文本节点
             const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
             
             const nodesToReplace = [];
             
             while(walker.nextNode()) {
                 const node = walker.currentNode;
-                // 简单的判断：如果文本包含点号 . (这里假设英文内容为主，如果是中文可以加 || node.nodeValue.includes('。'))
                 if (node.nodeValue && node.nodeValue.includes('.')) {
                     nodesToReplace.push(node);
                 }
@@ -574,37 +643,19 @@
 
             nodesToReplace.forEach(node => {
                 const text = node.nodeValue;
-                // 按 . 分割，保留 .
                 const parts = text.split(/(\.)/);
                 
                 if (parts.length > 1) {
                     const fragment = document.createDocumentFragment();
-                    let bufferSentence = ""; // 用于构建当前句子
-
                     for (let i = 0; i < parts.length; i++) {
                         const part = parts[i];
-                        
-                        // 插入文本
                         fragment.appendChild(document.createTextNode(part));
-                        
-                        // 如果是分隔符 '.'，且前面有内容，则插入按钮
                         if (part === '.') {
-                            // 此时 bufferSentence 存储的是点号之前的内容
-                            // 但我们需要向上回溯完整的句子比较困难，这里简化处理：
-                            // 实际上 split 后，parts[i-1] 就是点号前的那段文本。
-                            // 但为了获取完整句子（可能跨越了节点），这里采用简单策略：
-                            // 将当前段落作为上下文，或者只取点号前最近的一段文本。
-                            // 优化策略：在点击时动态获取该按钮前的文本。
-                            
                             const btn = document.createElement('span');
                             btn.className = 'ai-analyze-btn';
-                            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>`; // Info icon
+                            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>`;
                             btn.title = "AI 分析";
-                            
-                            // 绑定点击事件
-                            // 为了获取准确的上下文，我们保存这个按钮的引用
                             btn.onclick = (e) => handleAIAnalyzeClick(e.target);
-                            
                             fragment.appendChild(btn);
                         }
                     }
@@ -615,12 +666,9 @@
 
         // --- AI 交互逻辑 ---
         async function handleAIAnalyzeClick(target) {
-            // 找到按钮元素（防止点击到 SVG 内部）
             const btn = target.closest('.ai-analyze-btn');
             if (!btn) return;
 
-            // 1. 获取上下文（句子）
-            // 简单的逻辑：获取该按钮之前的所有文本，直到遇到上一个点号或块级元素开始
             const sentence = extractSentenceBefore(btn);
             
             if (!sentence || sentence.length < 2) {
@@ -628,13 +676,18 @@
                 return;
             }
 
-            // 2. 打开模态框显示加载中
             document.getElementById('aiOriginalSentence').textContent = sentence;
             const resultContainer = document.getElementById('aiResultContent');
+            const copyBtn = document.getElementById('copyAiContentBtn');
+            
+            // 重置内容和复制按钮状态
             resultContainer.innerHTML = '<div class="ai-loading">正在思考中...</div>';
+            currentRawAIResponse = ""; // 清空缓存
+            copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+            copyBtn.classList.remove('copy-success');
+            
             openModal('aiResultModal');
 
-            // 3. 调用 API
             try {
                 const apiKey = localStorage.getItem('groq_api_key');
                 if (!apiKey) {
@@ -670,54 +723,82 @@
                 const data = await response.json();
                 const content = data.choices[0]?.message?.content || "无内容返回";
                 
-                // 简单的 Markdown 转 HTML (换行处理)
-                resultContainer.innerHTML = content.replace(/\n/g, '<br>');
+                // 保存原始 Markdown 用于复制
+                currentRawAIResponse = content;
+
+                // 使用 marked.js 渲染 Markdown 为 HTML
+                resultContainer.innerHTML = marked.parse(content);
 
             } catch (error) {
                 resultContainer.innerHTML = `<p style="color:red;">发生错误: ${error.message}</p>`;
             }
         }
 
-        // 提取按钮前的句子
         function extractSentenceBefore(btnNode) {
             let text = "";
             let currentNode = btnNode.previousSibling;
             
-            // 向前遍历直到遇到另一个按钮或块级元素边界
             while (currentNode) {
                 if (currentNode.nodeType === Node.TEXT_NODE) {
                     text = currentNode.nodeValue + text;
-                    // 如果文本里包含了点号，说明跨越了上一句，截取最后一句
                     if (text.lastIndexOf('.') !== -1 && text.lastIndexOf('.') < text.length - 1) {
                          text = text.substring(text.lastIndexOf('.') + 1);
                          break;
                     }
                 } else if (currentNode.classList && currentNode.classList.contains('ai-analyze-btn')) {
-                    break; // 遇到上一个按钮停止
+                    break;
                 } else {
-                    // 如果是其他元素（如 span, b 等），提取其文本
                     text = currentNode.innerText + text;
                 }
                 currentNode = currentNode.previousSibling;
             }
-            
-            // 如果是在段落中间，可能还需要向前查找（这里简化处理，只看当前节点树）
-            // 如果上面的循环没找到完整句子，可能需要向上层父级查找（逻辑较复杂，暂时只处理当前层级）
-            
             return text.trim();
         }
 
+        // --- 复制功能逻辑 ---
+        function copyToClipboard(text) {
+            if (!navigator.clipboard) {
+                // 后备方案
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    return Promise.resolve();
+                } catch (err) {
+                    return Promise.reject(err);
+                } finally {
+                    document.body.removeChild(textArea);
+                }
+            }
+            return navigator.clipboard.writeText(text);
+        }
+
+        document.getElementById('copyAiContentBtn').addEventListener('click', function() {
+            if (!currentRawAIResponse) return;
+            
+            copyToClipboard(currentRawAIResponse).then(() => {
+                const btn = this;
+                // 切换为勾选图标
+                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                btn.classList.add('copy-success');
+                
+                // 2秒后恢复
+                setTimeout(() => {
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                    btn.classList.remove('copy-success');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('复制失败');
+            });
+        });
 
         // --- UI 交互与设置 ---
-        function openModal(id) {
-            document.getElementById(id).classList.add('active');
-        }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
-        }
-
-        // 设置保存
         document.getElementById('saveSettingsBtn').addEventListener('click', () => {
             const key = document.getElementById('apiKeyInput').value.trim();
             const model = document.getElementById('modelSelect').value;
@@ -731,7 +812,6 @@
             alert('设置已保存');
         });
 
-        // 设置加载
         function loadSettings() {
             const key = localStorage.getItem('groq_api_key');
             const model = localStorage.getItem('groq_model');
@@ -748,15 +828,13 @@
             openModal('settingsModal');
         });
 
-        // 点击遮罩关闭
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) closeModal(overlay.id);
             });
         });
 
-
-        // --- 初始化与加载 ---
+        // --- 初始化 ---
         document.addEventListener('DOMContentLoaded', function() {
             const dynamicContentDiv = document.getElementById('dynamic-content');
             const readAloudButton = document.getElementById('readAloudButton');
@@ -765,10 +843,8 @@
             const readAloudContainer = document.getElementById('readAloudContainer');
             const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
 
-            // URL Hash Logic
-            function generateRandomHash() {
-                return (Math.random().toString(36).substring(2, 10) + Date.now().toString(36)).toUpperCase();
-            }
+            // Hash Logic
+            function generateRandomHash() { return (Math.random().toString(36).substring(2, 10) + Date.now().toString(36)).toUpperCase(); }
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('hash', generateRandomHash());
             window.history.replaceState({}, '', currentUrl.toString());
@@ -799,23 +875,17 @@
                 })
                 .then(data => {
                     dynamicContentDiv.innerHTML = data;
-                    
-                    // 1. 设置标题
                     let cleanedText = data.replace(/<\/?[^>]+(>|$)/g, "").trim();
                     if (cleanedText.startsWith('URL')) cleanedText = cleanedText.substring(3).trim();
                     const firstSentenceMatch = cleanedText.match(/^.*?[.?!。？！\n]/);
                     document.title = firstSentenceMatch ? firstSentenceMatch[0].substring(0, 60) : "中转站";
-
-                    // 2. 注入 AI 按钮 (关键修改)
                     injectAIButtons();
-
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     dynamicContentDiv.innerText = '无法加载内容。请检查网络。';
                 });
 
-            // Read Button Logic
             readAloudButton.addEventListener('click', function() {
                 if (isReading) pauseTTS();
                 else if (isPaused) resumeTTS();
