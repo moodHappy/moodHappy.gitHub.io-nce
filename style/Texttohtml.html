@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 阅读 & 创作助手</title>
+    <title>AI 阅读 & 创作助手 (GitHub版)</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
@@ -220,7 +220,7 @@
     </nav>
 
     <div class="content-container">
-        <div id="dynamic-content" class="text-placeholder"></div>
+        <div id="dynamic-content" class="text-placeholder">加载中...</div>
     </div>
 
     <div id="aiResultModal" class="modal-overlay">
@@ -260,7 +260,7 @@
                 
                 <div class="gen-actions">
                     <button class="btn-outline" id="genTopicsBtn" onclick="generateRandomTopics(event)">🎲 生成随机题目</button>
-                    <button class="btn-primary" onclick="confirmGenerate(event)">✨ 立即创作</button>
+                    <button class="btn-primary" onclick="confirmGenerate(event)">✨ 创作并同步GitHub</button>
                 </div>
 
                 <div id="genStatus" style="margin-top:10px; color:#8b7355; font-size:0.9em; text-align:center;"></div>
@@ -297,8 +297,12 @@
             </div>
             <div class="modal-scroll-body">
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GROQ API Key</label>
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GROQ API Key (创作)</label>
                     <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
+                </div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token (同步)</label>
+                    <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
                 </div>
                 <div class="settings-group">
                     <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">模型</label>
@@ -324,11 +328,19 @@
         const API_URL = "https://api.groq.com/openai/v1/chat/completions";
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const ttsDomains = ['https://ms-ra-forwarder-for-ifreetime-2.vercel.app/'];
+        
+        // --- GitHub 配置 ---
+        const GH_CONFIG = {
+            owner: 'moodHappy',
+            repo: 'HelloWorld',
+            path: 'Notes/B1.md'
+        };
+        const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+
         let summaryVoice = 'en-US-EricNeural';
         let currentAudio = null;
         let isReading = false;
         let currentSpeed = -20;
-        let currentRawAIResponse = "";
 
         // --- 生成配置 ---
         const THEME_LIBRARY = { '日常生活':[],'悬疑推理':[],'科幻奇幻':[],'历史现实':[],'哲理寓言':[],'爱情情感':[],'心理情绪':[],'幽默讽刺':[],'奇遇冒险':[] };
@@ -362,7 +374,7 @@
         async function callGroqAPI(messages, temp = 0.7) {
             const key = localStorage.getItem('groq_api_key');
             const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
-            if (!key) throw new Error("请先在设置中配置 API Key");
+            if (!key) throw new Error("请先在设置中配置 Groq API Key");
             
             const res = await fetch(API_URL, {
                 method: 'POST',
@@ -372,6 +384,43 @@
             const data = await res.json();
             if(!res.ok) throw new Error(data.error?.message || "请求失败");
             return data.choices[0]?.message?.content || "";
+        }
+
+        // --- GitHub API 操作 ---
+        async function getGitHubSHA(token) {
+            const res = await fetch(GH_API_BASE, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (res.status === 404) return null; // 文件不存在
+            if (!res.ok) throw new Error(`GitHub 读取失败: ${res.status}`);
+            const data = await res.json();
+            return data.sha;
+        }
+
+        function utf8_to_b64(str) {
+            return window.btoa(unescape(encodeURIComponent(str)));
+        }
+
+        async function uploadToGitHub(content, token) {
+            const sha = await getGitHubSHA(token);
+            const body = {
+                message: "Update via AI Reader",
+                content: utf8_to_b64(content),
+                committer: { name: "AI Reader", email: "bot@ai-reader.com" }
+            };
+            if (sha) body.sha = sha;
+
+            const res = await fetch(GH_API_BASE, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || "上传失败");
+            }
+            return true;
         }
 
         // --- 分析功能 ---
@@ -464,33 +513,51 @@
         }
 
         async function startGeneration(topic) {
+            const ghToken = localStorage.getItem('gh_token');
+            const statusDiv = document.getElementById('genStatus');
+
+            if (!ghToken) {
+                statusDiv.innerText = "错误：请先在设置中配置 GitHub Token";
+                return;
+            }
+
             const diff = document.getElementById('difficultySelect').value;
             const style = document.getElementById('styleSelect').value;
-            const statusDiv = document.getElementById('genStatus');
             const contentDiv = document.getElementById('dynamic-content');
             
             statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
             
-            const prompt = `Write a short story in English (approx 150 words), CEFR Level ${diff}, based on title/theme: "${topic}". Style: ${style}. Output ONLY the story text.`;
+            const prompt = `Write a short story in English (approx 150 words), CEFR Level ${diff}, based on title/theme: "${topic}". Style: ${style}. Output ONLY the story text. No intro/outro.`;
             
             try {
+                // 1. 生成故事
                 const story = await callGroqAPI([{role:"user", content: prompt}]);
+                
+                // 2. 上传到 GitHub
+                statusDiv.innerText = "创作完成，正在同步到 GitHub...";
+                await uploadToGitHub(story, ghToken);
+
+                // 3. 更新界面
+                statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
                 contentDiv.innerHTML = story.replace(/\n/g, '<br><br>');
                 injectAIButtons();
-                statusDiv.innerText = "";
-            } catch(err) { statusDiv.innerText = "创作失败: " + err.message; }
+                
+            } catch(err) { 
+                console.error(err);
+                statusDiv.innerText = "失败: " + err.message; 
+            }
         }
 
         // --- 风格管理 ---
         function openStyleManagementModal() {
             populateCustomStyleList();
-            document.getElementById('generateModal').classList.remove('active'); // 暂时隐藏上级
+            document.getElementById('generateModal').classList.remove('active'); 
             document.getElementById('styleManagementModal').classList.add('active');
         }
         function closeStyleManagementModal() {
             document.getElementById('styleManagementModal').classList.remove('active');
-            document.getElementById('generateModal').classList.add('active'); // 恢复上级
+            document.getElementById('generateModal').classList.add('active'); 
             populateStyleSelector();
         }
         function populateCustomStyleList() {
@@ -526,8 +593,6 @@
         function injectAIButtons() {
             const div = document.getElementById('dynamic-content');
             if(!div.innerText.trim()) return;
-            
-            // 简单处理：先移除旧按钮，避免重复
             div.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
             
             const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
@@ -595,18 +660,31 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('apiKeyInput').value = localStorage.getItem('groq_api_key') || '';
+            document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             updateCacheDisplay();
             
-            // 初始加载一个示例文本
-            document.getElementById('dynamic-content').innerHTML = "Welcome! Click the magic wand icon above to generate a short story, or paste your own text here.";
-            injectAIButtons();
+            // 初始加载：使用 Raw URL 加载，确保速度，避免消耗 API 限额
+            const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
+            fetch(rawUrl)
+                .then(r => {
+                    if(!r.ok) throw new Error("无法加载 GitHub 文件");
+                    return r.text();
+                })
+                .then(d => {
+                    document.getElementById('dynamic-content').innerHTML = d.replace(/\n/g, '<br>');
+                    injectAIButtons();
+                })
+                .catch(e => {
+                    document.getElementById('dynamic-content').innerHTML = "欢迎！请点击顶部魔术棒图标开始创作。<br>(注意：初始加载 GitHub 内容失败，可能是仓库私有或网络问题，但不影响创作功能)";
+                });
 
             document.getElementById('speedRange').oninput = function() { document.getElementById('currentSpeedValue').innerText = this.value; currentSpeed = this.value; };
             document.getElementById('settingsBtn').onclick = () => openModal('settingsModal');
             document.getElementById('saveSettingsBtn').onclick = () => {
                 localStorage.setItem('groq_api_key', document.getElementById('apiKeyInput').value);
+                localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
                 localStorage.setItem('groq_model', document.getElementById('modelSelect').value);
                 localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
                 closeModal('settingsModal');
