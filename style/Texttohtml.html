@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中转站 - AI 增强版</title>
+    <title>中转站 - 智能缓存版</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Noto Serif SC', 'Inter', serif;
@@ -25,409 +21,218 @@
             overflow-x: hidden;
         }
 
-        /* 背景纹理 */
         body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background:
-                radial-gradient(circle at 20% 80%, rgba(198, 167, 130, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(158, 125, 95, 0.06) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(178, 145, 118, 0.04) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(198, 167, 130, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(158, 125, 95, 0.06) 0%, transparent 50%);
+            pointer-events: none; z-index: -1;
         }
 
         /* --- 顶部控制栏 --- */
         .speed-control-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: linear-gradient(90deg, rgba(248, 244, 240, 0.95) 0%, rgba(242, 237, 232, 0.95) 50%, rgba(235, 230, 225, 0.95) 100%);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            padding: 20px 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: rgba(248, 244, 240, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 15px 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
             z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 25px;
+            display: flex; align-items: center; justify-content: center; gap: 20px;
             border-bottom: 1px solid rgba(198, 167, 130, 0.15);
         }
 
-        /* 设置按钮样式 */
         .settings-toggle {
-            position: absolute;
-            right: 30px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: #6b5b4f;
-            transition: transform 0.3s ease, color 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute; right: 20px;
+            background: transparent; border: none; cursor: pointer; color: #6b5b4f;
+            transition: all 0.3s ease;
         }
+        .settings-toggle:hover { color: #8b7355; transform: rotate(90deg); }
+        .settings-toggle svg { width: 24px; height: 24px; }
 
-        .settings-toggle:hover {
-            color: #8b7355;
-            transform: rotate(90deg);
-        }
-
-        .settings-toggle svg {
-            width: 28px;
-            height: 28px;
-        }
-
-        .speed-label {
-            font-size: 1.15em;
-            font-weight: 500;
-            color: #6b5b4f;
-            white-space: nowrap;
-            font-family: 'Inter', sans-serif;
-        }
-
+        .speed-label { font-size: 1em; color: #6b5b4f; white-space: nowrap; font-family: 'Inter', sans-serif; }
         .speed-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 10px;
-            background: linear-gradient(90deg, #d4c4b0 0%, #c6a782 50%, #9e7d5f 100%);
-            border-radius: 25px;
-            cursor: pointer;
-            width: 220px;
-            max-width: 50%;
+            -webkit-appearance: none; height: 6px; background: #d4c4b0;
+            border-radius: 25px; cursor: pointer; width: 200px; max-width: 40%;
         }
-
         .speed-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            background: #a68b6b;
-            border-radius: 50%;
-            cursor: grab;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            -webkit-appearance: none; width: 18px; height: 18px;
+            background: #a68b6b; border-radius: 50%; cursor: grab;
+            border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-
-        .speed-value-display {
-            font-weight: 600;
-            color: #8b7355;
-            min-width: 35px;
-            text-align: center;
-        }
+        .speed-value-display { font-weight: 600; color: #8b7355; min-width: 35px; text-align: center; }
 
         /* --- 朗读按钮 --- */
         .read-aloud-container {
-            position: fixed;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+            z-index: 100; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .read-aloud-container.hidden {
-            opacity: 0;
-            visibility: hidden;
-            transform: translateX(-50%) translateY(20px);
-        }
+        .read-aloud-container.hidden { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); }
 
         .read-aloud-button {
             background: linear-gradient(135deg, #8b7355 0%, #a68b6b 100%);
-            color: #f8f4f0;
-            padding: 16px 32px;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.2em;
-            font-weight: 500;
-            cursor: pointer;
-            box-shadow: 0 8px 24px rgba(139, 115, 85, 0.3);
-            font-family: 'Noto Serif SC', serif;
-            letter-spacing: 1px;
-            transition: transform 0.2s;
+            color: #f8f4f0; padding: 14px 30px; border: none; border-radius: 50px;
+            font-size: 1.1em; cursor: pointer; box-shadow: 0 8px 24px rgba(139, 115, 85, 0.3);
+            font-family: 'Noto Serif SC', serif; letter-spacing: 1px; transition: transform 0.2s;
         }
-
-        .read-aloud-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(139, 115, 85, 0.4);
-        }
-
+        .read-aloud-button:hover { transform: translateY(-2px); }
         .read-aloud-button.reading {
             background: linear-gradient(135deg, #a0522d 0%, #cd853f 100%);
             animation: pulse 2s infinite;
         }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 8px 24px rgba(160, 82, 45, 0.3); }
-            50% { box-shadow: 0 12px 32px rgba(160, 82, 45, 0.5); }
-        }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 8px 24px rgba(160, 82, 45, 0.3); } 50% { box-shadow: 0 12px 32px rgba(160, 82, 45, 0.5); } }
 
         /* --- 内容区域 --- */
-        .content-container {
-            max-width: 850px;
-            margin: 0 auto;
-            padding: 40px 30px;
-            position: relative;
-        }
-
+        .content-container { max-width: 850px; margin: 0 auto; padding: 20px 20px; position: relative; }
         .content-container::before {
-            content: '';
-            position: absolute;
-            top: 20px; left: 15px; right: 15px; bottom: 20px;
-            background: rgba(248, 244, 240, 0.85);
-            border-radius: 25px;
-            z-index: -1;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+            content: ''; position: absolute; top: 0; left: 10px; right: 10px; bottom: 0;
+            background: rgba(248, 244, 240, 0.85); border-radius: 20px; z-index: -1;
+            backdrop-filter: blur(10px); box-shadow: 0 20px 60px rgba(0,0,0,0.05);
         }
-
         .text-placeholder {
-            min-height: 400px;
-            padding: 50px 45px;
-            font-size: 1.45em;
-            line-height: 1.8;
-            color: #2c2c2c;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Noto Serif SC', serif;
+            min-height: 400px; padding: 40px 30px; font-size: 1.35em; line-height: 1.8;
+            color: #2c2c2c; white-space: pre-wrap; font-family: 'Noto Serif SC', serif;
         }
 
-        /* --- AI 按钮样式 --- */
+        /* --- AI 按钮 --- */
         .ai-analyze-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(139, 115, 85, 0.1);
-            border: 1px solid rgba(139, 115, 85, 0.2);
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            margin-left: 4px;
-            margin-right: 4px;
-            cursor: pointer;
-            vertical-align: middle;
-            transition: all 0.2s ease;
-            color: #8b7355;
-            font-size: 12px;
-            position: relative;
-            top: -2px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background-color: rgba(139, 115, 85, 0.1); border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 50%; width: 22px; height: 22px; margin: 0 4px;
+            cursor: pointer; vertical-align: middle; transition: all 0.2s ease;
+            color: #8b7355; position: relative; top: -2px;
         }
+        .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
+        .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
-        .ai-analyze-btn:hover {
-            background-color: #8b7355;
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .ai-analyze-btn svg {
-            width: 14px;
-            height: 14px;
-            fill: currentColor;
-        }
-
-        /* --- 模态框通用样式 --- */
+        /* --- 模态框通用 --- */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(44, 44, 44, 0.4);
-            backdrop-filter: blur(5px);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 44, 44, 0.4); backdrop-filter: blur(5px);
+            z-index: 2000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
         }
-
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
 
         .modal-card {
-            background: #fcfbf9;
-            width: 90%;
-            max-width: 650px; /* 稍微加宽以适应更好的排版 */
-            border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            padding: 30px;
-            transform: translateY(20px);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            max-height: 85vh;
-            overflow-y: auto;
+            background: #fcfbf9; width: 92%; max-width: 650px;
+            border-radius: 16px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            max-height: 85vh; /* 限制最大高度 */
+            display: flex; /* 使用 Flex 布局实现固定头部 */
+            flex-direction: column; 
             border: 1px solid rgba(139, 115, 85, 0.2);
+            overflow: hidden; /* 防止整个卡片滚动 */
         }
 
-        .modal-overlay.active .modal-card {
-            transform: translateY(0);
+        /* --- 模态框固定区域（头部 + 原文） --- */
+        .modal-sticky-header {
+            flex-shrink: 0; /* 禁止压缩 */
+            background: #fcfbf9;
+            padding: 25px 25px 15px 25px;
+            border-bottom: 1px solid rgba(139, 115, 85, 0.15);
+            z-index: 10;
         }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            padding-bottom: 15px;
+        .modal-header-top {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px;
         }
 
-        .modal-header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .modal-title {
-            font-size: 1.3em;
-            color: #6b5b4f;
-            font-weight: 600;
-        }
-
-        .modal-close, .modal-copy-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.2s, transform 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-close:hover, .modal-copy-btn:hover { color: #555; }
+        .modal-title { font-size: 1.25em; color: #6b5b4f; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .modal-title svg { width: 20px; height: 20px; }
         
-        .modal-copy-btn svg, .modal-close svg {
-            width: 24px;
-            height: 24px;
+        .modal-actions { display: flex; align-items: center; gap: 15px; }
+        .action-btn {
+            background: none; border: none; cursor: pointer; color: #999;
+            transition: color 0.2s; display: flex;
         }
-        
-        /* 复制成功的提示效果 */
-        .copy-success {
-            color: #8b7355 !important;
-            transform: scale(1.1);
-        }
+        .action-btn:hover { color: #555; }
+        .action-btn.success { color: #8b7355; }
+        .action-btn svg { width: 22px; height: 22px; }
 
-        /* --- 设置面板样式 --- */
-        .settings-group { margin-bottom: 20px; }
-        .settings-label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; font-size: 0.95em; }
-        .settings-input, .settings-select, .settings-textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #dcdcdc;
+        /* 原文展示区域样式优化 */
+        .original-sentence-box {
+            background: rgba(139, 115, 85, 0.08);
+            padding: 15px;
             border-radius: 8px;
-            font-family: 'Inter', sans-serif;
-            font-size: 1em;
+            border-left: 4px solid #8b7355;
+            color: #4a4a4a;
+            font-family: 'Noto Serif SC', serif;
+            font-style: italic;
+            font-size: 0.95em;
+            line-height: 1.6;
+            max-height: 120px; /* 防止原文太长占满屏幕 */
+            overflow-y: auto;
+        }
+
+        /* --- 模态框滚动区域（AI 结果） --- */
+        .modal-scroll-body {
+            flex: 1; /* 占据剩余空间 */
+            overflow-y: auto; /* 允许内部滚动 */
+            padding: 25px;
             background: #fff;
-            transition: border-color 0.2s;
         }
-        .settings-input:focus, .settings-textarea:focus {
-            outline: none;
-            border-color: #8b7355;
-            box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
-        }
-        .settings-textarea { min-height: 80px; resize: vertical; }
-        .save-btn {
-            width: 100%;
-            padding: 12px;
-            background: #8b7355;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .save-btn:hover { background: #6b5b4f; }
 
-        /* --- AI 结果 & Markdown 渲染样式 --- */
+        /* AI 结果 Markdown 样式 */
         .ai-result-content {
             font-family: 'Noto Serif SC', serif;
-            line-height: 1.8;
-            color: #333;
-            font-size: 1.05em;
+            line-height: 1.8; color: #333; font-size: 1.05em;
         }
-        
-        /* Markdown 特定样式 */
-        .ai-result-content h1, 
-        .ai-result-content h2, 
-        .ai-result-content h3 {
-            color: #6b5b4f;
-            margin-top: 1.2em;
-            margin-bottom: 0.8em;
-            font-weight: 600;
-            line-height: 1.4;
+        .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 {
+            color: #6b5b4f; margin: 1.2em 0 0.6em 0; font-weight: 600;
         }
-        .ai-result-content h1 { font-size: 1.4em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
-        .ai-result-content h2 { font-size: 1.25em; }
-        .ai-result-content h3 { font-size: 1.1em; }
-        
-        .ai-result-content p { margin-bottom: 1em; }
-        
-        .ai-result-content strong {
-            color: #8b7355;
-            font-weight: 600;
-        }
-        
-        .ai-result-content ul, .ai-result-content ol {
-            padding-left: 20px;
-            margin-bottom: 1em;
-        }
-        
-        .ai-result-content li {
-            margin-bottom: 0.5em;
-        }
-        
+        .ai-result-content h3 { font-size: 1.1em; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .ai-result-content strong { color: #a0522d; font-weight: 600; }
+        .ai-result-content p { margin-bottom: 1em; text-align: justify; }
+        .ai-result-content ul { padding-left: 20px; margin-bottom: 1em; }
+        .ai-result-content li { margin-bottom: 0.5em; }
         .ai-result-content code {
-            background: rgba(139, 115, 85, 0.1);
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: 'Inter', monospace;
-            font-size: 0.9em;
-            color: #6b5b4f;
+            background: #f4f4f4; padding: 2px 5px; border-radius: 4px;
+            font-family: monospace; font-size: 0.9em; color: #d63384;
         }
 
-        .ai-loading { text-align: center; color: #8b7355; padding: 20px; }
-        
-        .original-sentence {
-            background: rgba(139, 115, 85, 0.08);
-            padding: 12px 18px;
-            border-left: 3px solid #8b7355;
-            margin-bottom: 25px;
-            font-style: italic;
-            color: #555;
-            font-size: 0.95em;
-            border-radius: 0 8px 8px 0;
+        .ai-loading {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 40px; color: #8b7355; gap: 10px;
+        }
+        .spinner {
+            width: 30px; height: 30px; border: 3px solid rgba(139, 115, 85, 0.3);
+            border-radius: 50%; border-top-color: #8b7355;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 设置面板 */
+        .settings-content { padding: 30px; }
+        .settings-group { margin-bottom: 20px; }
+        .settings-label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
+        .settings-input, .settings-select, .settings-textarea {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+        .save-btn {
+            width: 100%; padding: 12px; background: #8b7355; color: white;
+            border: none; border-radius: 8px; cursor: pointer;
         }
 
         @media (max-width: 768px) {
-            .speed-control-container { padding: 15px 20px; justify-content: space-between; }
+            .modal-card { width: 95%; max-height: 90vh; }
+            .modal-sticky-header { padding: 20px 20px 15px 20px; }
+            .modal-scroll-body { padding: 20px; }
+            .content-container { padding: 20px 15px; }
+            .speed-control-container { justify-content: space-between; padding: 15px 20px; }
             .speed-slider { width: 120px; }
-            .settings-toggle { position: static; }
-            .content-container { padding: 25px 20px; }
-            .text-placeholder { padding: 35px 25px; font-size: 1.25em; }
         }
     </style>
 </head>
 <body>
+
     <div class="speed-control-container">
-        <div style="display:flex; align-items:center; gap:15px;">
+        <div style="display:flex; align-items:center; gap:10px;">
             <span class="speed-label">语速</span>
             <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20">
             <span id="currentSpeedValue" class="speed-value-display">-20</span>
         </div>
-        
-        <button id="settingsBtn" class="settings-toggle" title="AI 配置">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-            </svg>
+        <button id="settingsBtn" class="settings-toggle" title="配置">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
         </button>
     </div>
 
@@ -436,460 +241,370 @@
     </div>
 
     <div class="content-container">
-        <div id="dynamic-content" class="text-placeholder">
-            加载中...
-        </div>
+        <div id="dynamic-content" class="text-placeholder">加载中...</div>
     </div>
 
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-card">
-            <div class="modal-header">
-                <h3 class="modal-title">AI 配置</h3>
-                <button class="modal-close" onclick="closeModal('settingsModal')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
+            <div class="modal-sticky-header">
+                <div class="modal-header-top">
+                    <h3 class="modal-title">设置</h3>
+                    <button class="action-btn" onclick="closeModal('settingsModal')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
             </div>
-            <div class="settings-group">
-                <label class="settings-label">GROQ API Key</label>
-                <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
+            <div class="modal-scroll-body">
+                <div class="settings-group">
+                    <label class="settings-label">GROQ API Key</label>
+                    <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">模型</label>
+                    <select id="modelSelect" class="settings-select">
+                        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick (17b)</option>
+                        <option value="llama-3.3-70b-versatile">Llama 3.3 Versatile (70b)</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">提示词 (System Prompt)</label>
+                    <textarea id="systemPromptInput" class="settings-textarea" rows="4"></textarea>
+                </div>
+                <button id="saveSettingsBtn" class="save-btn">保存设置</button>
+                <div style="margin-top:15px; font-size:0.85em; color:#999; text-align:center;">
+                    <span id="cacheSizeDisplay">缓存: 0 条</span> | <a href="#" onclick="clearAICache()" style="color:#8b7355;">清空缓存</a>
+                </div>
             </div>
-            <div class="settings-group">
-                <label class="settings-label">选择模型</label>
-                <select id="modelSelect" class="settings-select">
-                    <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick (17b)</option>
-                    <option value="llama-3.3-70b-versatile">Llama 3.3 Versatile (70b)</option>
-                </select>
-            </div>
-            <div class="settings-group">
-                <label class="settings-label">系统指令 (System Prompt)</label>
-                <textarea id="systemPromptInput" class="settings-textarea" placeholder="例如：翻译这句话并解释其中的语法难点。"></textarea>
-            </div>
-            <button id="saveSettingsBtn" class="save-btn">保存设置</button>
         </div>
     </div>
 
     <div id="aiResultModal" class="modal-overlay">
         <div class="modal-card">
-            <div class="modal-header">
-                <h3 class="modal-title">AI 分析</h3>
-                <div class="modal-header-actions">
-                    <button id="copyAiContentBtn" class="modal-copy-btn" title="复制内容">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                    </button>
-                    <button class="modal-close" onclick="closeModal('aiResultModal')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
+            <div class="modal-sticky-header">
+                <div class="modal-header-top">
+                    <div class="modal-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        AI 分析
+                    </div>
+                    <div class="modal-actions">
+                        <button id="copyAiContentBtn" class="action-btn" title="复制结果">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                        <button class="action-btn" onclick="closeModal('aiResultModal')" title="关闭">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
                 </div>
+                <div class="original-sentence-box" id="aiOriginalSentence"></div>
             </div>
-            <div class="original-sentence" id="aiOriginalSentence"></div>
-            <div id="aiResultContent" class="ai-result-content">
+
+            <div id="aiResultContent" class="modal-scroll-body">
                 </div>
         </div>
     </div>
 
     <script>
-        // --- 全局变量与 TTS 配置 ---
+        // --- 核心配置 ---
+        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+        const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式清晰地输出，重点词汇可以加粗。";
+        
+        // TTS 相关
         const ttsDomains = ['https://ms-ra-forwarder-for-ifreetime-2.vercel.app/'];
         let summaryVoice = 'en-US-EricNeural';
         let currentAudio = null;
         let isReading = false;
         let isPaused = false;
-        let currentTextToSpeak = '';
         let currentSpeed = -20;
-        let currentPosition = 0;
-        
-        // 保存当前的 AI 响应原始内容以便复制
         let currentRawAIResponse = "";
 
-        // --- AI 配置默认值 ---
-        const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式清晰地输出。";
-        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+        // --- 缓存系统 (24小时) ---
+        const CACHE_PREFIX = 'ai_cache_v1_';
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时
 
-        // --- TTS 功能 ---
-        function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
-            if (!textToSpeak || textToSpeak.trim() === '') return;
-
-            if (currentAudio && currentAudio.played) {
-                currentAudio.pause();
-                currentAudio = null;
+        function generateCacheKey(text, prompt, model) {
+            // 简单的哈希生成，结合文本、提示词和模型
+            const str = text + "|||" + prompt + "|||" + model;
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
             }
+            return CACHE_PREFIX + Math.abs(hash);
+        }
 
-            currentTextToSpeak = textToSpeak;
-            const trimmedText = textToSpeak.trim();
-            let finaltextToSpeak = trimmedText;
+        function getFromCache(key) {
+            const itemStr = localStorage.getItem(key);
+            if (!itemStr) return null;
             
-            if (trimmedText.length >= 3 && trimmedText.substring(0, 3).toUpperCase() === 'URL') {
-                finaltextToSpeak = trimmedText.substring(3);
-            }
-
-            const queryString = new URLSearchParams({
-                text: finaltextToSpeak,
-                voiceName: summaryVoice,
-                speed: currentSpeed,
-            }).toString();
-
-            currentAudio = new Audio();
-            let played = false;
-
-            for (const url of ttsDomains) {
-                const ttsUrl = `${url}api/aiyue?${queryString}`;
-                currentAudio.src = ttsUrl;
-
-                if (fromCurrentPosition && currentPosition > 0) {
-                    currentAudio.currentTime = currentPosition;
-                } else {
-                    currentPosition = 0;
+            try {
+                const item = JSON.parse(itemStr);
+                const now = new Date().getTime();
+                // 检查是否过期
+                if (now - item.timestamp > CACHE_DURATION) {
+                    localStorage.removeItem(key);
+                    return null;
                 }
-
-                currentAudio.play()
-                    .then(() => {
-                        played = true;
-                        isReading = true;
-                        isPaused = false;
-                        updateButtonState();
-                    })
-                    .catch(e => console.error('TTS Play Error:', e));
-                if (played) break;
-            }
-
-            if (currentAudio) {
-                currentAudio.addEventListener('ended', () => {
-                    isReading = false;
-                    isPaused = false;
-                    currentPosition = 0;
-                    updateButtonState();
-                });
-                currentAudio.addEventListener('timeupdate', () => {
-                    if (!currentAudio.paused) currentPosition = currentAudio.currentTime;
-                });
+                return item.content;
+            } catch (e) {
+                return null;
             }
         }
 
-        function pauseTTS() {
-            if (currentAudio && !currentAudio.paused) {
-                currentPosition = currentAudio.currentTime;
-                currentAudio.pause();
-                isPaused = true;
-                isReading = false;
-                updateButtonState();
+        function saveToCache(key, content) {
+            const item = {
+                content: content,
+                timestamp: new Date().getTime()
+            };
+            // 尝试保存，如果存储满了清理旧缓存
+            try {
+                localStorage.setItem(key, JSON.stringify(item));
+                updateCacheDisplay();
+            } catch (e) {
+                console.warn('Cache full, clearing old entries...');
+                clearAICache(); // 简单粗暴策略：满了就清空
+                try { localStorage.setItem(key, JSON.stringify(item)); } catch(e){}
             }
         }
 
-        function resumeTTS() {
-            if (currentAudio && isPaused) {
-                currentAudio.play().then(() => {
-                    isReading = true;
-                    isPaused = false;
-                    updateButtonState();
-                });
-            } else {
-                startReadingPage();
+        function updateCacheDisplay() {
+            let count = 0;
+            for(let i=0; i<localStorage.length; i++) {
+                if(localStorage.key(i).startsWith(CACHE_PREFIX)) count++;
             }
+            const display = document.getElementById('cacheSizeDisplay');
+            if(display) display.innerText = `缓存: ${count} 条`;
         }
 
-        function restartTTSWithNewSpeed() {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
+        function clearAICache() {
+            const keysToRemove = [];
+            for(let i=0; i<localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if(key.startsWith(CACHE_PREFIX)) keysToRemove.push(key);
             }
-            if (isReading || isPaused) {
-                startReadingPage(currentPosition > 0);
-            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+            updateCacheDisplay();
+            alert('AI 分析缓存已清空');
         }
 
-        function getCleanTextForTTS() {
-            const contentDiv = document.getElementById('dynamic-content');
-            const clone = contentDiv.cloneNode(true);
-            const buttons = clone.querySelectorAll('.ai-analyze-btn');
-            buttons.forEach(btn => btn.remove());
-            return clone.innerText;
-        }
-
-        function startReadingPage(resume = false) {
-            const textToRead = getCleanTextForTTS();
-            playSummaryTTS(textToRead, resume);
-        }
-
-        function updateButtonState() {
-            const btn = document.getElementById('readAloudButton');
-            if (isReading) {
-                btn.textContent = '暂停朗读';
-                btn.classList.add('reading');
-            } else if (isPaused) {
-                btn.textContent = '继续朗读';
-                btn.classList.remove('reading');
-            } else {
-                btn.textContent = '朗读页面';
-                btn.classList.remove('reading');
-            }
-        }
-
-        // --- 内容处理与 AI 按钮注入 ---
-        function injectAIButtons() {
-            const container = document.getElementById('dynamic-content');
-            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-            
-            const nodesToReplace = [];
-            
-            while(walker.nextNode()) {
-                const node = walker.currentNode;
-                if (node.nodeValue && node.nodeValue.includes('.')) {
-                    nodesToReplace.push(node);
-                }
-            }
-
-            nodesToReplace.forEach(node => {
-                const text = node.nodeValue;
-                const parts = text.split(/(\.)/);
-                
-                if (parts.length > 1) {
-                    const fragment = document.createDocumentFragment();
-                    for (let i = 0; i < parts.length; i++) {
-                        const part = parts[i];
-                        fragment.appendChild(document.createTextNode(part));
-                        if (part === '.') {
-                            const btn = document.createElement('span');
-                            btn.className = 'ai-analyze-btn';
-                            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>`;
-                            btn.title = "AI 分析";
-                            btn.onclick = (e) => handleAIAnalyzeClick(e.target);
-                            fragment.appendChild(btn);
-                        }
-                    }
-                    node.parentNode.replaceChild(fragment, node);
-                }
-            });
-        }
-
-        // --- AI 交互逻辑 ---
+        // --- AI 分析逻辑 ---
         async function handleAIAnalyzeClick(target) {
             const btn = target.closest('.ai-analyze-btn');
             if (!btn) return;
 
             const sentence = extractSentenceBefore(btn);
+            if (!sentence || sentence.length < 2) { alert("句子过短，无法分析"); return; }
+
+            // UI 初始化
+            document.getElementById('aiOriginalSentence').innerText = sentence;
+            const resultBox = document.getElementById('aiResultContent');
+            const copyBtn = document.getElementById('copyAiContentBtn');
+            resultBox.innerHTML = '<div class="ai-loading"><div class="spinner"></div><p>AI 正在思考中...</p></div>';
+            currentRawAIResponse = "";
+            copyBtn.classList.remove('success');
+            openModal('aiResultModal');
+
+            // 准备参数
+            const apiKey = localStorage.getItem('groq_api_key');
+            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
+            const systemPrompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             
-            if (!sentence || sentence.length < 2) {
-                alert("无法提取有效句子。");
+            // 1. 检查缓存
+            const cacheKey = generateCacheKey(sentence, systemPrompt, model);
+            const cachedContent = getFromCache(cacheKey);
+
+            if (cachedContent) {
+                console.log("使用本地缓存");
+                currentRawAIResponse = cachedContent;
+                resultBox.innerHTML = marked.parse(cachedContent);
                 return;
             }
 
-            document.getElementById('aiOriginalSentence').textContent = sentence;
-            const resultContainer = document.getElementById('aiResultContent');
-            const copyBtn = document.getElementById('copyAiContentBtn');
-            
-            // 重置内容和复制按钮状态
-            resultContainer.innerHTML = '<div class="ai-loading">正在思考中...</div>';
-            currentRawAIResponse = ""; // 清空缓存
-            copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-            copyBtn.classList.remove('copy-success');
-            
-            openModal('aiResultModal');
+            // 2. 无缓存，请求 API
+            if (!apiKey) {
+                resultBox.innerHTML = '<p style="color:#d63384; text-align:center; padding:20px;">请点击右上角设置图标，配置 API Key。</p>';
+                return;
+            }
 
             try {
-                const apiKey = localStorage.getItem('groq_api_key');
-                if (!apiKey) {
-                    resultContainer.innerHTML = '<p style="color:red; text-align:center;">请先点击右上角设置按钮配置 API Key。</p>';
-                    return;
-                }
-
-                const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
-                const systemPrompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         model: model,
                         messages: [
                             { role: "system", content: systemPrompt },
-                            { role: "user", content: `Analyze this sentence: "${sentence}"` }
+                            { role: "user", content: `Analyze: "${sentence}"` }
                         ],
-                        temperature: 0.7,
-                        max_tokens: 1024
+                        temperature: 0.7, max_tokens: 1024
                     })
                 });
 
                 if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error?.message || 'API 请求失败');
+                    const err = await response.json();
+                    throw new Error(err.error?.message || '请求失败');
                 }
 
                 const data = await response.json();
-                const content = data.choices[0]?.message?.content || "无内容返回";
-                
-                // 保存原始 Markdown 用于复制
-                currentRawAIResponse = content;
+                const content = data.choices[0]?.message?.content || "无回复";
 
-                // 使用 marked.js 渲染 Markdown 为 HTML
-                resultContainer.innerHTML = marked.parse(content);
+                // 保存缓存并渲染
+                saveToCache(cacheKey, content);
+                currentRawAIResponse = content;
+                resultBox.innerHTML = marked.parse(content);
 
             } catch (error) {
-                resultContainer.innerHTML = `<p style="color:red;">发生错误: ${error.message}</p>`;
+                resultBox.innerHTML = `<p style="color:red; padding:20px;">Error: ${error.message}</p>`;
             }
+        }
+
+        // --- 文本提取与按钮注入 ---
+        function injectAIButtons() {
+            const container = document.getElementById('dynamic-content');
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+            const nodesToProcess = [];
+            while(walker.nextNode()) nodesToProcess.push(walker.currentNode);
+
+            nodesToProcess.forEach(node => {
+                if (node.nodeValue && node.nodeValue.includes('.')) {
+                    const parts = node.nodeValue.split(/(\.)/);
+                    if (parts.length > 1) {
+                        const frag = document.createDocumentFragment();
+                        parts.forEach(part => {
+                            frag.appendChild(document.createTextNode(part));
+                            if (part === '.') {
+                                const span = document.createElement('span');
+                                span.className = 'ai-analyze-btn';
+                                span.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>`;
+                                span.onclick = (e) => handleAIAnalyzeClick(e.target);
+                                frag.appendChild(span);
+                            }
+                        });
+                        node.parentNode.replaceChild(frag, node);
+                    }
+                }
+            });
         }
 
         function extractSentenceBefore(btnNode) {
             let text = "";
-            let currentNode = btnNode.previousSibling;
-            
-            while (currentNode) {
-                if (currentNode.nodeType === Node.TEXT_NODE) {
-                    text = currentNode.nodeValue + text;
-                    if (text.lastIndexOf('.') !== -1 && text.lastIndexOf('.') < text.length - 1) {
-                         text = text.substring(text.lastIndexOf('.') + 1);
-                         break;
+            let curr = btnNode.previousSibling;
+            while (curr) {
+                if (curr.nodeType === 3) { // Text node
+                    text = curr.nodeValue + text;
+                    // 遇到上一个句号停止
+                    if (text.lastIndexOf('.') > -1 && text.lastIndexOf('.') < text.length - 1) {
+                        text = text.substring(text.lastIndexOf('.') + 1);
+                        break;
                     }
-                } else if (currentNode.classList && currentNode.classList.contains('ai-analyze-btn')) {
+                } else if (curr.classList && curr.classList.contains('ai-analyze-btn')) {
                     break;
                 } else {
-                    text = currentNode.innerText + text;
+                    text = curr.innerText + text;
                 }
-                currentNode = currentNode.previousSibling;
+                curr = curr.previousSibling;
             }
             return text.trim();
         }
 
-        // --- 复制功能逻辑 ---
-        function copyToClipboard(text) {
-            if (!navigator.clipboard) {
-                // 后备方案
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    return Promise.resolve();
-                } catch (err) {
-                    return Promise.reject(err);
-                } finally {
-                    document.body.removeChild(textArea);
-                }
-            }
-            return navigator.clipboard.writeText(text);
-        }
-
-        document.getElementById('copyAiContentBtn').addEventListener('click', function() {
-            if (!currentRawAIResponse) return;
+        // --- 基础功能 (TTS, 弹窗, 设置) ---
+        function playTTS(text) {
+            if(!text) return;
+            if(currentAudio) { currentAudio.pause(); currentAudio = null; }
             
-            copyToClipboard(currentRawAIResponse).then(() => {
-                const btn = this;
-                // 切换为勾选图标
-                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-                btn.classList.add('copy-success');
-                
-                // 2秒后恢复
-                setTimeout(() => {
-                    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-                    btn.classList.remove('copy-success');
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-                alert('复制失败');
-            });
-        });
-
-        // --- UI 交互与设置 ---
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-            const key = document.getElementById('apiKeyInput').value.trim();
-            const model = document.getElementById('modelSelect').value;
-            const prompt = document.getElementById('systemPromptInput').value;
-
-            if (key) localStorage.setItem('groq_api_key', key);
-            localStorage.setItem('groq_model', model);
-            localStorage.setItem('groq_prompt', prompt);
-
-            closeModal('settingsModal');
-            alert('设置已保存');
-        });
-
-        function loadSettings() {
-            const key = localStorage.getItem('groq_api_key');
-            const model = localStorage.getItem('groq_model');
-            const prompt = localStorage.getItem('groq_prompt');
-
-            if (key) document.getElementById('apiKeyInput').value = key;
-            if (model) document.getElementById('modelSelect').value = model;
-            if (prompt) document.getElementById('systemPromptInput').value = prompt;
-            else document.getElementById('systemPromptInput').value = DEFAULT_PROMPT;
+            // 移除 AI 按钮文本，避免读出干扰字符
+            let cleanText = text; 
+            // 如果是获取全页文本，需要更复杂的清理，这里简化处理
+            
+            const q = new URLSearchParams({ text: cleanText, voiceName: summaryVoice, speed: currentSpeed });
+            // 尝试多个源
+            for(let d of ttsDomains) {
+                let audio = new Audio(`${d}api/aiyue?${q}`);
+                audio.play().then(() => {
+                    currentAudio = audio; isReading = true; updateReadBtn();
+                    audio.onended = () => { isReading = false; updateReadBtn(); };
+                }).catch(e => console.log(e));
+                if(currentAudio) break; 
+            }
         }
 
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            loadSettings();
-            openModal('settingsModal');
-        });
+        function updateReadBtn() {
+            const btn = document.getElementById('readAloudButton');
+            if(isReading) { btn.innerText = "停止朗读"; btn.classList.add('reading'); }
+            else { btn.innerText = "朗读页面"; btn.classList.remove('reading'); }
+        }
+        
+        document.getElementById('readAloudButton').onclick = () => {
+            if(isReading) { 
+                if(currentAudio) currentAudio.pause(); 
+                isReading = false; updateReadBtn(); 
+            } else {
+                // 获取纯净文本
+                const clone = document.getElementById('dynamic-content').cloneNode(true);
+                clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
+                playTTS(clone.innerText);
+            }
+        };
 
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) closeModal(overlay.id);
+        // 复制功能
+        document.getElementById('copyAiContentBtn').onclick = function() {
+            if(!currentRawAIResponse) return;
+            navigator.clipboard.writeText(currentRawAIResponse).then(() => {
+                this.classList.add('success');
+                setTimeout(() => this.classList.remove('success'), 2000);
             });
-        });
+        };
 
-        // --- 初始化 ---
-        document.addEventListener('DOMContentLoaded', function() {
-            const dynamicContentDiv = document.getElementById('dynamic-content');
-            const readAloudButton = document.getElementById('readAloudButton');
-            const speedRange = document.getElementById('speedRange');
-            const currentSpeedValueDisplay = document.getElementById('currentSpeedValue');
-            const readAloudContainer = document.getElementById('readAloudContainer');
-            const contentUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
+        // 模态框操作
+        window.openModal = (id) => document.getElementById(id).classList.add('active');
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        
+        // 设置保存
+        document.getElementById('saveSettingsBtn').onclick = () => {
+            localStorage.setItem('groq_api_key', document.getElementById('apiKeyInput').value);
+            localStorage.setItem('groq_model', document.getElementById('modelSelect').value);
+            localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
+            closeModal('settingsModal');
+            // 清空缓存因为设置变了
+            if(confirm("设置已修改。是否清空旧的 AI 缓存以应用新设置？")) {
+                clearAICache();
+            }
+        };
 
-            // Hash Logic
-            function generateRandomHash() { return (Math.random().toString(36).substring(2, 10) + Date.now().toString(36)).toUpperCase(); }
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('hash', generateRandomHash());
-            window.history.replaceState({}, '', currentUrl.toString());
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 加载设置
+            document.getElementById('apiKeyInput').value = localStorage.getItem('groq_api_key') || '';
+            document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
+            document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
+            updateCacheDisplay();
 
-            // Speed Control
-            currentSpeedValueDisplay.textContent = speedRange.value;
-            currentSpeed = parseInt(speedRange.value);
-            speedRange.addEventListener('input', function() { currentSpeedValueDisplay.textContent = this.value; });
-            speedRange.addEventListener('change', function() {
-                currentSpeed = parseInt(this.value);
-                restartTTSWithNewSpeed();
+            // 加载内容
+            const url = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/B1.md';
+            fetch(url).then(r => r.text()).then(data => {
+                const div = document.getElementById('dynamic-content');
+                div.innerHTML = data;
+                // 清理标题
+                let title = data.replace(/<[^>]+>/g, '').trim();
+                if(title.startsWith('URL')) title = title.substring(3).trim();
+                document.title = title.split(/[.\n]/)[0].substring(0,20);
+                
+                injectAIButtons();
             });
 
-            // Scroll Logic
-            let lastScrollTop = 0;
-            window.addEventListener('scroll', function() {
-                let st = window.pageYOffset || document.documentElement.scrollTop;
-                if (st > lastScrollTop) readAloudContainer.classList.add('hidden');
-                else readAloudContainer.classList.remove('hidden');
-                lastScrollTop = st <= 0 ? 0 : st;
-            }, false);
-
-            // Fetch Content
-            fetch(contentUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    return response.text();
-                })
-                .then(data => {
-                    dynamicContentDiv.innerHTML = data;
-                    let cleanedText = data.replace(/<\/?[^>]+(>|$)/g, "").trim();
-                    if (cleanedText.startsWith('URL')) cleanedText = cleanedText.substring(3).trim();
-                    const firstSentenceMatch = cleanedText.match(/^.*?[.?!。？！\n]/);
-                    document.title = firstSentenceMatch ? firstSentenceMatch[0].substring(0, 60) : "中转站";
-                    injectAIButtons();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    dynamicContentDiv.innerText = '无法加载内容。请检查网络。';
-                });
-
-            readAloudButton.addEventListener('click', function() {
-                if (isReading) pauseTTS();
-                else if (isPaused) resumeTTS();
-                else startReadingPage();
+            // 语速控制
+            const range = document.getElementById('speedRange');
+            range.oninput = function() { 
+                document.getElementById('currentSpeedValue').innerText = this.value; 
+                currentSpeed = this.value; 
+            };
+            
+            // 设置按钮
+            document.getElementById('settingsBtn').onclick = () => openModal('settingsModal');
+            
+            // 点击遮罩关闭
+            document.querySelectorAll('.modal-overlay').forEach(o => {
+                o.onclick = (e) => { if(e.target === o) closeModal(o.id); }
             });
         });
     </script>
