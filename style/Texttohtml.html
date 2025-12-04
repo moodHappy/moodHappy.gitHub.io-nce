@@ -93,6 +93,7 @@
         /* --- 正文区域 --- */
         .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
         .text-placeholder { min-height: 500px; padding: 20px 10px; font-size: 1.4em; line-height: 1.8; color: #2c2c2c; white-space: pre-wrap; }
+        
         .ai-analyze-btn {
             display: inline-flex; align-items: center; justify-content: center;
             background-color: rgba(139, 115, 85, 0.08); border: 1px solid rgba(139, 115, 85, 0.15);
@@ -100,6 +101,15 @@
             color: #8b7355; position: relative; top: -2px; transition: all 0.2s;
         }
         .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
+        /* [新增] 上一次点击的分析按钮样式：红色高亮 */
+        .ai-analyze-btn.last-clicked {
+            background-color: #d32f2f !important; /* 鲜艳的红色 */
+            color: white !important;
+            border-color: #d32f2f !important;
+            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5); /* 添加一点红色光晕 */
+            transform: scale(1.15); /* 稍微放大一点以便识别 */
+            z-index: 10;
+        }
         .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
 
         /* --- 通用模态框结构 --- */
@@ -150,7 +160,7 @@
         .btn-primary { background: #8b7355; color: white; }
         .btn-secondary { background: #f4f0ec; color: #5a4a3f; border: 1px solid #e0d5ca !important; }
         .btn-outline { background: transparent; border: 1px solid #8b7355 !important; color: #8b7355; }
-        
+
         #randomTopicsList { list-style: none; margin-top: 20px; padding: 0; }
         #randomTopicsList li {
             padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px;
@@ -198,7 +208,7 @@
                 <div class="sound-wave" id="waveIcon" style="display:none;"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
                 <span>朗读</span>
             </button>
-            
+
             <button class="icon-btn" onclick="openModal('generateModal')" title="生成微小说">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
             </button>
@@ -257,7 +267,7 @@
                     <select id="styleSelect" class="settings-select"></select>
                 </div>
                 <input type="text" id="themeInput" class="settings-input" placeholder="输入主题，或选择分类后生成题目..." />
-                
+
                 <div class="gen-actions">
                     <button class="btn-outline" id="genTopicsBtn" onclick="generateRandomTopics(event)">🎲 生成随机题目</button>
                     <button class="btn-primary" onclick="confirmGenerate(event)">✨ 创作并同步GitHub</button>
@@ -328,7 +338,7 @@
         const API_URL = "https://api.groq.com/openai/v1/chat/completions";
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const ttsDomains = ['https://ms-ra-forwarder-for-ifreetime-2.vercel.app/'];
-        
+
         // --- GitHub 配置 ---
         const GH_CONFIG = {
             owner: 'moodHappy',
@@ -375,7 +385,7 @@
             const key = localStorage.getItem('groq_api_key');
             const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             if (!key) throw new Error("请先在设置中配置 Groq API Key");
-            
+
             const res = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -427,6 +437,13 @@
         async function handleAIAnalyzeClick(target) {
             const btn = target.closest('.ai-analyze-btn');
             if (!btn) return;
+
+            // [新增] 移除所有旧的高亮标记，并给当前按钮添加标记
+            document.querySelectorAll('.ai-analyze-btn.last-clicked').forEach(b => {
+                b.classList.remove('last-clicked');
+            });
+            btn.classList.add('last-clicked');
+
             const sentence = extractSentenceBefore(btn);
             if (!sentence || sentence.length < 2) return;
 
@@ -440,7 +457,7 @@
             const prompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             const cacheKey = generateCacheKey(sentence, prompt, model);
             const cached = getFromCache(cacheKey);
-            
+
             if (cached) { box.innerHTML = `<div class="ai-result-content">${marked.parse(cached)}</div>`; return; }
 
             try {
@@ -460,7 +477,7 @@
             catSel.innerHTML = '<option value="" disabled selected>选择分类</option>';
             for(let c in THEME_LIBRARY) { let o = document.createElement('option'); o.value=c; o.text=c; catSel.add(o); }
             catSel.onchange = () => document.getElementById('themeInput').value = '';
-            
+
             diffSel.innerHTML = '';
             DIFFICULTY_LEVELS.forEach(l => { let o = document.createElement('option'); o.value=l.split(' ')[0]; o.text=l; if(l.startsWith('B1')) o.selected=true; diffSel.add(o); });
             populateStyleSelector();
@@ -472,7 +489,7 @@
             const customStyles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
             [...BUILT_IN_STYLES, ...customStyles].forEach(s => { let o = document.createElement('option'); o.value=s; o.text=s; styleSel.add(o); });
             let manageOpt = document.createElement('option'); manageOpt.text='⚙️ 管理风格...'; manageOpt.value='manage'; styleSel.add(manageOpt);
-            
+
             styleSel.onchange = (e) => {
                 if(e.target.value === 'manage') {
                     openStyleManagementModal();
@@ -486,7 +503,7 @@
             const theme = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value;
             const statusDiv = document.getElementById('genStatus');
             const list = document.getElementById('randomTopicsList');
-            
+
             if(!theme) { statusDiv.innerText = "请先选择分类或输入主题"; return; }
             statusDiv.innerText = "正在生成题目...";
             list.innerHTML = '';
@@ -524,15 +541,15 @@
             const diff = document.getElementById('difficultySelect').value;
             const style = document.getElementById('styleSelect').value;
             const contentDiv = document.getElementById('dynamic-content');
-            
+
             statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
-            
+
             const prompt = `Write a short story in English (approx 150 words), CEFR Level ${diff}, based on title/theme: "${topic}". Style: ${style}. Output ONLY the story text. No intro/outro.`;
-            
+
             try {
                 // 1. 生成故事
                 const story = await callGroqAPI([{role:"user", content: prompt}]);
-                
+
                 // 2. 上传到 GitHub
                 statusDiv.innerText = "创作完成，正在同步到 GitHub...";
                 await uploadToGitHub(story, ghToken);
@@ -542,7 +559,7 @@
                 closeModal('generateModal');
                 contentDiv.innerHTML = story.replace(/\n/g, '<br><br>');
                 injectAIButtons();
-                
+
             } catch(err) { 
                 console.error(err);
                 statusDiv.innerText = "失败: " + err.message; 
@@ -594,7 +611,7 @@
             const div = document.getElementById('dynamic-content');
             if(!div.innerText.trim()) return;
             div.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
-            
+
             const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
             const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
             nodes.forEach(n => {
@@ -664,7 +681,7 @@
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             updateCacheDisplay();
-            
+
             // 初始加载：使用 Raw URL 加载，确保速度，避免消耗 API 限额
             const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
             fetch(rawUrl)
