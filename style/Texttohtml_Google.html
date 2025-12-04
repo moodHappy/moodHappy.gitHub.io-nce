@@ -3,8 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 阅读 & 创作助手 (GitHub版)</title>
+    <title>AI 阅读 & 创作助手 (Pro版)</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script src="https://unpkg.com/compromise@14.10.0/builds/compromise.min.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light-border.css"/>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -12,7 +21,7 @@
 
         body {
             font-family: 'Noto Serif SC', 'Inter', serif;
-            line-height: 1.8; /* 稍微增加行高，更像阅读类App */
+            line-height: 1.8;
             color: #2c2c2c;
             background: linear-gradient(135deg, #f8f4f0 0%, #e8e4e0 25%, #f2ede8 50%, #ebe6e1 75%, #f5f1ec 100%);
             background-attachment: fixed;
@@ -93,10 +102,10 @@
         /* --- 正文区域 --- */
         .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
         .text-placeholder { min-height: 500px; padding: 20px 10px; font-size: 1.4em; line-height: 1.8; color: #2c2c2c; white-space: pre-wrap; }
-        
+
         .ai-analyze-btn {
             display: inline-flex; align-items: center; justify-content: center;
-            background-color: rgba(139, 115, 85, 0.1); /* 稍微调淡背景，更像图标 */
+            background-color: rgba(139, 115, 85, 0.1); 
             border-radius: 50%; width: 18px; height: 18px; margin: 0 4px; cursor: pointer;
             color: #8b7355; position: relative; top: -1px; transition: all 0.2s;
         }
@@ -109,19 +118,64 @@
         }
         .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
 
-        /* --- [修改] 高亮单词样式 (仿图片效果：纯文字颜色) --- */
+        /* --- 高亮单词样式 (更新：支持点击) --- */
+        .clickable-word {
+            cursor: pointer;
+            border-radius: 3px;
+            padding: 0 1px;
+            transition: background-color 0.2s;
+        }
+        .clickable-word:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
         .highlight-blue {
-            background-color: transparent; /* 去掉背景 */
-            border-bottom: none;          /* 去掉下划线 */
-            color: #1967d2;               /* 谷歌风格的蓝色 */
-            font-weight: 500;             /* 稍微加粗一点点，增强辨识度 */
+            background-color: transparent; 
+            color: #1967d2;               
+            font-weight: 500;             
         }
         .highlight-red {
-            background-color: transparent; /* 去掉背景 */
-            border-bottom: none;          /* 去掉下划线 */
-            color: #d93025;               /* 谷歌风格的红色 */
-            font-weight: 500;             /* 稍微加粗一点点，增强辨识度 */
+            background-color: transparent; 
+            color: #d93025;               
+            font-weight: 500;             
         }
+
+        /* --- 弹窗与词典样式 (复刻 Anki 模板) --- */
+        .dict-popup {
+            text-align: left; font-size: 14px; line-height: 1.4; max-width: 280px; color: #333; padding: 2px;
+        }
+        .dict-header-row {
+            border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px;
+        }
+        .dict-word-line {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 2px;
+        }
+        .dict-head-word {
+            font-weight: bold; color: #D32F2F; font-size: 18px;
+        }
+        .dict-ipa {
+            font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
+            color: #666; font-size: 13px; background: #f0f0f0; padding: 0 4px; border-radius: 4px;
+        }
+        .dict-speaker-btn {
+            display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px;
+            border-radius: 50%; transition: background 0.2s;
+        }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 16px; height: 16px; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: pulse 1s infinite; }
+        
+        .dict-basic-trans { font-size: 14px; color: #444; }
+        .dict-pos-block { margin-bottom: 4px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
 
         /* --- 通用模态框结构 --- */
         .modal-overlay {
@@ -330,8 +384,12 @@
                     <input type="text" id="blueUrlInput" class="settings-input" placeholder="https://raw.github.../one.txt">
                 </div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#d93025;">高亮词表 URL (红色)</label>
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#d93025;">高亮词表 URL (红色 - 优先)</label>
                     <input type="text" id="redUrlInput" class="settings-input" placeholder="https://raw.github.../two.txt">
+                </div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;color:#444;">排除词表 URL (最高优先级)</label>
+                    <input type="text" id="excludeUrlInput" class="settings-input" placeholder="https://raw.github.../Excluded.txt">
                 </div>
                 <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
                 <div class="settings-group">
@@ -372,10 +430,12 @@
         let currentAudio = null;
         let isReading = false;
         let currentSpeed = -20;
-        
-        // 高亮词表集合
+
+        // 高亮与排除词表集合
         let blueWords = new Set();
         let redWords = new Set();
+        let excludedWords = new Set();
+        const lemmaCache = new Map(); // 缓存 NLP 结果
 
         // --- 生成配置 ---
         const THEME_LIBRARY = { '日常生活':[],'悬疑推理':[],'科幻奇幻':[],'历史现实':[],'哲理寓言':[],'爱情情感':[],'心理情绪':[],'幽默讽刺':[],'奇遇冒险':[] };
@@ -405,6 +465,26 @@
         }
         function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
 
+        // --- NLP 辅助函数 (Compromise) ---
+        function getLemma(word) {
+            const lower = word.toLowerCase();
+            if (lemmaCache.has(lower)) return lemmaCache.get(lower);
+            
+            let root = lower;
+            if (window.nlp) {
+                try {
+                    const doc = nlp(lower);
+                    doc.compute('root');
+                    const foundRoot = doc.text('root');
+                    if (foundRoot) root = foundRoot;
+                } catch (e) {
+                    // ignore error
+                }
+            }
+            lemmaCache.set(lower, root);
+            return root;
+        }
+
         // --- 词表获取函数 ---
         async function fetchWords(url) {
             if (!url) return new Set();
@@ -419,17 +499,19 @@
                 return new Set();
             }
         }
-        
+
         async function updateWordLists() {
             const bUrl = localStorage.getItem('highlight_url_blue');
             const rUrl = localStorage.getItem('highlight_url_red');
-            
+            const exUrl = localStorage.getItem('highlight_url_exclude');
+
             const promises = [];
             if(bUrl) promises.push(fetchWords(bUrl).then(s => blueWords = s));
             if(rUrl) promises.push(fetchWords(rUrl).then(s => redWords = s));
-            
+            if(exUrl) promises.push(fetchWords(exUrl).then(s => excludedWords = s));
+
             await Promise.all(promises);
-            console.log(`Loaded words - Blue: ${blueWords.size}, Red: ${redWords.size}`);
+            console.log(`Loaded: Blue(${blueWords.size}), Red(${redWords.size}), Excluded(${excludedWords.size})`);
         }
 
         // --- 通用 AI 调用函数 (Groq) ---
@@ -602,22 +684,14 @@
             const prompt = `Write a short story in English (approx 150 words), CEFR Level ${diff}, based on title/theme: "${topic}". Style: ${style}. Output ONLY the story text. No intro/outro.`;
 
             try {
-                // 1. 生成故事
                 const story = await callGroqAPI([{role:"user", content: prompt}]);
-
-                // 2. 上传到 GitHub
                 statusDiv.innerText = "创作完成，正在同步到 GitHub...";
                 await uploadToGitHub(story, ghToken);
-
-                // [清除位置记录]
                 localStorage.removeItem(LAST_CLICKED_KEY);
-
-                // 3. 更新界面
                 statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
                 contentDiv.innerHTML = story.replace(/\n/g, '<br><br>');
                 injectAIButtons();
-
             } catch(err) { 
                 console.error(err);
                 statusDiv.innerText = "失败: " + err.message; 
@@ -664,30 +738,148 @@
             populateCustomStyleList();
         };
 
-        // --- 文本处理与注入 (核心) ---
+        // --- 在线查词与发音 (新增功能：复刻 Anki 模板) ---
 
-        // 单词高亮处理函数
-        function highlightText(text, container) {
-            const parts = text.split(/([a-zA-Z0-9\u00C0-\u024F]+)/g); 
+        async function fetchTranslation(text) {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Translation API request failed');
+            return await response.json();
+        }
+
+        async function fetchPhonetics(text) {
+            try {
+                const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`;
+                const response = await fetch(url);
+                if (!response.ok) return null;
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const phoneticObj = data[0].phonetics.find(p => p.text) || data[0];
+                    return phoneticObj.text || null;
+                }
+                return null;
+            } catch (e) { return null; }
+        }
+
+        window.playSpecificText = function(text, btnElement) {
+            if (!text) return;
+            const cleanText = text.trim();
+            if (!cleanText) return;
+            if(btnElement) btnElement.classList.add('playing');
+
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(cleanText)}&type=2`;
+            const audio = new Audio(url);
+            audio.onended = () => { if(btnElement) btnElement.classList.remove('playing'); };
+            audio.onerror = () => { if(btnElement) btnElement.classList.remove('playing'); };
+            audio.play().catch(e => { if(btnElement) btnElement.classList.remove('playing'); });
+        }
+
+        function formatDictData(originalWord, transData, ipaText) {
+            const escapedWord = originalWord.replace(/'/g, "\\'");
+            let html = `<div class="dict-popup">`;
+            const basicTrans = transData[0] && transData[0][0] ? transData[0][0][0] : '';
             
+            html += `<div class="dict-header-row">
+                        <div class="dict-word-line">
+                            <span class="dict-head-word">${originalWord}</span>
+                            ${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}
+                            <span class="dict-speaker-btn" onclick="playSpecificText('${escapedWord}', this)" title="Pronounce">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            </span>
+                        </div>
+                        <div class="dict-basic-trans">${basicTrans}</div>
+                     </div>`;
+
+            const dictEntries = transData[1];
+            if (dictEntries && dictEntries.length > 0) {
+                html += `<div class="dict-details">`;
+                dictEntries.forEach(entry => {
+                    const pos = entry[0];
+                    const displayDefs = entry[1].slice(0, 3);
+                    html += `<div class="dict-pos-block">
+                                <span class="dict-pos-tag">${pos}.</span>
+                                <ul class="dict-def-list">`;
+                    displayDefs.forEach(def => { html += `<li class="dict-def-item">${def}</li>`; });
+                    html += `</ul></div>`;
+                });
+                html += `</div>`;
+            } else {
+                if(!basicTrans) html += `<div style="padding:5px">No definition found.</div>`;
+            }
+            html += `</div>`;
+            return html;
+        }
+
+        function initTippy() {
+            if(window._tippyInstances) {
+                window._tippyInstances.forEach(i => i.destroy());
+            }
+            
+            // 绑定到所有 .clickable-word
+            window._tippyInstances = tippy('.clickable-word', {
+                trigger: 'click',
+                interactive: true,
+                theme: 'light-border',
+                placement: 'bottom',
+                animation: 'shift-away',
+                appendTo: document.body,
+                allowHTML: true,
+                maxWidth: 300,
+                onShow(instance) {
+                    const word = instance.reference.innerText.trim();
+                    // 显示加载动画
+                    instance.setContent('<div class="dict-popup"><span class="dict-loading">🔍 Searching...</span></div>');
+                    // 并行请求翻译和音标
+                    Promise.all([
+                        fetchTranslation(word).catch(e => [[['Error']]]), 
+                        fetchPhonetics(word)
+                    ]).then(([transData, ipaText]) => {
+                        instance.setContent(formatDictData(word, transData, ipaText));
+                    });
+                }
+            });
+        }
+
+        // --- 文本处理与注入 (核心更新) ---
+
+        // 辅助检查函数
+        function checkInSet(word, set) {
+            const lower = word.toLowerCase();
+            if (set.has(lower)) return true;
+            const lemma = getLemma(lower);
+            return set.has(lemma);
+        }
+
+        // 更新的高亮处理函数：支持排除列表和优先级
+        function highlightText(text, container) {
+            // 分割文本保留单词和标点
+            const parts = text.split(/([a-zA-Z0-9\u00C0-\u024F]+)/g); 
+
             parts.forEach(part => {
                 if(!part) return;
-                const lower = part.toLowerCase();
-                let span = null;
-
-                if(blueWords.has(lower)) {
-                    span = document.createElement('span');
-                    span.className = 'highlight-blue';
+                
+                // 检查是否是单词 (简单正则)
+                if(/^[a-zA-Z0-9\u00C0-\u024F]+$/.test(part)) {
+                    const span = document.createElement('span');
+                    span.className = 'clickable-word'; // 基础交互类
                     span.textContent = part;
-                } else if(redWords.has(lower)) {
-                    span = document.createElement('span');
-                    span.className = 'highlight-red';
-                    span.textContent = part;
-                }
 
-                if(span) {
+                    // 1. 检查排除 (优先级最高)
+                    if (checkInSet(part, excludedWords)) {
+                        // 即使排除，也保留 clickable-word 以便查词，但不加高亮色
+                    } 
+                    // 2. 检查红色 (优先级第二)
+                    else if (checkInSet(part, redWords)) {
+                        span.classList.add('highlight-red');
+                    }
+                    // 3. 检查蓝色 (优先级第三)
+                    else if (checkInSet(part, blueWords)) {
+                        span.classList.add('highlight-blue');
+                    }
+
                     container.appendChild(span);
                 } else {
+                    // 标点符号或空格，直接添加文本节点
                     container.appendChild(document.createTextNode(part));
                 }
             });
@@ -700,9 +892,10 @@
 
             const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
             const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
-            
+
             nodes.forEach(n => {
-                if(n.parentElement && (n.parentElement.classList.contains('highlight-blue') || n.parentElement.classList.contains('highlight-red'))) return;
+                // 跳过已经在 span 里的文本（避免重复处理）
+                if(n.parentElement && n.parentElement.tagName === 'SPAN') return;
 
                 if (n.nodeValue.includes('.')) {
                     const f = document.createDocumentFragment();
@@ -719,8 +912,16 @@
                         }
                     });
                     n.parentNode.replaceChild(f, n);
+                } else if (n.nodeValue.trim().length > 0) {
+                     // 处理不含句号的文本片段，也进行单词高亮
+                     const f = document.createDocumentFragment();
+                     highlightText(n.nodeValue, f);
+                     n.parentNode.replaceChild(f, n);
                 }
             });
+
+            // 初始化 Tippy
+            initTippy();
 
             const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
             if (lastClickedIndex !== null) {
@@ -733,14 +934,18 @@
         }
 
         function extractSentenceBefore(node) {
+            // 更新提取逻辑，因为现在单词被包裹在 span 里
             let t = "", c = node.previousSibling;
             while(c) {
-                if(c.nodeType === 3) { 
+                if(c.nodeType === 3) { // 文本节点
                     t = c.nodeValue + t; 
                     if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { t=t.substring(t.lastIndexOf('.')+1); break; } 
                 }
                 else if(c.classList?.contains('ai-analyze-btn')) {
                     break;
+                }
+                else if(c.tagName === 'SPAN') { // 处理单词 span
+                     t = c.innerText + t;
                 }
                 else {
                     t = c.innerText + t;
@@ -788,9 +993,11 @@
             document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
+            
             // 载入 URL 设置
             document.getElementById('blueUrlInput').value = localStorage.getItem('highlight_url_blue') || '';
             document.getElementById('redUrlInput').value = localStorage.getItem('highlight_url_red') || '';
+            document.getElementById('excludeUrlInput').value = localStorage.getItem('highlight_url_exclude') || 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/Excluded.txt';
 
             updateCacheDisplay();
 
@@ -822,6 +1029,7 @@
                 // 保存 URL 设置
                 localStorage.setItem('highlight_url_blue', document.getElementById('blueUrlInput').value.trim());
                 localStorage.setItem('highlight_url_red', document.getElementById('redUrlInput').value.trim());
+                localStorage.setItem('highlight_url_exclude', document.getElementById('excludeUrlInput').value.trim());
 
                 closeModal('settingsModal');
                 // 刷新页面以应用新设置
