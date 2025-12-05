@@ -6,7 +6,7 @@
   <title>GitHub 同步助手 & AI 阅读</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* CSS Variables for theming and typography */
+    /* --- 全局变量与主题配置 --- */
     :root {
       --bg-color: #f9f9f9;
       --text-color: #222;
@@ -24,7 +24,7 @@
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
       --settings-icon-color: #333;
-      --highlight-color: #800080; /* 魔术棒高亮色 */
+      --highlight-color: #800080; 
 
       --primary-font: 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
       --font-size: 17px;
@@ -90,7 +90,7 @@
       border-color: var(--textarea-border-color);
     }
 
-    /* Button Container Styles */
+    /* 按钮样式 */
     .button-container {
         display: flex;
         flex-wrap: wrap;
@@ -175,26 +175,35 @@
     .style-input-container input { flex: 1; }
     .style-input-container button { flex: none; width: 100px; margin-top: 0; }
 
-    /* --- 魔术棒 & AI 分析 样式 --- */
+    /* --- 魔术棒(Emoji) & AI 分析 样式 --- */
     .ai-analyze-btn {
-        display: inline-flex; align-items: center; justify-content: center;
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center;
         background-color: transparent; 
-        border: 1px solid var(--input-border-color);
-        border-radius: 50%; width: 22px; height: 22px; margin: 0 4px; cursor: pointer;
-        color: var(--status-color); position: relative; top: -1px; transition: all 0.2s;
-        opacity: 0.6;
+        border: none; /* Emoji 不需要边框 */
+        width: 24px; height: 24px; 
+        margin: 0 2px; 
+        cursor: pointer;
+        position: relative; 
+        top: 0; 
+        font-size: 16px; /* Emoji 大小 */
+        line-height: 1;
+        transition: transform 0.2s;
+        opacity: 0.8;
     }
-    .ai-analyze-btn:hover { background-color: var(--highlight-color); color: white; transform: scale(1.1); opacity: 1; border-color: var(--highlight-color); }
+    .ai-analyze-btn:hover { 
+        transform: scale(1.2) rotate(10deg); 
+        opacity: 1; 
+    }
     
-    /* 红色高亮样式 - 标记上次点击位置 */
+    /* 高亮样式 - 标记上次点击位置 */
     .ai-analyze-btn.last-clicked {
-        background-color: var(--button-danger-bg) !important;
-        color: white !important;
-        border-color: var(--button-danger-bg) !important;
+        background-color: rgba(128, 0, 128, 0.15); /* 淡淡的紫色背景 */
+        border-radius: 50%;
+        transform: scale(1.2);
         opacity: 1;
-        transform: scale(1.15);
     }
-    .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
     /* 分析结果弹窗特定样式 */
     .original-sentence-box {
@@ -324,7 +333,7 @@
       </div>
 
       <label for="analysis-prompt-input">AI 分析指令 (System Prompt)</label>
-      <textarea id="analysis-prompt-input" rows="3" placeholder="例如：你是一位语言专家，请分析句子的语法结构..."></textarea>
+      <textarea id="analysis-prompt-input" rows="5" placeholder="自定义指令..."></textarea>
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
@@ -366,7 +375,7 @@
       </div>
       <div class="original-sentence-box" id="aiOriginalSentence"></div>
       <div id="aiResultContent"></div>
-      <p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">双击任意处关闭弹窗</p>
+      <p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">双击任意区域关闭弹窗</p>
     </div>
   </div>
 
@@ -386,7 +395,12 @@
     const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     const DEFAULT_ZHIPU_MODEL = "glm-4";
 
-    const DEFAULT_ANALYSIS_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
+    // 🔴 关键修改：更新了预装指令
+    const DEFAULT_ANALYSIS_PROMPT = `你是一位精通中英文的语言专家。请分析我提供的句子：
+1. 判断难度等级 (A1-C2)。
+2. 提供准确、优美的中文翻译。
+3. 句中关键短语及例句、例句翻译。
+请使用 Markdown 格式输出。`;
 
     // Default TTS settings
     const DEFAULT_TTS_URLS = 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/';
@@ -772,9 +786,9 @@
       else { textarea.value = ""; editMode(); statusDiv.textContent = "✅ 文件为空"; }
     }
 
-    // --- Magic Wand & Analysis Logic (移植部分) ---
+    // --- Magic Wand & Analysis Logic ---
     function injectAIButtons() {
-        // 清除旧按钮（如果有）
+        // 清除旧按钮
         renderedDiv.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
 
         const w = document.createTreeWalker(renderedDiv, NodeFilter.SHOW_TEXT);
@@ -788,10 +802,10 @@
                     f.appendChild(document.createTextNode(p));
                     // 在句号后且不是空字符串时插入按钮
                     if(p === '.') {
-                        const b = document.createElement('span');
+                        const b = document.createElement('button');
                         b.className = 'ai-analyze-btn';
-                        // 魔术棒 SVG
-                        b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7.5 5.6L10 7 8.6 4.5 10 2 7.5 3.4 5 2 6.4 4.5 5 7 7.5 5.6zm12 9.8L17 12l1.4 2.5L21 12l-2.5 3.4L21 19l-2.5-1.4L17 19l1.4-2.5L15.9 12l3.6 3.4zm-9 3.8L12 16l1.4 2.5L14.9 16l-1.4 3.2L14.9 22l-1.4-1.3L12 22l1.4-3.2L10.5 22l0-2.8zM19 2l-5 9-2-4-2 4-5-9 9 19 5-19z" style="fill:none;stroke:currentColor;stroke-width:2"/></svg>';
+                        // 🔴 关键修改：使用 Emoji
+                        b.innerText = '🪄';
                         b.title = "AI 分析此句";
                         b.onclick = (e) => handleAIAnalyzeClick(e.target);
                         f.appendChild(b);
@@ -812,20 +826,15 @@
     function extractSentenceBefore(node) {
         let t = "", c = node.previousSibling;
         while(c) {
-            // 如果是文本节点
             if(c.nodeType === 3) { 
                 t = c.nodeValue + t; 
-                // 如果遇到句号，截取句号后的部分并停止
                 if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { 
                     t = t.substring(t.lastIndexOf('.')+1); 
                     break; 
                 } 
             }
-            // 如果遇到另一个分析按钮，停止
             else if(c.classList?.contains('ai-analyze-btn')) break;
-            // 其他元素（如b, i标签）直接取innerText
             else t = c.innerText + t;
-            
             c = c.previousSibling;
         }
         return t.trim();
@@ -854,6 +863,7 @@
 
         // Cache & API Logic
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+        // 如果 localStorage 里没有存自定义指令，就用新的默认指令
         const sysPrompt = settings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
         const cacheKey = generateCacheKey(sentence, sysPrompt);
         
@@ -872,11 +882,10 @@
         }
     }
 
-    // Double click to close modal
+    // 🔴 关键修改：双击任意区域关闭弹窗
     document.getElementById('aiResultModal').addEventListener('dblclick', function(e) {
-        if(e.target === this || e.target.classList.contains('modal-content')) {
-            this.style.display = 'none';
-        }
+        // 不再判断 e.target，只要在弹窗层双击就关闭
+        this.style.display = 'none';
     });
 
     // --- TTS Logic ---
