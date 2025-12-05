@@ -3,849 +3,463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 阅读 & 创作助手 (GitHub版)</title>
+    <title>GitHub 同步助手 (AI 阅读版)</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            /* 核心色板 - 莫兰迪色系 */
+            --primary-brown: #8b7355;
+            --primary-light: rgba(139, 115, 85, 0.1);
+            --text-main: #333333;
+            --text-sub: #666666;
+            --bg-page: #f9f9f9;
+            --border-color: #e0e0e0;
+            --dashed-line: 1px dashed #d0c4b4; /* 核心分割线颜色 */
+            
+            /* 标签颜色 */
+            --badge-green-bg: #e6f4ea;
+            --badge-green-text: #1e8e3e;
+            --badge-orange-bg: #ffe0b2;
+            --badge-orange-text: #e65100;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        :root {
-            --primary-color: #8b7355;
-            --accent-color: #a0522d;
-            --bg-gradient: linear-gradient(135deg, #f8f4f0 0%, #e8e4e0 25%, #f2ede8 50%, #ebe6e1 75%, #f5f1ec 100%);
-            --card-bg: #fcfbf9;
-            --text-main: #2c2c2c;
-            --text-secondary: #5a4a3f;
-            --border-light: rgba(139, 115, 85, 0.15);
-            --dashed-line: 1px dashed #dcd3c3;
-        }
-
         body {
             font-family: 'Noto Serif SC', 'Inter', serif;
-            line-height: 1.75;
+            background-color: var(--bg-page);
             color: var(--text-main);
-            background: var(--bg-gradient);
-            background-attachment: fixed;
-            padding-top: 80px;
-            position: relative;
-            overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
+            padding: 20px;
+            padding-top: 80px; /* 为导航栏留空 */
         }
 
-        body::before {
-            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 20% 80%, rgba(198, 167, 130, 0.08) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(158, 125, 95, 0.06) 0%, transparent 50%);
-            pointer-events: none; z-index: -1;
-        }
-
-        /* --- 导航栏 --- */
+        /* --- 导航栏 (复用逻辑) --- */
         .navbar {
-            position: fixed; top: 0; left: 0; width: 100%; height: 64px;
-            background: rgba(252, 251, 249, 0.92);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(139, 115, 85, 0.1);
+            position: fixed; top: 0; left: 0; width: 100%; height: 60px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 24px; z-index: 1000;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+            padding: 0 20px; z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .nav-brand { font-weight: 700; color: var(--primary-brown); font-size: 1.1em; }
+        .nav-actions { display: flex; gap: 15px; align-items: center; }
+
+        /* 按钮样式 */
+        .icon-btn { 
+            background: none; border: none; cursor: pointer; color: #666; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .icon-btn svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2; }
+        
+        /* 朗读按钮 */
+        .read-btn {
+            background: var(--primary-brown); color: white; border: none;
+            padding: 6px 16px; border-radius: 20px; font-size: 0.9em;
+            display: flex; align-items: center; gap: 5px; cursor: pointer;
+        }
+        .read-btn.reading { background: white; color: var(--primary-brown); border: 1px solid var(--primary-brown); }
+
+        /* --- 主内容区 --- */
+        .content-container { max-width: 800px; margin: 0 auto; }
+        .text-placeholder { 
+            font-size: 1.2em; line-height: 1.8; color: #222; min-height: 60vh; 
+            white-space: pre-wrap;
         }
 
-        .nav-brand { font-weight: 600; font-size: 1.15em; color: var(--text-secondary); user-select: none; }
-        .nav-actions { display: flex; align-items: center; gap: 8px; }
-
-        /* --- 按钮通用 --- */
-        .icon-btn {
-            background: transparent; border: none; cursor: pointer; color: #6b5b4f;
-            width: 40px; height: 40px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        /* --- AI 分析按钮 (魔法棒) --- */
+        .ai-analyze-btn {
+            display: inline-flex; vertical-align: middle;
+            background: rgba(139, 115, 85, 0.1); 
+            border-radius: 50%; width: 22px; height: 22px;
+            align-items: center; justify-content: center;
+            margin: 0 2px; cursor: pointer; color: var(--primary-brown);
             transition: all 0.2s;
         }
-        .icon-btn:hover { background: rgba(139, 115, 85, 0.12); color: var(--primary-color); transform: scale(1.05); }
-        .icon-btn:active { transform: scale(0.95); }
-        .icon-btn svg { width: 22px; height: 22px; stroke-width: 2px; }
-
-        .read-btn-top {
-            height: 40px; background: var(--primary-color); color: #fff; border: none;
-            padding: 0 20px; border-radius: 20px; font-family: 'Noto Serif SC', serif;
-            font-size: 0.95em; display: flex; align-items: center; justify-content: center;
-            gap: 6px; cursor: pointer; transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(139, 115, 85, 0.25); flex-shrink: 0;
-        }
-        .read-btn-top:hover { background: #6b5b4f; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(139, 115, 85, 0.3); }
-        .read-btn-top:active { transform: translateY(0); }
-        .read-btn-top.reading { background: #fff; color: var(--accent-color); border: 1px solid var(--accent-color); box-shadow: none; }
-        .read-btn-top svg { width: 18px; height: 18px; fill: currentColor; }
-        .read-btn-top .sound-wave { display: flex; gap: 2px; align-items: center; height: 12px; }
-        .bar { width: 2px; background: currentColor; animation: wave 0.8s infinite ease-in-out; }
-        .bar:nth-child(1) { animation-delay: 0s; height: 6px; }
-        .bar:nth-child(2) { animation-delay: 0.1s; height: 12px; }
-        .bar:nth-child(3) { animation-delay: 0.2s; height: 8px; }
-        @keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
-
-        /* --- 语速弹窗 --- */
-        .speed-wrapper { position: relative; display: flex; align-items: center; }
-        .speed-popup {
-            position: absolute; top: 100%; right: -10px; margin-top: 14px;
-            background: #fff; padding: 16px 20px; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid var(--border-light);
-            display: flex; flex-direction: column; gap: 10px; width: 240px;
-            opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.2s; z-index: 1100;
-        }
-        .speed-popup.active { opacity: 1; visibility: visible; transform: translateY(0); }
-        .speed-popup::before {
-            content: ''; position: absolute; top: -6px; right: 24px; width: 12px; height: 12px;
-            background: #fff; transform: rotate(45deg); border-left: 1px solid var(--border-light); border-top: 1px solid var(--border-light);
-        }
-        .speed-slider { -webkit-appearance: none; width: 100%; height: 6px; background: linear-gradient(90deg, #e0d5ca 0%, #c6a782 100%); border-radius: 10px; }
-        .speed-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #fff; border: 2px solid var(--primary-color); border-radius: 50%; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-
-        /* --- 正文区域 --- */
-        .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
-        .text-placeholder { min-height: 500px; padding: 20px 10px; font-size: 1.4em; line-height: 1.8; color: #2c2c2c; white-space: pre-wrap; }
-
-        .ai-analyze-btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            background-color: rgba(139, 115, 85, 0.08); border: 1px solid rgba(139, 115, 85, 0.15);
-            border-radius: 50%; width: 20px; height: 20px; margin: 0 3px; cursor: pointer;
-            color: var(--primary-color); position: relative; top: -2px; transition: all 0.2s;
-        }
-        .ai-analyze-btn:hover { background-color: var(--primary-color); color: white; transform: scale(1.1); }
-        /* 红色高亮样式 - 持久化 */
+        .ai-analyze-btn:hover { background: var(--primary-brown); color: white; transform: scale(1.1); }
+        .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
         .ai-analyze-btn.last-clicked {
-            background-color: #d32f2f !important;
-            color: white !important;
-            border-color: #d32f2f !important;
-            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5);
-            transform: scale(1.15);
-            z-index: 10;
+            background-color: #d32f2f !important; color: white !important;
+            box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
         }
-        .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
 
-        /* --- 通用模态框结构 --- */
+        /* --- 弹窗基础结构 (Bottom Sheet 风格) --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(44, 44, 44, 0.4); backdrop-filter: blur(4px);
-            z-index: 2000; display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden; transition: all 0.25s ease;
+            background: rgba(0,0,0,0.5); z-index: 2000;
+            display: none; align-items: flex-end; /* 底部对齐 */
+            justify-content: center;
         }
-        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.2s; }
+        
         .modal-card {
-            background: var(--card-bg); width: 92%; max-width: 650px;
-            border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-            max-height: 85vh; display: flex; flex-direction: column;
-            border: 1px solid var(--border-light); transform: scale(0.95);
-            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .modal-overlay.active .modal-card { transform: scale(1); }
-        
-        /* 固定头部 */
-        .modal-sticky-header {
-            flex-shrink: 0; background: var(--card-bg); padding: 20px 24px 15px;
-            border-bottom: 1px solid var(--border-light); border-radius: 16px 16px 0 0;
-            z-index: 10;
-        }
-        .modal-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .modal-title { font-size: 1.2em; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }
-        .modal-scroll-body { flex: 1; overflow-y: auto; padding: 24px; background: #fff; border-radius: 0 0 16px 16px; -webkit-overflow-scrolling: touch; }
-
-        /* --- [优化] 原句展示区样式 --- */
-        .original-sentence-box { 
-            background: #f0ebe5; /* 暖灰色背景 */
-            padding: 16px; 
-            border-radius: 10px; 
-            border-left: 5px solid var(--primary-color); 
-            color: #3e3e3e; 
-            font-family: 'Inter', sans-serif;
-            font-size: 1.05em; 
-            line-height: 1.6; 
-            font-style: italic;
-            box-shadow: inset 0 1px 4px rgba(0,0,0,0.03);
-            margin-top: 5px;
+            background: #fff; width: 100%; max-width: 600px;
+            height: 85vh; /* 占据大半屏 */
+            border-radius: 20px 20px 0 0;
+            display: flex; flex-direction: column;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* --- [优化] AI 分析结果排版 (核心修改) --- */
-        .ai-result-content { 
-            line-height: 1.9; 
-            color: #333; 
-            font-size: 15px; 
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* 标题 - 带虚线分割 */
-        .ai-result-content h1, 
-        .ai-result-content h2, 
-        .ai-result-content h3 { 
-            color: var(--text-secondary); 
-            margin: 1.5em 0 0.8em; 
-            font-size: 1.15em; 
-            font-weight: 700;
-            border-bottom: var(--dashed-line); 
-            padding-bottom: 8px; 
-            position: relative;
-        }
-        .ai-result-content h1:first-child, 
-        .ai-result-content h2:first-child, 
-        .ai-result-content h3:first-child { 
-            margin-top: 0; 
-        }
-
-        /* 列表优化 - 移除默认圆点，增加间距 */
-        .ai-result-content ul, .ai-result-content ol {
-            padding-left: 0;
-            list-style-type: none;
-            margin-bottom: 1em;
+        /* 弹窗头部 (固定) */
+        .modal-header {
+            padding: 20px 20px 10px;
+            border-bottom: 1px solid #eee;
+            background: #fff; border-radius: 20px 20px 0 0;
+            flex-shrink: 0;
         }
         
-        .ai-result-content li {
-            margin-bottom: 12px;
-            padding-left: 10px;
-            position: relative;
-        }
+        /* 顶部标题栏 */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-title { font-weight: 700; font-size: 1.1em; color: #333; display: flex; align-items: center; gap: 6px; }
         
-        /* 重点词汇 (Bold) - 变成彩色高亮文本 */
-        .ai-result-content strong { 
-            color: #d35400; /* 焦糖色 */
-            font-weight: 600;
-            margin-right: 2px;
+        /* 原句展示框 (美化版) */
+        .original-sentence {
+            background: #f8f6f4;
+            border-left: 4px solid var(--primary-brown);
+            padding: 12px 15px;
+            border-radius: 0 8px 8px 0;
+            color: #444; font-style: italic; font-size: 0.95em;
+            line-height: 1.5;
+            max-height: 100px; overflow-y: auto;
         }
 
-        /* 模拟截图中的“标签” (Badge) 效果
-           假设 AI 输出 Markdown 为： - **释义**: xxx  或  - **例句**: xxx 
-           我们把这种列表开头加粗的样式做成徽章
-        */
-        .ai-result-content li > strong:first-child {
+        /* 弹窗滚动区域 */
+        .modal-body {
+            flex: 1; overflow-y: auto; padding: 20px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* --- [核心] AI 分析结果美化 (Result Styling) --- */
+        .ai-result { font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; color: #333; }
+
+        /* 1. 标题带分割线 */
+        .ai-result h1, .ai-result h2 {
+            font-size: 1.1em; font-weight: 700; color: var(--primary-brown);
+            margin-top: 25px; margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: var(--dashed-line); /* 虚线分割 */
+        }
+        .ai-result h1:first-child, .ai-result h2:first-child { margin-top: 0; }
+        
+        /* 2. 列表样式 */
+        .ai-result ul, .ai-result ol { padding-left: 0; list-style: none; margin-bottom: 15px; }
+        .ai-result li { margin-bottom: 10px; padding-left: 5px; }
+
+        /* 3. 标签化 Badge (关键) */
+        /* 针对 **释义**: 这种结构，将 strong 渲染为标签 */
+        .ai-result li strong:first-child {
             display: inline-block;
-            background-color: rgba(139, 115, 85, 0.1); /* 浅棕色背景 */
-            color: var(--primary-color);
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.9em;
-            margin-right: 8px;
-            font-weight: 500;
-            transform: translateY(-1px);
+            font-weight: 600; font-size: 0.85em;
+            padding: 2px 8px; border-radius: 6px;
+            margin-right: 6px; transform: translateY(-1px);
         }
 
-        /* 英文单词本身的高亮 (Usually in h3 or bold) */
-        .ai-result-content p {
-            margin-bottom: 1em;
-            text-align: justify;
+        /* 绿色系标签 (释义/含义) */
+        .ai-result li:nth-child(odd) strong:first-child {
+            background-color: var(--badge-green-bg); color: var(--badge-green-text);
+        }
+        /* 橙色系标签 (例句/其他) */
+        .ai-result li:nth-child(even) strong:first-child {
+            background-color: var(--badge-orange-bg); color: var(--badge-orange-text);
         }
 
-        /* 代码块样式 (如果AI输出了代码块) */
-        .ai-result-content code {
-            background: #f4f4f4;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: monospace;
-            color: #c0392b;
+        /* 普通段落 */
+        .ai-result p { margin-bottom: 10px; text-align: justify; }
+
+        /* 三级标题 (单词本身) */
+        .ai-result h3 { font-size: 1em; color: #2c3e50; margin: 15px 0 8px; font-weight: 700; }
+
+        /* 加载状态 */
+        .loading-state { text-align: center; color: #999; padding: 40px; }
+        
+        /* 动画 */
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* --- 设置弹窗样式 (简化) --- */
+        .settings-group { margin-bottom: 15px; }
+        .settings-group label { display: block; margin-bottom: 5px; color: #666; font-size: 0.9em; }
+        .settings-input, .settings-select, textarea {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+            font-size: 1em; background: #fff;
         }
+        .btn-full { width: 100%; padding: 12px; background: var(--primary-brown); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 500; margin-top: 10px; }
 
-        /* 分割线 */
-        .ai-result-content hr {
-            border: 0;
-            border-top: var(--dashed-line);
-            margin: 25px 0;
-        }
-
-        /* --- 表单元素样式 --- */
-        .settings-input, .settings-select, .settings-textarea {
-            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd;
-            border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 1em; background: #fff;
-        }
-        .save-btn { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; }
-        .ai-loading { text-align: center; padding: 40px; color: var(--primary-color); }
-        .spinner { width: 30px; height: 30px; border: 3px solid rgba(139,115,85,0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* --- 生成模块专用样式 --- */
-        .select-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .select-group select { flex: 1; }
-        .gen-actions { display: flex; gap: 10px; margin-top: 10px; }
-        .gen-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95em; }
-        .btn-primary { background: var(--primary-color); color: white; }
-        .btn-secondary { background: #f4f0ec; color: var(--text-secondary); border: 1px solid #e0d5ca !important; }
-        .btn-outline { background: transparent; border: 1px solid var(--primary-color) !important; color: var(--primary-color); }
-
-        #randomTopicsList { list-style: none; margin-top: 20px; padding: 0; }
-        #randomTopicsList li {
-            padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px;
-            cursor: pointer; transition: all 0.2s; background: #fafafa;
-        }
-        #randomTopicsList li:hover { background: #f0ebe5; border-color: #dcd3c3; }
-
-        #customStyleList { list-style: none; max-height: 200px; overflow-y: auto; margin-top: 10px; border: 1px solid #eee; border-radius: 8px; }
-        #customStyleList li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        #customStyleList li:last-child { border: none; }
-        .delete-style-btn { background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-
-        /* --- 移动端适配 --- */
-        @media (max-width: 600px) {
-            .navbar { padding: 0 16px; height: 56px; }
-            .nav-brand { font-size: 1em; }
-            .read-btn-top { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
-            .read-btn-top span { display: none; }
-            .speed-popup { right: -60px; width: 220px; }
-            .speed-popup::before { right: 70px; }
-            .content-container { padding: 15px; }
-            .text-placeholder { padding: 10px 5px; font-size: 1.25em; }
-
-            /* 移动端弹窗 Bottom Sheet */
-            .modal-overlay { align-items: flex-end; }
-            .modal-card {
-                width: 100% !important; max-width: 100%; margin: 0;
-                border-radius: 24px 24px 0 0; max-height: 85vh; height: auto;
-                transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            }
-            .modal-overlay.active .modal-card { transform: translateY(0); scale: 1; }
-            .modal-sticky-header { padding: 20px 20px 10px; }
-            .modal-scroll-body { padding: 20px 20px 40px 20px; }
-            .select-group { flex-direction: column; gap: 0; }
-        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div class="nav-brand"><span>阅读助手</span></div>
+        <div class="nav-brand">阅读助手</div>
         <div class="nav-actions">
-            <button id="readAloudButton" class="read-btn-top" title="朗读全文">
-                <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <div class="sound-wave" id="waveIcon" style="display:none;"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+            <button class="read-btn" id="readBtn" onclick="toggleRead()">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2V15H6L11 19V5Z" fill="currentColor"/><path d="M19.07 4.93L17.66 6.34C18.78 7.46 19.5 9.01 19.5 10.74C19.5 12.47 18.78 14.02 17.66 15.14L19.07 16.55C20.57 15.05 21.5 12.99 21.5 10.74C21.5 8.49 20.57 6.43 19.07 4.93Z" fill="currentColor"/></svg>
                 <span>朗读</span>
             </button>
-
-            <button class="icon-btn" onclick="openModal('generateModal')" title="生成微小说">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-            </button>
-
-            <div class="speed-wrapper" id="speedWrapper">
-                <button class="icon-btn" id="speedToggleBtn" title="调节语速">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                </button>
-                <div class="speed-popup" id="speedPopup">
-                    <div class="speed-header"><span>语速</span><span id="currentSpeedValue" class="speed-val">-20</span></div>
-                    <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20">
-                </div>
-            </div>
-
-            <button class="icon-btn" id="settingsBtn" title="AI 设置">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>
+            <button class="icon-btn" onclick="openModal('settingsModal')">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor"/></svg>
             </button>
         </div>
     </nav>
 
     <div class="content-container">
-        <div id="dynamic-content" class="text-placeholder">加载中...</div>
+        <div id="dynamic-content" class="text-placeholder">加载内容中...</div>
     </div>
 
     <div id="aiResultModal" class="modal-overlay">
         <div class="modal-card">
-            <div class="modal-sticky-header">
-                <div class="modal-header-top">
-                    <div class="modal-title">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #a0522d"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
-                        <span>AI 深度分析</span>
+            <div class="modal-header">
+                <div class="header-bar">
+                    <div class="header-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#8b7355"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                        深度分析
                     </div>
-                    </div>
-                <div class="original-sentence-box" id="aiOriginalSentence"></div>
-            </div>
-            <div id="aiResultContent" class="modal-scroll-body ai-result-content"></div>
-        </div>
-    </div>
-
-    <div id="generateModal" class="modal-overlay">
-        <div class="modal-card">
-            <div class="modal-sticky-header">
-                <div class="modal-header-top">
-                    <div class="modal-title">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon></svg>
-                        <span>生成微小说</span>
-                    </div>
-                    <button class="icon-btn" onclick="closeModal('generateModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
+                <div id="aiOriginalSentence" class="original-sentence"></div>
             </div>
-            <div class="modal-scroll-body">
-                <div class="select-group">
-                    <select id="themeCategorySelect" class="settings-select"></select>
-                    <select id="difficultySelect" class="settings-select"></select>
-                    <select id="styleSelect" class="settings-select"></select>
-                </div>
-                <input type="text" id="themeInput" class="settings-input" placeholder="输入主题，或选择分类后生成题目..." />
-
-                <div class="gen-actions">
-                    <button class="btn-outline" id="genTopicsBtn" onclick="generateRandomTopics(event)">🎲 生成随机题目</button>
-                    <button class="btn-primary" onclick="confirmGenerate(event)">✨ 创作并同步GitHub</button>
-                </div>
-
-                <div id="genStatus" style="margin-top:10px; color:#8b7355; font-size:0.9em; text-align:center;"></div>
-                <ul id="randomTopicsList"></ul>
-            </div>
-        </div>
-    </div>
-
-    <div id="styleManagementModal" class="modal-overlay">
-        <div class="modal-card" style="max-height: 50vh;">
-            <div class="modal-sticky-header">
-                <div class="modal-header-top">
-                    <h3 class="modal-title">🎨 管理风格</h3>
-                    <button class="icon-btn" onclick="closeStyleManagementModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                </div>
-            </div>
-            <div class="modal-scroll-body">
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="addStyleInput" class="settings-input" style="margin-bottom:0;" placeholder="新风格名称..." />
-                    <button onclick="addCustomStyle()" class="save-btn" style="width:auto;">添加</button>
-                </div>
-                <ul id="customStyleList"></ul>
-            </div>
+            <div id="aiResultContent" class="modal-body ai-result"></div>
         </div>
     </div>
 
     <div id="settingsModal" class="modal-overlay">
-        <div class="modal-card">
-            <div class="modal-sticky-header">
-                <div class="modal-header-top">
-                    <h3 class="modal-title">设置</h3>
-                    <button class="icon-btn" onclick="closeModal('settingsModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        <div class="modal-card" style="height: auto; max-height: 80vh;">
+            <div class="modal-header">
+                <div class="header-bar">
+                    <div class="header-title">设置</div>
+                    <button class="icon-btn" onclick="closeModal('settingsModal')">✕</button>
                 </div>
             </div>
-            <div class="modal-scroll-body">
+            <div class="modal-body">
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GROQ API Key (创作)</label>
-                    <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
-                </div>
-                <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token (同步)</label>
+                    <label>Github Token</label>
                     <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
                 </div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">模型</label>
-                    <select id="modelSelect" class="settings-select">
-                        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick (17b)</option>
-                        <option value="llama-3.3-70b-versatile">Llama 3.3 Versatile (70b)</option>
-                    </select>
+                    <label>Groq API Key</label>
+                    <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
                 </div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">系统提示词 (分析用)</label>
-                    <textarea id="systemPromptInput" class="settings-textarea" rows="4"></textarea>
+                    <label>分析指令</label>
+                    <textarea id="systemPromptInput" rows="4" class="settings-textarea"></textarea>
                 </div>
-                <button id="saveSettingsBtn" class="save-btn">保存设置</button>
-                <div style="margin-top:20px; font-size:0.85em; color:#999; text-align:center;">
-                    <span id="cacheSizeDisplay">缓存: 0</span> | <a href="#" onclick="clearAICache()" style="color:#8b7355; text-decoration:none;">清空缓存</a>
-                </div>
+                <button onclick="saveSettings()" class="btn-full">保存设置</button>
+                <div style="text-align:center; margin-top:15px; color:#999; font-size:0.9em;" onclick="clearCache()">清空缓存</div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 核心配置 ---
-        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-        const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
-        const ttsDomains = ['https://ms-ra-forwarder-for-ifreetime-2.vercel.app/'];
-        const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
+        // --- 核心逻辑 ---
+        const GH_CONFIG = { owner: 'moodHappy', repo: 'HelloWorld', path: 'Notes/B1.md' };
+        const CACHE_PREFIX = 'ai_reader_v2_';
+        
+        // 默认指令 (适配新的 Badge 样式，要求 Markdown 列表结构清晰)
+        const DEFAULT_PROMPT = `Analyze the sentence. Output in Markdown:
+1. **难度等级**: [Level]
+2. **中文翻译**: [Translation]
+3. **关键短语**:
+   - **Phrase 1**: [English Phrase]
+     - **释义**: [Chinese Meaning]
+     - **例句**: [English Example]
+     - **例句翻译**: [Chinese Example Translation]`;
 
-        // --- GitHub 配置 ---
-        const GH_CONFIG = {
-            owner: 'moodHappy',
-            repo: 'HelloWorld',
-            path: 'Notes/B1.md'
-        };
-        const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
-
-        let summaryVoice = 'en-US-EricNeural';
         let currentAudio = null;
         let isReading = false;
-        let currentSpeed = -20;
 
-        // --- 生成配置 ---
-        const THEME_LIBRARY = { '日常生活':[],'悬疑推理':[],'科幻奇幻':[],'历史现实':[],'哲理寓言':[],'爱情情感':[],'心理情绪':[],'幽默讽刺':[],'奇遇冒险':[] };
-        const DIFFICULTY_LEVELS = ['A1 (入门)', 'A2 (初级)', 'B1 (中级)', 'B2 (中高级)', 'C1 (高级)', 'C2 (精通)'];
-        const BUILT_IN_STYLES = ['口语风格','简洁风格','叙事风格','书面风格','新闻风格','幽默风格','讽刺风格','黑镜风格','文学风格','哲理风格','商业风格','学术风格'];
-        const CUSTOM_STYLES_KEY = 'ai_reader_custom_styles';
-
-        // --- 交互与缓存 ---
-        const speedBtn = document.getElementById('speedToggleBtn');
-        const speedPopup = document.getElementById('speedPopup');
-        const speedWrapper = document.getElementById('speedWrapper');
-        speedBtn.addEventListener('click', (e) => { e.stopPropagation(); speedPopup.classList.toggle('active'); });
-        document.addEventListener('click', (e) => { if (!speedWrapper.contains(e.target)) speedPopup.classList.remove('active'); });
-        speedPopup.addEventListener('click', (e) => e.stopPropagation());
-
-        const CACHE_PREFIX = 'ai_cache_v1_';
-        function generateCacheKey(text, prompt, model) {
-            let str = text + "|" + prompt + "|" + model; let hash = 0;
-            for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i) | 0;
-            return CACHE_PREFIX + Math.abs(hash);
-        }
-        function getFromCache(key) { const item = JSON.parse(localStorage.getItem(key)); return (!item || Date.now() - item.timestamp > 86400000) ? null : item.content; }
-        function saveToCache(key, content) { try { localStorage.setItem(key, JSON.stringify({ content, timestamp: Date.now() })); updateCacheDisplay(); } catch(e) { clearAICache(); } }
-        function updateCacheDisplay() {
-            let count = 0; for(let i=0; i<localStorage.length; i++) if(localStorage.key(i).startsWith(CACHE_PREFIX)) count++;
-            document.getElementById('cacheSizeDisplay').innerText = `缓存: ${count}`;
-        }
-        function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
-
-        // --- 通用 AI 调用函数 (Groq) ---
-        async function callGroqAPI(messages, temp = 0.7) {
-            const key = localStorage.getItem('groq_api_key');
-            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
-            if (!key) throw new Error("请先在设置中配置 Groq API Key");
-
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model, messages, temperature: temp })
+        // --- 初始化 ---
+        window.onload = () => {
+            document.getElementById('apiKeyInput').value = localStorage.getItem('groq_key') || '';
+            document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
+            document.getElementById('systemPromptInput').value = localStorage.getItem('sys_prompt') || DEFAULT_PROMPT;
+            loadGitHubContent();
+            
+            // 弹窗点击外部关闭
+            document.querySelectorAll('.modal-overlay').forEach(el => {
+                el.onclick = (e) => { if(e.target === el) closeModal(el.id); };
             });
-            const data = await res.json();
-            if(!res.ok) throw new Error(data.error?.message || "请求失败");
-            return data.choices[0]?.message?.content || "";
-        }
-
-        // --- GitHub API 操作 ---
-        async function getGitHubSHA(token) {
-            const res = await fetch(GH_API_BASE, {
-                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            // 弹窗内部双击关闭
+            document.querySelectorAll('.modal-card').forEach(card => {
+                card.ondblclick = (e) => {
+                    if(!['INPUT','TEXTAREA'].includes(e.target.tagName)) closeModal(card.parentElement.id);
+                };
             });
-            if (res.status === 404) return null; // 文件不存在
-            if (!res.ok) throw new Error(`GitHub 读取失败: ${res.status}`);
-            const data = await res.json();
-            return data.sha;
-        }
+        };
 
-        function utf8_to_b64(str) {
-            return window.btoa(unescape(encodeURIComponent(str)));
-        }
-
-        async function uploadToGitHub(content, token) {
-            const sha = await getGitHubSHA(token);
-            const body = {
-                message: "Update via AI Reader",
-                content: utf8_to_b64(content),
-                committer: { name: "AI Reader", email: "bot@ai-reader.com" }
-            };
-            if (sha) body.sha = sha;
-
-            const res = await fetch(GH_API_BASE, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || "上传失败");
+        // --- GitHub 加载 ---
+        async function loadGitHubContent() {
+            const div = document.getElementById('dynamic-content');
+            const token = localStorage.getItem('gh_token');
+            const url = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+            
+            try {
+                // 如果有 Token 用 API (防缓存)，没有则用 Raw (公开库)
+                let text = "";
+                if(token) {
+                    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const data = await res.json();
+                    text = decodeURIComponent(escape(atob(data.content)));
+                } else {
+                    const res = await fetch(`https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`);
+                    text = await res.text();
+                }
+                
+                div.innerHTML = text.replace(/\n/g, '<br>');
+                injectAnalysisButtons(div);
+            } catch(e) {
+                div.innerHTML = "加载失败，请检查设置中的 GitHub Token 或网络连接。<br><br>" + e.message;
             }
-            return true;
         }
 
-        // --- 分析功能 ---
-        async function handleAIAnalyzeClick(target) {
-            const btn = target.closest('.ai-analyze-btn');
-            if (!btn) return;
+        // --- 注入魔法棒按钮 ---
+        function injectAnalysisButtons(container) {
+            const w = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+            const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
+            
+            nodes.forEach(n => {
+                if(n.nodeValue.includes('.')) {
+                    const fragment = document.createDocumentFragment();
+                    n.nodeValue.split(/(\.)/).forEach(part => {
+                        fragment.appendChild(document.createTextNode(part));
+                        if(part === '.') {
+                            const btn = document.createElement('span');
+                            btn.className = 'ai-analyze-btn';
+                            // 魔法棒 Icon
+                            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14.5 13.5L16.75 16.25L21 12L16.75 7.75L14.5 10.5V13.5ZM12.5 5.5L10.25 2.75L6 7L10.25 11.25L12.5 8.5V5.5ZM7 14L2 19L7 24L12 19L7 14Z"/></svg>';
+                            btn.onclick = (e) => analyzeSentence(e.target);
+                            fragment.appendChild(btn);
+                        }
+                    });
+                    n.parentNode.replaceChild(fragment, n);
+                }
+            });
+            
+            // 恢复上次点击状态
+            const lastIdx = localStorage.getItem('last_click_idx');
+            if(lastIdx) {
+                const btns = document.querySelectorAll('.ai-analyze-btn');
+                if(btns[lastIdx]) btns[lastIdx].classList.add('last-clicked');
+            }
+        }
 
+        // --- 提取句子 ---
+        function getSentence(btn) {
+            let text = "", node = btn.previousSibling;
+            while(node) {
+                if(node.nodeType === 3) {
+                    text = node.nodeValue + text;
+                    if(text.lastIndexOf('.') > -1 && text.lastIndexOf('.') < text.length-1) {
+                        text = text.substring(text.lastIndexOf('.')+1);
+                        break;
+                    }
+                } else if(node.classList?.contains('ai-analyze-btn')) break;
+                else text = node.innerText + text;
+                node = node.previousSibling;
+            }
+            return text.trim();
+        }
+
+        // --- 分析核心 ---
+        async function analyzeSentence(target) {
+            const btn = target.closest('.ai-analyze-btn');
             const allBtns = document.querySelectorAll('.ai-analyze-btn');
             allBtns.forEach(b => b.classList.remove('last-clicked'));
             btn.classList.add('last-clicked');
+            localStorage.setItem('last_click_idx', Array.from(allBtns).indexOf(btn));
 
-            const btnIndex = Array.from(allBtns).indexOf(btn);
-            if (btnIndex !== -1) {
-                localStorage.setItem(LAST_CLICKED_KEY, btnIndex);
-            }
+            const sentence = getSentence(btn);
+            if(!sentence) return;
 
-            const sentence = extractSentenceBefore(btn);
-            if (!sentence || sentence.length < 2) return;
-
-            const box = document.getElementById('aiResultContent');
-            const sentenceBox = document.getElementById('aiOriginalSentence');
-            sentenceBox.innerText = sentence;
-            box.innerHTML = '<div class="ai-loading"><div class="spinner"></div><p>分析中...</p></div>';
+            // UI 更新
+            document.getElementById('aiOriginalSentence').innerText = sentence;
+            const contentBox = document.getElementById('aiResultContent');
+            contentBox.innerHTML = '<div class="loading-state">✨ AI 正在思考中...</div>';
             openModal('aiResultModal');
 
-            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
-            const prompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-            const cacheKey = generateCacheKey(sentence, prompt, model);
-            const cached = getFromCache(cacheKey);
+            // 缓存与请求
+            const sysPrompt = localStorage.getItem('sys_prompt') || DEFAULT_PROMPT;
+            const cacheKey = CACHE_PREFIX + hashCode(sentence + sysPrompt);
+            const cached = localStorage.getItem(cacheKey);
 
-            if (cached) { box.innerHTML = `<div class="ai-result-content">${marked.parse(cached)}</div>`; return; }
-
-            try {
-                const content = await callGroqAPI([
-                    {role: "system", content: prompt},
-                    {role: "user", content: `Analyze: "${sentence}"`}
-                ]);
-                saveToCache(cacheKey, content);
-                box.innerHTML = `<div class="ai-result-content">${marked.parse(content)}</div>`;
-            } catch (e) { box.innerHTML = `<p style="color:#a0522d;padding:20px;">错误: ${e.message}</p>`; }
-        }
-
-        // --- 生成微小说功能 ---
-        function populateSelectors() {
-            const catSel = document.getElementById('themeCategorySelect');
-            const diffSel = document.getElementById('difficultySelect');
-            catSel.innerHTML = '<option value="" disabled selected>选择分类</option>';
-            for(let c in THEME_LIBRARY) { let o = document.createElement('option'); o.value=c; o.text=c; catSel.add(o); }
-            catSel.onchange = () => document.getElementById('themeInput').value = '';
-
-            diffSel.innerHTML = '';
-            DIFFICULTY_LEVELS.forEach(l => { let o = document.createElement('option'); o.value=l.split(' ')[0]; o.text=l; if(l.startsWith('B1')) o.selected=true; diffSel.add(o); });
-            populateStyleSelector();
-        }
-
-        function populateStyleSelector() {
-            const styleSel = document.getElementById('styleSelect');
-            styleSel.innerHTML = '';
-            const customStyles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-            [...BUILT_IN_STYLES, ...customStyles].forEach(s => { let o = document.createElement('option'); o.value=s; o.text=s; styleSel.add(o); });
-            let manageOpt = document.createElement('option'); manageOpt.text='⚙️ 管理风格...'; manageOpt.value='manage'; styleSel.add(manageOpt);
-
-            styleSel.onchange = (e) => {
-                if(e.target.value === 'manage') {
-                    openStyleManagementModal();
-                    e.target.value = BUILT_IN_STYLES[0]; 
-                }
-            };
-        }
-
-        async function generateRandomTopics(e) {
-            e.preventDefault();
-            const theme = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value;
-            const statusDiv = document.getElementById('genStatus');
-            const list = document.getElementById('randomTopicsList');
-
-            if(!theme) { statusDiv.innerText = "请先选择分类或输入主题"; return; }
-            statusDiv.innerText = "正在生成题目...";
-            list.innerHTML = '';
-
-            try {
-                const prompt = `Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Separate with newlines. Just the titles.`;
-                const text = await callGroqAPI([{role:"user", content: prompt}]);
-                text.split('\n').filter(t=>t.trim()).forEach(t => {
-                    let li = document.createElement('li');
-                    li.innerText = t.replace(/^\d+\.\s*/, '').replace(/["《》]/g, '');
-                    li.onclick = () => startGeneration(li.innerText);
-                    list.appendChild(li);
-                });
-                statusDiv.innerText = "点击题目开始生成";
-            } catch(err) { statusDiv.innerText = "生成失败: " + err.message; }
-        }
-
-        async function confirmGenerate(e) {
-            e.preventDefault();
-            let topic = document.getElementById('themeInput').value.trim();
-            if(!topic) topic = document.getElementById('themeCategorySelect').value;
-            if(!topic) { document.getElementById('genStatus').innerText = "请输入主题"; return; }
-            startGeneration(topic);
-        }
-
-        async function startGeneration(topic) {
-            const ghToken = localStorage.getItem('gh_token');
-            const statusDiv = document.getElementById('genStatus');
-
-            if (!ghToken) {
-                statusDiv.innerText = "错误：请先在设置中配置 GitHub Token";
+            if(cached) {
+                contentBox.innerHTML = marked.parse(cached);
                 return;
             }
 
-            const diff = document.getElementById('difficultySelect').value;
-            const style = document.getElementById('styleSelect').value;
-            const contentDiv = document.getElementById('dynamic-content');
-
-            statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
-
-            // [修改] 强制英文生成的 Prompt
-            const prompt = `
-            Role: Professional English Storyteller.
-            Task: Write a short story based on the theme/topic: "${topic}".
-            Constraints:
-            1. LANGUAGE: STRICTLY ENGLISH ONLY. Even if the topic is in Chinese or another language, the story content must be 100% English.
-            2. Level: CEFR ${diff}.
-            3. Style: ${style}.
-            4. Length: Approximately 150 words.
-            5. Output: Return ONLY the story text. Do not include the title. Do not include "Here is the story".
-            `;
-
             try {
-                // 1. 生成故事
-                const story = await callGroqAPI([{role:"user", content: prompt}]);
+                const apiKey = localStorage.getItem('groq_key');
+                if(!apiKey) throw new Error("请先设置 Groq API Key");
 
-                // 2. 上传到 GitHub
-                statusDiv.innerText = "创作完成，正在同步到 GitHub...";
-                await uploadToGitHub(story, ghToken);
-
-                // 3. 更新界面
-                localStorage.removeItem(LAST_CLICKED_KEY); // 清除旧位置
-                statusDiv.innerText = "同步成功！";
-                closeModal('generateModal');
-                contentDiv.innerHTML = story.replace(/\n/g, '<br><br>');
-                injectAIButtons();
-
-            } catch(err) { 
-                console.error(err);
-                statusDiv.innerText = "失败: " + err.message; 
-            }
-        }
-
-        // --- 风格管理 ---
-        function openStyleManagementModal() {
-            populateCustomStyleList();
-            document.getElementById('generateModal').classList.remove('active'); 
-            document.getElementById('styleManagementModal').classList.add('active');
-        }
-        function closeStyleManagementModal() {
-            document.getElementById('styleManagementModal').classList.remove('active');
-            document.getElementById('generateModal').classList.add('active'); 
-            populateStyleSelector();
-        }
-        function populateCustomStyleList() {
-            const list = document.getElementById('customStyleList');
-            list.innerHTML = '';
-            const styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-            styles.forEach(s => {
-                let li = document.createElement('li');
-                li.innerHTML = `<span>${s}</span><button class="delete-style-btn" onclick="deleteStyle('${s}')">删除</button>`;
-                list.appendChild(li);
-            });
-        }
-        window.addCustomStyle = () => {
-            const input = document.getElementById('addStyleInput');
-            const val = input.value.trim();
-            if(!val) return;
-            const styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-            if(!styles.includes(val) && !BUILT_IN_STYLES.includes(val)) {
-                styles.push(val);
-                localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
-                input.value = '';
-                populateCustomStyleList();
-            }
-        };
-        window.deleteStyle = (val) => {
-            let styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-            styles = styles.filter(s => s !== val);
-            localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
-            populateCustomStyleList();
-        };
-
-        // --- 文本处理与注入 ---
-        function injectAIButtons() {
-            const div = document.getElementById('dynamic-content');
-            if(!div.innerText.trim()) return;
-            div.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
-
-            const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
-            const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
-            nodes.forEach(n => {
-                if (n.nodeValue.includes('.')) {
-                    const f = document.createDocumentFragment();
-                    n.nodeValue.split(/(\.)/).forEach(p => {
-                        f.appendChild(document.createTextNode(p));
-                        if(p==='.') {
-                            const b = document.createElement('span');
-                            b.className = 'ai-analyze-btn';
-                            b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
-                            b.onclick = (e) => handleAIAnalyzeClick(e.target);
-                            f.appendChild(b);
-                        }
-                    });
-                    n.parentNode.replaceChild(f, n);
-                }
-            });
-
-            const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
-            if (lastClickedIndex !== null) {
-                const allBtns = div.querySelectorAll('.ai-analyze-btn');
-                const idx = parseInt(lastClickedIndex);
-                if (allBtns[idx]) {
-                    allBtns[idx].classList.add('last-clicked');
-                }
-            }
-        }
-
-        function extractSentenceBefore(node) {
-            let t = "", c = node.previousSibling;
-            while(c) {
-                if(c.nodeType===3) { t = c.nodeValue + t; if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { t=t.substring(t.lastIndexOf('.')+1); break; } }
-                else if(c.classList?.contains('ai-analyze-btn')) break;
-                else t = c.innerText + t;
-                c = c.previousSibling;
-            }
-            return t.trim();
-        }
-
-        // --- TTS & 初始化 ---
-        function playTTS(text) {
-            if(currentAudio) { currentAudio.pause(); currentAudio = null; }
-            const q = new URLSearchParams({ text, voiceName: summaryVoice, speed: currentSpeed });
-            for(let d of ttsDomains) {
-                let a = new Audio(`${d}api/aiyue?${q}`);
-                a.play().then(() => { currentAudio = a; isReading = true; updateReadBtn(); a.onended = () => { isReading = false; updateReadBtn(); }; }).catch(()=>{});
-                if(currentAudio) break;
-            }
-        }
-        function updateReadBtn() {
-            const btn = document.getElementById('readAloudButton');
-            const playIcon = document.getElementById('playIcon');
-            const waveIcon = document.getElementById('waveIcon');
-            const textSpan = btn.querySelector('span');
-            if(isReading) { btn.classList.add('reading'); playIcon.style.display='none'; waveIcon.style.display='flex'; if(textSpan) textSpan.textContent="停止"; }
-            else { btn.classList.remove('reading'); playIcon.style.display='block'; waveIcon.style.display='none'; if(textSpan) textSpan.textContent="朗读"; }
-        }
-        document.getElementById('readAloudButton').onclick = () => {
-            if(isReading) { if(currentAudio) currentAudio.pause(); isReading = false; updateReadBtn(); }
-            else {
-                const c = document.getElementById('dynamic-content').cloneNode(true);
-                c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
-                playTTS(c.innerText);
-            }
-        };
-
-        window.openModal = id => {
-            if(id === 'generateModal') populateSelectors();
-            document.getElementById(id).classList.add('active');
-        };
-        window.closeModal = id => document.getElementById(id).classList.remove('active');
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('apiKeyInput').value = localStorage.getItem('groq_api_key') || '';
-            document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
-            document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
-            document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-            updateCacheDisplay();
-
-            const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
-            fetch(rawUrl)
-                .then(r => {
-                    if(!r.ok) throw new Error("无法加载 GitHub 文件");
-                    return r.text();
-                })
-                .then(d => {
-                    document.getElementById('dynamic-content').innerHTML = d.replace(/\n/g, '<br>');
-                    injectAIButtons();
-                })
-                .catch(e => {
-                    document.getElementById('dynamic-content').innerHTML = "欢迎！请点击顶部魔术棒图标开始创作。<br>(注意：初始加载 GitHub 内容失败，可能是仓库私有或网络问题，但不影响创作功能)";
+                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile",
+                        messages: [
+                            { role: "system", content: sysPrompt },
+                            { role: "user", content: sentence }
+                        ],
+                        temperature: 0.3
+                    })
                 });
+                
+                const data = await res.json();
+                if(data.error) throw new Error(data.error.message);
+                
+                const md = data.choices[0].message.content;
+                localStorage.setItem(cacheKey, md);
+                contentBox.innerHTML = marked.parse(md);
 
-            document.getElementById('speedRange').oninput = function() { document.getElementById('currentSpeedValue').innerText = this.value; currentSpeed = this.value; };
-            document.getElementById('settingsBtn').onclick = () => openModal('settingsModal');
-            document.getElementById('saveSettingsBtn').onclick = () => {
-                localStorage.setItem('groq_api_key', document.getElementById('apiKeyInput').value);
-                localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
-                localStorage.setItem('groq_model', document.getElementById('modelSelect').value);
-                localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
-                closeModal('settingsModal');
-                if(confirm('设置已保存。是否清空缓存?')) clearAICache();
-            };
+            } catch(e) {
+                contentBox.innerHTML = `<div style="color:red; text-align:center;">错误: ${e.message}</div>`;
+            }
+        }
 
-            document.querySelectorAll('.modal-overlay').forEach(o => o.onclick = e => { if(e.target===o) closeModal(o.id) });
-            document.querySelectorAll('.modal-card').forEach(c => {
-                c.addEventListener('dblclick', (e) => {
-                    if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName) || window.getSelection().toString().length > 0) return;
-                    closeModal(c.closest('.modal-overlay').id);
-                });
-            });
-        });
+        // --- 辅助功能 ---
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        function saveSettings() {
+            localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
+            localStorage.setItem('groq_key', document.getElementById('apiKeyInput').value);
+            localStorage.setItem('sys_prompt', document.getElementById('systemPromptInput').value);
+            closeModal('settingsModal');
+            alert("设置已保存");
+            loadGitHubContent(); // 重新加载以应用新Token
+        }
+
+        function clearCache() {
+            Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k));
+            alert("缓存已清空");
+        }
+
+        function hashCode(s) {
+            let h = 0;
+            for(let i=0; i<s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+            return h;
+        }
+
+        // 朗读 (简化版，直接调浏览器 TTS 兜底)
+        function toggleRead() {
+            if(isReading) {
+                window.speechSynthesis.cancel();
+                isReading = false;
+                document.getElementById('readBtn').classList.remove('reading');
+                document.getElementById('readBtn').querySelector('span').innerText = "朗读";
+            } else {
+                const text = document.getElementById('dynamic-content').innerText;
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.onend = () => toggleRead();
+                window.speechSynthesis.speak(u);
+                isReading = true;
+                document.getElementById('readBtn').classList.add('reading');
+                document.getElementById('readBtn').querySelector('span').innerText = "停止";
+            }
+        }
     </script>
 </body>
 </html>
