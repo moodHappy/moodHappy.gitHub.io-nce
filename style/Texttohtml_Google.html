@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI 阅读 & 创作助手 (Pro版)</title>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
+
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="https://unpkg.com/compromise@14.10.0/builds/compromise.min.js"></script>
-    
+
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css"/>
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light-border.css"/>
 
@@ -164,7 +164,7 @@
         .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
         .dict-speaker-btn svg { width: 16px; height: 16px; }
         .dict-speaker-btn.playing { color: #E91E63; animation: pulse 1s infinite; }
-        
+
         .dict-basic-trans { font-size: 14px; color: #444; }
         .dict-pos-block { margin-bottom: 4px; }
         .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
@@ -469,7 +469,7 @@
         function getLemma(word) {
             const lower = word.toLowerCase();
             if (lemmaCache.has(lower)) return lemmaCache.get(lower);
-            
+
             let root = lower;
             if (window.nlp) {
                 try {
@@ -681,7 +681,15 @@
 
             statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
 
-            const prompt = `Write a short story in English (approx 150 words), CEFR Level ${diff}, based on title/theme: "${topic}". Style: ${style}. Output ONLY the story text. No intro/outro.`;
+            // 核心修改：强制英文生成的 Prompt
+            const prompt = `You are an English creative writing assistant.
+User Request: Write a short story based on the theme: "${topic}".
+Constraints:
+1. LANGUAGE: The story MUST be written in ENGLISH, regardless of the input language.
+2. Level: CEFR ${diff}.
+3. Style: ${style}.
+4. Length: Approx 150 words.
+5. Output: ONLY the story text. No titles, no intro, no translation.`;
 
             try {
                 const story = await callGroqAPI([{role:"user", content: prompt}]);
@@ -778,7 +786,7 @@
             const escapedWord = originalWord.replace(/'/g, "\\'");
             let html = `<div class="dict-popup">`;
             const basicTrans = transData[0] && transData[0][0] ? transData[0][0][0] : '';
-            
+
             html += `<div class="dict-header-row">
                         <div class="dict-word-line">
                             <span class="dict-head-word">${originalWord}</span>
@@ -814,7 +822,7 @@
             if(window._tippyInstances) {
                 window._tippyInstances.forEach(i => i.destroy());
             }
-            
+
             // 绑定到所有 .clickable-word
             window._tippyInstances = tippy('.clickable-word', {
                 trigger: 'click',
@@ -857,7 +865,7 @@
 
             parts.forEach(part => {
                 if(!part) return;
-                
+
                 // 检查是否是单词 (简单正则)
                 if(/^[a-zA-Z0-9\u00C0-\u024F]+$/.test(part)) {
                     const span = document.createElement('span');
@@ -993,7 +1001,7 @@
             document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-            
+
             // 载入 URL 设置
             document.getElementById('blueUrlInput').value = localStorage.getItem('highlight_url_blue') || '';
             document.getElementById('redUrlInput').value = localStorage.getItem('highlight_url_red') || '';
