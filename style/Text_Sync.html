@@ -6,7 +6,7 @@
   <title>GitHub 同步助手 & AI 阅读</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* CSS Variables for theming and typography */
+    /* CSS Variables - 完整保留您原来的配色方案 */
     :root {
       --bg-color: #f9f9f9;
       --text-color: #222;
@@ -24,10 +24,11 @@
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
       --settings-icon-color: #333;
-      
-      /* 还原最初的按钮色调风格 */
-      --btn-icon-color: #8b7355; 
-      --btn-bg-hover: #8b7355;
+
+      /* AI 分析专用变量 */
+      --wand-color: #8b7355; 
+      --wand-hover-bg: #8b7355;
+      --highlight-bg: rgba(139, 115, 85, 0.08);
 
       --primary-font: 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
       --font-size: 17px;
@@ -46,8 +47,10 @@
       --modal-content-bg: #2d2d2d;
       --input-border-color: #555;
       --settings-icon-color: #ccc;
-      --btn-icon-color: #bb86fc;
-      --btn-bg-hover: #bb86fc;
+      
+      --wand-color: #bb86fc;
+      --wand-hover-bg: #bb86fc;
+      --highlight-bg: rgba(187, 134, 252, 0.1);
     }
 
     /* Sepia Theme */
@@ -62,8 +65,10 @@
       --modal-content-bg: #fdfaf3;
       --input-border-color: #c9bca8;
       --settings-icon-color: #5b4636;
-      --btn-icon-color: #8b7355;
-      --btn-bg-hover: #8b7355;
+      
+      --wand-color: #8b7355;
+      --wand-hover-bg: #8b7355;
+      --highlight-bg: rgba(139, 115, 85, 0.1);
     }
 
     body {
@@ -117,79 +122,226 @@
       transition: background-color 0.3s;
     }
 
-    button:disabled { background-color: #999; cursor: not-allowed; }
+    button:disabled {
+        background-color: #999;
+        cursor: not-allowed;
+    }
+
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
     button.generate { background-color: var(--button-generate-bg); }
     button.read { background-color: var(--button-read-bg); }
 
     @media (max-width: 600px) {
-        .button-container { flex-wrap: wrap; justify-content: space-between; }
-        button { flex: 1 1 calc(20% - 8px); }
+        .button-container {
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        button {
+            flex: 1 1 calc(20% - 8px);
+        }
     }
 
-    #status { margin-top: 10px; color: var(--status-color); font-size: 14px; }
-    #settings-icon { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--settings-icon-color); }
+    #status {
+      margin-top: 10px;
+      color: var(--status-color);
+      font-size: 14px;
+    }
+
+    #settings-icon {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--settings-icon-color);
+    }
 
     /* Modal Styles */
     .modal {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: var(--modal-bg); display: none; justify-content: center; align-items: center; z-index: 999;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: var(--modal-bg);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
     }
     .modal-content {
-      background: var(--modal-content-bg); color: var(--text-color); padding: 20px;
-      border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+      background: var(--modal-content-bg);
+      color: var(--text-color);
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px; /* 稍微调宽以适应分析内容 */
+      max-height: 90vh; 
+      overflow-y: auto;
       position: relative;
     }
-    .modal-content h3 { margin-top: 0; }
+    .modal-content h3 {
+      margin-top: 0;
+    }
     .modal-content input, .modal-content select, .modal-content textarea {
-      width: 100%; padding: 10px; margin-top: 10px; font-size: 16px; border-radius: 5px;
-      border: 1px solid var(--input-border-color); background-color: var(--textarea-bg-color);
-      color: var(--text-color); box-sizing: border-box;
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid var(--input-border-color);
+      background-color: var(--textarea-bg-color);
+      color: var(--text-color);
+      box-sizing: border-box;
     }
-    .modal-content select[multiple] { height: 100px; }
-    .modal-content label { display: block; margin-top: 15px; font-size: 14px; color: var(--status-color); }
 
-    article.immersive-content { line-height: var(--line-height); font-size: var(--font-size); }
-    article.immersive-content p { margin-bottom: 1em; white-space: pre-wrap; }
+    .modal-content select[multiple] {
+        height: 100px;
+    }
 
-    .ai-inputs { display: none; }
-    .modal-buttons { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--textarea-border-color); }
-    .modal-buttons button { flex: 1 1 auto; margin-top: 0; }
-    
-    #storyThemeModal .modal-buttons-container { display: flex; gap: 10px; margin-top: 10px; }
-    #storyThemeModal .modal-buttons-container button { flex: 1; }
-    #storyThemeModal .modal-buttons-container button.generate-topics-btn { background-color: #800080; }
+    .modal-content label {
+      display: block;
+      margin-top: 15px;
+      font-size: 14px;
+      color: var(--status-color);
+    }
 
-    #randomTopicsList { margin-top: 20px; padding: 0; list-style: none; }
+    article.immersive-content {
+      line-height: var(--line-height);
+      font-size: var(--font-size);
+    }
+    article.immersive-content p {
+      margin-bottom: 1em;
+      white-space: pre-wrap;
+    }
+
+    .ai-inputs {
+        display: none;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid var(--textarea-border-color);
+    }
+
+    .modal-buttons button {
+      flex: 1 1 auto;
+      margin-top: 0;
+    }
+
+    #storyThemeModal .modal-buttons-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    #storyThemeModal .modal-buttons-container button {
+        flex: 1;
+    }
+
+    #storyThemeModal .modal-buttons-container button.generate-topics-btn {
+        background-color: #800080;
+    }
+
+    #randomTopicsList {
+        margin-top: 20px;
+        padding: 0;
+        list-style: none;
+    }
     #randomTopicsList li {
-        padding: 10px; border: 1px solid var(--textarea-border-color); border-radius: 5px;
-        margin-bottom: 8px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+        padding: 10px;
+        border: 1px solid var(--textarea-border-color);
+        border-radius: 5px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s;
     }
-    #randomTopicsList li:hover { background-color: var(--textarea-border-color); }
+    #randomTopicsList li:hover {
+        background-color: var(--textarea-border-color);
+    }
 
-    .select-container { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-    .select-container select { flex: 1 1 30%; }
+    .select-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
 
-    /* Style Management */
-    #customStyleList { padding: 0; list-style: none; max-height: 150px; overflow-y: auto; border: 1px solid var(--textarea-border-color); border-radius: 5px; margin-top: 10px; }
-    #customStyleList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--textarea-border-color); }
-    #customStyleList li:last-child { border-bottom: none; }
-    #customStyleList .delete-style-btn { background: var(--button-danger-bg); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
-    .style-input-container { display: flex; gap: 10px; margin-top: 10px; }
-    .style-input-container input { flex: 1; }
-    .style-input-container button { flex: none; width: 100px; margin-top: 0; }
+    .select-container select {
+      flex: 1 1 30%;
+    }
 
-    /* --- 分析按钮样式 (还原至第一版设计) --- */
+    /* Style Management Modal Specifics */
+    #styleManagementModal h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: var(--text-color);
+    }
+
+    #customStyleList {
+        padding: 0;
+        list-style: none;
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid var(--textarea-border-color);
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+
+    #customStyleList li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid var(--textarea-border-color);
+    }
+
+    #customStyleList li:last-child {
+        border-bottom: none;
+    }
+
+    #customStyleList .delete-style-btn {
+        background: var(--button-danger-bg);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .style-input-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .style-input-container input {
+        flex: 1;
+    }
+
+    .style-input-container button {
+        flex: none;
+        width: 100px;
+        margin-top: 0;
+    }
+
+    /* --- 新增：魔术棒分析按钮样式 --- */
     .ai-analyze-btn {
         display: inline-flex; align-items: center; justify-content: center;
-        background-color: rgba(139, 115, 85, 0.08); 
+        background-color: var(--highlight-bg); 
         border: 1px solid rgba(139, 115, 85, 0.15);
-        border-radius: 50%; width: 20px; height: 20px; margin: 0 3px; cursor: pointer;
-        color: var(--btn-icon-color); position: relative; top: -1px; transition: all 0.2s;
+        border-radius: 50%; width: 22px; height: 22px; margin: 0 4px; cursor: pointer;
+        color: var(--wand-color); position: relative; top: -1px; transition: all 0.2s;
     }
-    .ai-analyze-btn:hover { background-color: var(--btn-bg-hover); color: white; transform: scale(1.1); }
-    
+    .ai-analyze-btn:hover {
+        background-color: var(--wand-hover-bg); 
+        color: white; 
+        transform: scale(1.1);
+    }
     /* 红色高亮样式 - 标记上次点击位置 */
     .ai-analyze-btn.last-clicked {
         background-color: var(--button-danger-bg) !important;
@@ -197,23 +349,45 @@
         border-color: var(--button-danger-bg) !important;
         transform: scale(1.15);
     }
-    .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
+    .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
-    /* 分析结果弹窗特定样式 */
+    /* --- 新增：AI 分析结果样式 --- */
     .original-sentence-box {
-        background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; 
-        border-left: 4px solid var(--btn-icon-color); 
-        color: var(--text-color); font-style: italic; font-size: 0.9em; margin-bottom: 15px;
+        background: rgba(0,0,0,0.05); 
+        padding: 10px; 
+        border-radius: 6px; 
+        border-left: 4px solid var(--wand-color); 
+        color: var(--text-color); 
+        font-style: italic; 
+        font-size: 0.9em; 
+        margin-bottom: 15px;
     }
-    .ai-result-content { line-height: 1.7; font-size: 1em; }
-    .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { color: var(--btn-icon-color); margin-top: 15px; margin-bottom: 8px; font-size: 1.1em; border-bottom: 1px dashed var(--input-border-color); }
+    .ai-result-content { 
+        line-height: 1.7; 
+        font-size: 1em; 
+    }
+    .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { 
+        color: var(--wand-color); 
+        margin-top: 15px; 
+        margin-bottom: 8px; 
+        font-size: 1.1em; 
+        border-bottom: 1px dashed var(--input-border-color); 
+    }
     .ai-result-content ul { padding-left: 20px; }
+    
     .ai-loading { text-align: center; padding: 20px; color: var(--status-color); }
-    .spinner { width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.1); border-top-color: var(--btn-icon-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+    .spinner { 
+        width: 24px; height: 24px; 
+        border: 3px solid rgba(0,0,0,0.1); 
+        border-top-color: var(--wand-color); 
+        border-radius: 50%; 
+        animation: spin 0.8s linear infinite; 
+        margin: 0 auto 10px; 
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
     
     .cache-info { text-align: center; font-size: 12px; color: #999; margin-top: 10px; }
-    .cache-info a { color: var(--btn-icon-color); cursor: pointer; text-decoration: none; }
+    .cache-info a { color: var(--wand-color); cursor: pointer; text-decoration: none; }
 
   </style>
 </head>
@@ -236,7 +410,7 @@
 
   <div id="tokenModal" class="modal">
     <div class="modal-content">
-      <h3>🔐 请输入 GitHub Token：</h3>
+      <h3>🔐 请输入你的 GitHub Token：</h3>
       <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
       <button style="margin-top:10px;" onclick="saveToken()">保存 Token</button>
     </div>
@@ -343,7 +517,7 @@
       </div>
 
       <div class="modal-buttons">
-          <button class="delete" onclick="resetToken()">重设 Token</button>
+          <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
           <button onclick="saveAndApplySettings()">保存并关闭</button>
       </div>
     </div>
@@ -364,7 +538,7 @@
   <div id="aiResultModal" class="modal">
     <div class="modal-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h3 style="margin:0;">📝 句子分析</h3>
+        <h3 style="margin:0;">🪄 AI 深度分析</h3>
         <button onclick="closeModal('aiResultModal')" style="background:transparent; color:var(--text-color); border:none; font-size:20px; padding:0; min-width:auto; min-height:auto;">✕</button>
       </div>
       <div class="original-sentence-box" id="aiOriginalSentence"></div>
@@ -389,7 +563,7 @@
     const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     const DEFAULT_ZHIPU_MODEL = "glm-4";
 
-    // 更新后的默认指令
+    // 默认指令 (您指定的)
     const DEFAULT_ANALYSIS_PROMPT = `你是一位精通中英文的语言专家。请分析我提供的句子：
 1. 判断难度等级 (A1-C2)。
 2. 提供准确、优美的中文翻译。
@@ -412,6 +586,7 @@
     const themeInput = document.getElementById("themeInput");
     const randomTopicsList = document.getElementById("randomTopicsList");
     const generateTopicsBtn = document.querySelector('.generate-topics-btn');
+    const confirmBtn = document.querySelector('.confirm-btn');
     const rootElement = document.documentElement;
 
     // AI Settings Elements
@@ -442,13 +617,43 @@
     const addStyleInput = document.getElementById('addStyleInput');
     const customStyleList = document.getElementById('customStyleList');
 
+
     // --- THEME & STYLE LIBRARY ---
     const THEME_LIBRARY = {
-        '日常生活类': [], '悬疑与推理类': [], '科幻与奇幻类': [], '历史与现实主义类': [],
-        '哲理与寓言类': [], '爱情与情感类': [], '心理与情绪类': [], '幽默与讽刺类': [], '奇遇与冒险类': [],
+        '日常生活类': [], 
+        '悬疑与推理类': [],
+        '科幻与奇幻类': [],
+        '历史与现实主义类': [],
+        '哲理与寓言类': [],
+        '爱情与情感类': [],
+        '心理与情绪类': [],
+        '幽默与讽刺类': [],
+        '奇遇与冒险类': [],
     };
-    const DIFFICULTY_LEVELS = ['A1 (入门)', 'A2 (初级)', 'B1 (中级)', 'B2 (中高级)', 'C1 (高级)', 'C2 (精通)'];
-    const BUILT_IN_STYLES = ['口语风格','简洁风格','叙事风格','书面风格','新闻风格','幽默风格','讽刺风格','黑镜风格','文学风格','哲理风格','商业风格','学术风格'];
+
+    const DIFFICULTY_LEVELS = [
+        'A1 (入门)', 
+        'A2 (初级)', 
+        'B1 (中级)', 
+        'B2 (中高级)', 
+        'C1 (高级)', 
+        'C2 (精通)'
+    ];
+
+    const BUILT_IN_STYLES = [
+        '口语风格',
+        '简洁风格',
+        '叙事风格',
+        '书面风格',
+        '新闻风格',
+        '幽默风格',
+        '讽刺风格', 
+        '黑镜风格',
+        '文学风格',
+        '哲理风格',
+        '商业风格',
+        '学术风格'
+    ];
 
     // --- Settings Management ---
     const defaultSettings = {
@@ -474,6 +679,7 @@
         rootElement.style.setProperty('--primary-font', settings.fontFamily);
         rootElement.style.setProperty('--font-size', settings.fontSize);
         rootElement.style.setProperty('--line-height', settings.lineHeight);
+
         aiProviderSelect.value = settings.aiProvider;
         updateAIInputsVisibility(settings.aiProvider);
     }
@@ -483,6 +689,7 @@
         const currentSettings = { ...defaultSettings, ...savedSettings };
         applySettings(currentSettings);
 
+        // Load AI values into inputs
         aiKimiApiKeyInput.value = currentSettings.aiKimiApiKey;
         aiKimiModelNameInput.value = currentSettings.aiKimiModelName;
         aiZhipuApiKeyInput.value = currentSettings.aiZhipuApiKey;
@@ -490,9 +697,11 @@
         aiApiUrlInput.value = currentSettings.aiApiUrl;
         aiCustomApiKeyInput.value = currentSettings.aiCustomApiKey;
         aiCustomModelNameInput.value = currentSettings.aiCustomModelName;
+        analysisPromptInput.value = currentSettings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
+
+        // Load TTS values into inputs
         ttsUrlsInput.value = currentSettings.ttsUrls;
         ttsVoiceNameInput.value = currentSettings.ttsVoiceName;
-        analysisPromptInput.value = currentSettings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
         
         updateCacheDisplay();
     }
@@ -503,14 +712,19 @@
         aiCustomInputsDiv.style.display = provider === 'custom' ? 'block' : 'none';
     }
 
-    aiProviderSelect.addEventListener('change', (event) => updateAIInputsVisibility(event.target.value));
+    aiProviderSelect.addEventListener('change', (event) => {
+        updateAIInputsVisibility(event.target.value);
+    });
 
     function openSettingsModal() {
-        loadSettings(); // Reload to ensure inputs are fresh
+        loadSettings(); // Ensure fresh data
         settingsModal.style.display = "flex";
     }
 
-    function closeSettingsModal() { settingsModal.style.display = "none"; }
+    function closeSettingsModal() {
+        settingsModal.style.display = "none";
+    }
+
     function closeModal(id) { document.getElementById(id).style.display = "none"; }
 
     function saveAndApplySettings() {
@@ -571,35 +785,58 @@
         statusDiv.textContent = "🗑️ 缓存已清空。";
     }
 
-    // --- Token & GitHub Logic ---
-    function ensureToken() { if (!GITHUB_TOKEN) tokenModal.style.display = "flex"; }
+    // --- GitHub Token Management ---
+    function ensureToken() {
+      if (!GITHUB_TOKEN) {
+        tokenModal.style.display = "flex";
+      }
+    }
+
     function saveToken() {
       const token = document.getElementById("tokenInput").value.trim();
-      if (!token.startsWith("ghp_") && !token.startsWith("github_pat_")) { alert("请输入有效的 GitHub Token！"); return; }
+      if (!token.startsWith("ghp_") && !token.startsWith("github_pat_")) {
+        alert("请输入有效的 GitHub Token！");
+        return;
+      }
       localStorage.setItem("github_token", token);
       GITHUB_TOKEN = token;
       tokenModal.style.display = "none";
       statusDiv.textContent = "⏳ 正在加载 GitHub 内容...";
       loadContent();
     }
+
     function resetToken() {
-      if (confirm("确定要清除 Token 吗？")) {
-        localStorage.removeItem("github_token"); GITHUB_TOKEN = null;
-        closeSettingsModal(); ensureToken();
+      if (confirm("确定要清除已保存的 GitHub Token 并重新输入吗？")) {
+        localStorage.removeItem("github_token");
+        GITHUB_TOKEN = null;
+        closeSettingsModal();
+        ensureToken();
       }
     }
-    function getHeaders() { return { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" }; }
-    
+
+    // --- Core GitHub API Functions ---
+    function getHeaders() {
+      return {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github.v3+json"
+      };
+    }
+
     async function getCurrentFileShaAndContent() {
       try {
         const res = await fetch(apiUrl, { headers: getHeaders() });
-        if (res.status === 404) return { sha: null, content: "" };
+        if (res.status === 404) {
+             statusDiv.textContent = "ℹ️ 目标文件不存在，提交时将自动创建。";
+             return { sha: null, content: "" };
+        }
         if (!res.ok) throw new Error(`GitHub 状态码 ${res.status}`);
         const data = await res.json();
         const decoded = decodeURIComponent(escape(atob(data.content)));
         return { sha: data.sha, content: decoded };
       } catch (err) {
-        statusDiv.textContent = `❌ 读取失败: ${err.message}`; return { sha: null, content: "" };
+        console.warn("读取失败：", err.message);
+        statusDiv.textContent = `❌ 读取失败: ${err.message}. 请检查 Token 或网络。`;
+        return { sha: null, content: "" };
       }
     }
 
@@ -607,155 +844,372 @@
       const content = textarea.value.trim();
       if (!content) return alert("请输入内容再提交！");
       statusDiv.textContent = "🔄 正在提交到 GitHub...";
+
       const { sha } = await getCurrentFileShaAndContent();
       const encodedContent = btoa(unescape(encodeURIComponent(content)));
+
       const res = await fetch(apiUrl, {
-        method: "PUT", headers: { ...getHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Update ${WORD_FILE_PATH_GITHUB}`, content: encodedContent, committer: { name: "GitHub Sync Assistant", email: "bot@example.com" }, ...(sha ? { sha } : {}) })
+        method: "PUT",
+        headers: { ...getHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Update ${WORD_FILE_PATH_GITHUB}`,
+          content: encodedContent,
+          committer: { name: "GitHub Sync Assistant", email: "bot@example.com" },
+          ...(sha ? { sha } : {})
+        })
       });
-      if (res.ok) { renderMode(content); statusDiv.textContent = "✅ 提交成功。"; }
-      else { statusDiv.textContent = "❌ 提交失败：" + (await res.json()).message; }
+
+      if (res.ok) {
+        renderMode(content);
+        statusDiv.textContent = "✅ 提交成功，段落已渲染。";
+      } else {
+        statusDiv.textContent = "❌ 提交失败：" + (await res.json()).message;
+      }
     }
 
     async function deleteContent() {
-      if (!confirm("确定要清空吗？")) return;
+      if (!confirm("确定要清空 GitHub 上的文件内容吗？此操作不可逆。")) return;
+
+      statusDiv.textContent = "🗑️ 正在清空 GitHub 文件...";
       const { sha } = await getCurrentFileShaAndContent();
-      if (!sha) { textarea.value = ""; editMode(); return; }
+      if (!sha) {
+        textarea.value = "";
+        editMode();
+        statusDiv.textContent = "✅ 文件本就为空或不存在。";
+        return;
+      }
+
       const res = await fetch(apiUrl, {
-        method: "PUT", headers: { ...getHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Empty ${WORD_FILE_PATH_GITHUB}`, content: btoa(""), sha, committer: { name: "GitHub Sync Assistant", email: "bot@example.com" } })
+        method: "PUT",
+        headers: { ...getHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Empty ${WORD_FILE_PATH_GITHUB}`,
+          content: btoa(""),
+          sha,
+          committer: { name: "GitHub Sync Assistant", email: "bot@example.com" }
+        })
       });
-      if (res.ok) { textarea.value = ""; editMode(); statusDiv.textContent = "✅ 内容已清空。"; }
+
+      if (res.ok) {
+        textarea.value = "";
+        editMode();
+        statusDiv.textContent = "✅ GitHub 内容已清空。";
+      } else {
+        statusDiv.textContent = "❌ 删除失败：" + (await res.json()).message;
+      }
     }
 
-    // --- AI Logic (Generic) ---
+    // --- AI Generation Functions (Generic) ---
     function getAIConfig() {
       const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
       let aiApiUrl, aiApiKey, aiModelName;
+
       switch (savedSettings.aiProvider) {
-        case 'kimi': aiApiUrl = DEFAULT_KIMI_API_URL; aiApiKey = savedSettings.aiKimiApiKey; aiModelName = savedSettings.aiKimiModelName || DEFAULT_KIMI_MODEL; break;
-        case 'zhipu': aiApiUrl = DEFAULT_ZHIPU_API_URL; aiApiKey = savedSettings.aiZhipuApiKey; aiModelName = savedSettings.aiZhipuModelName || DEFAULT_ZHIPU_MODEL; break;
-        case 'custom': aiApiUrl = savedSettings.aiApiUrl; aiApiKey = savedSettings.aiCustomApiKey; aiModelName = savedSettings.aiCustomModelName; break;
+        case 'kimi':
+            aiApiUrl = DEFAULT_KIMI_API_URL;
+            aiApiKey = savedSettings.aiKimiApiKey;
+            aiModelName = savedSettings.aiKimiModelName || DEFAULT_KIMI_MODEL;
+            break;
+        case 'zhipu':
+            aiApiUrl = DEFAULT_ZHIPU_API_URL;
+            aiApiKey = savedSettings.aiZhipuApiKey;
+            aiModelName = savedSettings.aiZhipuModelName || DEFAULT_ZHIPU_MODEL;
+            break;
+        case 'custom':
+            aiApiUrl = savedSettings.aiApiUrl;
+            aiApiKey = savedSettings.aiCustomApiKey;
+            aiModelName = savedSettings.aiCustomModelName;
+            break;
       }
       return { aiApiUrl, aiApiKey, aiModelName };
     }
 
     async function callAI(userPrompt, systemPromptOverride = null) {
       const { aiApiUrl, aiApiKey, aiModelName } = getAIConfig();
-      if (!aiApiKey) throw new Error("❌ 请在设置中输入 AI 的 API Key！");
+      if (!aiApiKey) {
+          throw new Error("❌ 请在设置中输入 AI 的 API Key！");
+      }
       
       const systemContent = systemPromptOverride || "You are a helpful assistant.";
 
       const response = await fetch(aiApiUrl, {
-        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${aiApiKey}` },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${aiApiKey}`
+        },
         body: JSON.stringify({
           model: aiModelName,
-          messages: [{ role: "system", content: systemContent }, { role: "user", content: userPrompt }],
+          messages: [
+            { role: "system", content: systemContent },
+            { role: "user", content: userPrompt }
+          ],
           temperature: 0.7
         })
       });
-      if (!response.ok) throw new Error(`API 请求失败: ${response.status}`);
+
+      if (!response.ok) {
+        throw new Error(`API 请求失败，状态码: ${response.status} - ${await response.text()}`);
+      }
+
       const data = await response.json();
       return data.choices[0].message.content.trim();
     }
 
-    // --- Generation Features ---
     function openThemeModal() {
-      storyThemeModal.style.display = "flex"; themeInput.value = ""; randomTopicsList.innerHTML = "";
-      populateThemeSelectors(); populateStyleSelector();
-    }
-    function closeThemeModal() { storyThemeModal.style.display = "none"; }
-    
-    function populateThemeSelectors() {
-        themeCategorySelect.innerHTML = '<option value="" disabled selected>选择分类</option>';
-        for (const cat in THEME_LIBRARY) { let o = document.createElement('option'); o.value=cat; o.text=cat; themeCategorySelect.add(o); }
-        difficultySelect.innerHTML = '';
-        DIFFICULTY_LEVELS.forEach(l => { let o = document.createElement('option'); o.value=l.split(' ')[0]; o.text=l; if(l.startsWith('B1')) o.selected=true; difficultySelect.add(o); });
-        themeCategorySelect.onchange = () => themeInput.value = '';
+      storyThemeModal.style.display = "flex";
+      themeInput.value = "";
+      randomTopicsList.innerHTML = "";
+      populateThemeSelectors();
+      populateStyleSelector();
     }
 
-    function populateStyleSelector() {
-        styleSelect.innerHTML = '';
-        const allStyles = [...BUILT_IN_STYLES, ...(JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [])];
-        styleSelect.add(new Option('管理风格...', 'manage'));
-        allStyles.forEach(s => styleSelect.add(new Option(s, s)));
-        styleSelect.onchange = (e) => {
-            if(e.target.value === 'manage') { e.target.selectedOptions[0].selected = false; openStyleManagementModal(); }
+    function closeThemeModal() {
+        storyThemeModal.style.display = "none";
+    }
+
+    // --- Populate Theme Selectors ---
+    function populateThemeSelectors() {
+        themeCategorySelect.innerHTML = '';
+        difficultySelect.innerHTML = '';
+
+        // Populate Categories
+        const defaultCategoryOption = document.createElement('option');
+        defaultCategoryOption.textContent = '选择分类';
+        defaultCategoryOption.value = '';
+        defaultCategoryOption.disabled = true;
+        defaultCategoryOption.selected = true;
+        themeCategorySelect.appendChild(defaultCategoryOption);
+
+        for (const category in THEME_LIBRARY) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            themeCategorySelect.appendChild(option);
+        }
+
+        // Populate Difficulty Levels
+        DIFFICULTY_LEVELS.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level.split(' ')[0]; // Store "A1" from "A1 (入门)"
+            option.textContent = level;
+            if (level.startsWith('B1')) { // Default to B1
+                option.selected = true;
+            }
+            difficultySelect.appendChild(option);
+        });
+
+        // When category changes, we can clear the input
+        themeCategorySelect.onchange = (event) => {
+            themeInput.value = '';
         };
     }
 
-    // Style Management
-    function openStyleManagementModal() { populateCustomStyleList(); styleManagementModal.style.display = "flex"; storyThemeModal.style.display = "none"; }
-    function closeStyleManagementModal() { styleManagementModal.style.display = "none"; populateStyleSelector(); }
-    function populateCustomStyleList() {
-        const styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-        customStyleList.innerHTML = styles.length ? '' : '<li style="color:#999">暂无自定义风格</li>';
-        styles.forEach(s => {
-            let li = document.createElement('li'); li.innerHTML = `${s} <button class="delete-style-btn" onclick="deleteCustomStyle('${s}')">删除</button>`;
-            customStyleList.appendChild(li);
-        });
+    // --- Style Management Functions ---
+    function getCustomStyles() {
+      try {
+        return JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
+      } catch (e) {
+        console.error("Failed to parse custom styles from localStorage:", e);
+        return [];
+      }
     }
-    window.addCustomStyle = () => {
-        const val = addStyleInput.value.trim();
-        const styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-        if(val && !styles.includes(val) && !BUILT_IN_STYLES.includes(val)) {
-            styles.push(val); localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
-            addStyleInput.value = ""; populateCustomStyleList();
-        }
-    };
-    window.deleteCustomStyle = (val) => {
-        let styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-        localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles.filter(s => s !== val)));
-        populateCustomStyleList();
-    };
 
-    async function generateRandomTopics(e) {
-        if(e) e.preventDefault();
+    function saveCustomStyles(styles) {
+      localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
+    }
+
+    function addCustomStyle() {
+      const newStyle = addStyleInput.value.trim();
+      if (newStyle === "") return;
+
+      const customStyles = getCustomStyles();
+      if (!customStyles.includes(newStyle) && !BUILT_IN_STYLES.includes(newStyle)) {
+        customStyles.push(newStyle);
+        saveCustomStyles(customStyles);
+        addStyleInput.value = "";
+        populateCustomStyleList();
+        statusDiv.textContent = "✅ 新风格已添加！";
+      } else {
+        statusDiv.textContent = "🤔 风格已存在，无需重复添加。";
+      }
+    }
+
+    function deleteCustomStyle(styleToDelete) {
+      const customStyles = getCustomStyles();
+      const newStyles = customStyles.filter(style => style !== styleToDelete);
+      saveCustomStyles(newStyles);
+      populateCustomStyleList();
+      statusDiv.textContent = "🗑️ 风格已删除。";
+    }
+
+    function populateCustomStyleList() {
+      const customStyles = getCustomStyles();
+      customStyleList.innerHTML = "";
+      if (customStyles.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = "尚无自定义风格";
+        li.style.color = 'var(--status-color)';
+        customStyleList.appendChild(li);
+        return;
+      }
+      customStyles.forEach(style => {
+        const li = document.createElement('li');
+        li.textContent = style;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '删除';
+        deleteBtn.className = 'delete-style-btn';
+        deleteBtn.onclick = () => deleteCustomStyle(style);
+        li.appendChild(deleteBtn);
+        customStyleList.appendChild(li);
+      });
+    }
+
+    function openStyleManagementModal() {
+        populateCustomStyleList();
+        styleManagementModal.style.display = "flex";
+        storyThemeModal.style.display = "none";
+    }
+
+    function closeStyleManagementModal() {
+        styleManagementModal.style.display = "none";
+        // Re-populate the main style selector when closing this modal
+        populateStyleSelector();
+    }
+
+    // --- Populate Style Selector in main modal ---
+    function populateStyleSelector() {
+        styleSelect.innerHTML = '';
+        const allStyles = [...BUILT_IN_STYLES, ...getCustomStyles()];
+
+        // Add "管理风格" option
+        const manageOption = document.createElement('option');
+        manageOption.textContent = '管理风格...';
+        manageOption.value = 'manage';
+        styleSelect.appendChild(manageOption);
+
+        allStyles.forEach(style => {
+            const option = document.createElement('option');
+            option.value = style;
+            option.textContent = style;
+            styleSelect.appendChild(option);
+        });
+
+        styleSelect.onchange = (event) => {
+            const selectedOption = event.target.selectedOptions[0];
+            if (selectedOption && selectedOption.value === 'manage') {
+                event.preventDefault();
+                event.stopPropagation();
+                openStyleManagementModal();
+                selectedOption.selected = false;
+            }
+        };
+    }
+
+    // --- Generate a list of Chinese story titles ---
+    async function generateRandomTopics(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
         const theme = themeInput.value.trim() || themeCategorySelect.value;
-        if (!theme) return statusDiv.textContent = "🤔 请先选择分类或输入主题";
-        
-        generateTopicsBtn.innerText = "生成中..."; generateTopicsBtn.disabled = true;
+        if (theme === "" || theme === '选择分类') {
+            statusDiv.textContent = "🤔 请选择一个分类或手动输入，然后点击'生成题目'。";
+            return;
+        }
+
+        generateTopicsBtn.textContent = "生成中...";
+        generateTopicsBtn.disabled = true;
+        randomTopicsList.innerHTML = "";
+        statusDiv.textContent = `✨ 正在根据“${theme}”生成微小说题目...`;
+
         try {
-            const txt = await callAI(`Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Return only the titles, one per line.`);
-            randomTopicsList.innerHTML = "";
-            txt.split('\n').filter(t=>t.trim()).forEach(t => {
-                let li = document.createElement('li');
-                li.textContent = t.replace(/^\d+\.\s*/, '').replace(/["《》]/g, '');
-                li.onclick = () => startGeneration(li.textContent);
+            const prompt = `Based on the theme "${theme}", generate a list of 10 creative and unique short story titles in simplified Chinese. Separate each title with a newline character. Example:
+1. 瓶中被遗忘的记忆
+2. 最后一颗星的光芒
+3. 一个由梦想驱动的城市
+4. 古树的低语
+5. 世界尽头的咖啡馆
+6. 倒着走的钟
+7. 看不见的色彩
+8. 收藏未完成故事的图书馆
+9. 来自未来自己的信
+10. 由逝去时间组成的桥`;
+            const topicsText = await callAI(prompt);
+            const topics = topicsText.split('\n').filter(t => t.trim() !== '');
+
+            topics.forEach(topic => {
+                const li = document.createElement('li');
+                li.textContent = topic.replace(/^\d+\.\s*/, ''); // Remove leading numbers and dots
+                li.onclick = () => {
+                    startGeneration(li.textContent);
+                };
                 randomTopicsList.appendChild(li);
             });
-            statusDiv.textContent = "✅ 题目已生成";
-        } catch(err) { statusDiv.textContent = "❌ 失败: " + err.message; }
-        finally { generateTopicsBtn.innerText = "生成题目"; generateTopicsBtn.disabled = false; }
+            statusDiv.textContent = "✅ 题目列表生成成功！点击一个题目来生成微小说。";
+        } catch (error) {
+            statusDiv.textContent = `❌ 生成题目失败: ${error.message}`;
+            console.error("生成题目失败:", error);
+        } finally {
+            generateTopicsBtn.textContent = "生成题目";
+            generateTopicsBtn.disabled = false;
+        }
     }
 
-    function confirmGenerate(e) {
-        if(e) e.preventDefault();
-        let t = themeInput.value.trim() || themeCategorySelect.value;
-        if(t && t !== '选择分类') startGeneration(t);
-        else statusDiv.textContent = "🤔 请输入题目或选择分类";
+    // --- Confirm direct generation from title input OR category ---
+    function confirmGenerate(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        let topic = themeInput.value.trim();
+        if (topic === "") {
+            const selectedCategory = themeCategorySelect.value;
+            if (selectedCategory && selectedCategory !== '选择分类') {
+                topic = selectedCategory;
+            }
+        }
+
+        if (topic === "") {
+            statusDiv.textContent = "🤔 请在输入框中输入一个题目，或者选择一个分类。";
+            return;
+        }
+
+        startGeneration(topic);
     }
 
+    // --- Start Generation (Updated with Difficulty) ---
     async function startGeneration(topic) {
-        const diff = difficultySelect.value || 'B1';
-        const styles = Array.from(styleSelect.selectedOptions).map(o=>o.value).filter(v=>v!=='manage');
-        const styleStr = styles.length ? ` in a ${styles.join(' and ')} style.` : '.';
-        const prompt = `Write a short story in English, about 100 words, **CEFR Level ${diff}**, based on the Chinese title or theme: "${topic}"${styleStr}`;
-        
-        statusDiv.textContent = `✍️ 正在创作 (${diff})...`;
-        closeThemeModal(); editMode();
-        try {
-            const txt = await callAI(prompt);
-            textarea.value = txt;
-            statusDiv.textContent = "✅ 创作成功，正在提交...";
-            await submitContent();
-        } catch(e) { statusDiv.textContent = `❌ 失败: ${e.message}`; }
+      const difficulty = difficultySelect.value || 'B1';
+      const selectedStyles = Array.from(styleSelect.selectedOptions)
+                                 .map(option => option.value)
+                                 .filter(value => value !== 'manage');
+      const stylePrompt = selectedStyles.length > 0
+          ? ` in a ${selectedStyles.join(' and ')} style.`
+          : '.';
+
+      const prompt = `Write a short story in English, about 100 words, **CEFR Level ${difficulty}**, based on the Chinese title or theme: "${topic}"${stylePrompt}`;
+
+      statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说 (Level ${difficulty})...`;
+      editMode();
+      closeThemeModal();
+
+      try {
+          const storyContent = await callAI(prompt);
+          textarea.value = storyContent;
+          statusDiv.textContent = "✅ 微小说创作成功！正在自动提交到 GitHub...";
+          await submitContent();
+      } catch (error) {
+          statusDiv.textContent = `❌ 创作失败: ${error.message}`;
+          console.error("创作失败:", error);
+      }
     }
 
     // --- Content Rendering & Magic Wand Injection ---
     function renderMode(text) {
       renderedDiv.innerHTML = "";
-      // 普通渲染
       const paragraphs = text.split(/\n{2,}/);
       for (const para of paragraphs) {
         if (para.trim()) {
@@ -766,18 +1220,37 @@
       }
       renderedDiv.style.display = "block";
       textarea.style.display = "none";
-      // 注入按钮
+      // 注入魔术棒
       injectAIButtons();
     }
 
-    function editMode() { textarea.style.display = "block"; renderedDiv.style.display = "none"; }
-    function copyContent() { navigator.clipboard.writeText(renderedDiv.style.display!=="none"?renderedDiv.innerText:textarea.value); statusDiv.textContent = "📋 已复制"; }
+    function editMode() {
+      textarea.style.display = "block";
+      renderedDiv.style.display = "none";
+    }
+
+    function copyContent() {
+      const content = renderedDiv.style.display !== "none" ? renderedDiv.innerText : textarea.value;
+      if (!content) {
+        statusDiv.textContent = "🤷‍♀️ 内容为空，无需复制。";
+        return;
+      }
+      navigator.clipboard.writeText(content);
+      statusDiv.textContent = "📋 内容已复制到剪贴板。";
+    }
 
     async function loadContent() {
-      statusDiv.textContent = "⏳ 加载中...";
+      statusDiv.textContent = "⏳ 正在加载 GitHub 内容...";
       const { content } = await getCurrentFileShaAndContent();
-      if (content.trim()) { textarea.value = content; renderMode(content); statusDiv.textContent = "✅ 已加载"; }
-      else { textarea.value = ""; editMode(); statusDiv.textContent = "✅ 文件为空"; }
+      if (content.trim()) {
+        textarea.value = content;
+        renderMode(content);
+        statusDiv.textContent = "✅ GitHub 内容已加载并渲染。";
+      } else {
+        textarea.value = "";
+        editMode();
+        statusDiv.textContent = "✅ GitHub 内容为空，请编辑。";
+      }
     }
 
     // --- Magic Wand & Analysis Logic ---
@@ -798,8 +1271,8 @@
                     if(p === '.') {
                         const b = document.createElement('span');
                         b.className = 'ai-analyze-btn';
-                        // 还原为第一版 SVG (Info Icon style)
-                        b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
+                        // 使用 DeepRead 风格的魔术棒 SVG
+                        b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7.5 5.6L10 7 8.6 4.5 10 2 7.5 3.4 5 2 6.4 4.5 5 7 7.5 5.6zm12 9.8L17 12l1.4 2.5L21 12l-2.5 3.4L21 19l-2.5-1.4L17 19l1.4-2.5L15.9 12l3.6 3.4zm-9 3.8L12 16l1.4 2.5L14.9 16l-1.4 3.2L14.9 22l-1.4-1.3L12 22l1.4-3.2L10.5 22l0-2.8zM19 2l-5 9-2-4-2 4-5-9 9 19 5-19z" style="fill:none;stroke:currentColor;stroke-width:2"/></svg>';
                         b.title = "AI 分析此句";
                         b.onclick = (e) => handleAIAnalyzeClick(e.target);
                         f.appendChild(b);
@@ -882,51 +1355,200 @@
         this.style.display = 'none';
     });
 
-    // --- TTS Logic ---
-    let currentAudio = null, isReading = false, isPaused = false;
-    
-    function playSummaryTTS(text) {
-        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-        const urls = settings.ttsUrls.split(',').map(u => u.trim()).filter(u=>u);
-        if(!urls.length) return alert("请先配置 TTS URL");
-        
-        if(currentAudio) currentAudio.pause();
-        const q = new URLSearchParams({ text: text.trim(), voiceName: settings.ttsVoiceName, speed: -20 });
+    // --- Text-to-Speech Functionality ---
+    let currentAudio = null;
+    let isReading = false;
+    let isPaused = false;
+    let currentTextToSpeak = '';
+    let currentPosition = 0;
+    const currentSpeed = -20; // Keep speed constant for simplicity
 
-        function tryPlay(list) {
-            if(!list.length) { isReading=false; updateTTSBtn(); return statusDiv.textContent="❌ TTS连接失败"; }
-            const url = list.shift();
-            const fullUrl = `${url.endsWith('/')?url:url+'/'}api/aiyue?${q}`;
-            currentAudio = new Audio(fullUrl);
-            currentAudio.play().then(() => {
-                isReading=true; isPaused=false; updateTTSBtn(); statusDiv.textContent="🔊 正在朗读...";
-                currentAudio.onended = () => { isReading=false; updateTTSBtn(); statusDiv.textContent="✅ 朗读结束"; };
-            }).catch(() => tryPlay(list));
+    function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
+      if (!textToSpeak || textToSpeak.trim() === '') {
+          console.warn('Text to speak is empty.');
+          return;
+      }
+
+      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+      const ttsUrls = savedSettings.ttsUrls.split(',').map(url => url.trim()).filter(url => url !== '');
+      const ttsVoiceName = savedSettings.ttsVoiceName;
+
+      if (ttsUrls.length === 0 || !ttsVoiceName) {
+        statusDiv.textContent = "❌ 请在设置中配置 TTS API URL 和语音名称。";
+        console.error("TTS configuration is missing.");
+        return;
+      }
+
+      if (currentAudio && !currentAudio.paused) {
+          currentAudio.pause();
+      }
+
+      currentTextToSpeak = textToSpeak;
+      const finaltextToSpeak = textToSpeak.trim();
+
+      const queryString = new URLSearchParams({
+          text: finaltextToSpeak,
+          voiceName: ttsVoiceName,
+          speed: currentSpeed,
+      }).toString();
+
+      // Use a recursive function to try each URL until one works
+      function tryPlay(urls) {
+        if (urls.length === 0) {
+            statusDiv.textContent = "❌ 所有 TTS 服务都无法连接，请检查 URL。";
+            isReading = false;
+            isPaused = false;
+            updateButtonState();
+            return;
         }
-        tryPlay([...urls]);
+
+        const url = urls.shift();
+        const ttsUrl = `${url.endsWith('/') ? url : url + '/'}api/aiyue?${queryString}`;
+        console.log('Attempting to play TTS from:', ttsUrl);
+
+        currentAudio = new Audio(ttsUrl);
+
+        if (fromCurrentPosition && currentPosition > 0) {
+            currentAudio.currentTime = currentPosition;
+        } else {
+            currentPosition = 0;
+        }
+
+        currentAudio.play()
+            .then(() => {
+                console.log('TTS started playing successfully from:', ttsUrl);
+                isReading = true;
+                isPaused = false;
+                updateButtonState();
+                statusDiv.textContent = '🔊 正在朗读...';
+
+                currentAudio.addEventListener('ended', function() {
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    updateButtonState();
+                    statusDiv.textContent = '✅ 朗读已完成。';
+                }, { once: true });
+
+                currentAudio.addEventListener('error', function() {
+                    console.error('TTS playback error:', this.error);
+                    isReading = false;
+                    isPaused = false;
+                    currentPosition = 0;
+                    updateButtonState();
+                    statusDiv.textContent = `❌ 朗读失败: ${this.error.message}`;
+                }, { once: true });
+
+                currentAudio.addEventListener('timeupdate', function() {
+                    if (!currentAudio.paused) {
+                        currentPosition = currentAudio.currentTime;
+                    }
+                });
+            })
+            .catch(e => {
+                console.error('Error playing TTS from ' + ttsUrl + ':', e);
+                // Try the next URL in the list
+                tryPlay(urls);
+            });
+      }
+
+      // Start the process
+      tryPlay([...ttsUrls]);
     }
 
-    function updateTTSBtn() {
-        const btn = document.querySelector('.read');
-        btn.textContent = isReading ? '停止' : '朗读';
+    function pauseTTS() {
+        if (currentAudio && !currentAudio.paused) {
+            currentPosition = currentAudio.currentTime;
+            currentAudio.pause();
+            isPaused = true;
+            isReading = false;
+            updateButtonState();
+            statusDiv.textContent = '⏸️ 朗读已暂停。';
+        }
+    }
+
+    function resumeTTS() {
+        if (currentAudio && isPaused) {
+            currentAudio.play()
+                .then(() => {
+                    isReading = true;
+                    isPaused = false;
+                    updateButtonState();
+                    statusDiv.textContent = '🔊 正在朗读...';
+                })
+                .catch(e => {
+                    console.error('Error resuming TTS:', e);
+                    currentPosition = 0;
+                    playSummaryTTS(currentTextToSpeak);
+                });
+        } else if (!currentAudio || currentAudio.ended) {
+            const dynamicContentDiv = renderedDiv;
+            const textToRead = dynamicContentDiv.innerText;
+            currentPosition = 0;
+            playSummaryTTS(textToRead);
+        }
+    }
+
+    function updateButtonState() {
+        const readAloudButton = document.querySelector('.read');
+        if (isReading) {
+            readAloudButton.textContent = '暂停';
+        } else if (isPaused) {
+            readAloudButton.textContent = '继续';
+        } else {
+            readAloudButton.textContent = '朗读';
+        }
     }
 
     function readContent() {
-        if(isReading) { if(currentAudio) currentAudio.pause(); isReading=false; updateTTSBtn(); statusDiv.textContent="⏹ 已停止"; }
-        else { playSummaryTTS(renderedDiv.style.display!=='none' ? renderedDiv.innerText : textarea.value); }
+        const textToRead = renderedDiv.innerText.trim();
+        if (!textToRead) {
+            statusDiv.textContent = "🤷‍♀️ 没有内容可以朗读。";
+            return;
+        }
+
+        if (isReading) {
+            pauseTTS();
+        } else if (isPaused) {
+            resumeTTS();
+        } else {
+            currentPosition = 0;
+            playSummaryTTS(textToRead);
+        }
     }
 
-    // --- Events & Init ---
-    window.onclick = (e) => {
-        // 单击遮罩层关闭普通弹窗，AI分析弹窗不在此列（因为有双击逻辑）
-        if(e.target.classList.contains('modal') && e.target.id !== 'aiResultModal') {
-            e.target.style.display = "none";
+    // --- Enhanced Mobile Support ---
+    themeInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        confirmGenerate(event);
+      }
+    });
+
+    addStyleInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addCustomStyle();
         }
-    };
+    });
+
+    // 单击遮罩层关闭普通弹窗，AI分析弹窗除外
+    window.addEventListener('click', function(event) {
+      if (event.target === storyThemeModal) closeThemeModal();
+      if (event.target === settingsModal) closeSettingsModal();
+      if (event.target === styleManagementModal) closeStyleManagementModal();
+      if (event.target === tokenModal) { /* token modal usually stays until token entered */ }
+    });
+
+    // --- Initial Load ---
     window.onload = () => {
-        loadSettings(); ensureToken();
-        if(GITHUB_TOKEN) loadContent();
-        else statusDiv.textContent = "👋 欢迎！请先设置 GitHub Token。";
+      loadSettings();
+      ensureToken();
+      if (GITHUB_TOKEN) {
+        loadContent();
+      } else {
+        statusDiv.textContent = "👋 欢迎使用！请输入 GitHub Token 以开始。";
+      }
     };
   </script>
 </body>
