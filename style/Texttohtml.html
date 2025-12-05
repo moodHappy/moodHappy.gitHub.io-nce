@@ -93,7 +93,7 @@
         /* --- 正文区域 --- */
         .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
         .text-placeholder { min-height: 500px; padding: 20px 10px; font-size: 1.4em; line-height: 1.8; color: #2c2c2c; white-space: pre-wrap; }
-        
+
         .ai-analyze-btn {
             display: inline-flex; align-items: center; justify-content: center;
             background-color: rgba(139, 115, 85, 0.08); border: 1px solid rgba(139, 115, 85, 0.15);
@@ -338,7 +338,7 @@
         const API_URL = "https://api.groq.com/openai/v1/chat/completions";
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const ttsDomains = ['https://ms-ra-forwarder-for-ifreetime-2.vercel.app/'];
-        const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index'; // [新增] 用于存储位置的 Key
+        const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
 
         // --- GitHub 配置 ---
         const GH_CONFIG = {
@@ -439,12 +439,10 @@
             const btn = target.closest('.ai-analyze-btn');
             if (!btn) return;
 
-            // [修改] 视觉更新：移除所有高亮，高亮当前
             const allBtns = document.querySelectorAll('.ai-analyze-btn');
             allBtns.forEach(b => b.classList.remove('last-clicked'));
             btn.classList.add('last-clicked');
 
-            // [新增] 保存状态：找到当前按钮是第几个，存入 localStorage
             const btnIndex = Array.from(allBtns).indexOf(btn);
             if (btnIndex !== -1) {
                 localStorage.setItem(LAST_CLICKED_KEY, btnIndex);
@@ -550,7 +548,17 @@
 
             statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
 
-            const prompt = `Write a short story in English (approx 150 words), CEFR Level ${diff}, based on title/theme: "${topic}". Style: ${style}. Output ONLY the story text. No intro/outro.`;
+            // [修改] 强制英文生成的 Prompt
+            const prompt = `
+            Role: Professional English Storyteller.
+            Task: Write a short story based on the theme/topic: "${topic}".
+            Constraints:
+            1. LANGUAGE: STRICTLY ENGLISH ONLY. Even if the topic is in Chinese or another language, the story content must be 100% English.
+            2. Level: CEFR ${diff}.
+            3. Style: ${style}.
+            4. Length: Approximately 150 words.
+            5. Output: Return ONLY the story text. Do not include the title. Do not include "Here is the story".
+            `;
 
             try {
                 // 1. 生成故事
@@ -560,10 +568,8 @@
                 statusDiv.innerText = "创作完成，正在同步到 GitHub...";
                 await uploadToGitHub(story, ghToken);
 
-                // [新增] 成功生成新故事后，清除旧的阅读位置记录，避免错位
-                localStorage.removeItem(LAST_CLICKED_KEY);
-
                 // 3. 更新界面
+                localStorage.removeItem(LAST_CLICKED_KEY); // 清除旧位置
                 statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
                 contentDiv.innerHTML = story.replace(/\n/g, '<br><br>');
@@ -640,15 +646,12 @@
                 }
             });
 
-            // [新增] 注入按钮后，立即从 localStorage 恢复上一次的点击状态
             const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
             if (lastClickedIndex !== null) {
                 const allBtns = div.querySelectorAll('.ai-analyze-btn');
                 const idx = parseInt(lastClickedIndex);
                 if (allBtns[idx]) {
                     allBtns[idx].classList.add('last-clicked');
-                    // 可选：如果希望自动滚动到上次的位置，可以取消下面这行的注释
-                    // allBtns[idx].scrollIntoView({behavior: "smooth", block: "center"}); 
                 }
             }
         }
@@ -704,7 +707,6 @@
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             updateCacheDisplay();
 
-            // 初始加载：使用 Raw URL 加载，确保速度，避免消耗 API 限额
             const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
             fetch(rawUrl)
                 .then(r => {
