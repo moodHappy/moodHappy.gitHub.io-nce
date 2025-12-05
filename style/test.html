@@ -19,8 +19,9 @@
             background-color: #f9f9f9;
             margin: 0;
             padding: 20px;
+            position: relative; /* 为绝对定位的齿轮做参照 */
         }
-        
+
         header { margin-bottom: 30px; text-align: center; }
 
         .container {
@@ -34,28 +35,55 @@
 
         p { margin-bottom: 24px; font-size: 18px; text-align: justify; }
 
-        /* API 设置框样式 */
-        .api-setup {
-            max-width: 600px; margin: 0 auto 30px; padding: 15px;
-            background: #eef; border-radius: 8px; font-size: 14px;
-            text-align: center;
+        /* 右上角齿轮按钮样式 */
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #fff;
+            border: 1px solid #ddd;
+            font-size: 20px;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1000;
+            outline: none;
         }
-        input { padding: 5px; width: 200px; }
-        button { padding: 5px 10px; cursor: pointer; }
+
+        /* 鼠标悬停动画 */
+        .settings-btn:hover {
+            transform: rotate(90deg);
+            background-color: #f0f0f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Key 已保存时的样式（绿色） */
+        .settings-btn.has-key {
+            border-color: #b7eb8f;
+            color: #52c41a;
+            background-color: #f6ffed;
+        }
     </style>
 </head>
 <body>
 
+    <button id="configBtn" class="settings-btn" onclick="configKey()" title="设置 Groq API Key">
+        ⚙️
+    </button>
+
     <header>
-        <h1>AI Reader 测试</h1>
-        <div class="api-setup">
-            <label>Groq API Key: </label>
-            <input type="password" id="tempApiKey" placeholder="输入 Key 以测试 AI 分析...">
-            <button onclick="saveKey()">保存并刷新</button>
-        </div>
+        <h1>阅读助手通用模板</h1>
     </header>
 
     <div class="container" id="content-area">
+    	
         <p>President Vladimir Putin has warned again that Ukrainian troops must withdraw from Ukraine's eastern Donbas region or Russia will seize it, rejecting any compromise over how to end the war in Ukraine.</p>
 
         <p>"Either we liberate these territories by force, or Ukrainian troops will leave these territories," he told India Today. Moscow controls around 85% of Donbas.</p>
@@ -65,6 +93,7 @@
         <p>Putin's comments come after President Donald Trump said his negotiators discussing a US peace plan believed Russia's leader "would like to end the war" after Tuesday's talks in Moscow.</p>
 
         <p>Trump's envoy Steve Witkoff, who was in Moscow, is due to meet Ukraine's team in Florida.</p>
+        
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -75,23 +104,42 @@
     <script src="https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/ai-reader.js"></script>
 
     <script>
-        // Key 管理小工具
-        function saveKey() {
-            const val = document.getElementById('tempApiKey').value.trim();
-            if(val) { localStorage.setItem('groq_api_key', val); location.reload(); }
+        // Key 管理逻辑
+        function configKey() {
+            const currentKey = localStorage.getItem('groq_api_key') || '';
+            const val = prompt("请输入您的 Groq API Key:", currentKey);
+            
+            if(val !== null) { 
+                const cleanVal = val.trim();
+                if(cleanVal) {
+                    localStorage.setItem('groq_api_key', cleanVal);
+                    alert("API Key 已保存！页面将刷新。");
+                    location.reload(); 
+                } else {
+                    if(currentKey && confirm("确定要清除 API Key 吗？")) {
+                        localStorage.removeItem('groq_api_key');
+                        location.reload();
+                    }
+                }
+            }
         }
-        if(localStorage.getItem('groq_api_key')) document.getElementById('tempApiKey').placeholder = 'API Key 已保存';
+
+        // 页面加载时检查 Key 状态
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('configBtn');
+            if(localStorage.getItem('groq_api_key')) {
+                // 如果有 Key，添加绿色样式，并修改鼠标悬停提示
+                btn.classList.add('has-key');
+                btn.title = 'API Key 已保存 (点击修改)';
+            }
+        });
 
         // 启动 AIReader
         document.addEventListener('DOMContentLoaded', () => {
             new AIReader({
-                // 告诉脚本去处理哪个容器
                 containerSelector: '#content-area', 
-                
-                // 如果你想让单词显示 红色/蓝色 高亮，必须填写你的词表文件 raw 地址
-                // 如果不填，功能依然可用（可以点击查词，有分析按钮），但单词全是黑色
-                blueUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/blue.txt', // 示例路径，请修改为你真实的
-                redUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/red.txt',   // 示例路径，请修改为你真实的
+                blueUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/blue.txt',
+                redUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/red.txt',
                 excludeUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/exclude.txt'
             });
             console.log("AI Reader 已启动");
