@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/ai-reader.css">
 
     <style>
-        /* 页面基础样式 */
+        /* --- 页面基础样式 --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.8;
@@ -19,7 +19,6 @@
             background-color: #f9f9f9;
             margin: 0;
             padding: 20px;
-            position: relative; /* 为绝对定位的齿轮做参照 */
         }
 
         header { margin-bottom: 30px; text-align: center; }
@@ -35,7 +34,7 @@
 
         p { margin-bottom: 24px; font-size: 18px; text-align: justify; }
 
-        /* 右上角齿轮按钮样式 */
+        /* --- 右上角齿轮按钮样式 --- */
         .settings-btn {
             position: absolute;
             top: 20px;
@@ -56,25 +55,59 @@
             z-index: 1000;
             outline: none;
         }
-
-        /* 鼠标悬停动画 */
         .settings-btn:hover {
             transform: rotate(90deg);
             background-color: #f0f0f0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-
         /* Key 已保存时的样式（绿色） */
         .settings-btn.has-key {
             border-color: #b7eb8f;
             color: #52c41a;
             background-color: #f6ffed;
         }
+
+        /* --- 设置弹窗 (Settings Modal) 样式 --- */
+        .settings-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+            display: none; /* 默认隐藏 */
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .settings-overlay.active { display: flex; opacity: 1; }
+
+        .settings-card {
+            background: white; padding: 25px; border-radius: 12px;
+            width: 90%; max-width: 450px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transform: scale(0.95); transition: transform 0.3s;
+        }
+        .settings-overlay.active .settings-card { transform: scale(1); }
+
+        .settings-card h2 { margin: 0 0 20px 0; font-size: 18px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .settings-group { margin-bottom: 15px; }
+        .settings-group label { display: block; font-size: 14px; font-weight: 500; color: #555; margin-bottom: 5px; }
+        .settings-group input {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 14px; box-sizing: border-box; transition: border-color 0.2s; font-family: monospace;
+        }
+        .settings-group input:focus { border-color: #1976D2; outline: none; }
+        .settings-group input::placeholder { color: #ccc; }
+        .settings-group .desc { font-size: 11px; color: #888; margin-top: 3px; }
+
+        .btn-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .btn-save { background: #1976D2; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        .btn-save:hover { background: #1565C0; }
+        .btn-cancel { background: #f5f5f5; color: #333; border: 1px solid #ddd; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .btn-cancel:hover { background: #e0e0e0; }
+
     </style>
 </head>
 <body>
 
-    <button id="configBtn" class="settings-btn" onclick="configKey()" title="设置 Groq API Key">
+    <button id="configBtn" class="settings-btn" onclick="openSettings()" title="设置 API 和 词表链接">
         ⚙️
     </button>
 
@@ -83,8 +116,8 @@
     </header>
 
     <div class="container" id="content-area">
-    	
-<p>As the sun set over the quiet streets of Salisbury, a chill ran down the spine of the city's residents. It had been years since the fateful day when Sergei Skripal, a former Russian spy, and his daughter Yulia were poisoned with Novichok, a deadly nerve agent. The incident had sent shockwaves through the community, and the memory of it still lingered like an open wound.</p>
+
+        <p>As the sun set over the quiet streets of Salisbury, a chill ran down the spine of the city's residents. It had been years since the fateful day when Sergei Skripal, a former Russian spy, and his daughter Yulia were poisoned with Novichok, a deadly nerve agent. The incident had sent shockwaves through the community, and the memory of it still lingered like an open wound.</p>
 
         <p>President Vladimir Putin has warned again that Ukrainian troops must withdraw from Ukraine's eastern Donbas region or Russia will seize it, rejecting any compromise over how to end the war in Ukraine.</p>
 
@@ -95,7 +128,41 @@
         <p>Putin's comments come after President Donald Trump said his negotiators discussing a US peace plan believed Russia's leader "would like to end the war" after Tuesday's talks in Moscow.</p>
 
         <p>Trump's envoy Steve Witkoff, who was in Moscow, is due to meet Ukraine's team in Florida.</p>
-        
+
+    </div>
+
+    <div id="settingsModal" class="settings-overlay">
+        <div class="settings-card">
+            <h2>⚙️ 配置中心</h2>
+            
+            <div class="settings-group">
+                <label>Groq API Key</label>
+                <input type="password" id="cfg_key" placeholder="sk-..." autocomplete="off">
+            </div>
+
+            <div class="settings-group">
+                <label>🔴 红色高亮词表链接 (Red)</label>
+                <input type="text" id="cfg_red" placeholder="例如: .../Notes/two.txt">
+                <div class="desc">填入 txt 文件直链，每行一个单词，显示为红色。</div>
+            </div>
+
+            <div class="settings-group">
+                <label>🔵 蓝色高亮词表链接 (Blue)</label>
+                <input type="text" id="cfg_blue" placeholder="例如: .../Notes/one.txt">
+                <div class="desc">填入 txt 文件直链，每行一个单词，显示为蓝色。</div>
+            </div>
+
+            <div class="settings-group">
+                <label>⚪ 排除词表链接 (Exclude)</label>
+                <input type="text" id="cfg_ex" placeholder="例如: .../Notes/Excluded.txt">
+                <div class="desc">此列表中的单词将不会被高亮。</div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="btn-save" onclick="saveSettings()">保存并刷新</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -106,45 +173,76 @@
     <script src="https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/ai-reader.js"></script>
 
     <script>
-        // Key 管理逻辑
-        function configKey() {
-            const currentKey = localStorage.getItem('groq_api_key') || '';
-            const val = prompt("请输入您的 Groq API Key:", currentKey);
+        // --- 设置面板逻辑 ---
+
+        // 定义 LocalStorage 的键名
+        const KEYS = {
+            API: 'groq_api_key',
+            RED: 'highlight_url_red',
+            BLUE: 'highlight_url_blue',
+            EXCLUDE: 'highlight_url_exclude'
+        };
+
+        // 打开设置弹窗
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
             
-            if(val !== null) { 
-                const cleanVal = val.trim();
-                if(cleanVal) {
-                    localStorage.setItem('groq_api_key', cleanVal);
-                    alert("API Key 已保存！页面将刷新。");
-                    location.reload(); 
-                } else {
-                    if(currentKey && confirm("确定要清除 API Key 吗？")) {
-                        localStorage.removeItem('groq_api_key');
-                        location.reload();
-                    }
-                }
-            }
+            // 读取已保存的值填充输入框
+            document.getElementById('cfg_key').value = localStorage.getItem(KEYS.API) || '';
+            document.getElementById('cfg_red').value = localStorage.getItem(KEYS.RED) || '';
+            document.getElementById('cfg_blue').value = localStorage.getItem(KEYS.BLUE) || '';
+            document.getElementById('cfg_ex').value = localStorage.getItem(KEYS.EXCLUDE) || '';
+
+            modal.classList.add('active');
         }
 
-        // 页面加载时检查 Key 状态
+        // 关闭设置弹窗
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        // 保存并刷新
+        function saveSettings() {
+            const key = document.getElementById('cfg_key').value.trim();
+            const red = document.getElementById('cfg_red').value.trim();
+            const blue = document.getElementById('cfg_blue').value.trim();
+            const ex = document.getElementById('cfg_ex').value.trim();
+
+            if (key) localStorage.setItem(KEYS.API, key);
+            else localStorage.removeItem(KEYS.API);
+
+            if (red) localStorage.setItem(KEYS.RED, red);
+            else localStorage.removeItem(KEYS.RED);
+
+            if (blue) localStorage.setItem(KEYS.BLUE, blue);
+            else localStorage.removeItem(KEYS.BLUE);
+
+            if (ex) localStorage.setItem(KEYS.EXCLUDE, ex);
+            else localStorage.removeItem(KEYS.EXCLUDE);
+
+            alert("设置已保存！页面将刷新以应用更改。");
+            location.reload();
+        }
+
+        // 页面加载时检查 Key 状态，改变齿轮样式
         document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('configBtn');
-            if(localStorage.getItem('groq_api_key')) {
-                // 如果有 Key，添加绿色样式，并修改鼠标悬停提示
+            if(localStorage.getItem(KEYS.API)) {
                 btn.classList.add('has-key');
-                btn.title = 'API Key 已保存 (点击修改)';
             }
         });
 
-        // 启动 AIReader
+        // --- 启动 AIReader ---
         document.addEventListener('DOMContentLoaded', () => {
+            // 这里不再写死链接，而是直接从 LocalStorage 读取
+            // 如果用户还没填，默认为空字符串，AIReader 不会报错只是不高亮
             new AIReader({
                 containerSelector: '#content-area', 
-                blueUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/blue.txt',
-                redUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/red.txt',
-                excludeUrl: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/master/Notes/exclude.txt'
+                blueUrl: localStorage.getItem(KEYS.BLUE) || '',
+                redUrl: localStorage.getItem(KEYS.RED) || '',
+                excludeUrl: localStorage.getItem(KEYS.EXCLUDE) || ''
             });
-            console.log("AI Reader 已启动");
+            console.log("AI Reader 已启动 (使用自定义配置)");
         });
     </script>
 </body>
