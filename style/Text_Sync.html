@@ -6,7 +6,7 @@
   <title>GitHub 同步助手 & AI 阅读</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* --- 全局变量与主题配置 --- */
+    /* CSS Variables for theming and typography */
     :root {
       --bg-color: #f9f9f9;
       --text-color: #222;
@@ -24,7 +24,10 @@
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
       --settings-icon-color: #333;
-      --highlight-color: #800080; 
+      
+      /* 还原最初的按钮色调风格 */
+      --btn-icon-color: #8b7355; 
+      --btn-bg-hover: #8b7355;
 
       --primary-font: 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
       --font-size: 17px;
@@ -43,7 +46,8 @@
       --modal-content-bg: #2d2d2d;
       --input-border-color: #555;
       --settings-icon-color: #ccc;
-      --highlight-color: #bb86fc;
+      --btn-icon-color: #bb86fc;
+      --btn-bg-hover: #bb86fc;
     }
 
     /* Sepia Theme */
@@ -58,7 +62,8 @@
       --modal-content-bg: #fdfaf3;
       --input-border-color: #c9bca8;
       --settings-icon-color: #5b4636;
-      --highlight-color: #8b7355;
+      --btn-icon-color: #8b7355;
+      --btn-bg-hover: #8b7355;
     }
 
     body {
@@ -90,7 +95,7 @@
       border-color: var(--textarea-border-color);
     }
 
-    /* 按钮样式 */
+    /* Button Container Styles */
     .button-container {
         display: flex;
         flex-wrap: wrap;
@@ -175,51 +180,40 @@
     .style-input-container input { flex: 1; }
     .style-input-container button { flex: none; width: 100px; margin-top: 0; }
 
-    /* --- 魔术棒(Emoji) & AI 分析 样式 --- */
+    /* --- 分析按钮样式 (还原至第一版设计) --- */
     .ai-analyze-btn {
-        display: inline-flex; 
-        align-items: center; 
-        justify-content: center;
-        background-color: transparent; 
-        border: none; /* Emoji 不需要边框 */
-        width: 24px; height: 24px; 
-        margin: 0 2px; 
-        cursor: pointer;
-        position: relative; 
-        top: 0; 
-        font-size: 16px; /* Emoji 大小 */
-        line-height: 1;
-        transition: transform 0.2s;
-        opacity: 0.8;
+        display: inline-flex; align-items: center; justify-content: center;
+        background-color: rgba(139, 115, 85, 0.08); 
+        border: 1px solid rgba(139, 115, 85, 0.15);
+        border-radius: 50%; width: 20px; height: 20px; margin: 0 3px; cursor: pointer;
+        color: var(--btn-icon-color); position: relative; top: -1px; transition: all 0.2s;
     }
-    .ai-analyze-btn:hover { 
-        transform: scale(1.2) rotate(10deg); 
-        opacity: 1; 
-    }
+    .ai-analyze-btn:hover { background-color: var(--btn-bg-hover); color: white; transform: scale(1.1); }
     
-    /* 高亮样式 - 标记上次点击位置 */
+    /* 红色高亮样式 - 标记上次点击位置 */
     .ai-analyze-btn.last-clicked {
-        background-color: rgba(128, 0, 128, 0.15); /* 淡淡的紫色背景 */
-        border-radius: 50%;
-        transform: scale(1.2);
-        opacity: 1;
+        background-color: var(--button-danger-bg) !important;
+        color: white !important;
+        border-color: var(--button-danger-bg) !important;
+        transform: scale(1.15);
     }
+    .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
 
     /* 分析结果弹窗特定样式 */
     .original-sentence-box {
         background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; 
-        border-left: 4px solid var(--highlight-color); 
+        border-left: 4px solid var(--btn-icon-color); 
         color: var(--text-color); font-style: italic; font-size: 0.9em; margin-bottom: 15px;
     }
     .ai-result-content { line-height: 1.7; font-size: 1em; }
-    .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { color: var(--highlight-color); margin-top: 15px; margin-bottom: 8px; font-size: 1.1em; border-bottom: 1px dashed var(--input-border-color); }
+    .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { color: var(--btn-icon-color); margin-top: 15px; margin-bottom: 8px; font-size: 1.1em; border-bottom: 1px dashed var(--input-border-color); }
     .ai-result-content ul { padding-left: 20px; }
     .ai-loading { text-align: center; padding: 20px; color: var(--status-color); }
-    .spinner { width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.1); border-top-color: var(--highlight-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+    .spinner { width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.1); border-top-color: var(--btn-icon-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     
     .cache-info { text-align: center; font-size: 12px; color: #999; margin-top: 10px; }
-    .cache-info a { color: var(--highlight-color); cursor: pointer; text-decoration: none; }
+    .cache-info a { color: var(--btn-icon-color); cursor: pointer; text-decoration: none; }
 
   </style>
 </head>
@@ -333,7 +327,7 @@
       </div>
 
       <label for="analysis-prompt-input">AI 分析指令 (System Prompt)</label>
-      <textarea id="analysis-prompt-input" rows="5" placeholder="自定义指令..."></textarea>
+      <textarea id="analysis-prompt-input" rows="5" placeholder="自定义你的AI分析指令..."></textarea>
 
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
@@ -370,12 +364,12 @@
   <div id="aiResultModal" class="modal">
     <div class="modal-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h3 style="margin:0;">🪄 AI 深度分析</h3>
+        <h3 style="margin:0;">📝 句子分析</h3>
         <button onclick="closeModal('aiResultModal')" style="background:transparent; color:var(--text-color); border:none; font-size:20px; padding:0; min-width:auto; min-height:auto;">✕</button>
       </div>
       <div class="original-sentence-box" id="aiOriginalSentence"></div>
       <div id="aiResultContent"></div>
-      <p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">双击任意区域关闭弹窗</p>
+      <p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">双击任意区域关闭</p>
     </div>
   </div>
 
@@ -395,7 +389,7 @@
     const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     const DEFAULT_ZHIPU_MODEL = "glm-4";
 
-    // 🔴 关键修改：更新了预装指令
+    // 更新后的默认指令
     const DEFAULT_ANALYSIS_PROMPT = `你是一位精通中英文的语言专家。请分析我提供的句子：
 1. 判断难度等级 (A1-C2)。
 2. 提供准确、优美的中文翻译。
@@ -772,7 +766,7 @@
       }
       renderedDiv.style.display = "block";
       textarea.style.display = "none";
-      // 注入魔术棒
+      // 注入按钮
       injectAIButtons();
     }
 
@@ -802,10 +796,10 @@
                     f.appendChild(document.createTextNode(p));
                     // 在句号后且不是空字符串时插入按钮
                     if(p === '.') {
-                        const b = document.createElement('button');
+                        const b = document.createElement('span');
                         b.className = 'ai-analyze-btn';
-                        // 🔴 关键修改：使用 Emoji
-                        b.innerText = '🪄';
+                        // 还原为第一版 SVG (Info Icon style)
+                        b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
                         b.title = "AI 分析此句";
                         b.onclick = (e) => handleAIAnalyzeClick(e.target);
                         f.appendChild(b);
@@ -863,7 +857,6 @@
 
         // Cache & API Logic
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-        // 如果 localStorage 里没有存自定义指令，就用新的默认指令
         const sysPrompt = settings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
         const cacheKey = generateCacheKey(sentence, sysPrompt);
         
@@ -882,9 +875,10 @@
         }
     }
 
-    // 🔴 关键修改：双击任意区域关闭弹窗
-    document.getElementById('aiResultModal').addEventListener('dblclick', function(e) {
-        // 不再判断 e.target，只要在弹窗层双击就关闭
+    // 双击任意区域关闭 (智能判断：如果正在选中文本则不关闭)
+    const resultModal = document.getElementById('aiResultModal');
+    resultModal.addEventListener('dblclick', function(e) {
+        if(window.getSelection().toString().length > 0) return; // 如果在选字，不关闭
         this.style.display = 'none';
     });
 
@@ -924,7 +918,10 @@
 
     // --- Events & Init ---
     window.onclick = (e) => {
-        if(e.target.classList.contains('modal')) e.target.style.display = "none";
+        // 单击遮罩层关闭普通弹窗，AI分析弹窗不在此列（因为有双击逻辑）
+        if(e.target.classList.contains('modal') && e.target.id !== 'aiResultModal') {
+            e.target.style.display = "none";
+        }
     };
     window.onload = () => {
         loadSettings(); ensureToken();
