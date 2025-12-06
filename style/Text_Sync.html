@@ -5,461 +5,445 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>GitHub 同步助手 (AI 阅读版)</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
-    /* CSS Variables for theming and typography */
+    /* --- 现代极简风格 CSS --- */
     :root {
-      --bg-color: #f9f9f9;
-      --text-color: #222;
-      --textarea-bg-color: #fff;
-      --textarea-border-color: #ccc;
-      --article-bg-color: #fff;
-      --article-border-color: #ccc;
-      --status-color: #444;
-      --button-primary-bg: #4CAF50;
-      --button-secondary-bg: #2196F3;
-      --button-danger-bg: #f44336;
-      --button-generate-bg: #800080;
-      --button-read-bg: #e6b800;
-      --modal-bg: rgba(0,0,0,0.5);
-      --modal-content-bg: #fff;
-      --input-border-color: #aaa;
-      --settings-icon-color: #333;
+      /* 核心配色：更柔和、现代 */
+      --bg-color: #f4f6f8;             /* 浅灰蓝背景 */
+      --card-bg: #ffffff;              /* 卡片纯白 */
+      --text-main: #333333;
+      --text-sub: #666666;
+      --border-color: #e1e4e8;
+      
+      /* 交互色 */
+      --primary-color: #2da44e;        /* GitHub Green */
+      --danger-color: #cf222e;         /* GitHub Red */
+      --action-blue: #0969da;          /* GitHub Blue */
+      --action-purple: #8250df;        /* GitHub Purple */
+      --action-yellow: #bf8700;        /* Gold */
 
-      --primary-font: 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-      --font-size: 17px;
+      /* 阴影与圆角 */
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+
+      /* 字体 */
+      --primary-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+      --font-size: 16px;
       --line-height: 1.6;
+      
+      /* 模态框 */
+      --modal-mask: rgba(0, 0, 0, 0.4);
+      --input-bg: #f6f8fa;
     }
 
     /* Dark Theme */
     body.theme-dark {
-      --bg-color: #121212;
-      --text-color: #e0e0e0;
-      --textarea-bg-color: #1e1e1e;
-      --textarea-border-color: #444;
-      --article-bg-color: #1e1e1e;
-      --article-border-color: #444;
-      --status-color: #aaa;
-      --modal-content-bg: #2d2d2d;
-      --input-border-color: #555;
-      --settings-icon-color: #ccc;
+      --bg-color: #0d1117;
+      --card-bg: #161b22;
+      --text-main: #c9d1d9;
+      --text-sub: #8b949e;
+      --border-color: #30363d;
+      --input-bg: #0d1117;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+      --modal-mask: rgba(0, 0, 0, 0.7);
     }
 
     /* Sepia Theme */
     body.theme-sepia {
-      --bg-color: #f4f0e8;
-      --text-color: #5b4636;
-      --textarea-bg-color: #fdfaf3;
-      --textarea-border-color: #dcd3c3;
-      --article-bg-color: #fdfaf3;
-      --article-border-color: #dcd3c3;
-      --status-color: #5b4636;
-      --modal-content-bg: #fdfaf3;
-      --input-border-color: #c9bca8;
-      --settings-icon-color: #5b4636;
+      --bg-color: #f4ecd8;
+      --card-bg: #fdf6e3;
+      --text-main: #5b4636;
+      --text-sub: #8f7e6d;
+      --border-color: #d3cbb9;
+      --input-bg: #eee4cd;
     }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     body {
       font-family: var(--primary-font);
       background: var(--bg-color);
-      color: var(--text-color);
-      padding: 1em;
-      transition: background-color 0.3s, color 0.3s;
+      color: var(--text-main);
+      margin: 0;
+      padding: 20px; /* 增加页面边距 */
+      transition: background 0.3s, color 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
 
+    /* 容器限制宽度，增强大屏体验 */
+    .app-container {
+        width: 100%;
+        max-width: 800px;
+    }
+
+    /* --- 1. 头部样式优化 (水平对齐) --- */
+    header.main-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    header h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .settings-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-sub);
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .settings-btn:hover {
+        background-color: rgba(0,0,0,0.05);
+        color: var(--text-main);
+        transform: rotate(30deg);
+    }
+
+    /* --- 2. 按钮栏优化 (纯图标) --- */
+    .button-container {
+        display: flex;
+        justify-content: space-between; /* 两端对齐或改为 center/flex-start */
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 5px 0;
+    }
+
+    .icon-action-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 50px;
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: white;
+        background-color: var(--text-sub); /* 默认 */
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+        position: relative;
+    }
+
+    .icon-action-btn:active { transform: scale(0.96); }
+    .icon-action-btn:hover { opacity: 0.9; box-shadow: var(--shadow-md); }
+
+    /* 各功能按钮颜色 */
+    .btn-submit   { background-color: var(--primary-color); }
+    .btn-delete   { background-color: var(--danger-color); }
+    .btn-copy     { background-color: var(--action-blue); }
+    .btn-generate { background-color: var(--action-purple); }
+    .btn-read     { background-color: var(--action-yellow); }
+
+    /* Tooltip 简单实现 */
+    .icon-action-btn::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        white-space: nowrap;
+        z-index: 10;
+    }
+    .icon-action-btn:hover::after { opacity: 1; bottom: -35px; }
+
+    /* --- 3. 编辑与阅读区域 --- */
     textarea, article.immersive-content {
       width: 100%;
       box-sizing: border-box;
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: var(--radius-md);
+      padding: 20px;
       font-size: var(--font-size);
       line-height: var(--line-height);
-      background-color: var(--article-bg-color);
-      border: 1px solid var(--article-border-color);
-      color: var(--text-color);
-      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s;
+      outline: none;
     }
+
+    textarea:focus { border-color: var(--action-blue); }
 
     textarea {
-      min-height: 150px;
+      min-height: 250px; /* 增加默认高度 */
       resize: vertical;
-      overflow: hidden;
-      background-color: var(--textarea-bg-color);
-      border-color: var(--textarea-border-color);
+      font-family: inherit;
     }
-
-    /* Button Container Styles */
-    .button-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    button {
-      padding: 10px 16px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: none;
-      color: white;
-      cursor: pointer;
-      background-color: var(--button-primary-bg);
-      min-height: 44px;
-      min-width: 44px;
-      flex: 1 1 auto;
-      transition: background-color 0.3s;
-    }
-
-    button:disabled {
-        background-color: #999;
-        cursor: not-allowed;
-    }
-
-    button.copy { background-color: var(--button-secondary-bg); }
-    button.delete { background-color: var(--button-danger-bg); }
-    button.generate { background-color: var(--button-generate-bg); }
-    button.read { background-color: var(--button-read-bg); }
+    
+    article.immersive-content { min-height: 250px; }
 
     #status {
-      margin-top: 10px;
-      color: var(--status-color);
-      font-size: 14px;
+      margin-top: 15px;
+      color: var(--text-sub);
+      font-size: 0.9rem;
+      text-align: center;
+      background: rgba(0,0,0,0.03);
+      padding: 8px;
+      border-radius: var(--radius-sm);
     }
 
-    #settings-icon {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 24px;
-      cursor: pointer;
-      color: var(--settings-icon-color);
-    }
-
-    /* Modal Styles */
+    /* --- 4. 模态框样式优化 --- */
     .modal {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: var(--modal-bg);
+      background: var(--modal-mask);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 999;
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(4px); /* 毛玻璃效果 */
     }
     
     .modal-content {
-      background: var(--modal-content-bg);
-      color: var(--text-color);
-      padding: 20px;
-      border-radius: 12px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 25px;
+      border-radius: var(--radius-lg);
       width: 90%;
-      max-width: 500px; /* 稍微调宽一点桌面端上限 */
+      max-width: 480px;
       max-height: 85vh; 
       overflow-y: auto; 
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      transition: transform 0.3s ease-out; /* 添加动画过渡 */
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
     }
 
-    /* AI Analysis Modal Specific Styles (Sticky Header) */
-    #aiResultModal .modal-content {
-        padding: 0; 
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; 
+    .modal-content h3, .modal-content h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-weight: 600;
+        color: var(--text-main);
     }
 
-    .modal-sticky-header {
-        padding: 20px 20px 15px 20px;
-        background: var(--modal-content-bg);
-        border-bottom: 1px solid var(--textarea-border-color);
-        flex-shrink: 0; 
-        z-index: 10;
-    }
-
-    .modal-scroll-body {
-        padding: 20px;
-        overflow-y: auto;
-        flex: 1; 
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .modal-content h3 {
-      margin-top: 0;
-    }
-    .modal-content input, .modal-content select, .modal-content textarea {
+    .modal-content input, 
+    .modal-content select, 
+    .modal-content textarea {
       width: 100%;
-      padding: 10px;
-      margin-top: 10px;
+      padding: 12px;
+      margin-top: 8px;
       font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid var(--input-border-color);
-      background-color: var(--textarea-bg-color);
-      color: var(--text-color);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background-color: var(--input-bg);
+      color: var(--text-main);
       box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
     }
-
-    .modal-content select[multiple] {
-        height: 100px;
+    
+    .modal-content input:focus, .modal-content select:focus, .modal-content textarea:focus {
+        border-color: var(--action-blue);
     }
 
     .modal-content label {
       display: block;
       margin-top: 15px;
-      font-size: 14px;
-      color: var(--status-color);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-sub);
     }
 
-    article.immersive-content {
-      line-height: var(--line-height);
-      font-size: var(--font-size);
-    }
-    article.immersive-content p {
-      margin-bottom: 1em;
-      white-space: pre-wrap;
-    }
-
-    .ai-inputs {
-        display: none;
-    }
-
-    .modal-buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 20px;
-      padding-top: 10px;
-      border-top: 1px solid var(--textarea-border-color);
-    }
-
-    .modal-buttons button {
-      flex: 1 1 auto;
-      margin-top: 0;
-    }
-
-    #storyThemeModal .modal-buttons-container {
+    /* 模态框内的按钮 */
+    .modal-buttons, .modal-buttons-container {
       display: flex;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 25px;
     }
 
-    #storyThemeModal .modal-buttons-container button {
+    .modal-content button {
         flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-weight: 600;
+        background-color: #eee;
+        color: #333;
+        transition: filter 0.2s;
     }
-
-    #storyThemeModal .modal-buttons-container button.confirm-btn {
-        background-color: var(--button-primary-bg);
+    
+    .modal-content button:hover { filter: brightness(0.95); }
+    .modal-content button.confirm-btn, .modal-content button:not(.delete):not(.read):not(.generate):not(.copy) { /* 默认主要按钮 */
+        background-color: var(--primary-color);
+        color: white;
     }
+    .modal-content button.delete { background-color: var(--danger-color); color: white;}
+    .modal-content button.generate-topics-btn { background-color: var(--action-purple); color: white; }
 
-    #storyThemeModal .modal-buttons-container button.generate-topics-btn {
-        background-color: #800080;
+    /* AI 分析相关特定样式 */
+    .modal-sticky-header {
+        padding: 20px 25px 15px;
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--border-color);
+        margin: -25px -25px 0 -25px; /* 抵消 padding */
     }
+    .modal-scroll-body { padding-top: 20px; }
 
-    #storyThemeModal .modal-buttons-container button:nth-child(3) {
-        background-color: #6c757d; 
-    }
-
-    #randomTopicsList {
-        margin-top: 20px;
+    /* 列表样式 */
+    #randomTopicsList, #customStyleList {
         padding: 0;
         list-style: none;
+        margin-top: 15px;
     }
-    #randomTopicsList li {
-        padding: 10px;
-        border: 1px solid var(--textarea-border-color);
-        border-radius: 5px;
+    #randomTopicsList li, #customStyleList li {
+        padding: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
         margin-bottom: 8px;
         cursor: pointer;
-        transition: background-color 0.2s, border-color 0.2s;
+        background-color: var(--input-bg);
+        transition: all 0.2s;
     }
     #randomTopicsList li:hover {
-        background-color: var(--textarea-border-color);
+        border-color: var(--action-blue);
+        background-color: var(--card-bg);
     }
 
-    .select-container {
-        display: flex;
-        gap: 10px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-    }
-
-    .select-container select {
-      flex: 1 1 30%;
-    }
-
-    /* Style Management Modal Specifics */
-    #styleManagementModal h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: var(--text-color);
-    }
-
-    #customStyleList {
-        padding: 0;
-        list-style: none;
-        max-height: 150px;
-        overflow-y: auto;
-        border: 1px solid var(--textarea-border-color);
-        border-radius: 5px;
-        margin-top: 10px;
-    }
-
-    #customStyleList li {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px;
-        border-bottom: 1px solid var(--textarea-border-color);
-    }
-
-    #customStyleList li:last-child {
-        border-bottom: none;
-    }
-
-    #customStyleList .delete-style-btn {
-        background: var(--button-danger-bg);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 4px 8px;
-        cursor: pointer;
-        font-size: 12px;
-    }
-
-    .style-input-container {
-        display: flex;
-        gap: 10px;
-        margin-top: 10px;
-    }
-
-    .style-input-container input {
-        flex: 1;
-    }
-
-    .style-input-container button {
-        flex: none;
-        width: 100px;
-        margin-top: 0;
-    }
-
-    /* --- AI 分析按钮及结果相关样式 --- */
+    /* --- AI 分析小按钮 --- */
     .ai-analyze-btn {
         display: inline-flex; align-items: center; justify-content: center;
-        background-color: rgba(139, 115, 85, 0.15); 
-        border: 1px solid rgba(139, 115, 85, 0.3);
-        border-radius: 50%; width: 20px; height: 20px; margin: 0 4px; cursor: pointer;
-        color: #8b7355; position: relative; top: -1px; transition: all 0.2s;
-        font-size: 0;
+        background-color: rgba(139, 115, 85, 0.1); 
+        border: 1px solid rgba(139, 115, 85, 0.2);
+        border-radius: 50%; width: 18px; height: 18px; margin: 0 4px; cursor: pointer;
+        color: var(--text-sub); vertical-align: middle; transition: all 0.2s;
     }
-    
-    body.theme-dark .ai-analyze-btn {
-        background-color: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-        color: #e0e0e0;
-    }
-
-    .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
-    body.theme-dark .ai-analyze-btn:hover { background-color: #aaa; color: #121212; }
-
-    /* 红色高亮样式 - 持久化 */
+    .ai-analyze-btn:hover { background-color: var(--action-yellow); color: white; transform: scale(1.2); border-color: transparent;}
+    .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
     .ai-analyze-btn.last-clicked {
-        background-color: #d32f2f !important;
+        background-color: var(--danger-color) !important;
         color: white !important;
-        border-color: #d32f2f !important;
-        box-shadow: 0 0 6px rgba(211, 47, 47, 0.5);
-        transform: scale(1.15);
-        z-index: 10;
+        border-color: transparent !important;
     }
-    
-    .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
-    /* AI 结果内容 Markdown 样式 */
-    .ai-result-content { font-size: 15px; line-height: 1.7; }
-    .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { margin-top: 1em; margin-bottom: 0.5em; font-size: 1.1em; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
-    .ai-result-content strong { color: var(--button-primary-bg); background: rgba(0,0,0,0.05); padding: 0 4px; border-radius: 3px; }
-    
-    /* 原句样式 - 现在位于固定头部 */
+    /* 原句展示框 */
     .ai-original-sentence {
-        font-style: italic; background: rgba(0,0,0,0.05); padding: 10px; 
-        border-left: 3px solid var(--button-secondary-bg); 
+        font-style: italic; 
+        background: var(--input-bg); 
+        padding: 12px; 
+        border-left: 3px solid var(--action-blue); 
         border-radius: 4px;
-        font-size: 0.9em;
-        max-height: 120px; /* 防止原句太长占满屏幕 */
-        overflow-y: auto;
+        font-size: 0.95em;
+        color: var(--text-sub);
     }
 
-    .ai-loading { text-align: center; padding: 20px; color: var(--status-color); }
-
-    /* --- 移动端适配 (重点修改) --- */
+    /* 移动端适配 */
     @media (max-width: 600px) {
+        body { padding: 10px; }
         .button-container {
-            flex-wrap: wrap;
-            justify-content: space-between;
+            gap: 8px;
         }
-        button {
-            flex: 1 1 calc(20% - 8px);
+        .icon-action-btn {
+            height: 44px; /* iOS 最小触控区域 */
+            font-size: 1rem;
         }
-
-        /* 移动端弹窗改为底部抽屉样式，铺满宽度 */
-        .modal {
-            align-items: flex-end; /* 底部对齐 */
-        }
+        /* 移动端不显示 tooltip */
+        .icon-action-btn::after { display: none; }
         
+        /* 底部抽屉模式 */
+        .modal { align-items: flex-end; }
         .modal-content {
-            width: 100%;
-            max-width: 100%;
-            margin: 0;
-            border-radius: 20px 20px 0 0; /* 仅顶部圆角 */
-            max-height: 90vh; /* 增高高度利用率 */
-        }
-
-        /* 修复固定头部在移动端的内边距 */
-        .modal-sticky-header {
-            padding: 15px 15px 10px 15px;
+            width: 100%; margin: 0; border-radius: 20px 20px 0 0; max-height: 85vh;
         }
     }
-
   </style>
 </head>
 <body>
-  <div id="settings-icon" title="设置" onclick="openSettingsModal()">⚙️</div>
-  <h2>📤 GitHub 同步助手</h2>
 
-  <div class="button-container">
-    <button onclick="submitContent()">提交</button>
-    <button class="delete" onclick="deleteContent()">删除</button>
-    <button class="copy" onclick="copyContent()">复制</button>
-    <button class="generate" onclick="openThemeModal()">生成</button>
-    <button class="read" onclick="readContent()">朗读</button>
+  <div class="app-container">
+    
+    <header class="main-header">
+        <h2><i class="fab fa-github"></i> Sync Assistant</h2>
+        <button class="settings-btn" onclick="openSettingsModal()" title="设置">
+            <i class="fa-solid fa-gear"></i>
+        </button>
+    </header>
+
+    <div class="button-container">
+        <button class="icon-action-btn btn-submit" onclick="submitContent()" data-tooltip="提交保存">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+        </button>
+        <button class="icon-action-btn btn-delete" onclick="deleteContent()" data-tooltip="清空内容">
+            <i class="fa-solid fa-trash-can"></i>
+        </button>
+        <button class="icon-action-btn btn-copy" onclick="copyContent()" data-tooltip="复制文本">
+            <i class="fa-solid fa-copy"></i>
+        </button>
+        <button class="icon-action-btn btn-generate" onclick="openThemeModal()" data-tooltip="AI 生成">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </button>
+        <button class="icon-action-btn btn-read read" onclick="readContent()" data-tooltip="朗读全文">
+            <i class="fa-solid fa-volume-high"></i>
+        </button>
+    </div>
+
+    <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
+    <article id="renderedContent" class="immersive-content" style="display:none;"></article>
+
+    <div id="status">⏳ 正在初始化...</div>
   </div>
-
-  <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
-  <article id="renderedContent" class="immersive-content" style="display:none;"></article>
-
-  <div id="status">⏳ 正在初始化...</div>
 
   <div id="tokenModal" class="modal">
     <div class="modal-content">
-      <h3>🔐 请输入你的 GitHub Token：</h3>
+      <h3>🔐 身份验证</h3>
+      <label>请输入你的 GitHub Token：</label>
       <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
-      <button style="margin-top:10px;" onclick="saveToken()">保存 Token</button>
+      <div class="modal-buttons">
+          <button onclick="saveToken()">保存 Token</button>
+      </div>
     </div>
   </div>
 
   <div id="storyThemeModal" class="modal">
     <div class="modal-content">
-      <h3>📚 请选择或输入创作主题：</h3>
-      <div class="select-container">
-        <select id="themeCategorySelect"></select>
-        <select id="difficultySelect"></select>
-        <select id="styleSelect" multiple></select>
+      <h3>📚 灵感生成器</h3>
+      <label>选择或输入主题：</label>
+      <div class="select-container" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <select id="themeCategorySelect" style="flex:1;"></select>
+        <select id="difficultySelect" style="flex:1;"></select>
       </div>
-      <input type="text" id="themeInput" placeholder="或手动输入..." />
+      <select id="styleSelect" multiple style="height:80px;"></select>
+      
+      <input type="text" id="themeInput" placeholder="或手动输入主题..." />
+      
       <div class="modal-buttons-container">
-          <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
-          <button class="confirm-btn" onclick="confirmGenerate(event)">确定</button>
-          <button onclick="closeThemeModal()">取消</button>
+          <button class="generate-topics-btn" onclick="generateRandomTopics(event)"><i class="fa-solid fa-lightbulb"></i> 生成题目</button>
+          <button class="confirm-btn" onclick="confirmGenerate(event)">开始创作</button>
+          <button onclick="closeThemeModal()" style="background:#ddd; color:#333;">取消</button>
       </div>
-      <p style="margin-top: 20px;">💡 点击下面列表中的题目来生成微小说：</p>
+      <p style="margin-top: 15px; font-size:0.85rem; color:var(--text-sub);">💡 点击下面列表中的题目直接生成：</p>
       <ul id="randomTopicsList"></ul>
     </div>
   </div>
@@ -471,8 +455,8 @@
       <label for="theme-select">界面主题</label>
       <select id="theme-select">
         <option value="">默认 (亮色)</option>
-        <option value="theme-dark">护眼 (暗色)</option>
-        <option value="theme-sepia">纸张 (米色)</option>
+        <option value="theme-dark">深邃 (暗色)</option>
+        <option value="theme-sepia">护眼 (羊皮纸)</option>
       </select>
 
       <label for="font-family-select">阅读字体</label>
@@ -497,7 +481,7 @@
           <option value="1.8">宽松</option>
       </select>
 
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
       <label for="ai-provider-select">AI 模型服务商</label>
       <select id="ai-provider-select">
@@ -506,21 +490,21 @@
         <option value="custom">自定义</option>
       </select>
 
-      <div id="ai-kimi-inputs" class="ai-inputs">
+      <div id="ai-kimi-inputs" class="ai-inputs" style="display:none;">
         <label for="ai-kimi-api-key">Kimi API Key</label>
         <input type="password" id="ai-kimi-api-key" placeholder="sk-xxx" />
         <label for="ai-kimi-model-name">Kimi 模型名称</label>
         <input type="text" id="ai-kimi-model-name" placeholder="moonshot-v1-8k" />
       </div>
 
-      <div id="ai-zhipu-inputs" class="ai-inputs">
+      <div id="ai-zhipu-inputs" class="ai-inputs" style="display:none;">
         <label for="ai-zhipu-api-key">智谱 API Key</label>
         <input type="password" id="ai-zhipu-api-key" placeholder="sk-xxx" />
         <label for="ai-zhipu-model-name">智谱 模型名称</label>
         <input type="text" id="ai-zhipu-model-name" placeholder="glm-4" />
       </div>
 
-      <div id="ai-custom-inputs" class="ai-inputs">
+      <div id="ai-custom-inputs" class="ai-inputs" style="display:none;">
         <label for="ai-api-url">自定义 API URL</label>
         <input type="text" id="ai-api-url" placeholder="例如：https://api.example.com/v1/chat/completions" />
         <label for="ai-custom-api-key">自定义 API Key</label>
@@ -529,37 +513,37 @@
         <input type="text" id="ai-custom-model-name" placeholder="例如：gpt-3.5-turbo" />
       </div>
 
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
       <h4>AI 分析设置</h4>
       <label for="analysis-prompt-input">分析指令 (System Prompt)</label>
-      <textarea id="analysis-prompt-input" rows="5" placeholder="自定义分析指令..."></textarea>
+      <textarea id="analysis-prompt-input" rows="3" placeholder="自定义分析指令..."></textarea>
       
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
       <h4>朗读设置</h4>
-      <label for="tts-urls">TTS API URLs (多个用逗号分隔)</label>
+      <label for="tts-urls">TTS API URLs</label>
       <input type="text" id="tts-urls" placeholder="例如: https://your-tts-api.com/api/aiyue" />
 
       <label for="tts-voice-name">TTS 语音名称</label>
       <input type="text" id="tts-voice-name" placeholder="例如: en-US-EricNeural" />
 
       <div class="modal-buttons">
-          <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
-          <button onclick="saveAndApplySettings()">保存并关闭</button>
+          <button class="delete" onclick="resetToken()">重设 Token</button>
+          <button class="confirm-btn" onclick="saveAndApplySettings()">保存设置</button>
       </div>
     </div>
   </div>
 
   <div id="styleManagementModal" class="modal">
     <div class="modal-content">
-      <h3>🎨 管理创作风格</h3>
-      <div class="style-input-container">
+      <h3>🎨 风格管理</h3>
+      <div class="style-input-container" style="display:flex; gap:10px;">
         <input type="text" id="addStyleInput" placeholder="输入新风格名称..." />
-        <button onclick="addCustomStyle()">添加</button>
+        <button onclick="addCustomStyle()" style="width:80px; margin-top:8px;">添加</button>
       </div>
       <ul id="customStyleList"></ul>
-      <button style="margin-top: 20px;" onclick="closeStyleManagementModal()">完成</button>
+      <button style="margin-top: 20px; width:100%; background:#eee; color:#333;" onclick="closeStyleManagementModal()">返回</button>
     </div>
   </div>
 
@@ -1067,7 +1051,7 @@
       if (customStyles.length === 0) {
         const li = document.createElement('li');
         li.textContent = "尚无自定义风格";
-        li.style.color = 'var(--status-color)';
+        li.style.color = 'var(--text-sub)';
         customStyleList.appendChild(li);
         return;
       }
@@ -1077,7 +1061,11 @@
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '删除';
         deleteBtn.className = 'delete-style-btn';
-        deleteBtn.onclick = () => deleteCustomStyle(style);
+        deleteBtn.style.cssText = "float:right; padding:2px 8px; font-size:12px; width:auto; background:var(--danger-color); color:white;";
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteCustomStyle(style);
+        }
         li.appendChild(deleteBtn);
         customStyleList.appendChild(li);
       });
@@ -1099,7 +1087,7 @@
         const allStyles = [...BUILT_IN_STYLES, ...getCustomStyles()];
 
         const manageOption = document.createElement('option');
-        manageOption.textContent = '管理风格...';
+        manageOption.textContent = '⚙️ 管理风格...';
         manageOption.value = 'manage';
         styleSelect.appendChild(manageOption);
 
@@ -1134,7 +1122,7 @@
             return;
         }
 
-        generateTopicsBtn.textContent = "生成中...";
+        generateTopicsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
         generateTopicsBtn.disabled = true;
         randomTopicsList.innerHTML = "";
         statusDiv.textContent = `✨ 正在根据“${theme}”生成微小说题目...`;
@@ -1157,7 +1145,7 @@
             statusDiv.textContent = `❌ 生成题目失败: ${error.message}`;
             console.error("生成题目失败:", error);
         } finally {
-            generateTopicsBtn.textContent = "生成题目";
+            generateTopicsBtn.innerHTML = '<i class="fa-solid fa-lightbulb"></i> 生成题目';
             generateTopicsBtn.disabled = false;
         }
     }
@@ -1367,7 +1355,7 @@
             saveToCache(cacheKey, content);
             resultBox.innerHTML = marked.parse(content);
         } catch (e) {
-            resultBox.innerHTML = `<p style="color:var(--button-danger-bg);">错误: ${e.message}</p>`;
+            resultBox.innerHTML = `<p style="color:var(--danger-color);">错误: ${e.message}</p>`;
         }
     }
 
@@ -1504,12 +1492,18 @@
 
     function updateButtonState() {
         const readAloudButton = document.querySelector('.read');
+        // 由于这里我们用的是 i 标签，需要控制 class 或 tooltip
+        const icon = readAloudButton.querySelector('i');
+        
         if (isReading) {
-            readAloudButton.textContent = '暂停';
+            readAloudButton.setAttribute('data-tooltip', '暂停朗读');
+            icon.className = 'fa-solid fa-pause';
         } else if (isPaused) {
-            readAloudButton.textContent = '继续';
+            readAloudButton.setAttribute('data-tooltip', '继续朗读');
+            icon.className = 'fa-solid fa-play';
         } else {
-            readAloudButton.textContent = '朗读';
+            readAloudButton.setAttribute('data-tooltip', '朗读全文');
+            icon.className = 'fa-solid fa-volume-high';
         }
     }
 
