@@ -183,7 +183,7 @@
         align-items:center;
     }
 
-    /* --- 核心修复区：原句容器 --- */
+    /* --- 原句容器样式 --- */
     .ai-original-sentence-container {
         padding: 0 20px; 
     }
@@ -194,40 +194,37 @@
         padding: 16px; 
         border-radius: 12px;
         font-size: 17px;
-        line-height: 1.6; /* 稍微增加行高 */
+        line-height: 1.6;
         max-height: 150px; 
         overflow-y: auto;
         
-        /* 关键修改：取消 Flex 布局，改回默认 Block */
-        /* 这样内部的 span 和 inline-flex 按钮就会自然流动 */
+        /* 关键：使用 block 布局，允许内部元素自然流动 */
         display: block; 
     }
     
-    /* 暗黑模式适配 */
     body.theme-dark .ai-original-sentence {
         background: #303134; 
         color: #e8eaed;
     }
     
     .ai-original-text {
-        /* 文字设为行内元素，允许按钮紧跟 */
-        display: inline; 
+        display: inline; /* 文字行内显示 */
         word-break: break-word;
     }
 
-    /* --- 核心修复区：朗读按钮 (行内流式布局) --- */
+    /* --- 修复核心：朗读按钮样式 --- */
     .ai-read-sentence-btn {
-        /* 关键修改：inline-flex 让它像文字一样排列 */
-        display: inline-flex; 
+        display: inline-flex; /* 关键：作为行内块元素紧跟文字 */
         
-        width: 34px;      
-        height: 34px;
-        min-width: 34px; /* 锁死尺寸 */
-        min-height: 34px;
+        /* 固定尺寸 */
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        min-height: 34px !important;
         border-radius: 50%;
         
-        background-color: #d7e3f4; 
-        color: #1a73e8; 
+        background-color: #d7e3f4; /* 淡蓝背景 */
+        /* 不依赖 color 属性，颜色直接写在 SVG 里 */
         
         border: none;
         align-items: center;
@@ -235,24 +232,26 @@
         cursor: pointer;
         transition: background-color 0.2s;
         
-        /* 关键修改：对齐与间距 */
-        vertical-align: middle; /* 与文字垂直居中对齐 */
-        margin-left: 8px;       /* 距离句尾的间距 */
-        position: relative;     
-        top: -2px;              /* 微调垂直位置，视觉更平衡 */
+        /* 对齐微调 */
+        vertical-align: middle;
+        margin-left: 8px; /* 间距 */
+        position: relative;
+        top: -3px; /* 视觉修正，向上微调使其与文字行高居中 */
+        
+        padding: 0;
+        flex-shrink: 0;
     }
 
+    /* 图标样式 */
     .ai-read-sentence-btn svg {
-        width: 18px; 
-        height: 18px;
-        fill: currentColor;
+        width: 20px; 
+        height: 20px;
+        display: block; /* 防止 SVG 下方有空隙 */
         pointer-events: none;
     }
 
-    /* 暗黑模式下按钮样式 */
     body.theme-dark .ai-read-sentence-btn {
         background-color: rgba(138, 180, 248, 0.2);
-        color: #8ab4f8;
     }
 
     .ai-read-sentence-btn:hover {
@@ -1421,19 +1420,19 @@
         const resultBox = document.getElementById('aiResultContent');
         const sentenceBox = document.getElementById('aiOriginalSentence');
         
-        // --- 修复后的 DOM 结构逻辑 (Inline Flow) ---
+        // --- 修复后的 DOM 结构逻辑 (Inline Flow + 强制图标) ---
         sentenceBox.innerHTML = ''; 
         
-        // 1. Text Node (直接插入文字节点，不包裹 div，允许后续元素 inline 跟随)
+        // 1. Text Node 
         const textNode = document.createElement('span');
         textNode.className = "ai-original-text";
         textNode.textContent = sentence;
         sentenceBox.appendChild(textNode);
 
-        // 2. Button (Google Style - 小圆点)
+        // 2. Button (图标颜色锁死 #1a73e8, 尺寸锁死 20px)
         const readBtn = document.createElement('button');
         readBtn.className = 'ai-read-sentence-btn';
-        readBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+        readBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 0 24 24" width="20px" style="fill:#1a73e8"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
         readBtn.title = "朗读原句";
         readBtn.onclick = (e) => {
             e.stopPropagation();
