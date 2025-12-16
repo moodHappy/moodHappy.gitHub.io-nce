@@ -151,7 +151,6 @@
             overflow: hidden;
         }
 
-        /* 顶部彩色条 */
         .news-item::before {
             content: '';
             position: absolute;
@@ -182,7 +181,6 @@
             text-decoration: none; 
             color: var(--text-primary); 
             display: block; 
-            /* 限制标题行数 */
             display: -webkit-box;
             -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
@@ -213,7 +211,7 @@
 
         /* === 状态显示 & 调试 === */
         .status-msg {
-            grid-column: 1 / -1; /* 占满整行 */
+            grid-column: 1 / -1;
             text-align: center;
             padding: 60px;
             color: var(--text-secondary);
@@ -284,22 +282,22 @@
 
     <script>
         // ============================================
-        // 核心配置：你的 News.js 地址
+        // 核心配置：使用 jsDelivr CDN 地址
         // ============================================
-        const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/News.js';
+        const REMOTE_CONFIG_URL = 'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/News.js';
 
         const yearSelect = document.getElementById('year-select');
         const monthContainer = document.getElementById('month-container');
         const newsContainer = document.getElementById('news-container');
 
-        // 1. 加载远程配置
+        // 1. 加载远程配置 (直连 CDN，无代理)
         function loadRemoteConfig() {
+            // 加个时间戳防止缓存太久，但 jsDelivr 有自己的缓存机制（约12-24小时更新一次）
             const timestamp = new Date().getTime();
-            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
-
-            fetch(proxyUrl)
+            
+            fetch(REMOTE_CONFIG_URL + '?t=' + timestamp)
                 .then(response => {
-                    if (!response.ok) throw new Error("无法连接到配置文件");
+                    if (!response.ok) throw new Error("无法连接到 CDN 配置文件");
                     return response.text();
                 })
                 .then(scriptContent => {
@@ -367,15 +365,18 @@
             }
         }
 
-        // 3. 核心获取逻辑 (带错误调试功能)
+        // 3. 核心获取逻辑 (直连 CDN，无代理)
         function fetchNews(year, month) {
+            // 注意：这里的 url 应该已经是 config.js 里生成的 CDN 地址了
             const targetUrl = NewsConfig.getUrl(year, month);
+            // 添加时间戳尝试绕过浏览器本地缓存
+            const fetchUrl = targetUrl + '?t=' + new Date().getTime();
 
             newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>读取中: ${year}-${month}</div>`;
 
-            fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl))
+            fetch(fetchUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error('Github 404 (文件未找到)');
+                    if (!response.ok) throw new Error('CDN 文件未找到 (404)');
                     return response.text();
                 })
                 .then(text => {
@@ -384,20 +385,17 @@
                     renderItems(items);
                 })
                 .catch(error => {
-                    // ⚠️ 这里集成了调试显示：如果报错，会显示具体的链接
                     newsContainer.innerHTML = `
                         <div class="status-msg error-msg">
                             <strong>无法加载归档</strong><br>
                             <small>${error.message}</small>
                             <br>
-                            系统尝试访问的地址:
                             <span class="debug-url">${targetUrl}</span>
-                            <small>请检查 GitHub 文件名是否包含0 (如 2025-08.md)</small>
                         </div>`;
                 });
         }
 
-        // 4. 解析逻辑 (正则已加强，支持空格和复杂链接)
+        // 4. 解析逻辑
         function parseMarkdown(text) {
             const lines = text.split('\n');
             const items = [];
@@ -405,7 +403,6 @@
 
             lines.forEach(line => {
                 line = line.trim();
-                // 修复点：更宽松的正则，防止因空格导致无法解析
                 const titleMatch = line.match(/^###\s*\[(.*?)\]\((.*)\)/);
 
                 if (titleMatch) {
@@ -422,7 +419,7 @@
             return items;
         }
 
-        // 5. 渲染逻辑 (支持胶囊样式 + 链接点击)
+        // 5. 渲染逻辑
         function renderItems(items) {
             newsContainer.innerHTML = '';
             if (items.length === 0) {
@@ -432,8 +429,6 @@
             items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'news-item';
-
-                // 渲染：使用 badge 样式，并确保 a 标签包裹标题
                 div.innerHTML = `
                     <h2 class="news-title">
                         <a href="${item.link}" target="_blank" title="${item.title}">${item.title}</a>
