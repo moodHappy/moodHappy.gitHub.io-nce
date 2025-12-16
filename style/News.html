@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>未来30年新闻归档 (2025-2054)</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 顶部控制栏 */
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .year-selector-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        select {
+            padding: 8px 12px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .months-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .month-btn {
+            padding: 8px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .month-btn:hover {
+            background-color: #f1f1f1;
+            border-color: #bbb;
+        }
+
+        .month-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+        }
+
+        /* 内容展示区 */
+        #news-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 300px;
+        }
+
+        .news-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--accent-color);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .news-title { margin: 0 0 10px 0; font-size: 1.25em; }
+        .news-title a { text-decoration: none; color: var(--primary-color); }
+        .news-title a:hover { color: var(--accent-color); }
+
+        .news-meta {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+        }
+
+        .status-msg {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        .error-msg { color: #e74c3c; }
+        
+        /* 加载动画 */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center; color: var(--primary-color);">🗞️ 历史与未来新闻归档</h1>
+
+    <div class="controls">
+        <div class="year-selector-group">
+            <label for="year-select">选择年份:</label>
+            <select id="year-select" disabled>
+                <option>加载中...</option>
+            </select>
+        </div>
+
+        <div class="months-grid" id="month-container">
+            </div>
+    </div>
+
+    <div id="news-container">
+        <div class="status-msg">
+            <div class="spinner"></div>
+            正在同步远程配置文件...
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 核心配置：远程 Config 文件的地址
+        // ============================================
+        const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/News.js';
+
+        // DOM 元素
+        const yearSelect = document.getElementById('year-select');
+        const monthContainer = document.getElementById('month-container');
+        const newsContainer = document.getElementById('news-container');
+
+        // 第一步：加载远程配置文件
+        function loadRemoteConfig() {
+            // 添加时间戳防止缓存，保证你修改 GitHub 后这里能立马生效
+            const timestamp = new Date().getTime();
+            // 使用代理获取 JS 内容
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
+
+            fetch(proxyUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error("无法下载配置文件");
+                    return response.text();
+                })
+                .then(scriptContent => {
+                    // 创建一个 Blob 对象来模拟本地脚本
+                    const blob = new Blob([scriptContent], { type: 'application/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 动态插入脚本
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.onload = () => {
+                        console.log("配置文件加载成功");
+                        initApp(); // 脚本加载完后，启动应用
+                        URL.revokeObjectURL(url); // 释放内存
+                    };
+                    script.onerror = () => {
+                        throw new Error("配置文件解析失败，请检查 News.js 语法");
+                    };
+                    document.head.appendChild(script);
+                })
+                .catch(error => {
+                    console.error(error);
+                    newsContainer.innerHTML = `
+                        <div class="status-msg error-msg">
+                            <h3>⚠️ 配置加载失败</h3>
+                            <p>${error.message}</p>
+                            <p>请检查 GitHub 链接是否正确。</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // 第二步：初始化应用 (Config 加载成功后执行)
+        function initApp() {
+            if (typeof NewsConfig === 'undefined') {
+                newsContainer.innerHTML = '<div class="status-msg error-msg">错误：News.js 已加载但 NewsConfig 对象不存在。</div>';
+                return;
+            }
+
+            // 启用下拉框
+            yearSelect.disabled = false;
+            yearSelect.innerHTML = '';
+
+            populateYears();
+            
+            // 默认加载逻辑：优先加载当前时间，如果是未来则回退到 Config 起始时间
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1;
+            
+            // 默认选中 Config 中的第一年，或者当前年份（如果在范围内）
+            let defaultYear = NewsConfig.startYear;
+            if (currentYear >= NewsConfig.startYear && currentYear < NewsConfig.startYear + NewsConfig.totalYears) {
+                defaultYear = currentYear;
+            }
+
+            // 设置下拉框并触发加载
+            yearSelect.value = defaultYear;
+            loadMonthsForYear(defaultYear);
+
+            // 自动点击对应月份
+            const monthToClick = (defaultYear === currentYear) ? currentMonth : 12;
+            const targetBtn = document.querySelector(`button[data-month="${monthToClick}"]`);
+            if (targetBtn) {
+                targetBtn.click();
+            } else {
+                // 如果找不到对应月份，点12月
+                const lastBtn = document.querySelector(`button[data-month="12"]`);
+                if(lastBtn) lastBtn.click();
+            }
+        }
+
+        // 填充年份
+        function populateYears() {
+            const start = NewsConfig.startYear;
+            const end = start + NewsConfig.totalYears;
+
+            for (let y = start; y < end; y++) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.text = `${y}年`;
+                yearSelect.appendChild(option);
+            }
+
+            yearSelect.addEventListener('change', (e) => {
+                loadMonthsForYear(parseInt(e.target.value));
+            });
+        }
+
+        // 生成月份按钮
+        function loadMonthsForYear(year) {
+            monthContainer.innerHTML = '';
+            
+            for (let m = 1; m <= 12; m++) {
+                const btn = document.createElement('button');
+                btn.className = 'month-btn';
+                btn.innerText = `${m}月`;
+                btn.dataset.month = m;
+                
+                btn.onclick = () => {
+                    document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    fetchNews(year, m);
+                };
+
+                monthContainer.appendChild(btn);
+            }
+        }
+
+        // 获取并解析新闻
+        function fetchNews(year, month) {
+            // 使用远程 Config 中的逻辑获取 URL
+            const targetUrl = NewsConfig.getUrl(year, month);
+            
+            newsContainer.innerHTML = `
+                <div class="status-msg">
+                    <div class="spinner"></div>
+                    正在读取档案: ${year}-${month.toString().padStart(2,'0')} ...
+                </div>`;
+
+            // 使用代理获取 Markdown
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
+
+            fetch(proxyUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Github 404 Not Found');
+                    return response.text();
+                })
+                .then(text => {
+                    if (!text.trim()) throw new Error('内容为空');
+                    const items = parseMarkdown(text);
+                    renderItems(items);
+                })
+                .catch(error => {
+                    let msg = `未找到 ${year}年${month}月 的归档。`;
+                    // 只有当这个月确实手动配置了链接，才显示链接错误，否则显示未上传
+                    if (NewsConfig.manualOverrides[`${year}-${month.toString().padStart(2,'0')}`]) {
+                         msg = `无法加载您配置的链接。`;
+                    }
+                    
+                    newsContainer.innerHTML = `
+                        <div class="status-msg">
+                            ${msg}<br>
+                            <small style="opacity:0.5; font-size: 0.8em">(${error.message})</small>
+                        </div>`;
+                });
+        }
+
+        // Markdown 解析逻辑
+        function parseMarkdown(text) {
+            const lines = text.split('\n');
+            const items = [];
+            let currentItem = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                const titleMatch = line.match(/^### \[(.*?)\]\((.*?)\)/);
+                if (titleMatch) {
+                    if (currentItem) items.push(currentItem);
+                    currentItem = { title: titleMatch[1], link: titleMatch[2], date: '', id: '' };
+                } else if (currentItem) {
+                    const dateMatch = line.match(/^- \*\*Date\*\*: (.*)/);
+                    if (dateMatch) currentItem.date = dateMatch[1];
+                    const idMatch = line.match(/^- \*\*ID\*\*: (.*)/);
+                    if (idMatch) currentItem.id = idMatch[1];
+                }
+            });
+            if (currentItem) items.push(currentItem);
+            return items;
+        }
+
+        // 渲染列表
+        function renderItems(items) {
+            newsContainer.innerHTML = '';
+            if (items.length === 0) {
+                newsContainer.innerHTML = '<div class="status-msg">解析成功，但没有条目。</div>';
+                return;
+            }
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'news-item';
+                div.innerHTML = `
+                    <h2 class="news-title"><a href="${item.link}" target="_blank">${item.title}</a></h2>
+                    <div class="news-meta">
+                        <span>📅 ${item.date || '未知日期'}</span>
+                        <span>🆔 ${item.id || 'N/A'}</span>
+                    </div>
+                `;
+                newsContainer.appendChild(div);
+            });
+        }
+
+        // 启动程序
+        loadRemoteConfig();
+
+    </script>
+</body>
+</html>
