@@ -266,7 +266,7 @@
             <div class="controls-header">
                 <span style="font-weight:600; font-size:1.1em">📅 选择年份</span>
                 <select id="year-select" disabled>
-                    <option>CDN 加载中...</option>
+                    <option>加载配置中...</option>
                 </select>
             </div>
 
@@ -277,16 +277,16 @@
         <div id="news-container">
             <div class="status-msg">
                 <div class="spinner"></div>
-                正在通过全球 CDN 同步配置...
+                正在连接云端档案库...
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 核心配置：使用 jsDelivr CDN 加速加载 News.js
+        // 核心配置：你的 News.js 地址
         // ============================================
-        const REMOTE_CONFIG_URL = 'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/News.js';
+        const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/News.js';
 
         const yearSelect = document.getElementById('year-select');
         const monthContainer = document.getElementById('month-container');
@@ -294,14 +294,12 @@
 
         // 1. 加载远程配置
         function loadRemoteConfig() {
-            // 时间戳(小时级)确保缓存更新
-            const timestamp = new Date().getHours();
-            // 使用代理请求 CDN 地址，确保 100% 可访问性
+            const timestamp = new Date().getTime();
             const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
 
             fetch(proxyUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error("CDN 连接失败");
+                    if (!response.ok) throw new Error("无法连接到配置文件");
                     return response.text();
                 })
                 .then(scriptContent => {
@@ -315,7 +313,7 @@
                     document.head.appendChild(script);
                 })
                 .catch(error => {
-                    newsContainer.innerHTML = `<div class="status-msg error-msg"><h3>⚠️ CDN 连接中断</h3><p>${error.message}</p></div>`;
+                    newsContainer.innerHTML = `<div class="status-msg error-msg"><h3>⚠️ 连接中断</h3><p>${error.message}</p></div>`;
                 });
         }
 
@@ -373,11 +371,11 @@
         function fetchNews(year, month) {
             const targetUrl = NewsConfig.getUrl(year, month);
 
-            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>CDN 加速读取中: ${year}-${month}</div>`;
+            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>读取中: ${year}-${month}</div>`;
 
             fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl))
                 .then(response => {
-                    if (!response.ok) throw new Error('Github/CDN 404 (文件未找到)');
+                    if (!response.ok) throw new Error('Github 404 (文件未找到)');
                     return response.text();
                 })
                 .then(text => {
@@ -428,7 +426,7 @@
         function renderItems(items) {
             newsContainer.innerHTML = '';
             if (items.length === 0) {
-                newsContainer.innerHTML = '<div class="status-msg">本月暂无新闻归档</div>';
+                newsContainer.innerHTML = '<div class="status-msg">没有找到条目</div>';
                 return;
             }
             items.forEach(item => {
