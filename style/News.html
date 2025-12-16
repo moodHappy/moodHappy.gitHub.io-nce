@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Global News Archive</title>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             /* === 浅色模式配色 === */
@@ -167,7 +167,7 @@
             box-shadow: var(--shadow-hover);
             border-color: transparent;
         }
-        
+
         .news-item:hover::before { opacity: 1; }
 
         .news-title { 
@@ -177,7 +177,7 @@
             line-height: 1.5;
             font-weight: 700;
         }
-        
+
         .news-title a { 
             text-decoration: none; 
             color: var(--text-primary); 
@@ -188,7 +188,7 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-        
+
         .news-title a:hover { color: var(--accent-color); }
 
         .news-meta {
@@ -223,7 +223,7 @@
             border: 1px dashed var(--border-color);
             word-break: break-all;
         }
-        
+
         .error-msg { 
             color: #ef4444; 
             border-color: #ef4444; 
@@ -266,7 +266,7 @@
             <div class="controls-header">
                 <span style="font-weight:600; font-size:1.1em">📅 选择年份</span>
                 <select id="year-select" disabled>
-                    <option>加载配置中...</option>
+                    <option>CDN 加载中...</option>
                 </select>
             </div>
 
@@ -277,16 +277,16 @@
         <div id="news-container">
             <div class="status-msg">
                 <div class="spinner"></div>
-                正在连接云端档案库...
+                正在通过全球 CDN 同步配置...
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 核心配置：你的 News.js 地址
+        // 核心配置：使用 jsDelivr CDN 加速加载 News.js
         // ============================================
-        const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/News.js';
+        const REMOTE_CONFIG_URL = 'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/News.js';
 
         const yearSelect = document.getElementById('year-select');
         const monthContainer = document.getElementById('month-container');
@@ -294,18 +294,20 @@
 
         // 1. 加载远程配置
         function loadRemoteConfig() {
-            const timestamp = new Date().getTime();
+            // 时间戳(小时级)确保缓存更新
+            const timestamp = new Date().getHours();
+            // 使用代理请求 CDN 地址，确保 100% 可访问性
             const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
 
             fetch(proxyUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error("无法连接到配置文件");
+                    if (!response.ok) throw new Error("CDN 连接失败");
                     return response.text();
                 })
                 .then(scriptContent => {
                     const blob = new Blob([scriptContent], { type: 'application/javascript' });
                     const url = URL.createObjectURL(blob);
-                    
+
                     const script = document.createElement('script');
                     script.src = url;
                     script.onload = () => { initApp(); URL.revokeObjectURL(url); };
@@ -313,7 +315,7 @@
                     document.head.appendChild(script);
                 })
                 .catch(error => {
-                    newsContainer.innerHTML = `<div class="status-msg error-msg"><h3>⚠️ 连接中断</h3><p>${error.message}</p></div>`;
+                    newsContainer.innerHTML = `<div class="status-msg error-msg"><h3>⚠️ CDN 连接中断</h3><p>${error.message}</p></div>`;
                 });
         }
 
@@ -324,7 +326,7 @@
             yearSelect.disabled = false;
             yearSelect.innerHTML = '';
             populateYears();
-            
+
             const today = new Date();
             let defaultYear = NewsConfig.startYear;
             if (today.getFullYear() >= NewsConfig.startYear && today.getFullYear() < NewsConfig.startYear + NewsConfig.totalYears) {
@@ -370,12 +372,12 @@
         // 3. 核心获取逻辑 (带错误调试功能)
         function fetchNews(year, month) {
             const targetUrl = NewsConfig.getUrl(year, month);
-            
-            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>读取中: ${year}-${month}</div>`;
+
+            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>CDN 加速读取中: ${year}-${month}</div>`;
 
             fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl))
                 .then(response => {
-                    if (!response.ok) throw new Error('Github 404 (文件未找到)');
+                    if (!response.ok) throw new Error('Github/CDN 404 (文件未找到)');
                     return response.text();
                 })
                 .then(text => {
@@ -407,7 +409,7 @@
                 line = line.trim();
                 // 修复点：更宽松的正则，防止因空格导致无法解析
                 const titleMatch = line.match(/^###\s*\[(.*?)\]\((.*)\)/);
-                
+
                 if (titleMatch) {
                     if (currentItem) items.push(currentItem);
                     currentItem = { title: titleMatch[1], link: titleMatch[2], date: '', id: '' };
@@ -426,13 +428,13 @@
         function renderItems(items) {
             newsContainer.innerHTML = '';
             if (items.length === 0) {
-                newsContainer.innerHTML = '<div class="status-msg">没有找到条目</div>';
+                newsContainer.innerHTML = '<div class="status-msg">本月暂无新闻归档</div>';
                 return;
             }
             items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'news-item';
-                
+
                 // 渲染：使用 badge 样式，并确保 a 标签包裹标题
                 div.innerHTML = `
                     <h2 class="news-title">
