@@ -96,13 +96,6 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border-left: 5px solid var(--accent-color);
             animation: slideIn 0.3s ease-out;
-            transition: transform 0.2s;
-        }
-        
-        /* 鼠标悬停在卡片上时，稍微上浮，提示可交互 */
-        .news-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         @keyframes slideIn {
@@ -110,30 +103,14 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .news-title { 
-            margin: 0 0 10px 0; 
-            font-size: 1.25em; 
-            line-height: 1.4;
-        }
-        
-        /* 确保链接样式明显且可点击 */
-        .news-title a { 
-            text-decoration: none; 
-            color: var(--primary-color); 
-            display: block; /* 让链接铺满标题区域 */
-            cursor: pointer;
-        }
-        
-        .news-title a:hover { 
-            color: var(--accent-color); 
-            text-decoration: underline;
-        }
+        .news-title { margin: 0 0 10px 0; font-size: 1.25em; }
+        .news-title a { text-decoration: none; color: var(--primary-color); }
+        .news-title a:hover { color: var(--accent-color); }
 
         .news-meta {
             font-size: 0.85em;
             color: #7f8c8d;
             display: flex;
-            flex-wrap: wrap;
             gap: 15px;
             margin-top: 5px;
         }
@@ -146,6 +123,7 @@
         }
         .error-msg { color: #e74c3c; }
         
+        /* 加载动画 */
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid var(--accent-color);
@@ -195,7 +173,9 @@
 
         // 第一步：加载远程配置文件
         function loadRemoteConfig() {
+            // 添加时间戳防止缓存，保证你修改 GitHub 后这里能立马生效
             const timestamp = new Date().getTime();
+            // 使用代理获取 JS 内容
             const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
 
             fetch(proxyUrl)
@@ -204,93 +184,129 @@
                     return response.text();
                 })
                 .then(scriptContent => {
+                    // 创建一个 Blob 对象来模拟本地脚本
                     const blob = new Blob([scriptContent], { type: 'application/javascript' });
                     const url = URL.createObjectURL(blob);
                     
+                    // 动态插入脚本
                     const script = document.createElement('script');
                     script.src = url;
                     script.onload = () => {
                         console.log("配置文件加载成功");
-                        initApp(); 
-                        URL.revokeObjectURL(url); 
+                        initApp(); // 脚本加载完后，启动应用
+                        URL.revokeObjectURL(url); // 释放内存
                     };
-                    script.onerror = () => { throw new Error("配置文件解析失败"); };
+                    script.onerror = () => {
+                        throw new Error("配置文件解析失败，请检查 News.js 语法");
+                    };
                     document.head.appendChild(script);
                 })
                 .catch(error => {
                     console.error(error);
-                    newsContainer.innerHTML = `<div class="status-msg error-msg"><h3>⚠️ 配置加载失败</h3><p>${error.message}</p></div>`;
+                    newsContainer.innerHTML = `
+                        <div class="status-msg error-msg">
+                            <h3>⚠️ 配置加载失败</h3>
+                            <p>${error.message}</p>
+                            <p>请检查 GitHub 链接是否正确。</p>
+                        </div>
+                    `;
                 });
         }
 
-        // 第二步：初始化应用
+        // 第二步：初始化应用 (Config 加载成功后执行)
         function initApp() {
             if (typeof NewsConfig === 'undefined') {
-                newsContainer.innerHTML = '<div class="status-msg error-msg">NewsConfig 对象不存在。</div>';
+                newsContainer.innerHTML = '<div class="status-msg error-msg">错误：News.js 已加载但 NewsConfig 对象不存在。</div>';
                 return;
             }
 
+            // 启用下拉框
             yearSelect.disabled = false;
             yearSelect.innerHTML = '';
+
             populateYears();
             
+            // 默认加载逻辑：优先加载当前时间，如果是未来则回退到 Config 起始时间
             const today = new Date();
             const currentYear = today.getFullYear();
             const currentMonth = today.getMonth() + 1;
             
+            // 默认选中 Config 中的第一年，或者当前年份（如果在范围内）
             let defaultYear = NewsConfig.startYear;
             if (currentYear >= NewsConfig.startYear && currentYear < NewsConfig.startYear + NewsConfig.totalYears) {
                 defaultYear = currentYear;
             }
 
+            // 设置下拉框并触发加载
             yearSelect.value = defaultYear;
             loadMonthsForYear(defaultYear);
 
+            // 自动点击对应月份
             const monthToClick = (defaultYear === currentYear) ? currentMonth : 12;
             const targetBtn = document.querySelector(`button[data-month="${monthToClick}"]`);
             if (targetBtn) {
                 targetBtn.click();
             } else {
+                // 如果找不到对应月份，点12月
                 const lastBtn = document.querySelector(`button[data-month="12"]`);
                 if(lastBtn) lastBtn.click();
             }
         }
 
+        // 填充年份
         function populateYears() {
             const start = NewsConfig.startYear;
             const end = start + NewsConfig.totalYears;
+
             for (let y = start; y < end; y++) {
                 const option = document.createElement('option');
                 option.value = y;
                 option.text = `${y}年`;
                 yearSelect.appendChild(option);
             }
-            yearSelect.addEventListener('change', (e) => loadMonthsForYear(parseInt(e.target.value)));
+
+            yearSelect.addEventListener('change', (e) => {
+                loadMonthsForYear(parseInt(e.target.value));
+            });
         }
 
+        // 生成月份按钮
         function loadMonthsForYear(year) {
             monthContainer.innerHTML = '';
+            
             for (let m = 1; m <= 12; m++) {
                 const btn = document.createElement('button');
                 btn.className = 'month-btn';
                 btn.innerText = `${m}月`;
                 btn.dataset.month = m;
+                
                 btn.onclick = () => {
                     document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     fetchNews(year, m);
                 };
+
                 monthContainer.appendChild(btn);
             }
         }
 
+        // 获取并解析新闻
         function fetchNews(year, month) {
+            // 使用远程 Config 中的逻辑获取 URL
             const targetUrl = NewsConfig.getUrl(year, month);
-            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>正在读取档案: ${year}-${month} ...</div>`;
+            
+            newsContainer.innerHTML = `
+                <div class="status-msg">
+                    <div class="spinner"></div>
+                    正在读取档案: ${year}-${month.toString().padStart(2,'0')} ...
+                </div>`;
 
-            fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl))
+            // 使用代理获取 Markdown
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
+
+            fetch(proxyUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error('Github 404');
+                    if (!response.ok) throw new Error('Github 404 Not Found');
                     return response.text();
                 })
                 .then(text => {
@@ -300,14 +316,20 @@
                 })
                 .catch(error => {
                     let msg = `未找到 ${year}年${month}月 的归档。`;
-                    if (NewsConfig.manualOverrides[`${year}-${month.toString().padStart(2,'0')}`]) msg = `无法加载配置的链接。`;
-                    newsContainer.innerHTML = `<div class="status-msg">${msg}<br><small>(${error.message})</small></div>`;
+                    // 只有当这个月确实手动配置了链接，才显示链接错误，否则显示未上传
+                    if (NewsConfig.manualOverrides[`${year}-${month.toString().padStart(2,'0')}`]) {
+                         msg = `无法加载您配置的链接。`;
+                    }
+                    
+                    newsContainer.innerHTML = `
+                        <div class="status-msg">
+                            ${msg}<br>
+                            <small style="opacity:0.5; font-size: 0.8em">(${error.message})</small>
+                        </div>`;
                 });
         }
 
-        // ============================================
-        // 核心修复：解析和渲染部分
-        // ============================================
+        // Markdown 解析逻辑
         function parseMarkdown(text) {
             const lines = text.split('\n');
             const items = [];
@@ -315,19 +337,10 @@
 
             lines.forEach(line => {
                 line = line.trim();
-                
-                // 修复点：更宽松的正则，允许 ### 后有空格，并贪婪匹配 URL 以防止被截断
-                // 匹配: ### [标题](链接)
-                const titleMatch = line.match(/^###\s*\[(.*?)\]\((.*)\)/);
-                
+                const titleMatch = line.match(/^### \[(.*?)\]\((.*?)\)/);
                 if (titleMatch) {
                     if (currentItem) items.push(currentItem);
-                    currentItem = { 
-                        title: titleMatch[1], 
-                        link: titleMatch[2], // 这里获取完整的 URL
-                        date: '', 
-                        id: '' 
-                    };
+                    currentItem = { title: titleMatch[1], link: titleMatch[2], date: '', id: '' };
                 } else if (currentItem) {
                     const dateMatch = line.match(/^- \*\*Date\*\*: (.*)/);
                     if (dateMatch) currentItem.date = dateMatch[1];
@@ -339,23 +352,18 @@
             return items;
         }
 
+        // 渲染列表
         function renderItems(items) {
             newsContainer.innerHTML = '';
             if (items.length === 0) {
-                newsContainer.innerHTML = '<div class="status-msg">没有条目。</div>';
+                newsContainer.innerHTML = '<div class="status-msg">解析成功，但没有条目。</div>';
                 return;
             }
             items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'news-item';
-                
-                // 修复点：确保 href 属性被正确填充，并添加 target="_blank"
                 div.innerHTML = `
-                    <h2 class="news-title">
-                        <a href="${item.link}" target="_blank" title="点击访问原网页">
-                            ${item.title}
-                        </a>
-                    </h2>
+                    <h2 class="news-title"><a href="${item.link}" target="_blank">${item.title}</a></h2>
                     <div class="news-meta">
                         <span>📅 ${item.date || '未知日期'}</span>
                         <span>🆔 ${item.id || 'N/A'}</span>
@@ -365,6 +373,7 @@
             });
         }
 
+        // 启动程序
         loadRemoteConfig();
 
     </script>
