@@ -7,7 +7,7 @@
     <style>
         :root {
             --primary-color: #2c3e50;
-            --accent-color: #007bff; /* 改回亮蓝色，更像链接 */
+            --accent-color: #3498db;
             --bg-color: #f8f9fa;
         }
 
@@ -68,14 +68,17 @@
             color: #555;
         }
 
-        .month-btn:hover { background-color: #f1f1f1; border-color: #bbb; }
-        
+        .month-btn:hover {
+            background-color: #f1f1f1;
+            border-color: #bbb;
+        }
+
         .month-btn.active {
             background-color: var(--accent-color);
             color: white;
             border-color: var(--accent-color);
             font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+            box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
         }
 
         /* 内容展示区 */
@@ -86,29 +89,20 @@
             min-height: 300px;
         }
 
-        /* 核心修改：让A标签包裹整个卡片，并去除A标签的默认下划线 */
-        .news-card-link {
-            text-decoration: none;
-            color: inherit;
-            display: block; /* 让链接变成块级元素 */
-        }
-
         .news-item {
             background: white;
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border-left: 5px solid var(--accent-color);
-            transition: transform 0.2s, box-shadow 0.2s;
             animation: slideIn 0.3s ease-out;
-            cursor: pointer; /* 鼠标放上去变成手型 */
+            transition: transform 0.2s;
         }
-
-        /* 悬停效果：整个卡片浮起 */
-        .news-card-link:hover .news-item {
-            transform: translateY(-3px);
+        
+        /* 鼠标悬停在卡片上时，稍微上浮，提示可交互 */
+        .news-item:hover {
+            transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            background-color: #fafcff;
         }
 
         @keyframes slideIn {
@@ -118,14 +112,20 @@
 
         .news-title { 
             margin: 0 0 10px 0; 
-            font-size: 1.25em;
-            color: #2c3e50;
-            font-weight: bold;
+            font-size: 1.25em; 
+            line-height: 1.4;
         }
-
-        /* 标题悬停变色 */
-        .news-card-link:hover .news-title {
-            color: var(--accent-color);
+        
+        /* 确保链接样式明显且可点击 */
+        .news-title a { 
+            text-decoration: none; 
+            color: var(--primary-color); 
+            display: block; /* 让链接铺满标题区域 */
+            cursor: pointer;
+        }
+        
+        .news-title a:hover { 
+            color: var(--accent-color); 
             text-decoration: underline;
         }
 
@@ -133,8 +133,9 @@
             font-size: 0.85em;
             color: #7f8c8d;
             display: flex;
+            flex-wrap: wrap;
             gap: 15px;
-            margin-top: 8px;
+            margin-top: 5px;
         }
 
         .status-msg {
@@ -170,7 +171,8 @@
             </select>
         </div>
 
-        <div class="months-grid" id="month-container"></div>
+        <div class="months-grid" id="month-container">
+            </div>
     </div>
 
     <div id="news-container">
@@ -181,43 +183,52 @@
     </div>
 
     <script>
-        // 远程 Config 地址
+        // ============================================
+        // 核心配置：远程 Config 文件的地址
+        // ============================================
         const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/News.js';
 
+        // DOM 元素
         const yearSelect = document.getElementById('year-select');
         const monthContainer = document.getElementById('month-container');
         const newsContainer = document.getElementById('news-container');
 
-        // 加载远程配置
+        // 第一步：加载远程配置文件
         function loadRemoteConfig() {
             const timestamp = new Date().getTime();
             const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
 
             fetch(proxyUrl)
-                .then(r => {
-                    if (!r.ok) throw new Error("无法下载配置文件");
-                    return r.text();
+                .then(response => {
+                    if (!response.ok) throw new Error("无法下载配置文件");
+                    return response.text();
                 })
                 .then(scriptContent => {
                     const blob = new Blob([scriptContent], { type: 'application/javascript' });
                     const url = URL.createObjectURL(blob);
+                    
                     const script = document.createElement('script');
                     script.src = url;
                     script.onload = () => {
-                        initApp();
-                        URL.revokeObjectURL(url);
+                        console.log("配置文件加载成功");
+                        initApp(); 
+                        URL.revokeObjectURL(url); 
                     };
                     script.onerror = () => { throw new Error("配置文件解析失败"); };
                     document.head.appendChild(script);
                 })
                 .catch(error => {
-                    newsContainer.innerHTML = `<div class="status-msg error-msg">${error.message}</div>`;
+                    console.error(error);
+                    newsContainer.innerHTML = `<div class="status-msg error-msg"><h3>⚠️ 配置加载失败</h3><p>${error.message}</p></div>`;
                 });
         }
 
-        // 初始化
+        // 第二步：初始化应用
         function initApp() {
-            if (typeof NewsConfig === 'undefined') return;
+            if (typeof NewsConfig === 'undefined') {
+                newsContainer.innerHTML = '<div class="status-msg error-msg">NewsConfig 对象不存在。</div>';
+                return;
+            }
 
             yearSelect.disabled = false;
             yearSelect.innerHTML = '';
@@ -237,10 +248,11 @@
 
             const monthToClick = (defaultYear === currentYear) ? currentMonth : 12;
             const targetBtn = document.querySelector(`button[data-month="${monthToClick}"]`);
-            if (targetBtn) targetBtn.click();
-            else {
-                 const lastBtn = document.querySelector(`button[data-month="12"]`);
-                 if(lastBtn) lastBtn.click();
+            if (targetBtn) {
+                targetBtn.click();
+            } else {
+                const lastBtn = document.querySelector(`button[data-month="12"]`);
+                if(lastBtn) lastBtn.click();
             }
         }
 
@@ -274,22 +286,28 @@
 
         function fetchNews(year, month) {
             const targetUrl = NewsConfig.getUrl(year, month);
-            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>正在读取档案...</div>`;
-            
+            newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>正在读取档案: ${year}-${month} ...</div>`;
+
             fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl))
-                .then(r => { if (!r.ok) throw new Error('404'); return r.text(); })
-                .then(text => {
-                    if (!text.trim()) throw new Error('Empty');
-                    renderItems(parseMarkdown(text));
+                .then(response => {
+                    if (!response.ok) throw new Error('Github 404');
+                    return response.text();
                 })
-                .catch(e => {
+                .then(text => {
+                    if (!text.trim()) throw new Error('内容为空');
+                    const items = parseMarkdown(text);
+                    renderItems(items);
+                })
+                .catch(error => {
                     let msg = `未找到 ${year}年${month}月 的归档。`;
-                    if (NewsConfig.manualOverrides[`${year}-${month.toString().padStart(2,'0')}`]) msg = `配置的链接无效。`;
-                    newsContainer.innerHTML = `<div class="status-msg">${msg}</div>`;
+                    if (NewsConfig.manualOverrides[`${year}-${month.toString().padStart(2,'0')}`]) msg = `无法加载配置的链接。`;
+                    newsContainer.innerHTML = `<div class="status-msg">${msg}<br><small>(${error.message})</small></div>`;
                 });
         }
 
-        // 核心修改：正则稍微放宽一点，允许 ### 后面有多个空格
+        // ============================================
+        // 核心修复：解析和渲染部分
+        // ============================================
         function parseMarkdown(text) {
             const lines = text.split('\n');
             const items = [];
@@ -297,11 +315,19 @@
 
             lines.forEach(line => {
                 line = line.trim();
-                // 允许 ### 后有一个或多个空格 \s+
-                const titleMatch = line.match(/^###\s+\[(.*?)\]\((.*?)\)/);
+                
+                // 修复点：更宽松的正则，允许 ### 后有空格，并贪婪匹配 URL 以防止被截断
+                // 匹配: ### [标题](链接)
+                const titleMatch = line.match(/^###\s*\[(.*?)\]\((.*)\)/);
+                
                 if (titleMatch) {
                     if (currentItem) items.push(currentItem);
-                    currentItem = { title: titleMatch[1], link: titleMatch[2], date: '', id: '' };
+                    currentItem = { 
+                        title: titleMatch[1], 
+                        link: titleMatch[2], // 这里获取完整的 URL
+                        date: '', 
+                        id: '' 
+                    };
                 } else if (currentItem) {
                     const dateMatch = line.match(/^- \*\*Date\*\*: (.*)/);
                     if (dateMatch) currentItem.date = dateMatch[1];
@@ -313,36 +339,34 @@
             return items;
         }
 
-        // 核心修改：渲染时，用 <a> 包裹整个卡片
         function renderItems(items) {
             newsContainer.innerHTML = '';
             if (items.length === 0) {
-                newsContainer.innerHTML = '<div class="status-msg">解析成功，但没有条目。</div>';
+                newsContainer.innerHTML = '<div class="status-msg">没有条目。</div>';
                 return;
             }
             items.forEach(item => {
-                // 创建一个大的链接容器
-                const linkWrapper = document.createElement('a');
-                linkWrapper.className = 'news-card-link';
-                linkWrapper.href = item.link;
-                linkWrapper.target = "_blank"; // 在新标签页打开
+                const div = document.createElement('div');
+                div.className = 'news-item';
                 
-                // 内部是之前的 news-item 结构
-                linkWrapper.innerHTML = `
-                    <div class="news-item">
-                        <div class="news-title">${item.title}</div>
-                        <div class="news-meta">
-                            <span>📅 ${item.date || '未知日期'}</span>
-                            <span>🆔 ${item.id || 'N/A'}</span>
-                        </div>
+                // 修复点：确保 href 属性被正确填充，并添加 target="_blank"
+                div.innerHTML = `
+                    <h2 class="news-title">
+                        <a href="${item.link}" target="_blank" title="点击访问原网页">
+                            ${item.title}
+                        </a>
+                    </h2>
+                    <div class="news-meta">
+                        <span>📅 ${item.date || '未知日期'}</span>
+                        <span>🆔 ${item.id || 'N/A'}</span>
                     </div>
                 `;
-                
-                newsContainer.appendChild(linkWrapper);
+                newsContainer.appendChild(div);
             });
         }
 
         loadRemoteConfig();
+
     </script>
 </body>
 </html>
