@@ -99,6 +99,7 @@
             transition: transform 0.2s;
         }
         
+        /* 鼠标悬停在卡片上时，稍微上浮，提示可交互 */
         .news-item:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
@@ -109,18 +110,17 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 标题和链接样式 */
         .news-title { 
             margin: 0 0 10px 0; 
             font-size: 1.25em; 
             line-height: 1.4;
         }
         
-        /* 关键修复：让链接充满整个标题区域，且颜色明显 */
+        /* 确保链接样式明显且可点击 */
         .news-title a { 
             text-decoration: none; 
             color: var(--primary-color); 
-            display: block; 
+            display: block; /* 让链接铺满标题区域 */
             cursor: pointer;
         }
         
@@ -184,7 +184,7 @@
 
     <script>
         // ============================================
-        // 核心配置：你的 News.js 托管地址
+        // 核心配置：远程 Config 文件的地址
         // ============================================
         const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/News.js';
 
@@ -195,17 +195,15 @@
 
         // 第一步：加载远程配置文件
         function loadRemoteConfig() {
-            // 加个时间戳，防止浏览器缓存旧的 News.js
             const timestamp = new Date().getTime();
             const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(REMOTE_CONFIG_URL) + '&t=' + timestamp;
 
             fetch(proxyUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error("无法下载 News.js 配置文件");
+                    if (!response.ok) throw new Error("无法下载配置文件");
                     return response.text();
                 })
                 .then(scriptContent => {
-                    // 模拟本地脚本执行
                     const blob = new Blob([scriptContent], { type: 'application/javascript' });
                     const url = URL.createObjectURL(blob);
                     
@@ -216,7 +214,7 @@
                         initApp(); 
                         URL.revokeObjectURL(url); 
                     };
-                    script.onerror = () => { throw new Error("News.js 解析失败，请检查语法"); };
+                    script.onerror = () => { throw new Error("配置文件解析失败"); };
                     document.head.appendChild(script);
                 })
                 .catch(error => {
@@ -228,16 +226,14 @@
         // 第二步：初始化应用
         function initApp() {
             if (typeof NewsConfig === 'undefined') {
-                newsContainer.innerHTML = '<div class="status-msg error-msg">错误：News.js 已加载但 NewsConfig 对象不存在。</div>';
+                newsContainer.innerHTML = '<div class="status-msg error-msg">NewsConfig 对象不存在。</div>';
                 return;
             }
 
-            // 启用界面
             yearSelect.disabled = false;
             yearSelect.innerHTML = '';
             populateYears();
             
-            // 计算默认加载的时间
             const today = new Date();
             const currentYear = today.getFullYear();
             const currentMonth = today.getMonth() + 1;
@@ -250,7 +246,6 @@
             yearSelect.value = defaultYear;
             loadMonthsForYear(defaultYear);
 
-            // 自动点击月份
             const monthToClick = (defaultYear === currentYear) ? currentMonth : 12;
             const targetBtn = document.querySelector(`button[data-month="${monthToClick}"]`);
             if (targetBtn) {
@@ -290,36 +285,28 @@
         }
 
         function fetchNews(year, month) {
-            // 调用 News.js 中的 getUrl 逻辑
             const targetUrl = NewsConfig.getUrl(year, month);
-            
             newsContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>正在读取档案: ${year}-${month} ...</div>`;
 
             fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl))
                 .then(response => {
-                    if (!response.ok) throw new Error('Github 404 (文件未上传)');
+                    if (!response.ok) throw new Error('Github 404');
                     return response.text();
                 })
                 .then(text => {
-                    if (!text.trim()) throw new Error('文件内容为空');
+                    if (!text.trim()) throw new Error('内容为空');
                     const items = parseMarkdown(text);
                     renderItems(items);
                 })
                 .catch(error => {
                     let msg = `未找到 ${year}年${month}月 的归档。`;
-                    // 如果这个月你是留空的，那就是文件没找到
-                    // 如果你手动填了地址，那就是手动填的地址错了
-                    const key = `${year}-${month.toString().padStart(2, '0')}`;
-                    if (NewsConfig.manualOverrides[key] && NewsConfig.manualOverrides[key] !== "") {
-                         msg = `无法加载您配置的链接。`;
-                    }
-                    
+                    if (NewsConfig.manualOverrides[`${year}-${month.toString().padStart(2,'0')}`]) msg = `无法加载配置的链接。`;
                     newsContainer.innerHTML = `<div class="status-msg">${msg}<br><small>(${error.message})</small></div>`;
                 });
         }
 
         // ============================================
-        // 核心修复：解析 Markdown，支持点击链接
+        // 核心修复：解析和渲染部分
         // ============================================
         function parseMarkdown(text) {
             const lines = text.split('\n');
@@ -329,14 +316,15 @@
             lines.forEach(line => {
                 line = line.trim();
                 
-                // 1. 修复正则，精准提取 [Title](URL)
+                // 修复点：更宽松的正则，允许 ### 后有空格，并贪婪匹配 URL 以防止被截断
+                // 匹配: ### [标题](链接)
                 const titleMatch = line.match(/^###\s*\[(.*?)\]\((.*)\)/);
                 
                 if (titleMatch) {
                     if (currentItem) items.push(currentItem);
                     currentItem = { 
                         title: titleMatch[1], 
-                        link: titleMatch[2], 
+                        link: titleMatch[2], // 这里获取完整的 URL
                         date: '', 
                         id: '' 
                     };
@@ -361,10 +349,10 @@
                 const div = document.createElement('div');
                 div.className = 'news-item';
                 
-                // 2. 渲染 HTML，确保 <a> 标签包裹标题，并加上 target="_blank"
+                // 修复点：确保 href 属性被正确填充，并添加 target="_blank"
                 div.innerHTML = `
                     <h2 class="news-title">
-                        <a href="${item.link}" target="_blank" title="访问: ${item.title}">
+                        <a href="${item.link}" target="_blank" title="点击访问原网页">
                             ${item.title}
                         </a>
                     </h2>
@@ -377,7 +365,6 @@
             });
         }
 
-        // 启动程序
         loadRemoteConfig();
 
     </script>
