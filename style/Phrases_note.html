@@ -60,12 +60,11 @@
         .note-word { font-family: 'Merriweather', serif; font-size: 1.4rem; font-weight: 700; color: var(--accent-color); margin-bottom: 12px; word-break: break-word; }
         .note-meaning { font-size: 1rem; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px; flex-grow: 1; }
         
-        /* 来源链接样式调整：去除了 flex gap，保持简洁 */
+        /* 来源链接样式 */
         .note-source { 
             padding-top: 15px; 
             border-top: 1px solid var(--border-color); 
             font-size: 0.85rem; 
-            /* 原来的 flex gap 去掉也没关系，因为现在只有一个元素了 */
             display: block; 
         }
         .note-source a { 
@@ -75,9 +74,11 @@
             -webkit-line-clamp: 1; 
             -webkit-box-orient: vertical; 
             overflow: hidden; 
+            transition: color 0.2s;
         }
-        .note-source a:hover { color: var(--accent-color); text-decoration: underline; }
-
+        /* 鼠标悬停时提示这是一个定位链接 */
+        .note-source a:hover { color: var(--accent-color); text-decoration: underline; cursor: context-menu; }
+        
         .note-meta { margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); }
         
         .status-msg { text-align: center; padding: 50px; color: var(--text-secondary); grid-column: 1 / -1; }
@@ -120,7 +121,7 @@
         const GITHUB_REPO = 'HelloWorld';
         const GITHUB_BRANCH = 'master'; 
         
-        // 你的 JS 配置文件在仓库中的相对路径
+        // 你的 JS 配置文件路径
         const CONFIG_FILE_PATH = 'Notes/Phrases_note.js'; 
 
         const yearSelect = document.getElementById('year-select');
@@ -257,7 +258,9 @@
                 });
         }
 
-        // 5. 渲染卡片 (已修改：移除来源标签)
+        // ===============================================
+        // 5. 渲染卡片 (关键修改：添加高亮定位功能)
+        // ===============================================
         function renderNotes(items) {
             notesContainer.innerHTML = '';
             items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -274,13 +277,24 @@
                 const sourceText = item.pageTitle || 'Source Link';
                 const timeStr = item.time ? item.time.split(' ')[0] : '---';
                 
-                // 修改处：删除了 <span>📄 来源:</span>
+                // --- 狂野想法实现区域 ---
+                // 1. 获取单词文本，去除首尾空格
+                const rawText = item.text ? item.text.trim() : "";
+                
+                // 2. 将文本编码（处理空格为%20，特殊符号等）
+                const encodedText = encodeURIComponent(rawText);
+                
+                // 3. 构造带有高亮片段锚点的 URL
+                // 格式：原始URL + #:~:text=编码后的单词
+                // 浏览器会识别这个后缀，自动滚动并高亮
+                const highlightUrl = `${item.url}#:~:text=${encodedText}`;
+
                 card.innerHTML = `
                     <div class="note-word">${item.text}</div>
                     <div class="note-meaning">${item.note}</div>
                     
                     <div class="note-source">
-                        <a href="${item.url}" target="_blank" title="${sourceText}">
+                        <a href="${highlightUrl}" target="_blank" title="点击跳转并高亮单词：${rawText}">
                             ${sourceText}
                         </a>
                     </div>
