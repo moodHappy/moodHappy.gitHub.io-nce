@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Phrases Archive (实时版)</title>
+    <title>English Phrases Archive (TTS动画版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -32,9 +32,31 @@
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); margin: 0; padding: 40px 20px; }
         .container { max-width: 1000px; margin: 0 auto; }
         
-        header { text-align: center; margin-bottom: 40px; }
+        header { text-align: center; margin-bottom: 30px; }
         h1 { font-family: 'Merriweather', serif; margin-bottom: 10px; }
         .subtitle { color: var(--text-secondary); font-size: 0.95rem; }
+
+        /* === 搜索框样式 === */
+        .search-section { margin-bottom: 20px; }
+        .search-box {
+            display: flex; gap: 10px;
+            background: var(--bg-card);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+        .search-input {
+            flex-grow: 1; border: none; background: transparent;
+            font-size: 16px; color: var(--text-primary); outline: none; padding: 5px 10px;
+        }
+        .search-btn {
+            background-color: var(--accent-color); color: white; border: none;
+            padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .search-btn:hover { opacity: 0.9; }
+        .search-btn:disabled { background-color: var(--text-secondary); cursor: not-allowed; }
 
         /* 顶部控制栏 */
         .controls { background: var(--bg-card); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 30px; }
@@ -57,30 +79,82 @@
         }
         .note-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); border-color: var(--accent-color); }
 
-        .note-word { font-family: 'Merriweather', serif; font-size: 1.4rem; font-weight: 700; color: var(--accent-color); margin-bottom: 12px; word-break: break-word; }
+        /* 标题行布局 */
+        .note-header-row {
+            display: flex;
+            align-items: flex-start; /* 对齐顶部，防止多行文本时按钮跑偏 */
+            justify-content: space-between; /* 文本和按钮两端对齐 */
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+
+        .note-word { 
+            font-family: 'Merriweather', serif; 
+            font-size: 1.4rem; 
+            font-weight: 700; 
+            color: #000000; 
+            word-break: break-word; 
+            margin: 0;
+            flex-grow: 1; /* 让文本占据剩余空间 */
+        }
+        @media (prefers-color-scheme: dark) { .note-word { color: #ffffff; } }
+
+        /* === 🔊 TTS 按钮及声波动画样式 === */
+        .tts-btn {
+            background: transparent;
+            border: none;
+            padding: 4px; /* 增加一点点击热区 */
+            cursor: pointer;
+            color: var(--text-secondary); /* 默认灰色 */
+            transition: color 0.3s, transform 0.2s;
+            flex-shrink: 0; /* 防止被挤压 */
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        /* SVG 图标基础设定 */
+        .tts-icon { width: 26px; height: 26px; fill: currentColor; }
+        .tts-body { /* 喇叭主体 */ }
+        .tts-waves { opacity: 0.4; transform-origin: center left; transition: opacity 0.3s; }
+
+        /* 悬停状态 */
+        .tts-btn:hover { color: var(--accent-color); transform: scale(1.1); }
+        .tts-btn:hover .tts-waves { opacity: 0.8; }
+        .tts-btn:active { transform: scale(0.95); }
+
+        /* 播放中状态 (.playing) */
+        .tts-btn.playing { 
+            color: var(--accent-color); /* 播放时高亮颜色 */
+            transform: scale(1.1); /* 保持放大 */
+            cursor: default; /* 播放时鼠标样式 */
+        }
+
+        /* 声波动画定义 */
+        @keyframes wave-animation {
+            0%   { opacity: 0.2; transform: scale(0.8) translateX(0); }
+            50%  { opacity: 1.0; transform: scale(1.1) translateX(1px); }
+            100% { opacity: 0.2; transform: scale(0.8) translateX(0); }
+        }
+
+        /* 播放时应用动画 */
+        /* inner wave */
+        .tts-btn.playing .tts-wave-1 { animation: wave-animation 1.2s infinite ease-in-out; }
+        /* outer wave (延迟一点，制造扩散感) */
+        .tts-btn.playing .tts-wave-2 { animation: wave-animation 1.2s infinite ease-in-out 0.2s; }
+
+
         .note-meaning { font-size: 1rem; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px; flex-grow: 1; }
         
-        /* 来源链接样式 */
-        .note-source { 
-            padding-top: 15px; 
-            border-top: 1px solid var(--border-color); 
-            font-size: 0.85rem; 
-            display: block; 
-        }
+        .note-source { padding-top: 15px; border-top: 1px solid var(--border-color); font-size: 0.85rem; display: block; }
         .note-source a { 
-            color: var(--text-secondary); 
-            text-decoration: none; 
-            display: -webkit-box; 
-            -webkit-line-clamp: 1; 
-            -webkit-box-orient: vertical; 
-            overflow: hidden; 
+            color: var(--text-secondary); text-decoration: none; 
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; 
             transition: color 0.2s;
         }
-        /* 鼠标悬停时提示这是一个定位链接 */
         .note-source a:hover { color: var(--accent-color); text-decoration: underline; cursor: context-menu; }
         
         .note-meta { margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); }
-        
+        .badge-source { background: var(--bg-body); padding: 2px 8px; border-radius: 4px; font-size: 0.7em; margin-right: 5px; }
+
         .status-msg { text-align: center; padding: 50px; color: var(--text-secondary); grid-column: 1 / -1; }
         .spinner { width: 30px; height: 30px; border: 3px solid var(--border-color); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 0.8s infinite linear; margin: 0 auto 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -95,9 +169,16 @@
             <div class="subtitle">Vocabulary & Context | 2025 - 2054</div>
         </header>
 
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="search-input" class="search-input" placeholder="搜索" onkeypress="handleEnter(event)">
+                <button id="search-btn" class="search-btn" onclick="performGlobalSearch()">搜 索</button>
+            </div>
+        </div>
+
         <div class="controls">
             <div class="controls-header">
-                <span style="font-weight:600;">📅 选择年份</span>
+                <span style="font-weight:600;">📅 浏览归档</span>
                 <select id="year-select" disabled>
                     <option>正在同步 GitHub...</option>
                 </select>
@@ -115,22 +196,82 @@
 
     <script>
         // ============================================
-        // 核心配置区域
+        // 1. TTS 配置区域
+        // ============================================
+        const TTS_CONFIG = {
+            useAlternative: false,
+            voices: [ "en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-AndrewNeural", "en-US-AvaNeural", "en-US-BrianNeural", "en-US-ChristopherNeural", "en-US-CoraNeural", "en-US-DavisNeural", "en-US-ElizabethNeural", "en-US-EricNeural", "en-US-GuyNeural", "en-US-JennyNeural", "en-US-MichelleNeural", "en-US-RogerNeural", "en-US-SteffanNeural", "en-US-TonyNeural" ],
+            voice: "en-US-JennyNeural"
+        };
+        TTS_CONFIG.voice = TTS_CONFIG.voices[Math.floor(Math.random() * TTS_CONFIG.voices.length)];
+        console.log("TTS Voice:", TTS_CONFIG.voice);
+
+        // 播放函数 (修改：接收按钮元素以控制动画)
+        function playPhrase(btnElement, text) {
+            if (!text || btnElement.classList.contains('playing')) return;
+
+            // 1. 重置所有按钮状态（防止同时播放多个动画）
+            document.querySelectorAll('.tts-btn').forEach(b => b.classList.remove('playing'));
+
+            // 2. 移除旧音频
+            const old = document.getElementById('audio-player-instance');
+            if (old) { old.pause(); old.remove(); }
+
+            const safeText = encodeURIComponent(text);
+            const safeVoice = encodeURIComponent(TTS_CONFIG.voice);
+            const baseUrl = TTS_CONFIG.useAlternative 
+                ? "https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/api/aiyue"
+                : "https://libre-tts-nu.vercel.app/api/tts";
+            const src = `${baseUrl}?t=${safeText}&v=${safeVoice}&r=0&p=0`;
+
+            // 3. 创建新音频并开始播放流程
+            const audio = new Audio(src);
+            audio.id = 'audio-player-instance';
+            document.body.appendChild(audio);
+
+            // 播放开始：添加动画类
+            btnElement.classList.add('playing');
+
+            // 定义清理函数（播放结束、暂停或出错时调用）
+            const resetUI = () => {
+                btnElement.classList.remove('playing');
+                audio.remove();
+            };
+
+            audio.onended = resetUI;
+            audio.onpause = resetUI;
+            audio.onerror = () => {
+                console.error("TTS Playback Error");
+                resetUI();
+                // 错误提示反馈
+                btnElement.style.color = '#ef4444';
+                setTimeout(() => btnElement.style.color = '', 1000);
+            };
+            
+            audio.play().catch(e => {
+                console.error("Audio play failed:", e);
+                resetUI();
+            });
+        }
+
+
+        // ============================================
+        // 2. 核心应用配置
         // ============================================
         const GITHUB_USER = 'moodHappy';
         const GITHUB_REPO = 'HelloWorld';
         const GITHUB_BRANCH = 'master'; 
-        
-        // 你的 JS 配置文件路径
         const CONFIG_FILE_PATH = 'Notes/Phrases_note.js'; 
 
         const yearSelect = document.getElementById('year-select');
         const monthContainer = document.getElementById('month-container');
         const notesContainer = document.getElementById('notes-container');
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
 
         let LATEST_SHA = 'master'; 
+        let GLOBAL_CONFIG = null; 
 
-        // 1. 获取最新 Commit SHA
         async function startApp() {
             try {
                 const response = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/commits/${GITHUB_BRANCH}`);
@@ -143,74 +284,45 @@
             loadRemoteConfig();
         }
 
-        // 2. 加载 JS 配置文件
         function loadRemoteConfig() {
             const configUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${LATEST_SHA}/${CONFIG_FILE_PATH}`;
-
             fetch(configUrl)
-                .then(res => {
-                    if(!res.ok) throw new Error(`配置文件加载失败 (Status: ${res.status})`);
-                    return res.text();
-                })
+                .then(res => res.ok ? res.text() : Promise.reject(res.status))
                 .then(scriptContent => {
                     const blob = new Blob([scriptContent], { type: 'application/javascript' });
                     const url = URL.createObjectURL(blob);
                     const script = document.createElement('script');
                     script.src = url;
-                    script.onload = () => { 
-                        initApp(); 
-                        URL.revokeObjectURL(url); 
-                    };
+                    script.onload = () => { initApp(); URL.revokeObjectURL(url); };
                     document.head.appendChild(script);
                 })
-                .catch(err => {
-                    notesContainer.innerHTML = `<div class="status-msg error-msg">⚠️ 无法加载配置文件<br><small>${configUrl}</small><br><br>${err.message}</div>`;
-                });
+                .catch(err => notesContainer.innerHTML = `<div class="status-msg error-msg">⚠️ 加载配置失败: ${err}</div>`);
         }
 
-        // 3. 初始化应用
         function initApp() {
-            let config = null;
-            if (typeof NotesConfig !== 'undefined') config = NotesConfig;
-            else if (typeof NewsConfig !== 'undefined') config = NewsConfig;
-
-            if (!config) {
-                notesContainer.innerHTML = `<div class="status-msg error-msg">错误：JS 文件中未找到 NotesConfig 对象</div>`;
-                return;
-            }
-
-            // 更新 BaseUrl
+            let config = (typeof NotesConfig !== 'undefined') ? NotesConfig : ((typeof NewsConfig !== 'undefined') ? NewsConfig : null);
+            if (!config) return;
+            GLOBAL_CONFIG = config; 
             const originalBase = config.repoBaseUrl;
             const pathPart = originalBase.includes('/master/') ? originalBase.split('/master/')[1] : 'Notes/Notes/';
             config.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${LATEST_SHA}/${pathPart}`;
 
-            yearSelect.disabled = false;
-            yearSelect.innerHTML = '';
-            const start = config.startYear || 2025;
-            const total = config.totalYears || 30;
-            
+            yearSelect.disabled = false; yearSelect.innerHTML = '';
+            const start = config.startYear || 2025; const total = config.totalYears || 30;
             for (let y = start; y < start + total; y++) {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.text = `${y}年`;
-                yearSelect.appendChild(opt);
+                const opt = document.createElement('option'); opt.value = y; opt.text = `${y}年`; yearSelect.appendChild(opt);
             }
             
             const today = new Date();
             let defaultYear = (today.getFullYear() >= start && today.getFullYear() < start + total) ? today.getFullYear() : start;
             yearSelect.value = defaultYear;
-            
             yearSelect.addEventListener('change', (e) => loadMonthsForYear(parseInt(e.target.value), config));
             loadMonthsForYear(defaultYear, config);
 
             const targetMonth = (defaultYear === today.getFullYear()) ? (today.getMonth() + 1) : 12;
             setTimeout(() => {
                 const btn = document.querySelector(`button[data-month="${targetMonth}"]`);
-                if(btn) btn.click();
-                else {
-                    const allBtns = document.querySelectorAll('.month-btn');
-                    if(allBtns.length > 0) allBtns[allBtns.length-1].click();
-                }
+                if(btn) btn.click(); else { const allBtns = document.querySelectorAll('.month-btn'); if(allBtns.length > 0) allBtns[allBtns.length-1].click(); }
             }, 100);
         }
 
@@ -218,10 +330,9 @@
             monthContainer.innerHTML = '';
             for (let m = 1; m <= 12; m++) {
                 const btn = document.createElement('button');
-                btn.className = 'month-btn';
-                btn.innerText = `${m}月`;
-                btn.dataset.month = m;
+                btn.className = 'month-btn'; btn.innerText = `${m}月`; btn.dataset.month = m;
                 btn.onclick = () => {
+                    searchInput.value = '';
                     document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     fetchNotes(year, m, config);
@@ -230,77 +341,92 @@
             }
         }
 
-        // 4. 获取 JSON 数据
         function fetchNotes(year, month, config) {
             const targetUrl = config.getUrl(year, month);
-            notesContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>正在读取: ${year}-${month}</div>`;
+            notesContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>读取中: ${year}-${month}</div>`;
+            fetch(targetUrl).then(res => {
+                if (res.status === 404) throw new Error('本月暂无数据'); if (!res.ok) throw new Error('网络错误'); return res.json();
+            }).then(data => renderNotes(data)).catch(err => {
+                notesContainer.innerHTML = (err.message === '本月暂无数据') ? `<div class="status-msg">📭 本月没有笔记数据</div>` : `<div class="status-msg error-msg">加载失败<br><small>${err.message}</small></div>`;
+            });
+        }
 
-            fetch(targetUrl)
-                .then(res => {
-                    if (res.status === 404) throw new Error('本月暂无数据');
-                    if (!res.ok) throw new Error(`网络错误 (${res.status})`);
-                    return res.json();
-                })
-                .then(data => {
-                    renderNotes(data);
-                })
-                .catch(err => {
-                    let msg = err.message;
-                    if(msg === '本月暂无数据') {
-                        notesContainer.innerHTML = `<div class="status-msg">📭 本月没有笔记数据</div>`;
-                    } else {
-                        notesContainer.innerHTML = `
-                            <div class="status-msg error-msg">
-                                <strong>加载失败</strong><br><small>${msg}</small>
-                                <br><span style="font-size:0.8em; opacity:0.7">${targetUrl}</span>
-                            </div>`;
-                    }
-                });
+        function handleEnter(e) { if(e.key === 'Enter') performGlobalSearch(); }
+
+        async function performGlobalSearch() {
+            const query = searchInput.value.trim().toLowerCase();
+            if(!query) { alert("请输入关键词"); return; }
+            if(!GLOBAL_CONFIG) return;
+
+            searchBtn.disabled = true; searchBtn.innerText = "搜索中...";
+            document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+            notesContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>搜索中: "${query}"...</div>`;
+
+            const results = []; const fetchPromises = []; const today = new Date(); const startYear = GLOBAL_CONFIG.startYear;
+            for (let y = startYear; y <= today.getFullYear(); y++) {
+                let maxM = (y === today.getFullYear()) ? (today.getMonth() + 1) : 12;
+                for (let m = 1; m <= maxM; m++) {
+                    fetchPromises.push(fetch(GLOBAL_CONFIG.getUrl(y, m)).then(res => res.ok ? res.json() : []).then(data => {
+                        if(Array.isArray(data)) {
+                            const matches = data.filter(item => (item.text||'').toLowerCase().includes(query) || (item.note||'').toLowerCase().includes(query));
+                            matches.forEach(item => item._sourceDate = `${y}年${m}月`); results.push(...matches);
+                        }
+                    }).catch(()=>{}));
+                }
+            }
+            await Promise.all(fetchPromises);
+            if(results.length > 0) renderNotes(results, true); else notesContainer.innerHTML = `<div class="status-msg">🔍 未找到 "${query}"</div>`;
+            searchBtn.disabled = false; searchBtn.innerText = "搜 索";
         }
 
         // ===============================================
-        // 5. 渲染卡片 (关键修改：添加高亮定位功能)
+        // 3. 渲染卡片 (含 SVG TTS 按钮)
         // ===============================================
-        function renderNotes(items) {
+        function renderNotes(items, isSearchResult = false) {
             notesContainer.innerHTML = '';
             items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-            if (items.length === 0) {
-                notesContainer.innerHTML = '<div class="status-msg">数据为空</div>';
-                return;
+            if (isSearchResult) {
+                const info = document.createElement('div'); info.className = 'status-msg'; info.style.padding = '10px'; info.style.fontSize = '0.9em';
+                info.innerHTML = `✅ 找到 ${items.length} 个结果`; notesContainer.appendChild(info);
             }
 
             items.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'note-card';
-                
                 const sourceText = item.pageTitle || 'Source Link';
                 const timeStr = item.time ? item.time.split(' ')[0] : '---';
-                
-                // --- 狂野想法实现区域 ---
-                // 1. 获取单词文本，去除首尾空格
                 const rawText = item.text ? item.text.trim() : "";
-                
-                // 2. 将文本编码（处理空格为%20，特殊符号等）
-                const encodedText = encodeURIComponent(rawText);
-                
-                // 3. 构造带有高亮片段锚点的 URL
-                // 格式：原始URL + #:~:text=编码后的单词
-                // 浏览器会识别这个后缀，自动滚动并高亮
-                const highlightUrl = `${item.url}#:~:text=${encodedText}`;
+                const safeTextForJS = rawText.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const highlightUrl = `${item.url}#:~:text=${encodeURIComponent(rawText)}`;
+                const sourceBadge = item._sourceDate ? `<span class="badge-source">📂 ${item._sourceDate}</span>` : '';
+
+                // SVG 图标定义
+                const svgIcon = `
+                <svg class="tts-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path class="tts-body" d="M3 9v6h4l5 5V4L7 9H3z"/>
+                    <path class="tts-waves tts-wave-1" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                    <path class="tts-waves tts-wave-2" d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>`;
 
                 card.innerHTML = `
-                    <div class="note-word">${item.text}</div>
+                    <div class="note-header-row">
+                        <div class="note-word">${item.text}</div>
+                        <button class="tts-btn" onclick="playPhrase(this, '${safeTextForJS}')" title="播放读音">
+                            ${svgIcon}
+                        </button>
+                    </div>
+
                     <div class="note-meaning">${item.note}</div>
                     
                     <div class="note-source">
-                        <a href="${highlightUrl}" target="_blank" title="点击跳转并高亮单词：${rawText}">
+                        <a href="${highlightUrl}" target="_blank" title="点击跳转并高亮：${rawText}">
                             ${sourceText}
                         </a>
                     </div>
                     
                     <div class="note-meta">
-                        <span>🕒 ${timeStr}</span>
+                        <div>${sourceBadge}<span>🕒 ${timeStr}</span></div>
                         <span style="opacity:0.5">ID: ${(item.id || '').slice(-4)}</span>
                     </div>
                 `;
