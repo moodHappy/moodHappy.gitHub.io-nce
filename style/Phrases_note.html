@@ -7,10 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
-    
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
-
-
 
     <style>
         :root { 
@@ -39,7 +36,7 @@
 
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); margin: 0; padding: 40px 20px; }
         .container { max-width: 1000px; margin: 0 auto; position: relative; }
-        
+
         /* 顶部布局 */
         header { text-align: center; margin-bottom: 30px; position: relative; }
         h1 { font-family: 'Merriweather', serif; margin-bottom: 10px; }
@@ -147,7 +144,7 @@
         .note-source { padding-top: 15px; border-top: 1px solid var(--border-color); font-size: 0.85rem; display: block; }
         .note-source a { color: var(--text-secondary); text-decoration: none; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
         .note-source a:hover { color: var(--accent-color); text-decoration: underline; }
-        
+
         .note-meta { margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); }
         .badge-source { background: var(--bg-body); padding: 2px 8px; border-radius: 4px; font-size: 0.7em; margin-right: 5px; }
         .status-msg { text-align: center; padding: 50px; color: var(--text-secondary); grid-column: 1 / -1; }
@@ -213,10 +210,10 @@
 
     <script>
         // ============================================
-        // 1. TTS 配置
+        // 1. TTS 配置 (已更新)
         // ============================================
         const TTS_CONFIG = {
-            useAlternative: false,
+            useBackup: false, // false = 使用主力(read-aloud), true = 使用备用(libre)
             voices: [ "en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-AndrewNeural", "en-US-AvaNeural", "en-US-BrianNeural", "en-US-ChristopherNeural", "en-US-CoraNeural", "en-US-DavisNeural", "en-US-ElizabethNeural", "en-US-EricNeural", "en-US-GuyNeural", "en-US-JennyNeural", "en-US-MichelleNeural", "en-US-RogerNeural", "en-US-SteffanNeural", "en-US-TonyNeural" ],
             voice: "en-US-JennyNeural"
         };
@@ -228,13 +225,28 @@
             const old = document.getElementById('audio-player-instance');
             if (old) { old.pause(); old.remove(); }
 
-            const safeText = encodeURIComponent(text);
-            const safeVoice = encodeURIComponent(TTS_CONFIG.voice);
-            const baseUrl = TTS_CONFIG.useAlternative 
-                ? "https://ms-ra-forwarder-for-ifreetime-beta-two.vercel.app/api/aiyue"
-                : "https://libre-tts-nu.vercel.app/api/tts";
+            let audioUrl = "";
             
-            const audio = new Audio(`${baseUrl}?t=${safeText}&v=${safeVoice}&r=0&p=0`);
+            if (!TTS_CONFIG.useBackup) {
+                // 主力接口: read-aloud-bay
+                // 参数: text, voiceName, rate, pitch, volume
+                const params = new URLSearchParams({
+                    text: text,
+                    voiceName: TTS_CONFIG.voice,
+                    rate: "+0%",
+                    pitch: "+0Hz",
+                    volume: "100"
+                });
+                audioUrl = `https://read-aloud-bay.vercel.app/api/synthesis?${params.toString()}`;
+            } else {
+                // 备用接口: libre-tts
+                // 参数: t, v, r, p
+                const safeText = encodeURIComponent(text);
+                const safeVoice = encodeURIComponent(TTS_CONFIG.voice);
+                audioUrl = `https://libre-tts-nu.vercel.app/api/tts?t=${safeText}&v=${safeVoice}&r=0&p=0`;
+            }
+
+            const audio = new Audio(audioUrl);
             audio.id = 'audio-player-instance';
             document.body.appendChild(audio);
             btnElement.classList.add('playing');
@@ -246,7 +258,7 @@
         }
 
         // ============================================
-        // 2. GitHub 配置管理 (新增模块)
+        // 2. GitHub 配置管理
         // ============================================
         // 从 LocalStorage 加载配置，如果没有则使用默认值
         let USER_CONFIG = {
@@ -283,7 +295,7 @@
             USER_CONFIG = { user, repo, path, token };
             closeSettings();
             alert('配置已保存，即将刷新应用...');
-            
+
             // 重新初始化
             LATEST_SHA = 'master'; 
             startApp();
@@ -339,7 +351,7 @@
             let config = (typeof NotesConfig !== 'undefined') ? NotesConfig : ((typeof NewsConfig !== 'undefined') ? NewsConfig : null);
             if (!config) return;
             GLOBAL_CONFIG = config;
-            
+
             // 强制覆盖 Config 中的 BaseUrl，使用用户设置的 Path + SHA
             config.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${LATEST_SHA}/${USER_CONFIG.path}`;
 
@@ -348,7 +360,7 @@
             for (let y = start; y < start + total; y++) {
                 const opt = document.createElement('option'); opt.value = y; opt.text = `${y}年`; yearSelect.appendChild(opt);
             }
-            
+
             const today = new Date();
             let defaultYear = (today.getFullYear() >= start && today.getFullYear() < start + total) ? today.getFullYear() : start;
             yearSelect.value = defaultYear;
@@ -380,7 +392,7 @@
         function fetchNotes(year, month, config) {
             CURRENT_VIEW_YEAR = year;
             CURRENT_VIEW_MONTH = month;
-            
+
             const targetUrl = config.getUrl(year, month);
             notesContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>读取中: ${year}-${month}</div>`;
             fetch(targetUrl).then(res => {
@@ -434,7 +446,7 @@
             // 注意：API 路径不包含 Notes/Notes/ 前缀，而是基于 Repo 根目录
             // 用户配置的 path 通常是 Notes/Notes/，所以 API 路径 = path + filename
             const apiUrl = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${USER_CONFIG.path}${fileName}`;
-            
+
             // 显示 Loading 遮罩
             const btn = document.activeElement;
             if(btn) { btn.innerText = "删除中..."; btn.disabled = true; }
@@ -444,10 +456,10 @@
                 const getRes = await fetch(apiUrl, {
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' }
                 });
-                
+
                 if(!getRes.ok) throw new Error("无法读取文件，请检查 Token 权限");
                 const fileData = await getRes.json();
-                
+
                 // Base64 解码 (处理中文)
                 const content = decodeURIComponent(escape(atob(fileData.content)));
                 let json = JSON.parse(content);
@@ -460,7 +472,7 @@
                 // 3. 重新编码并上传
                 // 使用 unescape + encodeURIComponent 处理 UTF-8 字符转 Base64
                 const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(newJson, null, 2))));
-                
+
                 const putRes = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
@@ -477,7 +489,7 @@
                 // 刷新当前列表
                 // 更新 SHA 保证读到最新的
                 startApp(); // 简单粗暴重新走一遍流程，或者只调用 fetchNotes
-                
+
             } catch (err) {
                 alert(`❌ 错误: ${err.message}`);
                 if(btn) { btn.innerText = "🗑️ 删除"; btn.disabled = false; }
@@ -532,7 +544,7 @@
                 `;
                 notesContainer.appendChild(card);
             });
-            
+
             // 如果配了Token但没看到删除按钮（比如首次加载），强制显示
             if(hasToken) {
                 const style = document.createElement('style');
