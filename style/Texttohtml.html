@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI 阅读 & 创作助手 (GitHub版)</title>
 
-
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
-
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
-
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -91,22 +88,36 @@
         .bar:nth-child(3) { animation-delay: 0.2s; height: 8px; }
         @keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
 
-        /* --- 语速弹窗 --- */
-        .speed-wrapper { position: relative; display: flex; align-items: center; }
-        .speed-popup {
+        /* --- 弹窗通用 (语速 & 语音) --- */
+        .popup-wrapper { position: relative; display: flex; align-items: center; }
+        .control-popup {
             position: absolute; top: 100%; right: -10px; margin-top: 14px;
             background: #fff; padding: 16px 20px; border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid var(--border-light);
-            display: flex; flex-direction: column; gap: 10px; width: 240px;
             opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.2s; z-index: 1100;
         }
-        .speed-popup.active { opacity: 1; visibility: visible; transform: translateY(0); }
-        .speed-popup::before {
+        .control-popup.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .control-popup::before {
             content: ''; position: absolute; top: -6px; right: 24px; width: 12px; height: 12px;
             background: #fff; transform: rotate(45deg); border-left: 1px solid var(--border-light); border-top: 1px solid var(--border-light);
         }
+
+        /* 语速弹窗特有 */
+        .speed-popup { display: flex; flex-direction: column; gap: 10px; width: 240px; }
         .speed-slider { -webkit-appearance: none; width: 100%; height: 6px; background: linear-gradient(90deg, #e0d5ca 0%, #c6a782 100%); border-radius: 10px; }
         .speed-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #fff; border: 2px solid var(--primary-color); border-radius: 50%; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* 语音选择弹窗特有 */
+        .voice-popup { width: 220px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; padding: 12px; }
+        .voice-group-label { font-size: 12px; font-weight: 700; color: #999; margin: 8px 0 4px 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .voice-item {
+            padding: 8px 12px; font-size: 14px; color: var(--text-secondary);
+            border-radius: 8px; cursor: pointer; transition: background 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .voice-item:hover { background: #f4f0ec; }
+        .voice-item.active { background: var(--primary-color); color: #fff; }
+        .voice-item.active::after { content: '✓'; font-weight: bold; font-size: 12px; }
 
         /* --- 正文区域 --- */
         .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
@@ -119,14 +130,9 @@
             color: var(--primary-color); position: relative; top: -2px; transition: all 0.2s;
         }
         .ai-analyze-btn:hover { background-color: var(--primary-color); color: white; transform: scale(1.1); }
-        /* 红色高亮样式 - 持久化 */
         .ai-analyze-btn.last-clicked {
-            background-color: #d32f2f !important;
-            color: white !important;
-            border-color: #d32f2f !important;
-            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5);
-            transform: scale(1.15);
-            z-index: 10;
+            background-color: #d32f2f !important; color: white !important; border-color: #d32f2f !important;
+            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5); transform: scale(1.15); z-index: 10;
         }
         .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
 
@@ -146,117 +152,40 @@
             transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .modal-overlay.active .modal-card { transform: scale(1); }
-        
-        /* 固定头部 */
+
         .modal-sticky-header {
             flex-shrink: 0; background: var(--card-bg); padding: 20px 24px 15px;
-            border-bottom: 1px solid var(--border-light); border-radius: 16px 16px 0 0;
-            z-index: 10;
+            border-bottom: 1px solid var(--border-light); border-radius: 16px 16px 0 0; z-index: 10;
         }
         .modal-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .modal-title { font-size: 1.2em; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }
         .modal-scroll-body { flex: 1; overflow-y: auto; padding: 24px; background: #fff; border-radius: 0 0 16px 16px; -webkit-overflow-scrolling: touch; }
 
-        /* --- [优化] 原句展示区样式 --- */
+        /* --- 原句 & AI 结果 --- */
         .original-sentence-box { 
-            background: #f0ebe5; /* 暖灰色背景 */
-            padding: 16px; 
-            border-radius: 10px; 
-            border-left: 5px solid var(--primary-color); 
-            color: #3e3e3e; 
-            font-family: 'Inter', sans-serif;
-            font-size: 1.05em; 
-            line-height: 1.6; 
-            font-style: italic;
-            box-shadow: inset 0 1px 4px rgba(0,0,0,0.03);
-            margin-top: 5px;
+            background: #f0ebe5; padding: 16px; border-radius: 10px; border-left: 5px solid var(--primary-color); 
+            color: #3e3e3e; font-family: 'Inter', sans-serif; font-size: 1.05em; line-height: 1.6; font-style: italic;
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.03); margin-top: 5px;
         }
 
-        /* --- [优化] AI 分析结果排版 (核心修改) --- */
-        .ai-result-content { 
-            line-height: 1.9; 
-            color: #333; 
-            font-size: 15px; 
-            font-family: 'Inter', sans-serif;
+        .ai-result-content { line-height: 1.9; color: #333; font-size: 15px; font-family: 'Inter', sans-serif; }
+        .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { 
+            color: var(--text-secondary); margin: 1.5em 0 0.8em; font-size: 1.15em; font-weight: 700;
+            border-bottom: var(--dashed-line); padding-bottom: 8px; position: relative;
         }
-
-        /* 标题 - 带虚线分割 */
-        .ai-result-content h1, 
-        .ai-result-content h2, 
-        .ai-result-content h3 { 
-            color: var(--text-secondary); 
-            margin: 1.5em 0 0.8em; 
-            font-size: 1.15em; 
-            font-weight: 700;
-            border-bottom: var(--dashed-line); 
-            padding-bottom: 8px; 
-            position: relative;
-        }
-        .ai-result-content h1:first-child, 
-        .ai-result-content h2:first-child, 
-        .ai-result-content h3:first-child { 
-            margin-top: 0; 
-        }
-
-        /* 列表优化 - 移除默认圆点，增加间距 */
-        .ai-result-content ul, .ai-result-content ol {
-            padding-left: 0;
-            list-style-type: none;
-            margin-bottom: 1em;
-        }
-        
-        .ai-result-content li {
-            margin-bottom: 12px;
-            padding-left: 10px;
-            position: relative;
-        }
-        
-        /* 重点词汇 (Bold) - 变成彩色高亮文本 */
-        .ai-result-content strong { 
-            color: #d35400; /* 焦糖色 */
-            font-weight: 600;
-            margin-right: 2px;
-        }
-
-        /* 模拟截图中的“标签” (Badge) 效果
-           假设 AI 输出 Markdown 为： - **释义**: xxx  或  - **例句**: xxx 
-           我们把这种列表开头加粗的样式做成徽章
-        */
+        .ai-result-content h1:first-child, .ai-result-content h2:first-child { margin-top: 0; }
+        .ai-result-content ul, .ai-result-content ol { padding-left: 0; list-style-type: none; margin-bottom: 1em; }
+        .ai-result-content li { margin-bottom: 12px; padding-left: 10px; position: relative; }
+        .ai-result-content strong { color: #d35400; font-weight: 600; margin-right: 2px; }
         .ai-result-content li > strong:first-child {
-            display: inline-block;
-            background-color: rgba(139, 115, 85, 0.1); /* 浅棕色背景 */
-            color: var(--primary-color);
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.9em;
-            margin-right: 8px;
-            font-weight: 500;
-            transform: translateY(-1px);
+            display: inline-block; background-color: rgba(139, 115, 85, 0.1); color: var(--primary-color);
+            padding: 2px 8px; border-radius: 6px; font-size: 0.9em; margin-right: 8px; font-weight: 500; transform: translateY(-1px);
         }
+        .ai-result-content p { margin-bottom: 1em; text-align: justify; }
+        .ai-result-content code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #c0392b; }
+        .ai-result-content hr { border: 0; border-top: var(--dashed-line); margin: 25px 0; }
 
-        /* 英文单词本身的高亮 (Usually in h3 or bold) */
-        .ai-result-content p {
-            margin-bottom: 1em;
-            text-align: justify;
-        }
-
-        /* 代码块样式 (如果AI输出了代码块) */
-        .ai-result-content code {
-            background: #f4f4f4;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: monospace;
-            color: #c0392b;
-        }
-
-        /* 分割线 */
-        .ai-result-content hr {
-            border: 0;
-            border-top: var(--dashed-line);
-            margin: 25px 0;
-        }
-
-        /* --- 表单元素样式 --- */
+        /* --- 表单 --- */
         .settings-input, .settings-select, .settings-textarea {
             width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd;
             border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 1em; background: #fff;
@@ -266,7 +195,7 @@
         .spinner { width: 30px; height: 30px; border: 3px solid rgba(139,115,85,0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* --- 生成模块专用样式 --- */
+        /* --- 生成模块 --- */
         .select-group { display: flex; gap: 10px; margin-bottom: 15px; }
         .select-group select { flex: 1; }
         .gen-actions { display: flex; gap: 10px; margin-top: 10px; }
@@ -293,12 +222,15 @@
             .nav-brand { font-size: 1em; }
             .read-btn-top { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
             .read-btn-top span { display: none; }
-            .speed-popup { right: -60px; width: 220px; }
-            .speed-popup::before { right: 70px; }
+            
+            .control-popup { right: -60px; }
+            .control-popup::before { right: 70px; }
+            /* 语音弹窗在移动端特别调整 */
+            .voice-popup { right: -100px; width: 240px; }
+
             .content-container { padding: 15px; }
             .text-placeholder { padding: 10px 5px; font-size: 1.25em; }
 
-            /* 移动端弹窗 Bottom Sheet */
             .modal-overlay { align-items: flex-end; }
             .modal-card {
                 width: 100% !important; max-width: 100%; margin: 0;
@@ -327,12 +259,24 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
             </button>
 
-            <div class="speed-wrapper" id="speedWrapper">
+            <div class="popup-wrapper" id="voiceWrapper">
+                <button class="icon-btn" id="voiceToggleBtn" title="切换语音">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <div class="control-popup voice-popup" id="voicePopup">
+                    <div class="voice-group-label">英语 English</div>
+                    <div id="enVoiceList"></div>
+                    <div class="voice-group-label" style="margin-top:10px">中文 Chinese</div>
+                    <div id="zhVoiceList"></div>
+                </div>
+            </div>
+
+            <div class="popup-wrapper" id="speedWrapper">
                 <button class="icon-btn" id="speedToggleBtn" title="调节语速">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>
-                <div class="speed-popup" id="speedPopup">
-                    <div class="speed-header"><span>语速</span><span id="currentSpeedValue" class="speed-val">-20</span></div>
+                <div class="control-popup speed-popup" id="speedPopup">
+                    <div class="speed-header" style="display:flex;justify-content:space-between;font-size:0.9em;color:#666;"><span>语速</span><span id="currentSpeedValue">-20%</span></div>
                     <input type="range" id="speedRange" class="speed-slider" min="-50" max="50" value="-20">
                 </div>
             </div>
@@ -461,7 +405,25 @@
         };
         const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
 
-        let summaryVoice = 'en-US-EricNeural';
+        // --- 语音与TTS配置 ---
+        const VOICE_OPTIONS = {
+            'en': [
+                { name: 'Eric (美男)', id: 'en-US-EricNeural' },
+                { name: 'Christopher (美男)', id: 'en-US-ChristopherNeural' },
+                { name: 'Michelle (美女)', id: 'en-US-MichelleNeural' },
+                { name: 'Sonia (英女)', id: 'en-GB-SoniaNeural' },
+                { name: 'Aria (美新)', id: 'en-US-AriaNeural' }
+            ],
+            'zh': [
+                { name: '晓晓 (活泼)', id: 'zh-CN-XiaoxiaoNeural' },
+                { name: '云希 (沉稳)', id: 'zh-CN-YunxiNeural' },
+                { name: '云健 (男声)', id: 'zh-CN-YunjianNeural' },
+                { name: '陕西话 (方言)', id: 'zh-CN-shaanxi-XiaobeiNeural' },
+                { name: '东北话 (方言)', id: 'zh-CN-liaoning-XiaobeiNeural' }
+            ]
+        };
+
+        let currentVoice = localStorage.getItem('ai_reader_voice') || 'en-US-EricNeural';
         let currentAudio = null;
         let isReading = false;
         let currentSpeed = -20;
@@ -472,14 +434,65 @@
         const BUILT_IN_STYLES = ['口语风格','简洁风格','叙事风格','书面风格','新闻风格','幽默风格','讽刺风格','黑镜风格','文学风格','哲理风格','商业风格','学术风格'];
         const CUSTOM_STYLES_KEY = 'ai_reader_custom_styles';
 
-        // --- 交互与缓存 ---
+        // --- 交互: 语速 & 语音弹窗 ---
         const speedBtn = document.getElementById('speedToggleBtn');
         const speedPopup = document.getElementById('speedPopup');
         const speedWrapper = document.getElementById('speedWrapper');
-        speedBtn.addEventListener('click', (e) => { e.stopPropagation(); speedPopup.classList.toggle('active'); });
-        document.addEventListener('click', (e) => { if (!speedWrapper.contains(e.target)) speedPopup.classList.remove('active'); });
-        speedPopup.addEventListener('click', (e) => e.stopPropagation());
+        
+        const voiceBtn = document.getElementById('voiceToggleBtn');
+        const voicePopup = document.getElementById('voicePopup');
+        const voiceWrapper = document.getElementById('voiceWrapper');
 
+        // 语速弹窗
+        speedBtn.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            speedPopup.classList.toggle('active'); 
+            voicePopup.classList.remove('active'); // 互斥
+        });
+        
+        // 语音弹窗
+        voiceBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            voicePopup.classList.toggle('active');
+            speedPopup.classList.remove('active'); // 互斥
+            renderVoiceList();
+        });
+
+        // 点击空白关闭
+        document.addEventListener('click', (e) => { 
+            if (!speedWrapper.contains(e.target)) speedPopup.classList.remove('active');
+            if (!voiceWrapper.contains(e.target)) voicePopup.classList.remove('active');
+        });
+        speedPopup.addEventListener('click', (e) => e.stopPropagation());
+        voicePopup.addEventListener('click', (e) => e.stopPropagation());
+
+        // --- 渲染语音列表 ---
+        function renderVoiceList() {
+            const createList = (items, containerId) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                items.forEach(v => {
+                    const div = document.createElement('div');
+                    div.className = `voice-item ${v.id === currentVoice ? 'active' : ''}`;
+                    div.innerText = v.name;
+                    div.onclick = () => {
+                        currentVoice = v.id;
+                        localStorage.setItem('ai_reader_voice', currentVoice);
+                        renderVoiceList(); // 重新渲染以更新 active 状态
+                        if(isReading) { 
+                            // 如果正在读，重新开始以应用新声音
+                            document.getElementById('readAloudButton').click(); // stop
+                            setTimeout(() => document.getElementById('readAloudButton').click(), 200); // start
+                        }
+                    };
+                    container.appendChild(div);
+                });
+            };
+            createList(VOICE_OPTIONS.en, 'enVoiceList');
+            createList(VOICE_OPTIONS.zh, 'zhVoiceList');
+        }
+
+        // --- 缓存管理 ---
         const CACHE_PREFIX = 'ai_cache_v1_';
         function generateCacheKey(text, prompt, model) {
             let str = text + "|" + prompt + "|" + model; let hash = 0;
@@ -661,7 +674,6 @@
 
             statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
 
-            // [修改] 强制英文生成的 Prompt
             const prompt = `
             Role: Professional English Storyteller.
             Task: Write a short story based on the theme/topic: "${topic}".
@@ -674,20 +686,15 @@
             `;
 
             try {
-                // 1. 生成故事
                 const story = await callGroqAPI([{role:"user", content: prompt}]);
-
-                // 2. 上传到 GitHub
                 statusDiv.innerText = "创作完成，正在同步到 GitHub...";
                 await uploadToGitHub(story, ghToken);
 
-                // 3. 更新界面
-                localStorage.removeItem(LAST_CLICKED_KEY); // 清除旧位置
+                localStorage.removeItem(LAST_CLICKED_KEY);
                 statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
                 contentDiv.innerHTML = story.replace(/\n/g, '<br><br>');
                 injectAIButtons();
-
             } catch(err) { 
                 console.error(err);
                 statusDiv.innerText = "失败: " + err.message; 
@@ -780,16 +787,19 @@
             return t.trim();
         }
 
-        // --- TTS & 初始化 ---
+        // --- TTS 核心 ---
         function playTTS(text) {
             if(currentAudio) { currentAudio.pause(); currentAudio = null; }
-            const q = new URLSearchParams({ text, voiceName: summaryVoice, speed: currentSpeed });
+            
+            // 使用当前选择的 voice (currentVoice)
+            const q = new URLSearchParams({ text, voiceName: currentVoice, speed: currentSpeed });
             for(let d of ttsDomains) {
                 let a = new Audio(`${d}api/aiyue?${q}`);
                 a.play().then(() => { currentAudio = a; isReading = true; updateReadBtn(); a.onended = () => { isReading = false; updateReadBtn(); }; }).catch(()=>{});
                 if(currentAudio) break;
             }
         }
+
         function updateReadBtn() {
             const btn = document.getElementById('readAloudButton');
             const playIcon = document.getElementById('playIcon');
@@ -819,6 +829,7 @@
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             updateCacheDisplay();
+            renderVoiceList(); // 初始化语音列表
 
             const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
             fetch(rawUrl)
@@ -834,7 +845,7 @@
                     document.getElementById('dynamic-content').innerHTML = "欢迎！请点击顶部魔术棒图标开始创作。<br>(注意：初始加载 GitHub 内容失败，可能是仓库私有或网络问题，但不影响创作功能)";
                 });
 
-            document.getElementById('speedRange').oninput = function() { document.getElementById('currentSpeedValue').innerText = this.value; currentSpeed = this.value; };
+            document.getElementById('speedRange').oninput = function() { document.getElementById('currentSpeedValue').innerText = this.value + '%'; currentSpeed = this.value; };
             document.getElementById('settingsBtn').onclick = () => openModal('settingsModal');
             document.getElementById('saveSettingsBtn').onclick = () => {
                 localStorage.setItem('groq_api_key', document.getElementById('apiKeyInput').value);
