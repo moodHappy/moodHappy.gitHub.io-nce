@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 阅读 & 创作助手 (GitHub版)</title>
+    <title>AI 阅读 & 创作助手 (GitHub实时版)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
@@ -56,7 +56,7 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.03);
         }
 
-        .nav-brand { font-weight: 600; font-size: 1.15em; color: var(--text-secondary); user-select: none; }
+        .nav-brand { font-weight: 600; font-size: 1.15em; color: var(--text-secondary); user-select: none; display: flex; align-items: center; gap: 10px; }
         .nav-actions { display: flex; align-items: center; gap: 8px; }
 
         /* --- 按钮通用 --- */
@@ -87,6 +87,9 @@
         .bar:nth-child(2) { animation-delay: 0.1s; height: 12px; }
         .bar:nth-child(3) { animation-delay: 0.2s; height: 8px; }
         @keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+
+        /* 旋转动画 (用于刷新按钮) */
+        .spin-anim { animation: spin 1s linear infinite; }
 
         /* --- 正文区域 --- */
         .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
@@ -205,8 +208,14 @@
 <body>
 
     <nav class="navbar">
-        <div class="nav-brand"><span>阅读助手</span></div>
+        <div class="nav-brand">
+            <span>阅读助手</span>
+        </div>
         <div class="nav-actions">
+            <button class="icon-btn" id="refreshBtn" title="刷新获取最新文章">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            </button>
+
             <button id="readAloudButton" class="read-btn-top" title="朗读全文">
                 <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 <div class="sound-wave" id="waveIcon" style="display:none;"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
@@ -235,6 +244,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #a0522d"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
                         <span>AI 深度分析</span>
                     </div>
+                    <span style="font-size:0.75em;color:#999;font-weight:400;margin-left:auto;">双击窗口关闭</span>
                 </div>
                 <div class="original-sentence-box" id="aiOriginalSentence"></div>
             </div>
@@ -356,6 +366,7 @@
         const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
 
         // --- TTS 语音数据 ---
+        // 新增了 zh-CN-XiaobeiNeural
         const TTS_VOICES = {
             'en': [
                 { id: 'en-US-GuyNeural', name: '🇺🇸 Guy (男, 标准)' },
@@ -365,6 +376,7 @@
             ],
             'zh': [
                 { id: 'zh-CN-XiaoxiaoNeural', name: '🇨🇳 晓晓 (女, 活泼)' },
+                { id: 'zh-CN-XiaobeiNeural', name: '🇨🇳 晓北 (女, 东北话/活泼)' }, 
                 { id: 'zh-CN-YunxiNeural', name: '🇨🇳 云希 (男, 活泼)' },
                 { id: 'zh-CN-YunjianNeural', name: '🇨🇳 云健 (男, 稳重)' },
                 { id: 'zh-CN-YunyangNeural', name: '🇨🇳 云扬 (男, 新闻)' },
@@ -376,12 +388,12 @@
         const TTS_DOMAINS = [
             { 
                 url: 'https://read-aloud-bay.vercel.app/api/synthesis', 
-                paramType: 'percent', // rate="-20%"
+                paramType: 'percent', 
                 needFormat: true 
             },
             { 
                 url: 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/api/aiyue', 
-                paramType: 'number', // speed=-20
+                paramType: 'number', 
                 needFormat: false
             }
         ];
@@ -397,7 +409,7 @@
         // --- 状态变量 ---
         let currentAudio = null;
         let isReading = false;
-        let ttsQueue = []; // 音频队列
+        let ttsQueue = []; 
 
         // --- 生成配置 ---
         const THEME_LIBRARY = { '日常生活':[],'悬疑推理':[],'科幻奇幻':[],'历史现实':[],'哲理寓言':[],'爱情情感':[],'心理情绪':[],'幽默讽刺':[],'奇遇冒险':[] };
@@ -420,8 +432,45 @@
         }
         function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
 
-        // --- TTS 功能逻辑 (含自动分段队列) ---
-        
+        // --- 实时刷新逻辑 (关键修复) ---
+        function loadContent(forceRefresh = false) {
+            const container = document.getElementById('dynamic-content');
+            const refreshBtnSvg = document.querySelector('#refreshBtn svg');
+            
+            if (forceRefresh) {
+                refreshBtnSvg.classList.add('spin-anim');
+                container.style.opacity = '0.5';
+            } else {
+                container.innerHTML = '加载中...';
+            }
+
+            const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
+            // 加上时间戳 ?t=... 强制避开 GitHub 的缓存
+            const fetchUrl = `${rawUrl}?t=${Date.now()}`;
+
+            fetch(fetchUrl)
+                .then(r => {
+                    if(!r.ok) throw new Error("无法加载 GitHub 文件");
+                    return r.text();
+                })
+                .then(d => {
+                    container.innerHTML = d.replace(/\n/g, '<br>');
+                    injectAIButtons();
+                    container.style.opacity = '1';
+                    if(forceRefresh) {
+                        setTimeout(() => refreshBtnSvg.classList.remove('spin-anim'), 500);
+                        // 清除旧的按钮高亮记录，防止位置错乱
+                        localStorage.removeItem(LAST_CLICKED_KEY);
+                    }
+                })
+                .catch(e => {
+                    container.innerHTML = "加载失败，请检查网络或配置。<br>" + e.message;
+                    container.style.opacity = '1';
+                    refreshBtnSvg.classList.remove('spin-anim');
+                });
+        }
+
+        // --- TTS 功能逻辑 ---
         function loadTTSConfig() {
             const savedLang = localStorage.getItem('tts_lang') || 'en';
             const savedVoice = localStorage.getItem('tts_voice'); 
@@ -452,19 +501,12 @@
             }
         }
 
-        // 核心：文本分段逻辑
         function splitTextIntoSentences(text) {
             if (!text) return [];
-            // 使用正则按标点符号分割，同时保留标点
-            // 匹配中文或英文的句号、问号、感叹号、换行符作为分割点
             const segments = text.match(/[^。！？.!?\r\n]+[。！？.!?\r\n]*/g) || [text];
-            
-            // 简单合并过短的片段，避免请求过于频繁，但尽量保持“按句话”的感觉
-            // 如果单句超过 800 字强制截断，防止 API 报错
             const MAX_CHUNK = 800;
             const chunks = [];
             let currentChunk = '';
-
             for (let seg of segments) {
                 if (currentChunk.length + seg.length > MAX_CHUNK) {
                     if (currentChunk) chunks.push(currentChunk);
@@ -477,42 +519,29 @@
             return chunks;
         }
 
-        // 开始播放 (入口)
         function startTTS(fullText) {
-            stopTTS(); // 先停止之前的
+            stopTTS(); 
             if (!fullText || !fullText.trim()) return;
-
             ttsQueue = splitTextIntoSentences(fullText);
             isReading = true;
             updateReadBtn();
             playNextInQueue();
         }
 
-        // 停止播放
         function stopTTS() {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
             ttsQueue = [];
             isReading = false;
             updateReadBtn();
         }
 
-        // 播放队列中的下一段
         async function playNextInQueue() {
-            if (ttsQueue.length === 0) {
-                stopTTS(); // 队列播完
-                return;
-            }
-
-            const textSegment = ttsQueue.shift(); // 取出第一段
+            if (ttsQueue.length === 0) { stopTTS(); return; }
+            const textSegment = ttsQueue.shift(); 
             const voiceName = document.getElementById('ttsVoiceSelect').value || 'en-US-GuyNeural';
             const speedVal = document.getElementById('ttsSpeedRange').value || 0;
-
             let success = false;
 
-            // 线路故障转移逻辑
             for(let domain of TTS_DOMAINS) {
                 try {
                     const params = new URLSearchParams();
@@ -532,37 +561,21 @@
                     }
 
                     const audioUrl = `${domain.url}?${params.toString()}`;
-                    
                     await new Promise((resolve, reject) => {
                         const a = new Audio(audioUrl);
                         a.oncanplaythrough = () => {
                             currentAudio = a;
                             a.play().catch(e => reject(e));
-                            
-                            // 核心：当前片段播放结束时，自动播放下一段
-                            a.onended = () => {
-                                playNextInQueue();
-                            };
+                            a.onended = () => { playNextInQueue(); };
                             resolve();
                         };
                         a.onerror = () => reject(new Error("Audio Error"));
                         setTimeout(() => reject(new Error("Timeout")), 8000); 
                     });
-
-                    success = true;
-                    break; // 成功则跳出线路循环
-
-                } catch (e) {
-                    console.warn(`TTS Line Failed, switching...`, e);
-                    continue; 
-                }
+                    success = true; break; 
+                } catch (e) { continue; }
             }
-
-            if (!success) {
-                // 如果当前片段失败，尝试跳过播放下一段，而不是完全停止
-                console.error("Segment failed, skipping.");
-                playNextInQueue();
-            }
+            if (!success) { playNextInQueue(); }
         }
 
         function updateReadBtn() {
@@ -744,8 +757,8 @@
                 localStorage.removeItem(LAST_CLICKED_KEY);
                 statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
-                document.getElementById('dynamic-content').innerHTML = story.replace(/\n/g, '<br><br>');
-                injectAIButtons();
+                // 创作完成后，强制刷新以显示最新内容
+                loadContent(true); 
             } catch(err) { statusDiv.innerText = "失败: " + err.message; }
         }
 
@@ -753,17 +766,24 @@
         window.openModal = id => { if(id === 'generateModal') populateSelectors(); document.getElementById(id).classList.add('active'); };
         window.closeModal = id => document.getElementById(id).classList.remove('active');
         
-        // 修改：点击朗读时调用 startTTS
-        document.getElementById('readAloudButton').onclick = () => { 
-            if(isReading) { 
-                stopTTS(); 
-            } else { 
-                const c = document.getElementById('dynamic-content').cloneNode(true); 
-                c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove()); 
-                startTTS(c.innerText); // 使用新的入口函数
-            } 
-        };
-        
+        // 双击关闭模态框
+        document.querySelectorAll('.modal-card').forEach(card => {
+            card.addEventListener('dblclick', function(e) {
+                // 如果用户选中了文字，不关闭
+                if(window.getSelection().toString().length > 0) return;
+                // 如果是输入框，不关闭
+                if(['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+                
+                const modalId = this.closest('.modal-overlay').id;
+                // 仅针对 AI 深度分析窗口或通用的逻辑，这里都适用
+                if(modalId === 'aiResultModal') {
+                    closeModal(modalId);
+                }
+            });
+        });
+
+        document.getElementById('refreshBtn').onclick = () => loadContent(true);
+        document.getElementById('readAloudButton').onclick = () => { if(isReading) { stopTTS(); } else { const c = document.getElementById('dynamic-content').cloneNode(true); c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove()); startTTS(c.innerText); } };
         document.getElementById('ttsSpeedRange').oninput = function() { document.getElementById('ttsSpeedDisplay').innerText = this.value; };
         document.getElementById('settingsBtn').onclick = () => { loadTTSConfig(); openModal('settingsModal'); };
         document.getElementById('saveSettingsBtn').onclick = () => {
@@ -783,8 +803,7 @@
             document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             loadTTSConfig(); updateCacheDisplay();
-            const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
-            fetch(rawUrl).then(r => r.ok ? r.text() : Promise.reject()).then(d => { document.getElementById('dynamic-content').innerHTML = d.replace(/\n/g, '<br>'); injectAIButtons(); }).catch(() => document.getElementById('dynamic-content').innerHTML = "欢迎！请点击顶部魔术棒图标开始创作。<br>(GitHub加载失败)");
+            loadContent(); // 初始加载
             document.querySelectorAll('.modal-overlay').forEach(o => o.onclick = e => { if(e.target===o) closeModal(o.id) });
         });
     </script>
