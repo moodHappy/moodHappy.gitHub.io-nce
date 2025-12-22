@@ -5,18 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Anki Pro (Fixed Persistence)</title>
     
-    
-        <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
-
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
-
-
-
-
-
-
-
-
 
     <style>
         :root { 
@@ -36,10 +26,7 @@
             } 
         }
 
-        /* === 核心修复：全局去除移动端点击高亮蓝框 === */
         * { -webkit-tap-highlight-color: transparent; }
-
-        /* 全屏布局 */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); display: flex; flex-direction: column; }
 
@@ -161,7 +148,12 @@
         .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 1rem; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
         .btn-save { background: var(--accent-color); color: white; }
-        .btn-sync { background: #f3f4f6; color: var(--text-primary); border: 1px solid var(--border-color); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; margin-bottom: 20px; }
+        
+        /* Sync Buttons */
+        .sync-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-sync-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-size: 0.9rem; font-weight: 600;}
+        .btn-sync-action:active { transform: scale(0.98); }
+        
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
         .status-page { text-align: center; padding-bottom: 20px; }
@@ -184,7 +176,19 @@
             <div class="form-group"><label>GitHub User</label> <input type="text" id="gh-user"></div>
             <div class="form-group"><label>GitHub Repo</label> <input type="text" id="gh-repo"></div>
             <div class="form-group"><label>Access Token</label> <input type="password" id="gh-token" placeholder="ghp_..."></div>
-             <button class="btn btn-sync" id="manual-sync-btn" onclick="syncProgressToCloud(this)"><span>☁️</span> 同步进度</button>
+            
+            <div class="form-group">
+                <label>云端同步</label>
+                <div class="sync-row">
+                    <button class="btn-sync-action" onclick="fetchCloudProgress(this)">
+                        <span>⬇️</span> 从云端下载
+                    </button>
+                    <button class="btn-sync-action" style="background:var(--bg-body); border-color:var(--accent-color); color:var(--accent-color)" onclick="syncProgressToCloud(this)">
+                        <span>☁️</span> 上传进度
+                    </button>
+                </div>
+            </div>
+
             <div class="modal-actions">
                 <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
                 <button class="btn btn-save" onclick="saveSettings()">保存</button>
@@ -249,23 +253,28 @@
             // 修复逻辑：合并数据而不是盲目覆盖
             loadExternalData(cloudData) { 
                 if (!cloudData) return; 
+                let updateCount = 0;
                 
                 // 遍历云端数据，智能合并
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
                     const localCard = this.db[id];
                     
-                    // 如果本地有记录，且本地记录的修改时间(lastModified)比云端晚（或者云端没有时间戳），则保留本地数据
-                    // 这防止了云端旧数据覆盖本地刚复习完的数据
-                    if (localCard && localCard.lastModified && cloudCard.lastModified) {
-                        if (localCard.lastModified >= cloudCard.lastModified) {
-                            continue; // 跳过，保留本地
+                    // 逻辑：如果本地记录存在，且本地记录的修改时间比云端晚（说明本地刚背过），则忽略云端旧数据
+                    // 只有当本地没有，或者云端数据更新（timestamp更大）时才采用
+                    if (localCard) {
+                        const localTime = localCard.lastModified || 0;
+                        const cloudTime = cloudCard.lastModified || 0;
+                        if (localTime >= cloudTime) {
+                            continue; // 本地更新，跳过云端
                         }
                     }
                     
-                    // 否则（本地没有，或云端更新），使用云端数据
+                    // 否则采用云端数据
                     this.db[id] = cloudCard;
+                    updateCount++;
                 }
                 this.save(); 
+                return updateCount;
             }
 
             getCardState(id) {
@@ -276,8 +285,12 @@
                         interval: 0, 
                         easeFactor: 2.5, 
                         dueDate: 0,
-                        lastModified: 0 // 新增：最后修改时间
+                        lastModified: 0 // 初始化时间戳
                     };
+                }
+                // 确保旧数据也有时间戳字段，防止比较出错
+                if (this.db[id].lastModified === undefined) {
+                    this.db[id].lastModified = 0;
                 }
                 return this.db[id];
             }
@@ -296,7 +309,7 @@
                 const card = this.getCardState(id);
                 const result = this.calculate(card, rating);
                 this.db[id] = result.card; 
-                this.save();
+                this.save(); // 立即保存到 LocalStorage
                 return result;
             }
 
@@ -304,31 +317,30 @@
                 let card = JSON.parse(JSON.stringify(originalCard));
                 let nextIntervalMin = 0;
 
-                // 标准 SM-2 逻辑微调
-                if (rating === 1) { // Again (重来)
+                // 标准 SM-2 逻辑
+                if (rating === 1) { // Again
                     card.step = 0; 
                     card.state = 'learning'; 
                     nextIntervalMin = 1; 
                     card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
                 } else if (card.state === 'new' || card.state === 'learning') {
-                    if (rating === 2) { // Hard (困难)
+                    if (rating === 2) { // Hard
                         nextIntervalMin = 6; 
-                        // Hard 不推进 step，保持 learning
-                    } else if (rating === 3) { // Good (良好)
+                    } else if (rating === 3) { // Good
                         if (card.step === 0) { 
                             card.step = 1; 
                             nextIntervalMin = 10; 
                         } else { 
                             card.state = 'review'; 
-                            card.interval = 1; // 毕业，进入复习，间隔1天
+                            card.interval = 1; 
                             nextIntervalMin = 1440; 
                         } 
-                    } else if (rating === 4) { // Easy (简单)
+                    } else if (rating === 4) { // Easy
                         card.state = 'review'; 
-                        card.interval = 4; // 直接毕业，间隔4天
+                        card.interval = 4; 
                         nextIntervalMin = 5760; 
                     } 
-                } else { // Review 阶段
+                } else { // Review
                     if (rating === 2) { 
                         card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
                         card.easeFactor -= 0.15; 
@@ -343,9 +355,7 @@
                 }
 
                 card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
-                
-                // 关键修复：更新最后修改时间戳
-                card.lastModified = Date.now();
+                card.lastModified = Date.now(); // 关键：更新修改时间戳
 
                 let timeText = nextIntervalMin < 60 ? nextIntervalMin + 'm' : (nextIntervalMin < 1440 ? Math.round(nextIntervalMin/60) + 'h' : Math.round(nextIntervalMin/1440) + 'd');
                 return { card, timeText };
@@ -361,38 +371,57 @@
             uiSync.style.display = 'inline-flex'; uiSync.className = `sync-badge ${type}`; uiSync.innerHTML = msg;
             if(type !== 'loading') setTimeout(() => { uiSync.style.display = 'none'; }, 3000);
         }
-        async function fetchCloudProgress() {
-            if(!USER_CONFIG.token) return;
-            updateSyncStatus('<span class="spin">🔄</span> 同步云端...', 'loading');
+
+        async function fetchCloudProgress(btnElement) {
+            if(!USER_CONFIG.token) { alert("请先填写 Token"); return; }
+            const originalText = btnElement ? btnElement.innerHTML : '';
+            if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 下载中...`; }
+            
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
-                const res = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
-                if(res.status === 404) { updateSyncStatus('无存档', 'success'); return; }
+                // 添加时间戳防止缓存
+                const res = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                if(res.status === 404) { 
+                    if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
+                    return; 
+                }
                 if(!res.ok) throw new Error('Fetch failed');
                 const data = await res.json();
                 const content = decodeURIComponent(escape(atob(data.content))); 
                 
-                // 这里调用的是新的合并逻辑，而不是直接覆盖
-                scheduler.loadExternalData(JSON.parse(content));
+                // 执行合并
+                const count = scheduler.loadExternalData(JSON.parse(content));
                 
-                updateSyncStatus('✅ 已同步', 'success');
-                // 重新加载并渲染卡片，确保合并后的状态立即反映
-                if(GLOBAL_CONFIG) loadAllCards(GLOBAL_CONFIG);
+                if(btnElement) {
+                    btnElement.innerHTML = `✅ 更新${count}条`;
+                    btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
+                    setTimeout(() => { 
+                        btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; 
+                        location.reload(); // 只有手动下载才刷新页面
+                    }, 1500);
+                }
                 return data.sha;
-            } catch(e) { console.warn('Sync failed:', e); updateSyncStatus('❌ 失败', 'error'); }
+            } catch(e) { 
+                console.warn('Sync failed:', e); 
+                if(btnElement) { btnElement.innerHTML = '❌ 失败'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
+            }
         }
+
         async function syncProgressToCloud(btnElement) {
             if(!USER_CONFIG.token) { alert('请先配置 Token'); return; }
             const originalText = btnElement ? btnElement.innerHTML : '';
             if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; }
             else { updateSyncStatus('<span class="spin">☁️</span> 上传...', 'loading'); }
+            
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
                 let sha = null;
-                const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
-                if(getRes.ok) { sha = (await getRes.json()).sha; }
+                // 先获取一下当前的 SHA，防止冲突
+                try {
+                    const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                    if(getRes.ok) { sha = (await getRes.json()).sha; }
+                } catch(e) {}
                 
-                // 确保上传前也是最新状态
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
                 
@@ -422,8 +451,9 @@
         let totalItemsCount = 0;
 
         async function startApp() {
-            // 先尝试后台同步，但不阻塞配置加载
-            const syncPromise = fetchCloudProgress();
+            // ★★★ 核心修复：移除启动时的自动同步 ★★★
+            // 之前这里调用 fetchCloudProgress() 会导致云端旧数据覆盖本地新数据
+            // 现在只依赖 LocalStorage，保证刷新后进度不丢失
             
             let sha = 'master';
             try {
@@ -431,6 +461,7 @@
                 if(res.ok) sha = (await res.json()).sha;
             } catch(e) {}
             
+            // 加载配置 JS
             const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
             
             try {
@@ -448,9 +479,6 @@
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
                     
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
-                    
-                    // 等待同步完成后再计算队列，确保使用的是合并后的最新进度
-                    await syncPromise; 
                     
                     loadAllCards(GLOBAL_CONFIG);
                     URL.revokeObjectURL(url);
@@ -473,7 +501,6 @@
             let allItems = [];
             const promises = [];
             
-            // 拉取最近两年的数据
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
