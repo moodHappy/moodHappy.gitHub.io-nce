@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anki Pro (Minimal Ver)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anki Pro (Thumb Friendly)</title>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
 
@@ -24,15 +24,41 @@
             } 
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); margin: 0; padding: 40px 20px; overflow-x: hidden; }
-        .container { max-width: 600px; margin: 0 auto; position: relative; padding-bottom: 150px; }
+        /* === 布局重构：全屏 Flex === */
+        html, body {
+            height: 100%; margin: 0; padding: 0; overflow: hidden; /* 禁止页面整体滚动，做成 App 感觉 */
+        }
 
-        /* Header */
-        header { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; position: relative; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-body); 
+            color: var(--text-primary); 
+            display: flex; flex-direction: column;
+        }
+        
+        .container { 
+            width: 100%; max-width: 600px; margin: 0 auto; 
+            position: relative; 
+            box-sizing: border-box;
+            padding: 20px;
+            
+            /* 关键：让容器撑满剩余空间 */
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        /* Header 保持在顶部 */
+        header { 
+            flex-shrink: 0; /* 防止被挤压 */
+            display: flex; flex-direction: column; align-items: center; 
+            margin-bottom: 10px; position: relative; 
+            padding-top: 20px; /* 顶部留点空隙 */
+        }
         h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; }
         .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;}
         
-        .header-actions { position: absolute; right: 0; top: 0; display: flex; gap: 10px; }
+        .header-actions { position: absolute; right: 0; top: 20px; display: flex; gap: 10px; }
         .icon-btn { 
             background: var(--bg-card); border: 1px solid var(--border-color); 
             width: 40px; height: 40px; border-radius: 50%; cursor: pointer; 
@@ -41,15 +67,25 @@
         }
         .icon-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
-        /* Sync Status */
         .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; margin-top: 10px; }
         .sync-badge.success { background: #dcfce7; color: #166534; }
         .sync-badge.error { background: #fee2e2; color: #991b1b; }
         .spin { animation: spin 1s infinite linear; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Card Container */
-        #notes-container { perspective: 1000px; min-height: 400px; position: relative; }
+        /* === 卡片容器：推到底部 === */
+        #notes-container { 
+            perspective: 1000px; 
+            position: relative; 
+            
+            /* 关键布局属性 */
+            flex: 1; /* 占据所有剩余高度 */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* 内容对齐到底部 */
+            padding-bottom: 15vh; /* 距离底部 15% 的高度，黄金单手操作区 */
+        }
+
         .note-card { 
             background: var(--bg-card); border-radius: 24px; padding: 30px 24px; 
             border: 1px solid var(--border-color); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08);
@@ -59,10 +95,8 @@
         }
         .note-card:not(:first-child) { display: none; }
 
-        /* 单词与来源 */
         .note-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
         
-        /* 来源链接 */
         .note-source { 
             font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; 
             margin-bottom: 25px; padding: 4px 10px; border-radius: 12px;
@@ -71,7 +105,6 @@
         }
         .note-source:hover { background: rgba(0,0,0,0.06); color: var(--accent-color); }
 
-        /* 释义部分 */
         .note-meaning { 
             font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
             display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
@@ -82,31 +115,20 @@
         .note-meaning:hover { filter: blur(6px); opacity: 0.9; }
         .note-meaning.revealed { filter: none; cursor: text; user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
         
-        /* === 播放按钮 (全新样式：无背景，实心图标) === */
+        /* 播放按钮 (无背景) */
         .tts-container { margin-top: auto; margin-bottom: 20px; z-index: 10; height: 60px; display: flex; align-items: center; justify-content: center; }
         
         .tts-btn { 
-            background: transparent; border: none; /* 去除背景和边框 */
+            background: transparent; border: none;
             width: 64px; height: 64px; 
-            color: var(--accent-color); 
-            cursor: pointer;
+            color: var(--accent-color); cursor: pointer;
             display: flex; align-items: center; justify-content: center; 
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* 给图标加一点点投影，让它浮起来 */
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
-        
-        /* 悬停效果：放大并增加光晕 */
         .tts-btn:hover { transform: scale(1.15); filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3)); }
-        
-        /* 播放中效果：呼吸动画 */
         .tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; color: var(--accent-color); pointer-events: none; }
-        
-        @keyframes breathe {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.7; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
 
         /* Anki Controls */
         .anki-controls { 
@@ -145,7 +167,7 @@
         .btn-sync { background: #f3f4f6; color: var(--text-primary); border: 1px solid var(--border-color); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; }
         
         /* Status Elements */
-        .status-page { text-align: center; padding: 60px 20px; }
+        .status-page { text-align: center; padding-bottom: 20px; }
         .emoji-lg { font-size: 4rem; margin-bottom: 20px; display: block; }
         .error-box { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 12px; font-size: 0.9rem; text-align: left; margin-top: 20px;}
     </style>
@@ -405,7 +427,6 @@
             const currentYear = today.getFullYear();
             let allItems = [];
             const promises = [];
-            // 加载今年和去年
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
