@@ -709,7 +709,7 @@
         const lastHtml = localStorage.getItem('last_ai_result');
         // 【新增】读取最后一次选中的文本
         const lastText = localStorage.getItem('last_selected_text') || '';
-        
+
         if (lastHtml) {
             const overlay = document.getElementById('dict-overlay');
             const aiCard = document.getElementById('ai-card');
@@ -809,8 +809,26 @@
         return data.choices?.[0]?.message?.content || "未收到回复";
     }
 
+    // --- 修改后的 Markdown 渲染函数 ---
     function simpleMarkdownRender(text) {
-        return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.*?)\*\*/g, '<span class="md-bold">$1</span>').replace(/### (.*?)(\n|$)/g, '<span class="md-h">$1</span>').replace(/## (.*?)(\n|$)/g, '<span class="md-h" style="font-size:1.1em">$1</span>').replace(/`([^`]+)`/g, '<span class="md-code">$1</span>').replace(/- (.*?)(\n|$)/g, '<span class="md-list-item">$1</span>').replace(/\n/g, '<br>');
+        return text
+            // 转义HTML标签
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            
+            // 1. 【核心修复】清除单独占据一行的 # 符号 (AI有时会作为分隔符输出)
+            .replace(/(^|\n)\s*#\s*(\n|$)/g, '$1') 
+
+            // 2. 增强标题渲染 (兼容 #, ##, ###)
+            .replace(/(^|\n)###\s+(.*?)(\n|$)/g, '$1<span class="md-h">$2</span>')
+            .replace(/(^|\n)##\s+(.*?)(\n|$)/g, '$1<span class="md-h" style="font-size:1.1em">$2</span>')
+            // 如果是一级标题 # Title，也渲染为大标题，而不是显示 #
+            .replace(/(^|\n)#\s+(.*?)(\n|$)/g, '$1<span class="md-h" style="font-size:1.2em">$2</span>')
+
+            // 3. 其他常规 Markdown
+            .replace(/\*\*(.*?)\*\*/g, '<span class="md-bold">$1</span>')
+            .replace(/`([^`]+)`/g, '<span class="md-code">$1</span>')
+            .replace(/- (.*?)(\n|$)/g, '<span class="md-list-item">$1</span>')
+            .replace(/\n/g, '<br>');
     }
 
     async function showDictCard(word) {
