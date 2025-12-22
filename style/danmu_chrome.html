@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Danmu 学习笔记 - AI 矩阵终极版</title>
+    <title>Danmu 学习笔记 - AI 旗舰版</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
@@ -114,7 +114,6 @@
         .form-group { margin-bottom: 15px; } 
         .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; } 
         
-        /* 统一输入框样式 */
         input, textarea, select { 
             width: 100%; padding: 10px; box-sizing: border-box; 
             border: 1px solid #d0d7de; border-radius: 6px; font-family: inherit; 
@@ -133,13 +132,12 @@
         .ai-tag { background: #e6f6ff; color: #0969da; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 6px; flex-shrink: 0; }
         .ai-priority-1 .ai-tag { background: #dafbe1; color: #1f883d; }
         
-        /* 【核心修改】单行垂直排列样式 */
         .ai-form-row { margin-bottom: 12px; }
         .ai-form-row label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; font-weight: 600; }
         .ai-form-row input { font-size: 13px; padding: 8px; background: #fcfcfc; }
 
         /* =========================================
-           查词卡片与 AI 卡片共用样式
+           查词卡片与 AI 卡片样式
            ========================================= */
         .dict-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -147,21 +145,38 @@
         }
         .dict-overlay.open { display: block; }
 
+        /* 基础 Sheet 样式 */
         .sheet-card {
             position: fixed; 
-            bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120%);
-            width: 90%; max-width: 500px;
             background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
             z-index: 999;
             padding: 20px;
             box-sizing: border-box;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-height: 70vh; display: flex; flex-direction: column;
+            display: flex; flex-direction: column;
         }
-        .sheet-card.open { transform: translateX(-50%) translateY(0); }
+
+        /* 查词卡片：维持悬浮风格 */
+        #dict-card {
+            width: 90%; max-width: 500px;
+            bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120%);
+            border-radius: 16px;
+            max-height: 70vh;
+        }
+        #dict-card.open { transform: translateX(-50%) translateY(0); }
+
+        /* AI 卡片：全屏宽度底部抽屉风格 */
+        #ai-card {
+            width: 100%; max-width: 100%; /* 全宽 */
+            bottom: 0; left: 0;
+            transform: translateY(100%); /* 向下隐藏 */
+            border-radius: 20px 20px 0 0; /* 仅上方圆角 */
+            max-height: 75vh;
+            padding-bottom: 30px; /* 底部留白适配全面屏手势条 */
+        }
+        #ai-card.open { transform: translateY(0); }
         
         .card-content-scroll { overflow-y: auto; flex: 1; }
 
@@ -266,7 +281,7 @@
     <div id="dc-content" class="card-content-scroll"></div>
 </div>
 
-<div id="ai-card" class="sheet-card">
+<div id="ai-card" class="sheet-card" ondblclick="closeAllCards()">
     <div class="dc-header" style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
         <div class="dc-word" style="font-size:18px;">🤖 AI 分析结果</div>
         <button class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="closeAllCards()">关闭</button>
@@ -621,7 +636,18 @@
         return null;
     }
 
-    // --- 多 AI 故障转移逻辑 ---
+    // --- 哈希函数用于缓存 Key ---
+    function simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return 'ai_c_' + hash;
+    }
+
+    // --- 多 AI 故障转移 + 缓存逻辑 ---
     async function callAIMulti(text) {
         const overlay = document.getElementById('dict-overlay');
         const aiCard = document.getElementById('ai-card');
@@ -631,6 +657,23 @@
         overlay.classList.add('open');
         aiCard.classList.add('open');
         content.innerHTML = '<div class="dc-loading">🧠 正在连接 AI...</div>';
+
+        // 1. 检查缓存 (有效期7天)
+        const cacheKey = simpleHash(text);
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const entry = JSON.parse(cached);
+                const now = Date.now();
+                // 7 days = 604800000 ms
+                if (now - entry.ts < 604800000) {
+                    content.innerHTML = simpleMarkdownRender(entry.reply) + `<div style="margin-top:15px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:5px;">⚡ 来自缓存结果 (7天内有效)</div>`;
+                    return;
+                } else {
+                    localStorage.removeItem(cacheKey);
+                }
+            } catch(e) { localStorage.removeItem(cacheKey); }
+        }
 
         const activeConfigs = config.aiConfigs.filter(c => c.key && c.host);
 
@@ -646,6 +689,12 @@
             
             try {
                 const reply = await callSingleAI(cfg, text);
+                
+                // 成功获取，存入缓存
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), reply: reply }));
+                } catch(e) { console.warn('Cache write failed', e); }
+
                 content.innerHTML = simpleMarkdownRender(reply);
                 if (i > 0) {
                     content.innerHTML += `<div style="margin-top:15px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:5px;">⚠️ 优先接口失败，已自动切换至 ${cfg.name}</div>`;
@@ -765,7 +814,7 @@
         document.getElementById('dict-overlay').classList.remove('open');
     }
 
-    // --- 设置 UI 逻辑 (完全垂直堆叠版) ---
+    // --- 设置 UI 逻辑 ---
     let tempAiConfigs = [];
 
     function openSettings() { 
@@ -833,7 +882,7 @@
             header.appendChild(btnGroup);
             div.appendChild(header);
 
-            // 【修改】改为完全垂直排列，每个输入框独占一行
+            // 垂直布局表单
             const formDiv = document.createElement('div');
             formDiv.innerHTML = `
                 <div class="ai-form-row"><label>配置名称</label><input type="text" value="${cfg.name}" onchange="updateTempConfig(${index}, 'name', this.value)"></div>
