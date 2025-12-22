@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>笔记总目录</title>
+    <style>
+        :root {
+            --primary: #0969da;
+            --bg: #f6f8fa;
+            --card-bg: #ffffff;
+            --border: #d0d7de;
+            --text-main: #1f2328;
+            --text-muted: #656d76;
+            --folder-color: #54aeff;
+            --pinned-bg: #e6f6ff; /* 置顶区域背景 */
+            --pinned-border: #b6e3ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 3px 6px rgba(140, 149, 159, 0.03);
+        }
+
+        /* 头部与导航 */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        h1 { margin: 0; font-size: 18px; }
+
+        .settings-btn {
+            background: none; border: 1px solid var(--border);
+            border-radius: 6px; cursor: pointer;
+            padding: 5px 10px; font-size: 13px; color: var(--text-muted);
+            display: flex; align-items: center; gap: 5px;
+        }
+        .settings-btn:hover { background-color: #f3f4f6; color: var(--text-main); }
+
+        /* 面包屑导航 */
+        .breadcrumb {
+            background: #f3f4f6;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .breadcrumb-item { cursor: pointer; color: var(--primary); font-weight: 500; }
+        .breadcrumb-item:hover { text-decoration: underline; }
+        .breadcrumb-separator { margin: 0 8px; color: var(--text-muted); }
+        .breadcrumb-current { color: var(--text-muted); pointer-events: none; }
+
+        /* 置顶区域样式 */
+        .pinned-section {
+            background: var(--pinned-bg);
+            border: 1px solid var(--pinned-border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        .pinned-label {
+            font-size: 12px; font-weight: bold; color: #0969da; text-transform: uppercase; margin-bottom: 8px; display: block;
+        }
+        .pinned-card {
+            display: flex; justify-content: space-between; align-items: center; text-decoration: none;
+        }
+        .pinned-title { font-size: 16px; font-weight: 700; color: #1f2328; }
+        .pinned-meta { font-size: 12px; color: #57606a; margin-top: 4px; }
+        .pinned-icon { font-size: 20px; margin-right: 10px; }
+        .pinned-arrow { color: #0969da; font-weight: bold; }
+        .pinned-card:hover .pinned-title { text-decoration: underline; color: #0969da; }
+
+        /* 普通列表样式 */
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { border-bottom: 1px solid #eaecef; }
+        li:last-child { border-bottom: none; }
+
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 10px; text-decoration: none; color: var(--text-main);
+            transition: background 0.2s; cursor: pointer; border-radius: 4px;
+        }
+        .list-item:hover { background-color: #f6f8fa; }
+        .item-icon { margin-right: 10px; font-size: 18px; }
+        .folder-icon { color: var(--folder-color); }
+        .file-icon { color: var(--text-muted); }
+        .item-info { flex-grow: 1; min-width: 0; }
+        .item-name { font-weight: 600; font-size: 15px; display: block; }
+        .item-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .loading, .error { text-align: center; padding: 30px; color: var(--text-muted); }
+        .error { color: #cf222e; background: #ffebe9; border-radius: 6px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 设置弹窗 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 99; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; }
+        .form-group .hint { font-size: 12px; color: #666; margin-top: 4px; }
+        .btn { padding: 8px 16px; cursor: pointer; border: none; border-radius: 4px; font-size: 14px; }
+        .btn-secondary { background: #f3f4f6; color: #24292f; margin-right: 10px; }
+        .btn-primary { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📚 英语学习笔记</h1>
+        <button class="settings-btn" onclick="openSettings()"><span>⚙️ 设置</span></button>
+    </header>
+
+    <div id="breadcrumb" class="breadcrumb"></div>
+
+    <div id="latest-container"></div>
+
+    <div id="file-list">
+        <div class="loading">正在加载...</div>
+    </div>
+</div>
+
+<div id="settings-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>🔧 配置</h3>
+        <div class="form-group">
+            <label>GitHub Token (PAT)</label>
+            <input type="password" id="cfg-token" placeholder="github_pat_...">
+            <div class="hint">🔒 Token 保存在本地，可大幅提升加载速度。</div>
+        </div>
+        <div class="form-group">
+            <label>GitHub 用户名</label>
+            <input type="text" id="cfg-user">
+        </div>
+        <div class="form-group">
+            <label>仓库名称</label>
+            <input type="text" id="cfg-repo">
+        </div>
+        <div class="form-group">
+            <label>根目录路径</label>
+            <input type="text" id="cfg-root">
+        </div>
+        <div style="text-align: right; margin-top: 20px;">
+            <button class="btn btn-secondary" onclick="closeSettings()">取消</button>
+            <button class="btn btn-primary" onclick="saveSettings()">保存并刷新</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 默认配置 ---
+    const DEFAULTS = {
+        user: 'moodHappy',
+        repo: 'moodHappy.gitHub.io-nce',
+        rootPath: 'Notes/danmu',
+        token: ''
+    };
+
+    let currentPath = ''; 
+    let config = {};
+
+    function getConfig() {
+        const stored = localStorage.getItem('gh_nav_config_v4'); // 升级存储版本
+        return stored ? { ...DEFAULTS, ...JSON.parse(stored) } : DEFAULTS;
+    }
+
+    async function init() {
+        config = getConfig();
+        if (!currentPath) currentPath = config.rootPath;
+        await loadPath(currentPath);
+    }
+
+    // 通用 Fetch 函数，带 Token
+    async function ghFetch(url) {
+        const headers = {};
+        if (config.token && config.token.trim() !== '') {
+            headers['Authorization'] = `token ${config.token}`;
+        }
+        const response = await fetch(url, { headers: headers });
+        if (!response.ok) {
+            if (response.status === 403) throw new Error("API 访问受限 (403)，请在设置中配置 Token。");
+            if (response.status === 404) throw new Error("路径未找到 (404)。");
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        return await response.json();
+    }
+
+    async function loadPath(path) {
+        currentPath = path;
+        renderBreadcrumb(path);
+        
+        const listContainer = document.getElementById('file-list');
+        const latestContainer = document.getElementById('latest-container');
+        
+        // 清空置顶区域（仅在根目录计算后显示）
+        latestContainer.innerHTML = ''; 
+        listContainer.innerHTML = '<div class="loading">正在获取列表...</div>';
+
+        const apiUrl = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`;
+        
+        try {
+            const data = await ghFetch(apiUrl);
+            
+            if (!Array.isArray(data)) {
+                window.location.href = data.html_url || data.download_url;
+                return;
+            }
+
+            // 分离文件夹和文件
+            let dirs = [];
+            let files = [];
+            processItems(data, dirs, files);
+
+            // 排序
+            dirs.sort((a, b) => b.name.localeCompare(a.name)); // 年份倒序
+            files.sort((a, b) => b.timestamp - a.timestamp);   // 文件倒序
+
+            // --- 核心逻辑：如果在根目录，尝试查找最新年份文件夹里的最新文件 ---
+            if (path === config.rootPath) {
+                // 找到看起来像年份的文件夹 (4位数字)
+                const yearDirs = dirs.filter(d => /^\d{4}$/.test(d.name));
+                
+                if (yearDirs.length > 0) {
+                    // 取最大年份 (dirs 已经按倒序排好了，取第一个即可)
+                    const latestYearDir = yearDirs[0];
+                    // 显示加载提示在置顶区，不影响下面列表
+                    latestContainer.innerHTML = '<div style="text-align:center; color:#999; font-size:12px; margin-bottom:10px;">正在检查最新笔记...</div>';
+                    
+                    // 异步获取最新年份文件夹的内容
+                    fetchLatestInDir(latestYearDir).then(latestFile => {
+                        if (latestFile) {
+                            renderLatestCard(latestFile, latestYearDir.name);
+                        } else {
+                            latestContainer.innerHTML = ''; // 没找到则清空
+                        }
+                    }).catch(e => {
+                        console.error("Fetch latest failed", e);
+                        latestContainer.innerHTML = '';
+                    });
+                }
+            }
+
+            renderList(dirs, files);
+
+        } catch (error) {
+            console.error(error);
+            listContainer.innerHTML = `<div class="error"><strong>加载失败</strong><br>${error.message}</div>`;
+        }
+    }
+
+    // 辅助函数：处理 API 返回的数据，提取时间戳
+    function processItems(items, dirsArr, filesArr) {
+        items.forEach(item => {
+            if (item.name.toLowerCase() === 'index.html') return;
+
+            if (item.type === 'dir') {
+                dirsArr.push(item);
+            } else if (item.name.endsWith('.html')) {
+                const match = item.name.match(/_(\d{13})\.html$/);
+                const timestamp = match ? parseInt(match[1]) : 0;
+                filesArr.push({
+                    ...item,
+                    timestamp: timestamp,
+                    dateStr: timestamp ? new Date(timestamp).toLocaleString('zh-CN', { hour12: false }) : ''
+                });
+            }
+        });
+    }
+
+    // 辅助函数：去指定文件夹找最新文件
+    async function fetchLatestInDir(dirItem) {
+        const url = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${dirItem.path}`;
+        const data = await ghFetch(url);
+        if (!Array.isArray(data)) return null;
+
+        let subFiles = [];
+        let subDirs = []; // 不需要用到，但占位
+        processItems(data, subDirs, subFiles);
+        
+        // 按时间倒序
+        subFiles.sort((a, b) => b.timestamp - a.timestamp);
+        
+        return subFiles.length > 0 ? subFiles[0] : null;
+    }
+
+    function renderLatestCard(file, year) {
+        const container = document.getElementById('latest-container');
+        let displayName = file.name.replace('.html', '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
+        let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
+
+        container.innerHTML = `
+            <div class="pinned-section">
+                <span class="pinned-label">🆕 最新笔记 (${year})</span>
+                <a href="${fileUrl}" target="_blank" class="pinned-card">
+                    <div style="display:flex; align-items:center;">
+                        <span class="pinned-icon">📄</span>
+                        <div>
+                            <div class="pinned-title">${displayName}</div>
+                            <div class="pinned-meta">📅 ${file.dateStr}</div>
+                        </div>
+                    </div>
+                    <div class="pinned-arrow">立即阅读 &rarr;</div>
+                </a>
+            </div>
+        `;
+    }
+
+    function renderList(dirs, files) {
+        const listContainer = document.getElementById('file-list');
+        if (dirs.length === 0 && files.length === 0) {
+            listContainer.innerHTML = '<div class="loading">此文件夹为空</div>';
+            return;
+        }
+
+        let html = '<ul>';
+
+        // 文件夹
+        dirs.forEach(dir => {
+            html += `
+                <li onclick="loadPath('${dir.path}')">
+                    <div class="list-item">
+                        <span class="item-icon folder-icon">📁</span>
+                        <div class="item-info">
+                            <span class="item-name">${dir.name}</span>
+                        </div>
+                        <span style="color:#ccc">›</span>
+                    </div>
+                </li>
+            `;
+        });
+
+        // 文件
+        files.forEach(file => {
+            let displayName = file.name.replace('.html', '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
+            let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
+
+            html += `
+                <li>
+                    <a href="${fileUrl}" target="_blank" class="list-item">
+                        <span class="item-icon file-icon">📄</span>
+                        <div class="item-info">
+                            <span class="item-name">${displayName}</span>
+                            ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
+                        </div>
+                    </a>
+                </li>
+            `;
+        });
+
+        html += '</ul>';
+        listContainer.innerHTML = html;
+    }
+
+    function renderBreadcrumb(path) {
+        const container = document.getElementById('breadcrumb');
+        let html = `<span class="breadcrumb-item" onclick="loadPath('${config.rootPath}')">🏠 首页</span>`;
+        
+        if (path !== config.rootPath && path.startsWith(config.rootPath)) {
+            const relativePath = path.substring(config.rootPath.length);
+            const parts = relativePath.split('/').filter(p => p);
+            let buildPath = config.rootPath;
+
+            parts.forEach((part, index) => {
+                buildPath += '/' + part;
+                html += `<span class="breadcrumb-separator">/</span>`;
+                if (index === parts.length - 1) {
+                    html += `<span class="breadcrumb-current">${part}</span>`;
+                } else {
+                    html += `<span class="breadcrumb-item" onclick="loadPath('${buildPath}')">${part}</span>`;
+                }
+            });
+        }
+        container.innerHTML = html;
+    }
+
+    // --- 设置逻辑 ---
+    function openSettings() {
+        document.getElementById('cfg-user').value = config.user;
+        document.getElementById('cfg-repo').value = config.repo;
+        document.getElementById('cfg-root').value = config.rootPath;
+        document.getElementById('cfg-token').value = config.token || '';
+        document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function closeSettings() {
+        document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    function saveSettings() {
+        const newConfig = {
+            user: document.getElementById('cfg-user').value.trim(),
+            repo: document.getElementById('cfg-repo').value.trim(),
+            rootPath: document.getElementById('cfg-root').value.trim().replace(/\/+$/, ''),
+            token: document.getElementById('cfg-token').value.trim()
+        };
+        localStorage.setItem('gh_nav_config_v4', JSON.stringify(newConfig));
+        closeSettings();
+        location.reload();
+    }
+
+    document.getElementById('settings-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeSettings();
+    });
+
+    init();
+</script>
+
+</body>
+</html>
