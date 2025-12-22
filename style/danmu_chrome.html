@@ -16,8 +16,11 @@
             --border: #d0d7de;
             --text-main: #1f2328;
             --text-muted: #656d76;
+            
+            /* 高亮颜色配置 */
             --hl-blue: #0969da; 
             --hl-red: #cf222e; 
+            --hl-yellow: #d97706; /* 【修改点1】新增黄色变量 (使用琥珀色以保证可读性) */
             
             /* ReadSense 特有样式变量 */
             --rs-blue: #3498db;
@@ -52,19 +55,19 @@
             font-size: 18px; line-height: 1.8; color: #333;
         }
 
-        /* 1. 标题样式：ReadSense 风格 */
+        /* 1. 标题样式 */
         .reader-content-wrapper h1 {
             display: block !important;
             margin-top: 25px;
             margin-bottom: 25px;
             line-height: 1.3;
             color: var(--rs-title);
-            border-bottom: 2px solid var(--rs-blue); /* 蓝色下划线 */
+            border-bottom: 2px solid var(--rs-blue);
             padding-bottom: 10px;
             font-size: 2em;
         }
 
-        /* 2. 元数据卡片：ReadSense 风格 */
+        /* 2. 元数据卡片 */
         .meta {
             font-size: 14px;
             color: var(--rs-meta-text);
@@ -74,37 +77,16 @@
             border-radius: 6px;
             line-height: 1.6;
         }
-        
-        /* 确保 meta 内部的 div 换行显示 */
-        .meta div {
-            margin-bottom: 4px;
-        }
-        .meta div:last-child {
-            margin-bottom: 0;
-        }
+        .meta div { margin-bottom: 4px; }
+        .meta div:last-child { margin-bottom: 0; }
+        .meta a { color: var(--rs-blue); text-decoration: none; word-break: break-all; }
+        .meta a:hover { text-decoration: underline; }
 
-        /* 链接样式 */
-        .meta a {
-            color: var(--rs-blue);
-            text-decoration: none;
-            word-break: break-all;
-        }
-        .meta a:hover {
-            text-decoration: underline;
-        }
-
-        /* 内容区域通用样式 */
         .content { background: #fff; }
         .reader-content-wrapper img { max-width: 100%; height: auto; display: block; margin: 20px auto; }
         
-        /* 底部版权/生成信息 */
         .footer {
-            margin-top: 40px;
-            font-size: 12px;
-            color: #bdc3c7;
-            text-align: center;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
+            margin-top: 40px; font-size: 12px; color: #bdc3c7; text-align: center; border-top: 1px solid #eee; padding-top: 20px;
         }
 
         /* --- 列表与头部通用样式 --- */
@@ -139,6 +121,8 @@
         /* 高亮样式 */
         .hl-blue { color: var(--hl-blue); font-weight: 700; }
         .hl-red { color: var(--hl-red); font-weight: 700; }
+        /* 【修改点2】添加黄色样式类 */
+        .hl-yellow { color: var(--hl-yellow); font-weight: 700; }
 
         /* 设置弹窗 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 200; justify-content: center; align-items: center; }
@@ -212,9 +196,14 @@
             ]);
             const parse = (text) => text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(w => w);
             const excludedSet = new Set(parse(txtExc));
+            
+            // 词库配置区域
             parse(txtOne).forEach(w => { if(!excludedSet.has(w)) dictMap.set(w, 'hl-blue'); });
             parse(txtTwo).forEach(w => { if(!excludedSet.has(w)) dictMap.set(w, 'hl-red'); });
-            parse(txtSup).forEach(w => { if(!excludedSet.has(w)) dictMap.set(w, 'hl-blue'); });
+            
+            // 【修改点3】将 supplement 词汇映射到 hl-yellow
+            parse(txtSup).forEach(w => { if(!excludedSet.has(w)) dictMap.set(w, 'hl-yellow'); });
+            
             isDictLoaded = true;
             statusEl.textContent = `✓ 词库就绪 (${dictMap.size}词)`; statusEl.classList.add('status-ready');
             if(document.getElementById('reader-view').style.display === 'block') applyHighlights(document.getElementById('reader-content'));
@@ -241,12 +230,10 @@
             let dirs = [], files = []; processItems(data, dirs, files);
             dirs.sort((a, b) => b.name.localeCompare(a.name)); files.sort((a, b) => b.timestamp - a.timestamp);
             
-            // 检查是否有年份文件夹（如2025），如果有则尝试加载最新文章
             if (path === config.rootPath) {
                 const yearDirs = dirs.filter(d => /^\d{4}$/.test(d.name));
                 if (yearDirs.length > 0) {
                     latestContainer.innerHTML = '<div style="text-align:center;color:#999;font-size:12px;margin-bottom:10px;">正在检查最新笔记...</div>';
-                    // 默认取最大的年份（假设已排序）
                     fetchLatestInDir(yearDirs[0]).then(latest => {
                         if (latest) renderLatestCard(latest, yearDirs[0].name); else latestContainer.innerHTML = '';
                     });
@@ -331,27 +318,19 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
 
-            // --- ReadSense 风格 DOM 重构 ---
             const h1 = doc.querySelector('h1');
             
-            // 提取关键信息
             let timeText = '';
             let linkHtml = '';
             let nodesToRemove = [];
 
-            // 策略：扫描 body 下的直接子元素（主要是 P 或 div.meta）
-            // 优先检查是否已经存在 .meta 结构
             const existingMeta = doc.querySelector('.meta');
             if (existingMeta) {
-                // 如果已存在，提取其中的信息以便重新标准化，或者直接保留但清理样式
-                // 这里选择提取后重建，确保样式完全统一
                 timeText = existingMeta.textContent.match(/归档时间:([^\n]*)/)?.[1] || '';
-                // 尝试找链接
                 const linkTag = existingMeta.querySelector('a');
                 if (linkTag) linkHtml = linkTag.outerHTML;
                 nodesToRemove.push(existingMeta);
             } else {
-                // 扫描 P 标签 (兼容旧格式)
                 let currentNode = h1 ? h1.nextElementSibling : doc.body.firstElementChild;
                 while (currentNode) {
                     const text = currentNode.textContent;
@@ -363,49 +342,37 @@
                         if (linkTag) {
                             linkHtml = linkTag.outerHTML;
                         } else {
-                            // 尝试纯文本提取
                             const urlMatch = text.match(/http[s]?:\/\/[^\s]+/);
                             if(urlMatch) linkHtml = `<a href="${urlMatch[0]}" target="_blank">${urlMatch[0]}</a>`;
                         }
                         nodesToRemove.push(currentNode);
                     }
-                    // 只要找到一个就继续，直到遇到看起来是正文的内容（这里简化处理，只扫描开头）
-                    // 防止误删正文，只对包含特定关键字的节点操作
                     if (nodesToRemove.length >= 2) break; 
                     currentNode = currentNode.nextElementSibling;
                 }
             }
 
-            // 清理旧节点
             nodesToRemove.forEach(n => n.remove());
 
-            // 构建标准 Meta 结构
             const metaDiv = document.createElement('div');
             metaDiv.className = 'meta';
-            
-            // 如果没找到时间，使用默认或隐藏
             if (timeText) {
                 const dateRow = document.createElement('div');
                 dateRow.innerHTML = `📅 归档时间: ${timeText.trim()}`;
                 metaDiv.appendChild(dateRow);
             }
-
-            // 如果没找到链接
             if (linkHtml) {
                 const linkRow = document.createElement('div');
                 linkRow.innerHTML = `🔗 原文链接: ${linkHtml}`;
                 metaDiv.appendChild(linkRow);
             }
 
-            // 插入 H1 之后
             if (h1 && h1.parentNode) {
                 h1.parentNode.insertBefore(metaDiv, h1.nextSibling);
             } else {
-                // 如果没有 H1，插入最前面
                 doc.body.insertBefore(metaDiv, doc.body.firstChild);
             }
 
-            // 确保 footer 存在
             if (!doc.querySelector('.footer')) {
                 const footer = document.createElement('div');
                 footer.className = 'footer';
@@ -425,7 +392,6 @@
         const textNodes = []; let node;
         while(node = walker.nextNode()) {
             const parent = node.parentElement;
-            // 跳过脚本、样式以及元数据区域(.meta)
             if (parent.tagName !== 'SCRIPT' && 
                 parent.tagName !== 'STYLE' && 
                 !parent.closest('.meta') && 
