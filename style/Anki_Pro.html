@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Anki Pro (Fixed Persistence)</title>
-    
+
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
 
@@ -148,12 +148,12 @@
         .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 1rem; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
         .btn-save { background: var(--accent-color); color: white; }
-        
+
         /* Sync Buttons */
         .sync-row { display: flex; gap: 10px; margin-bottom: 20px; }
         .btn-sync-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-size: 0.9rem; font-weight: 600;}
         .btn-sync-action:active { transform: scale(0.98); }
-        
+
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
         .status-page { text-align: center; padding-bottom: 20px; }
@@ -176,7 +176,7 @@
             <div class="form-group"><label>GitHub User</label> <input type="text" id="gh-user"></div>
             <div class="form-group"><label>GitHub Repo</label> <input type="text" id="gh-repo"></div>
             <div class="form-group"><label>Access Token</label> <input type="password" id="gh-token" placeholder="ghp_..."></div>
-            
+
             <div class="form-group">
                 <label>云端同步</label>
                 <div class="sync-row">
@@ -245,20 +245,20 @@
             constructor() { 
                 this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); 
             }
-            
+
             save() { 
                 localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); 
             }
-            
+
             // 修复逻辑：合并数据而不是盲目覆盖
             loadExternalData(cloudData) { 
                 if (!cloudData) return; 
                 let updateCount = 0;
-                
+
                 // 遍历云端数据，智能合并
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
                     const localCard = this.db[id];
-                    
+
                     // 逻辑：如果本地记录存在，且本地记录的修改时间比云端晚（说明本地刚背过），则忽略云端旧数据
                     // 只有当本地没有，或者云端数据更新（timestamp更大）时才采用
                     if (localCard) {
@@ -268,7 +268,7 @@
                             continue; // 本地更新，跳过云端
                         }
                     }
-                    
+
                     // 否则采用云端数据
                     this.db[id] = cloudCard;
                     updateCount++;
@@ -376,7 +376,7 @@
             if(!USER_CONFIG.token) { alert("请先填写 Token"); return; }
             const originalText = btnElement ? btnElement.innerHTML : '';
             if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 下载中...`; }
-            
+
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
                 // 添加时间戳防止缓存
@@ -388,10 +388,10 @@
                 if(!res.ok) throw new Error('Fetch failed');
                 const data = await res.json();
                 const content = decodeURIComponent(escape(atob(data.content))); 
-                
+
                 // 执行合并
                 const count = scheduler.loadExternalData(JSON.parse(content));
-                
+
                 if(btnElement) {
                     btnElement.innerHTML = `✅ 更新${count}条`;
                     btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
@@ -412,7 +412,7 @@
             const originalText = btnElement ? btnElement.innerHTML : '';
             if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; }
             else { updateSyncStatus('<span class="spin">☁️</span> 上传...', 'loading'); }
-            
+
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
                 let sha = null;
@@ -421,18 +421,18 @@
                     const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
                 } catch(e) {}
-                
+
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
-                
+
                 const putRes = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: `Update Anki Progress`, content: contentBase64, sha: sha })
                 });
-                
+
                 if(!putRes.ok) throw new Error('Upload failed');
-                
+
                 if(btnElement) {
                     btnElement.innerHTML = `✅ 成功`; btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
                     setTimeout(() => { btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; }, 2000);
@@ -454,16 +454,16 @@
             // ★★★ 核心修复：移除启动时的自动同步 ★★★
             // 之前这里调用 fetchCloudProgress() 会导致云端旧数据覆盖本地新数据
             // 现在只依赖 LocalStorage，保证刷新后进度不丢失
-            
+
             let sha = 'master';
             try {
                 const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master`);
                 if(res.ok) sha = (await res.json()).sha;
             } catch(e) {}
-            
+
             // 加载配置 JS
             const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
-            
+
             try {
                 const scriptContent = await fetch(configUrl).then(r => r.ok ? r.text() : Promise.reject(r.status));
                 const blob = new Blob([scriptContent], { type: 'application/javascript' });
@@ -475,11 +475,11 @@
                     else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
                     else if (window.NotesConfig) GLOBAL_CONFIG = window.NotesConfig;
                     else if (window.NewsConfig) GLOBAL_CONFIG = window.NewsConfig;
-                    
+
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
-                    
+
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
-                    
+
                     loadAllCards(GLOBAL_CONFIG);
                     URL.revokeObjectURL(url);
                 };
@@ -500,14 +500,14 @@
             const currentYear = today.getFullYear();
             let allItems = [];
             const promises = [];
-            
+
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
                     promises.push(fetch(config.getUrl(y, m)).then(r => r.ok ? r.json() : []).catch(()=>[]));
                 }
             }
-            
+
             const results = await Promise.all(promises);
             results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
 
@@ -555,7 +555,16 @@
             const rawText = item.text || '';
             const times = scheduler.previewNextDue(item.id);
             const sourceTitle = item.pageTitle || 'Source Link';
-            const sourceUrl = item.url || '#';
+            
+            // ★★★ 新增/修改代码开始 ★★★
+            // 功能：构建包含 Text Fragment 的 URL，实现点击直接跳转并高亮短语
+            let sourceUrl = item.url || '#';
+            if (sourceUrl !== '#' && item.text) {
+                // 使用 encodeURIComponent 处理特殊字符，生成锚点
+                // 格式: url#:~:text=ENCODED_PHRASE
+                sourceUrl = `${sourceUrl}#:~:text=${encodeURIComponent(item.text)}`;
+            }
+            // ★★★ 修改代码结束 ★★★
 
             container.innerHTML = `
                 <div class="note-card" id="current-card" onclick="handleCardClick(event)">
@@ -598,10 +607,10 @@
         function handleRate(rating) {
             stopCurrentAudio(); 
             const item = cardQueue[0];
-            
+
             // 记录答案并保存到 localStorage
             scheduler.answerCard(item.id, rating);
-            
+
             const cardEl = document.getElementById('current-card');
             cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0';
 
