@@ -206,8 +206,9 @@
         .dc-error { text-align: center; color: #cf222e; padding: 10px; font-size: 14px; }
 
         /* =========================================
-           AI 浮动按钮与结果样式
+           AI 按钮组样式
            ========================================= */
+        /* 1. 划词出现的悬浮按钮 */
         .ai-float-btn {
             position: absolute; display: none; z-index: 1000;
             background: linear-gradient(135deg, #6366f1, #a855f7);
@@ -218,6 +219,21 @@
             user-select: none; white-space: nowrap;
         }
         .ai-float-btn:active { transform: scale(0.95); }
+
+        /* 2. 【新增】常驻历史按钮 */
+        .ai-persistent-btn {
+            position: fixed; 
+            top: 80vh; right: 20px; /* 高度 80vh 处 */
+            z-index: 990;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white; border: none; padding: 8px 16px; border-radius: 24px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            display: none; /* 默认隐藏，有历史记录时才显示 */
+            transition: transform 0.2s;
+        }
+        .ai-persistent-btn:active { transform: scale(0.95); }
+
         @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         .ai-content-body { font-size: 15px; line-height: 1.6; color: #24292f; }
@@ -243,7 +259,10 @@
 
 <div id="reader-view" class="reader-page">
     <div id="reader-content" class="reader-content-wrapper"></div>
+    
     <button id="ai-float-btn" class="ai-float-btn" onmousedown="handleAiBtnClick(event)" ontouchstart="handleAiBtnClick(event)">🤖 AI 分析</button>
+    
+    <button id="ai-persistent-btn" class="ai-persistent-btn" onclick="showLastAnalysis()">🤖 最近分析</button>
 </div>
 
 <div id="settings-modal" class="modal-overlay">
@@ -347,6 +366,9 @@
         readerEl.addEventListener('click', handleReaderClick); 
         document.addEventListener('selectionchange', handleSelectionChange); 
         readerEl.addEventListener('touchend', () => setTimeout(handleSelectionChange, 100)); 
+        
+        // 尝试加载历史按钮状态
+        checkHistoryBtn();
     }
 
     // --- 词库加载逻辑 ---
@@ -466,6 +488,7 @@
     function showReaderUI() {
         document.getElementById('list-view').style.display = 'none'; document.getElementById('reader-view').style.display = 'block';
         document.body.style.backgroundColor = '#ffffff'; window.scrollTo(0, 0);
+        checkHistoryBtn(); // 进入阅读界面检查历史按钮
     }
 
     // --- 笔记渲染器 ---
@@ -647,6 +670,39 @@
         return 'ai_c_' + hash;
     }
 
+    // --- 【新增】历史回溯功能 ---
+    function checkHistoryBtn() {
+        // 如果有历史记录，且当前在阅读页，显示按钮
+        const lastHtml = localStorage.getItem('last_ai_result');
+        const btn = document.getElementById('ai-persistent-btn');
+        const isReader = document.getElementById('reader-view').style.display === 'block';
+        if (lastHtml && isReader) {
+            btn.style.display = 'block';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+
+    function showLastAnalysis() {
+        const lastHtml = localStorage.getItem('last_ai_result');
+        if (lastHtml) {
+            const overlay = document.getElementById('dict-overlay');
+            const aiCard = document.getElementById('ai-card');
+            const content = document.getElementById('ai-content');
+
+            document.getElementById('dict-card').classList.remove('open');
+            overlay.classList.add('open');
+            aiCard.classList.add('open');
+            
+            content.innerHTML = lastHtml;
+        }
+    }
+
+    function saveLastResult(html) {
+        localStorage.setItem('last_ai_result', html);
+        checkHistoryBtn(); // 更新按钮状态
+    }
+
     // --- 多 AI 故障转移 + 缓存逻辑 ---
     async function callAIMulti(text) {
         const overlay = document.getElementById('dict-overlay');
@@ -667,7 +723,9 @@
                 const now = Date.now();
                 // 7 days = 604800000 ms
                 if (now - entry.ts < 604800000) {
-                    content.innerHTML = simpleMarkdownRender(entry.reply) + `<div style="margin-top:15px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:5px;">⚡ 来自缓存结果 (7天内有效)</div>`;
+                    const html = simpleMarkdownRender(entry.reply) + `<div style="margin-top:15px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:5px;">⚡ 来自缓存结果 (7天内有效)</div>`;
+                    content.innerHTML = html;
+                    saveLastResult(html); // 更新最近一次历史
                     return;
                 } else {
                     localStorage.removeItem(cacheKey);
@@ -695,10 +753,13 @@
                     localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), reply: reply }));
                 } catch(e) { console.warn('Cache write failed', e); }
 
-                content.innerHTML = simpleMarkdownRender(reply);
+                const finalHtml = simpleMarkdownRender(reply);
+                content.innerHTML = finalHtml;
                 if (i > 0) {
                     content.innerHTML += `<div style="margin-top:15px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:5px;">⚠️ 优先接口失败，已自动切换至 ${cfg.name}</div>`;
                 }
+                
+                saveLastResult(content.innerHTML); // 存入历史
                 return; 
             } catch (err) {
                 console.error(`AI Config ${cfg.name} failed:`, err);
