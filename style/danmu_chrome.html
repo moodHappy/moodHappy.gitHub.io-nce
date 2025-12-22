@@ -39,6 +39,12 @@
             -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
 
+        /* 【新增】锁定滚动样式 */
+        body.no-scroll {
+            overflow: hidden;
+            height: 100vh;
+        }
+
         /* --- 视图样式 --- */
         .view-container {
             max-width: 800px; margin: 20px auto; background: var(--card-bg);
@@ -220,17 +226,20 @@
         }
         .ai-float-btn:active { transform: scale(0.95); }
 
-        /* 2. 【新增】常驻历史按钮 */
+        /* 2. 【核心】常驻历史按钮 (样式与浮动按钮完全一致) */
         .ai-persistent-btn {
             position: fixed; 
-            top: 80vh; right: 20px; /* 高度 80vh 处 */
+            top: 80vh; right: 20px; /* 屏幕高度 80% 处 */
             z-index: 990;
+            /* 样式复刻 ai-float-btn */
             background: linear-gradient(135deg, #6366f1, #a855f7);
-            color: white; border: none; padding: 8px 16px; border-radius: 24px;
+            color: white; border: none; padding: 6px 14px; border-radius: 20px;
             font-size: 14px; font-weight: 600; cursor: pointer;
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-            display: none; /* 默认隐藏，有历史记录时才显示 */
-            transition: transform 0.2s;
+            
+            display: none; /* 默认隐藏，有历史且在阅读页时显示 */
+            transition: opacity 0.3s;
+            user-select: none;
         }
         .ai-persistent-btn:active { transform: scale(0.95); }
 
@@ -367,7 +376,6 @@
         document.addEventListener('selectionchange', handleSelectionChange); 
         readerEl.addEventListener('touchend', () => setTimeout(handleSelectionChange, 100)); 
         
-        // 尝试加载历史按钮状态
         checkHistoryBtn();
     }
 
@@ -488,7 +496,7 @@
     function showReaderUI() {
         document.getElementById('list-view').style.display = 'none'; document.getElementById('reader-view').style.display = 'block';
         document.body.style.backgroundColor = '#ffffff'; window.scrollTo(0, 0);
-        checkHistoryBtn(); // 进入阅读界面检查历史按钮
+        checkHistoryBtn(); 
     }
 
     // --- 笔记渲染器 ---
@@ -573,7 +581,7 @@
     }
 
     /* =========================================
-       交互逻辑：查词与 AI 按钮
+       交互逻辑
        ========================================= */
     function handleSelectionChange() {
         const selection = window.getSelection();
@@ -602,7 +610,6 @@
         let topPos = rect.bottom + scrollTop + 12;
         let leftPos = rect.right + scrollLeft - aiBtn.offsetWidth;
 
-        // 边界保护
         if (leftPos < 10) leftPos = 10; 
         if ((leftPos + aiBtn.offsetWidth) > (window.innerWidth - 10)) leftPos = window.innerWidth - aiBtn.offsetWidth - 10;
 
@@ -612,13 +619,11 @@
 
     function handleAiBtnClick(e) {
         e.preventDefault(); e.stopPropagation();
-        
         if (!config.aiConfigs || config.aiConfigs.length === 0 || !config.aiConfigs[0].key) {
             alert('请先在“设置”中配置 AI 接口信息');
             openSettings();
             return;
         }
-
         callAIMulti(currentSelection);
         document.getElementById('ai-float-btn').style.display = 'none';
         window.getSelection().removeAllRanges();
@@ -659,7 +664,6 @@
         return null;
     }
 
-    // --- 哈希函数用于缓存 Key ---
     function simpleHash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -670,9 +674,9 @@
         return 'ai_c_' + hash;
     }
 
-    // --- 【新增】历史回溯功能 ---
+    // --- 历史回溯功能 ---
     function checkHistoryBtn() {
-        // 如果有历史记录，且当前在阅读页，显示按钮
+        // 如果有历史记录，它始终可见，不受选中影响
         const lastHtml = localStorage.getItem('last_ai_result');
         const btn = document.getElementById('ai-persistent-btn');
         const isReader = document.getElementById('reader-view').style.display === 'block';
@@ -693,6 +697,8 @@
             document.getElementById('dict-card').classList.remove('open');
             overlay.classList.add('open');
             aiCard.classList.add('open');
+            // 打开 AI 卡片时锁定滚动
+            document.body.classList.add('no-scroll');
             
             content.innerHTML = lastHtml;
         }
@@ -700,10 +706,9 @@
 
     function saveLastResult(html) {
         localStorage.setItem('last_ai_result', html);
-        checkHistoryBtn(); // 更新按钮状态
+        checkHistoryBtn();
     }
 
-    // --- 多 AI 故障转移 + 缓存逻辑 ---
     async function callAIMulti(text) {
         const overlay = document.getElementById('dict-overlay');
         const aiCard = document.getElementById('ai-card');
@@ -712,29 +717,27 @@
         document.getElementById('dict-card').classList.remove('open');
         overlay.classList.add('open');
         aiCard.classList.add('open');
+        // 打开 AI 卡片时锁定滚动
+        document.body.classList.add('no-scroll');
+        
         content.innerHTML = '<div class="dc-loading">🧠 正在连接 AI...</div>';
 
-        // 1. 检查缓存 (有效期7天)
         const cacheKey = simpleHash(text);
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
             try {
                 const entry = JSON.parse(cached);
                 const now = Date.now();
-                // 7 days = 604800000 ms
                 if (now - entry.ts < 604800000) {
                     const html = simpleMarkdownRender(entry.reply) + `<div style="margin-top:15px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:5px;">⚡ 来自缓存结果 (7天内有效)</div>`;
                     content.innerHTML = html;
-                    saveLastResult(html); // 更新最近一次历史
+                    saveLastResult(html); 
                     return;
-                } else {
-                    localStorage.removeItem(cacheKey);
-                }
+                } else { localStorage.removeItem(cacheKey); }
             } catch(e) { localStorage.removeItem(cacheKey); }
         }
 
         const activeConfigs = config.aiConfigs.filter(c => c.key && c.host);
-
         if (activeConfigs.length === 0) {
             content.innerHTML = `<div class="dc-error">❌ 未配置有效的 AI 密钥</div>`;
             return;
@@ -747,78 +750,48 @@
             
             try {
                 const reply = await callSingleAI(cfg, text);
-                
-                // 成功获取，存入缓存
-                try {
-                    localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), reply: reply }));
-                } catch(e) { console.warn('Cache write failed', e); }
-
+                try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), reply: reply })); } catch(e) {}
                 const finalHtml = simpleMarkdownRender(reply);
                 content.innerHTML = finalHtml;
-                if (i > 0) {
-                    content.innerHTML += `<div style="margin-top:15px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:5px;">⚠️ 优先接口失败，已自动切换至 ${cfg.name}</div>`;
-                }
-                
-                saveLastResult(content.innerHTML); // 存入历史
+                if (i > 0) content.innerHTML += `<div style="margin-top:15px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:5px;">⚠️ 优先接口失败，已自动切换至 ${cfg.name}</div>`;
+                saveLastResult(content.innerHTML);
                 return; 
             } catch (err) {
                 console.error(`AI Config ${cfg.name} failed:`, err);
                 lastError = err;
             }
         }
-
         content.innerHTML = `<div class="dc-error">❌ 所有 AI 接口均尝试失败。<br><small>最后一次错误: ${lastError.message}</small></div>`;
     }
 
     async function callSingleAI(cfg, text) {
         const response = await fetch(cfg.host, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${cfg.key}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.key}` },
             body: JSON.stringify({
                 model: cfg.model,
-                messages: [
-                    { role: "system", content: config.systemPrompt },
-                    { role: "user", content: `请分析这段文本：\n"${text}"` }
-                ],
+                messages: [ { role: "system", content: config.systemPrompt }, { role: "user", content: `请分析这段文本：\n"${text}"` } ],
                 stream: false 
             })
         });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errText}`);
-        }
-
+        if (!response.ok) { const errText = await response.text(); throw new Error(`HTTP ${response.status}: ${errText}`); }
         const data = await response.json();
         return data.choices?.[0]?.message?.content || "未收到回复";
     }
 
     function simpleMarkdownRender(text) {
-        return text
-            .replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/\*\*(.*?)\*\*/g, '<span class="md-bold">$1</span>')
-            .replace(/### (.*?)(\n|$)/g, '<span class="md-h">$1</span>')
-            .replace(/## (.*?)(\n|$)/g, '<span class="md-h" style="font-size:1.1em">$1</span>')
-            .replace(/`([^`]+)`/g, '<span class="md-code">$1</span>')
-            .replace(/- (.*?)(\n|$)/g, '<span class="md-list-item">$1</span>')
-            .replace(/\n/g, '<br>');
+        return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.*?)\*\*/g, '<span class="md-bold">$1</span>').replace(/### (.*?)(\n|$)/g, '<span class="md-h">$1</span>').replace(/## (.*?)(\n|$)/g, '<span class="md-h" style="font-size:1.1em">$1</span>').replace(/`([^`]+)`/g, '<span class="md-code">$1</span>').replace(/- (.*?)(\n|$)/g, '<span class="md-list-item">$1</span>').replace(/\n/g, '<br>');
     }
 
-    // --- 查词卡片渲染 ---
     async function showDictCard(word) {
         const card = document.getElementById('dict-card');
         const overlay = document.getElementById('dict-overlay');
         const content = document.getElementById('dc-content');
-        
         document.getElementById('ai-card').classList.remove('open');
-
         overlay.classList.add('open');
         card.classList.add('open');
+        // 查词卡片（小卡片）可选是否锁定滚动，目前这里不锁定，如果需要请加 document.body.classList.add('no-scroll');
         content.innerHTML = `<div class="dc-loading">🔍 正在查询 "${word}"...</div>`;
-
         try {
             const cleanWord = word.trim();
             const apiUrl = `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(cleanWord)}`;
@@ -827,10 +800,7 @@
             const data = await response.json();
             renderCardContent(data, cleanWord);
         } catch (err) {
-            content.innerHTML = `
-                <div class="dc-error">查询失败，请检查网络<br><small>${err.message}</small></div>
-                <div class="dc-footer"><a href="https://m.youdao.com/dict?le=eng&q=${word}" target="_blank" class="dc-link">🔗 跳转有道网页版</a></div>
-            `;
+            content.innerHTML = `<div class="dc-error">查询失败，请检查网络<br><small>${err.message}</small></div><div class="dc-footer"><a href="https://m.youdao.com/dict?le=eng&q=${word}" target="_blank" class="dc-link">🔗 跳转有道网页版</a></div>`;
         }
     }
 
@@ -844,163 +814,51 @@
         let definitions = [];
         if (ec.word && ec.word[0] && ec.word[0].trs) { definitions = ec.word[0].trs.map(tr => tr.tr[0].l.i.join("，")); } 
         else if (simple.word && simple.word[0] && simple.word[0].means) { definitions = simple.word[0].means.map(m => m.mean); }
-
         let starsHtml = ''; if (starLevel > 0) { starsHtml = `<div class="dc-stars">`; for (let i = 1; i <= 5; i++) { starsHtml += `<span class="dc-star ${i <= starLevel ? 'filled' : ''}">★</span>`; } starsHtml += `</div>`; }
         let defsHtml = `<ul class="dc-def-list">`;
-        if (definitions.length > 0) {
-            definitions.forEach(def => {
-                const parts = def.split('.'); let pos = '', mean = def;
-                if(parts.length > 1 && parts[0].length < 6) { pos = parts[0] + '.'; mean = def.substring(parts[0].length + 1); }
-                defsHtml += `<li class="dc-def-item"><span class="dc-pos">${pos}</span><span class="dc-meaning">${mean}</span></li>`;
-            });
-        } else { defsHtml += `<li class="dc-def-item">暂无详细释义</li>`; }
+        if (definitions.length > 0) { definitions.forEach(def => { const parts = def.split('.'); let pos = '', mean = def; if(parts.length > 1 && parts[0].length < 6) { pos = parts[0] + '.'; mean = def.substring(parts[0].length + 1); } defsHtml += `<li class="dc-def-item"><span class="dc-pos">${pos}</span><span class="dc-meaning">${mean}</span></li>`; }); } else { defsHtml += `<li class="dc-def-item">暂无详细释义</li>`; }
         defsHtml += `</ul>`;
-
-        content.innerHTML = `
-            <div class="dc-header">
-                <div class="dc-word">${displayWord}</div>
-                <button class="dc-audio-btn" onclick="new Audio('${audioUrl}').play()">
-                    <svg class="dc-audio-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                </button>
-            </div>
-            <div class="dc-meta-row">${phonetic ? `<span class="dc-phonetic">[${phonetic}]</span>` : ''}${starsHtml}</div>
-            ${defsHtml}
-            <div class="dc-footer"><a href="https://m.youdao.com/dict?le=eng&q=${displayWord}" target="_blank" class="dc-link">查看完整释义 &rarr;</a></div>
-        `;
+        content.innerHTML = `<div class="dc-header"><div class="dc-word">${displayWord}</div><button class="dc-audio-btn" onclick="new Audio('${audioUrl}').play()"><svg class="dc-audio-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></button></div><div class="dc-meta-row">${phonetic ? `<span class="dc-phonetic">[${phonetic}]</span>` : ''}${starsHtml}</div>${defsHtml}<div class="dc-footer"><a href="https://m.youdao.com/dict?le=eng&q=${displayWord}" target="_blank" class="dc-link">查看完整释义 &rarr;</a></div>`;
     }
 
     function closeAllCards() {
         document.getElementById('dict-card').classList.remove('open');
         document.getElementById('ai-card').classList.remove('open');
         document.getElementById('dict-overlay').classList.remove('open');
+        // 关闭时解除滚动锁定
+        document.body.classList.remove('no-scroll');
     }
 
-    // --- 设置 UI 逻辑 ---
     let tempAiConfigs = [];
-
     function openSettings() { 
         document.getElementById('settings-modal').style.display = 'flex'; 
-        document.getElementById('cfg-user').value = config.user; 
-        document.getElementById('cfg-repo').value = config.repo; 
-        document.getElementById('cfg-root').value = config.rootPath; 
-        document.getElementById('cfg-token').value = config.token || ''; 
-        document.getElementById('cfg-api-prompt').value = config.systemPrompt;
-        
-        tempAiConfigs = JSON.parse(JSON.stringify(config.aiConfigs || []));
-        renderAiConfigList();
+        document.getElementById('cfg-user').value = config.user; document.getElementById('cfg-repo').value = config.repo; document.getElementById('cfg-root').value = config.rootPath; document.getElementById('cfg-token').value = config.token || ''; document.getElementById('cfg-api-prompt').value = config.systemPrompt;
+        tempAiConfigs = JSON.parse(JSON.stringify(config.aiConfigs || [])); renderAiConfigList();
     }
-
     function renderAiConfigList() {
-        const container = document.getElementById('ai-config-list');
-        container.innerHTML = '';
-        
+        const container = document.getElementById('ai-config-list'); container.innerHTML = '';
         tempAiConfigs.forEach((cfg, index) => {
-            const div = document.createElement('div');
-            div.className = `ai-config-item ${index === 0 ? 'ai-priority-1' : ''}`;
-            
-            const header = document.createElement('div');
-            header.className = 'ai-config-header';
-            
-            const tag = document.createElement('span');
-            tag.className = 'ai-tag';
-            tag.textContent = index === 0 ? '优先' : `备选 ${index}`;
-            
-            const nameSpan = document.createElement('span');
-            nameSpan.style.fontWeight = 'bold';
-            nameSpan.style.fontSize = '13px';
-            nameSpan.textContent = cfg.name || '未命名配置';
-            
-            const btnGroup = document.createElement('div');
-            btnGroup.style.marginLeft = 'auto';
-            btnGroup.style.display = 'flex';
-            btnGroup.style.gap = '5px';
-
-            if (index > 0) {
-                const upBtn = document.createElement('button');
-                upBtn.textContent = '⬆';
-                upBtn.className = 'btn btn-secondary';
-                upBtn.style.padding = '2px 6px';
-                upBtn.onclick = () => { moveAiConfig(index, -1); };
-                btnGroup.appendChild(upBtn);
-            }
-            if (index < tempAiConfigs.length - 1) {
-                const downBtn = document.createElement('button');
-                downBtn.textContent = '⬇';
-                downBtn.className = 'btn btn-secondary';
-                downBtn.style.padding = '2px 6px';
-                downBtn.onclick = () => { moveAiConfig(index, 1); };
-                btnGroup.appendChild(downBtn);
-            }
-            
-            const delBtn = document.createElement('button');
-            delBtn.textContent = '✖';
-            delBtn.className = 'btn btn-danger';
-            delBtn.onclick = () => { removeAiConfig(index); };
-            btnGroup.appendChild(delBtn);
-
-            header.appendChild(tag);
-            header.appendChild(nameSpan);
-            header.appendChild(btnGroup);
-            div.appendChild(header);
-
-            // 垂直布局表单
+            const div = document.createElement('div'); div.className = `ai-config-item ${index === 0 ? 'ai-priority-1' : ''}`;
+            const header = document.createElement('div'); header.className = 'ai-config-header';
+            const tag = document.createElement('span'); tag.className = 'ai-tag'; tag.textContent = index === 0 ? '优先' : `备选 ${index}`;
+            const nameSpan = document.createElement('span'); nameSpan.style.fontWeight = 'bold'; nameSpan.style.fontSize = '13px'; nameSpan.textContent = cfg.name || '未命名配置';
+            const btnGroup = document.createElement('div'); btnGroup.style.marginLeft = 'auto'; btnGroup.style.display = 'flex'; btnGroup.style.gap = '5px';
+            if (index > 0) { const upBtn = document.createElement('button'); upBtn.textContent = '⬆'; upBtn.className = 'btn btn-secondary'; upBtn.style.padding = '2px 6px'; upBtn.onclick = () => { moveAiConfig(index, -1); }; btnGroup.appendChild(upBtn); }
+            if (index < tempAiConfigs.length - 1) { const downBtn = document.createElement('button'); downBtn.textContent = '⬇'; downBtn.className = 'btn btn-secondary'; downBtn.style.padding = '2px 6px'; downBtn.onclick = () => { moveAiConfig(index, 1); }; btnGroup.appendChild(downBtn); }
+            const delBtn = document.createElement('button'); delBtn.textContent = '✖'; delBtn.className = 'btn btn-danger'; delBtn.onclick = () => { removeAiConfig(index); }; btnGroup.appendChild(delBtn);
+            header.appendChild(tag); header.appendChild(nameSpan); header.appendChild(btnGroup); div.appendChild(header);
             const formDiv = document.createElement('div');
-            formDiv.innerHTML = `
-                <div class="ai-form-row"><label>配置名称</label><input type="text" value="${cfg.name}" onchange="updateTempConfig(${index}, 'name', this.value)"></div>
-                <div class="ai-form-row"><label>模型 (Model)</label><input type="text" value="${cfg.model}" onchange="updateTempConfig(${index}, 'model', this.value)"></div>
-                <div class="ai-form-row"><label>API Host</label><input type="text" value="${cfg.host}" onchange="updateTempConfig(${index}, 'host', this.value)"></div>
-                <div class="ai-form-row"><label>API Key</label><input type="password" value="${cfg.key}" placeholder="sk-..." onchange="updateTempConfig(${index}, 'key', this.value)"></div>
-            `;
-            div.appendChild(formDiv);
-            container.appendChild(div);
+            formDiv.innerHTML = `<div class="ai-form-row"><label>配置名称</label><input type="text" value="${cfg.name}" onchange="updateTempConfig(${index}, 'name', this.value)"></div><div class="ai-form-row"><label>模型 (Model)</label><input type="text" value="${cfg.model}" onchange="updateTempConfig(${index}, 'model', this.value)"></div><div class="ai-form-row"><label>API Host</label><input type="text" value="${cfg.host}" onchange="updateTempConfig(${index}, 'host', this.value)"></div><div class="ai-form-row"><label>API Key</label><input type="password" value="${cfg.key}" placeholder="sk-..." onchange="updateTempConfig(${index}, 'key', this.value)"></div>`;
+            div.appendChild(formDiv); container.appendChild(div);
         });
     }
-
-    function addAiConfigUI() {
-        tempAiConfigs.push({ name: 'New AI', host: 'https://api.openai.com/v1/chat/completions', model: 'gpt-3.5-turbo', key: '' });
-        renderAiConfigList();
-    }
-
-    function removeAiConfig(index) {
-        if (confirm('确定删除此 AI 配置吗？')) {
-            tempAiConfigs.splice(index, 1);
-            renderAiConfigList();
-        }
-    }
-
-    function moveAiConfig(index, direction) {
-        const targetIndex = index + direction;
-        if (targetIndex >= 0 && targetIndex < tempAiConfigs.length) {
-            const temp = tempAiConfigs[index];
-            tempAiConfigs[index] = tempAiConfigs[targetIndex];
-            tempAiConfigs[targetIndex] = temp;
-            renderAiConfigList();
-        }
-    }
-
-    function updateTempConfig(index, field, value) {
-        tempAiConfigs[index][field] = value.trim();
-        if (field === 'name') renderAiConfigList(); 
-    }
-
+    function addAiConfigUI() { tempAiConfigs.push({ name: 'New AI', host: 'https://api.openai.com/v1/chat/completions', model: 'gpt-3.5-turbo', key: '' }); renderAiConfigList(); }
+    function removeAiConfig(index) { if (confirm('确定删除此 AI 配置吗？')) { tempAiConfigs.splice(index, 1); renderAiConfigList(); } }
+    function moveAiConfig(index, direction) { const targetIndex = index + direction; if (targetIndex >= 0 && targetIndex < tempAiConfigs.length) { const temp = tempAiConfigs[index]; tempAiConfigs[index] = tempAiConfigs[targetIndex]; tempAiConfigs[targetIndex] = temp; renderAiConfigList(); } }
+    function updateTempConfig(index, field, value) { tempAiConfigs[index][field] = value.trim(); if (field === 'name') renderAiConfigList(); }
     function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
-    
-    function saveSettings() {
-        const newConfig = { 
-            user: document.getElementById('cfg-user').value.trim(), 
-            repo: document.getElementById('cfg-repo').value.trim(), 
-            rootPath: document.getElementById('cfg-root').value.trim().replace(/\/+$/, ''), 
-            token: document.getElementById('cfg-token').value.trim(),
-            systemPrompt: document.getElementById('cfg-api-prompt').value.trim() || DEFAULTS.systemPrompt,
-            aiConfigs: tempAiConfigs 
-        };
-        localStorage.setItem('gh_nav_config_v7', JSON.stringify(newConfig)); 
-        closeSettings(); 
-        location.reload();
-    }
-    
+    function saveSettings() { const newConfig = { user: document.getElementById('cfg-user').value.trim(), repo: document.getElementById('cfg-repo').value.trim(), rootPath: document.getElementById('cfg-root').value.trim().replace(/\/+$/, ''), token: document.getElementById('cfg-token').value.trim(), systemPrompt: document.getElementById('cfg-api-prompt').value.trim() || DEFAULTS.systemPrompt, aiConfigs: tempAiConfigs }; localStorage.setItem('gh_nav_config_v7', JSON.stringify(newConfig)); closeSettings(); location.reload(); }
     document.getElementById('settings-modal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
-    
     init();
 </script>
 </body>
