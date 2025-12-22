@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Multi-TTS)</title>
+    <title>Anki Pro (Logic Fix)</title>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
 
@@ -14,6 +14,7 @@
             --accent-color: #2563eb; --border-color: #e4e6eb; 
             --color-again: #ff5252; --color-hard: #ffab40;
             --color-good: #69f0ae; --color-easy: #40c4ff;
+            --color-error: #ef4444;
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
@@ -66,6 +67,8 @@
             position: relative; width: 100%; box-sizing: border-box;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             display: flex; flex-direction: column; align-items: center;
+            min-height: 50vh; 
+            cursor: pointer;
         }
         .note-card:not(:first-child) { display: none; }
 
@@ -82,10 +85,9 @@
             font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
             display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
             background: var(--bg-body); border-radius: 16px; padding: 20px; 
-            cursor: pointer; user-select: none;
+            user-select: none;
             filter: blur(10px); opacity: 0.7; transition: all 0.3s;
         }
-        .note-meaning:hover { filter: blur(6px); opacity: 0.9; }
         .note-meaning.revealed { filter: none; cursor: text; user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
         
         /* 播放按钮 */
@@ -98,7 +100,9 @@
         }
         .tts-btn:hover { transform: scale(1.15); filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3)); }
         .tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; color: var(--accent-color); pointer-events: none; }
+        .tts-btn.error { color: var(--color-error); animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 
         /* Controls */
         .anki-controls { 
@@ -121,19 +125,15 @@
         .btn-good::after { background: var(--color-good); } 
         .btn-easy::after { background: var(--color-easy); }
 
-        /* Settings UI - Enhanced for Multi TTS */
+        /* Settings UI */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal { background: var(--bg-card); padding: 20px; border-radius: 20px; width: 95%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
-        
         .modal h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 15px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; font-weight: 600; }
         .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
         
-        /* TTS 配置列表样式 */
-        .tts-config-item { 
-            background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; position: relative;
-        }
+        .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; position: relative; }
         .tts-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
         .tts-url-input { flex: 2; }
         .tts-token-input { flex: 1; }
@@ -159,28 +159,17 @@
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
             <h2>⚙️ 设置</h2>
-            
             <div class="form-group">
                 <label>TTS 语音源配置 (多路自动切换)</label>
-                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">
-                    系统将按顺序尝试播放。支持 <code>{text}</code> 占位符。
-                </div>
-                
-                <div id="tts-config-list">
-                    </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">系统将按顺序尝试播放。支持 <code>{text}</code> 占位符。</div>
+                <div id="tts-config-list"></div>
                 <button class="btn btn-mini btn-add" onclick="addTTSConfig()">+ 添加语音源</button>
             </div>
-
             <hr style="border:0; border-top:1px solid var(--border-color); margin: 15px 0;">
-
             <div class="form-group"><label>GitHub User</label> <input type="text" id="gh-user"></div>
             <div class="form-group"><label>GitHub Repo</label> <input type="text" id="gh-repo"></div>
             <div class="form-group"><label>Access Token</label> <input type="password" id="gh-token" placeholder="ghp_..."></div>
-
-            <button class="btn btn-sync" id="manual-sync-btn" onclick="syncProgressToCloud(this)">
-                <span>☁️</span> 同步进度
-            </button>
-            
+             <button class="btn btn-sync" id="manual-sync-btn" onclick="syncProgressToCloud(this)"><span>☁️</span> 同步进度</button>
             <div class="modal-actions">
                 <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
                 <button class="btn btn-save" onclick="saveSettings()">保存</button>
@@ -190,44 +179,40 @@
 
     <div class="container">
         <header>
-            <div class="header-actions">
-                <button class="icon-btn" onclick="openSettings()" title="设置">⚙️</button>
-            </div>
+            <div class="header-actions"><button class="icon-btn" onclick="openSettings()" title="设置">⚙️</button></div>
             <h1>Anki Pro</h1>
             <div class="subtitle" id="deck-stats">正在准备数据...</div>
             <div id="sync-status" class="sync-badge"></div>
         </header>
 
         <div id="notes-container">
-            <div class="status-page">
-                <div class="emoji-lg">⏳</div>
-                <div>正在初始化...</div>
-            </div>
+            <div class="status-page"><div class="emoji-lg">⏳</div><div>正在初始化...</div></div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 1. 用户配置 (支持多路 TTS)
+        // Global Audio
         // ============================================
-        
-        // 默认配置
-        const DEFAULT_TTS_LIST = [
-            {
-                url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100',
-                token: ''
-            },
-            {
-                url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}',
-                token: ''
+        let globalAudio = null; 
+        function stopCurrentAudio() {
+            if (globalAudio) {
+                globalAudio.pause(); globalAudio.onended = null; globalAudio.onerror = null; globalAudio = null;
             }
+        }
+
+        // ============================================
+        // Config
+        // ============================================
+        const DEFAULT_TTS_LIST = [
+            { url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
+            { url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}', token: '' }
         ];
 
         let USER_CONFIG = {
             user: localStorage.getItem('gh_user') || 'moodHappy',
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
             token: localStorage.getItem('gh_token') || '',
-            // 如果本地没有 tts_list，使用默认的两个
             ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST))
         };
 
@@ -235,18 +220,12 @@
         const LOCAL_DB_KEY = 'anki_db_v2'; 
 
         // ============================================
-        // 2. Anki 算法与数据管理
+        // Scheduler
         // ============================================
         class AnkiScheduler {
-            constructor() {
-                this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}');
-            }
+            constructor() { this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); }
             save() { localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); }
-            loadExternalData(cloudData) {
-                if (!cloudData) return;
-                this.db = cloudData;
-                this.save();
-            }
+            loadExternalData(cloudData) { if (!cloudData) return; this.db = cloudData; this.save(); }
             getCardState(id) {
                 if (!this.db[id]) this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0 };
                 return this.db[id];
@@ -263,8 +242,7 @@
             answerCard(id, rating) {
                 const card = this.getCardState(id);
                 const result = this.calculate(card, rating);
-                this.db[id] = result.card;
-                this.save();
+                this.db[id] = result.card; this.save();
                 return result;
             }
             calculate(originalCard, rating) {
@@ -291,25 +269,20 @@
             getDueCards(items) { return items.filter(item => this.getCardState(item.id).dueDate <= Date.now()); }
             getStats(items) {
                 let total=items.length, newC=0, learn=0, rev=0;
-                items.forEach(i => {
-                    const s = this.getCardState(i.id).state;
-                    if(s==='new') newC++; else if(s==='learning') learn++; else rev++;
-                });
+                items.forEach(i => { const s = this.getCardState(i.id).state; if(s==='new') newC++; else if(s==='learning') learn++; else rev++; });
                 return { total, newC, learn, rev };
             }
         }
-        
         const scheduler = new AnkiScheduler();
 
         // ============================================
-        // 3. Sync Logic
+        // Sync
         // ============================================
         const uiSync = document.getElementById('sync-status');
         function updateSyncStatus(msg, type) {
             uiSync.style.display = 'inline-flex'; uiSync.className = `sync-badge ${type}`; uiSync.innerHTML = msg;
             if(type !== 'loading') setTimeout(() => { uiSync.style.display = 'none'; }, 3000);
         }
-
         async function fetchCloudProgress() {
             if(!USER_CONFIG.token) return;
             updateSyncStatus('<span class="spin">🔄</span> 同步云端...', 'loading');
@@ -325,19 +298,16 @@
                 return data.sha;
             } catch(e) { console.warn('Sync failed:', e); updateSyncStatus('❌ 失败', 'error'); }
         }
-
         async function syncProgressToCloud(btnElement) {
             if(!USER_CONFIG.token) { alert('请先配置 Token'); return; }
             const originalText = btnElement ? btnElement.innerHTML : '';
             if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; }
             else { updateSyncStatus('<span class="spin">☁️</span> 上传...', 'loading'); }
-
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
                 let sha = null;
                 const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 if(getRes.ok) { sha = (await getRes.json()).sha; }
-
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
                 const putRes = await fetch(url, {
@@ -345,11 +315,9 @@
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: `Update Anki Progress`, content: contentBase64, sha: sha })
                 });
-
                 if(!putRes.ok) throw new Error('Upload failed');
                 if(btnElement) {
-                    btnElement.innerHTML = `✅ 成功`;
-                    btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
+                    btnElement.innerHTML = `✅ 成功`; btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
                     setTimeout(() => { btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; }, 2000);
                 } else { updateSyncStatus('✅ 成功', 'success'); }
             } catch(e) {
@@ -359,7 +327,7 @@
         }
 
         // ============================================
-        // 4. App Logic
+        // App Logic
         // ============================================
         let cardQueue = [];
         let GLOBAL_CONFIG = null;
@@ -371,7 +339,6 @@
                 const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master`);
                 if(res.ok) sha = (await res.json()).sha;
             } catch(e) {}
-
             const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
             try {
                 const scriptContent = await fetch(configUrl).then(r => r.ok ? r.text() : Promise.reject(r.status));
@@ -384,10 +351,8 @@
                     else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
                     else if (window.NotesConfig) GLOBAL_CONFIG = window.NotesConfig;
                     else if (window.NewsConfig) GLOBAL_CONFIG = window.NewsConfig;
-                    
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
-
                     await syncPromise;
                     loadAllCards(GLOBAL_CONFIG);
                     URL.revokeObjectURL(url);
@@ -395,6 +360,13 @@
                 script.onerror = () => showError(`配置脚本加载错误`);
                 document.head.appendChild(script);
             } catch (err) { showError(`无法加载配置: ${err.message}`); }
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
         }
 
         async function loadAllCards(config) {
@@ -412,11 +384,30 @@
             results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
             
             const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
-            cardQueue = scheduler.getDueCards(uniqueItems);
-            for (let i = cardQueue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [cardQueue[i], cardQueue[j]] = [cardQueue[j], cardQueue[i]];
-            }
+            
+            // 核心修改：优先级分类逻辑
+            const learning = [];
+            const review = [];
+            const newCards = [];
+            
+            uniqueItems.forEach(item => {
+                const s = scheduler.getCardState(item.id);
+                // 只有到期的卡片才加入列表
+                if (s.dueDate > Date.now()) return; 
+                
+                if (s.state === 'learning') learning.push(item);
+                else if (s.state === 'review') review.push(item);
+                else newCards.push(item);
+            });
+
+            // 组内随机，但组间有序
+            shuffle(learning);
+            shuffle(review);
+            shuffle(newCards);
+
+            // 最终队列：学习中 > 复习 > 新卡
+            cardQueue = [...learning, ...review, ...newCards];
+            
             updateStats(uniqueItems);
             renderCard();
         }
@@ -441,10 +432,10 @@
             const sourceUrl = item.url || '#';
 
             container.innerHTML = `
-                <div class="note-card" id="current-card">
+                <div class="note-card" id="current-card" onclick="handleCardClick(event)">
                     <div class="note-word">${item.text}</div>
                     <a href="${sourceUrl}" target="_blank" class="note-source">${sourceTitle}</a>
-                    <div class="note-meaning" onclick="revealAnswer(this)">${item.note}</div>
+                    <div class="note-meaning">${item.note}</div>
                     
                     <div class="tts-container">
                         <button class="tts-btn" onclick="playTTS(this)">
@@ -472,92 +463,79 @@
 
         function revealAnswer(el) { el.classList.add('revealed'); }
 
+        function handleCardClick(e) {
+            // 防误触：如果点击的是按钮、链接或输入框，不触发翻面
+            if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+            const meaning = document.querySelector('.note-meaning');
+            if (meaning && !meaning.classList.contains('revealed')) { revealAnswer(meaning); }
+        }
+
         function handleRate(rating) {
+            stopCurrentAudio(); 
             const item = cardQueue[0];
             scheduler.answerCard(item.id, rating);
             const cardEl = document.getElementById('current-card');
             cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0';
             setTimeout(() => {
                 cardQueue.shift();
+                // 只有“重来”的卡片才放回当前队列末尾继续背
                 if (rating === 1) cardQueue.push(item);
                 renderCard();
             }, 250);
         }
 
         // ============================================
-        // 5. 增强版 TTS 逻辑 (Failover)
+        // TTS Logic
         // ============================================
-        
-        // 构造实际请求 URL
         function constructTTSUrl(configObj, text) {
             let url = configObj.url.replace('{text}', encodeURIComponent(text));
-            // 如果 URL 里没有包含 token 参数，且配置里填了 token，则追加
             if (configObj.token && !url.includes('token=')) {
                 url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(configObj.token);
             }
             return url;
         }
 
-        // 递归尝试播放
         function playTTSChain(text, btn, index) {
             if (index >= USER_CONFIG.ttsList.length) {
                 console.error("All TTS sources failed.");
                 btn.classList.remove('playing');
-                alert("所有 TTS 线路均失败，请检查设置或网络。");
+                btn.classList.add('error'); setTimeout(() => btn.classList.remove('error'), 2000);
                 return;
             }
-
             const currentConfig = USER_CONFIG.ttsList[index];
             const url = constructTTSUrl(currentConfig, text);
             const audio = new Audio(url);
-
-            // 成功加载并播放
-            audio.onplay = () => { console.log(`Playing source ${index}`); };
-            
-            // 播放结束
-            audio.onended = () => btn.classList.remove('playing');
-
-            // 错误处理 (切换下一条)
-            const handleError = (e) => {
-                console.warn(`Source ${index} failed, trying next...`, e);
-                audio.onended = null; // 清理
-                playTTSChain(text, btn, index + 1);
-            };
-
+            globalAudio = audio;
+            audio.onended = () => { btn.classList.remove('playing'); globalAudio = null; };
+            const handleError = (e) => { console.warn(`Source ${index} failed, trying next...`); playTTSChain(text, btn, index + 1); };
             audio.onerror = handleError;
-            
             audio.play().catch(handleError);
         }
 
         function playTTS(btn) {
-            if(btn.classList.contains('playing')) return;
+            stopCurrentAudio();
+            btn.classList.remove('error'); btn.classList.add('playing');
             const item = cardQueue[0];
             const rawText = item.text || '';
-            
-            btn.classList.add('playing');
-            // 从第 0 个配置开始尝试
             playTTSChain(rawText, btn, 0);
         }
 
-        // 单独测试某一条线路 (设置页面的闪电按钮)
         function testSingleTTS(index, btn) {
-            const config = getTTSConfigFromUI(index); // 获取当前输入框的值
+            stopCurrentAudio(); 
+            const config = getTTSConfigFromUI(index); 
             if (!config.url) return;
-            
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳';
-            
-            const url = constructTTSUrl(config, "Hello World");
+            const url = constructTTSUrl(config, "Connection successful");
             const audio = new Audio(url);
-            
-            audio.onended = () => { btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = originalText, 2000); };
-            audio.onerror = () => { btn.innerHTML = '❌'; setTimeout(() => btn.innerHTML = originalText, 2000); };
-            
-            audio.play().catch(() => { btn.innerHTML = '❌'; setTimeout(() => btn.innerHTML = originalText, 2000); });
+            globalAudio = audio;
+            audio.onended = () => { btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = originalText, 2000); globalAudio = null; };
+            audio.onerror = () => { btn.innerHTML = '❌'; setTimeout(() => btn.innerHTML = originalText, 2000); globalAudio = null; };
+            audio.play().catch(() => { btn.innerHTML = '❌'; setTimeout(() => btn.innerHTML = originalText, 2000); globalAudio = null; });
         }
 
         // ============================================
-        // 6. UI Helpers & Settings
+        // UI Helpers
         // ============================================
         function updateStats(allItems) {
             const s = scheduler.getStats(allItems);
@@ -565,24 +543,20 @@
         }
         function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
         
-        // --- TTS 配置 UI 逻辑 ---
         function renderTTSConfigList() {
             const container = document.getElementById('tts-config-list');
             container.innerHTML = '';
-            
-            // 使用临时保存的或当前的
             const list = USER_CONFIG.ttsList;
-            
             list.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'tts-config-item';
                 div.innerHTML = `
                     <div class="tts-row">
-                        <input type="text" class="tts-url-input" placeholder="https://api...?text={text}" value="${item.url}" data-idx="${index}">
-                        <input type="text" class="tts-token-input" placeholder="Token (可选)" value="${item.token || ''}" data-idx="${index}">
+                        <input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}">
+                        <input type="text" class="tts-token-input" placeholder="Token" value="${item.token || ''}" data-idx="${index}">
                     </div>
                     <div class="tts-actions">
-                        <button class="btn-mini btn-test" onclick="testSingleTTS(${index}, this)" title="测试连接">⚡ 测试</button>
+                        <button class="btn-mini btn-test" onclick="testSingleTTS(${index}, this)" title="测试">⚡</button>
                         <button class="btn-mini btn-delete" onclick="removeTTSConfig(${index})" title="删除">🗑️</button>
                     </div>
                 `;
@@ -590,61 +564,36 @@
             });
         }
         
-        // 从 UI 获取当前某个索引的实时值
         function getTTSConfigFromUI(index) {
             const urlInp = document.querySelector(`.tts-url-input[data-idx="${index}"]`);
             const tokenInp = document.querySelector(`.tts-token-input[data-idx="${index}"]`);
-            return {
-                url: urlInp ? urlInp.value.trim() : '',
-                token: tokenInp ? tokenInp.value.trim() : ''
-            };
+            return { url: urlInp ? urlInp.value.trim() : '', token: tokenInp ? tokenInp.value.trim() : '' };
         }
 
-        // 保存当前 UI 上的所有 TTS 配置到 USER_CONFIG
         function scrapeTTSConfigs() {
             const items = document.querySelectorAll('.tts-config-item');
             const newList = [];
-            items.forEach((item, index) => {
-                newList.push(getTTSConfigFromUI(index));
-            });
-            return newList.filter(i => i.url.length > 0); // 过滤空行
+            items.forEach((item, index) => { newList.push(getTTSConfigFromUI(index)); });
+            return newList.filter(i => i.url.length > 0);
         }
 
-        function addTTSConfig() {
-            // 先保存当前输入
-            USER_CONFIG.ttsList = scrapeTTSConfigs();
-            // 添加空行
-            USER_CONFIG.ttsList.push({ url: '', token: '' });
-            renderTTSConfigList();
-        }
-
-        function removeTTSConfig(index) {
-            USER_CONFIG.ttsList = scrapeTTSConfigs();
-            USER_CONFIG.ttsList.splice(index, 1);
-            renderTTSConfigList();
-        }
+        function addTTSConfig() { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.push({ url: '', token: '' }); renderTTSConfigList(); }
+        function removeTTSConfig(index) { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.splice(index, 1); renderTTSConfigList(); }
 
         function openSettings() {
             document.getElementById('gh-user').value = USER_CONFIG.user;
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-token').value = USER_CONFIG.token;
-            
-            // 渲染 TTS 列表
             renderTTSConfigList();
-            
             document.getElementById('settingsModal').style.display = 'flex';
         }
-
         function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
         
         function saveSettings() {
             USER_CONFIG.user = document.getElementById('gh-user').value.trim();
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
-            
-            // 保存 TTS 列表
             USER_CONFIG.ttsList = scrapeTTSConfigs();
-            // 如果全删了，恢复默认，防止不可用
             if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
 
             localStorage.setItem('gh_user', USER_CONFIG.user);
