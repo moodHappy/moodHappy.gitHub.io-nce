@@ -3,19 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro</title>
-    
-    
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
-
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
-
-
-
-
-
-
-
+    <title>Anki Pro (No Flash)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
 
     <style>
         :root { 
@@ -35,63 +25,102 @@
             } 
         }
 
-        /* 全局去蓝框 & 基础设置 */
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        /* === 核心修复：全局去除移动端点击高亮蓝框 === */
+        * { -webkit-tap-highlight-color: transparent; }
+
+        /* 全屏布局 */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); display: flex; flex-direction: column; }
         
-        /* 进度条 */
-        #progress-container { position: fixed; top: 0; left: 0; width: 100%; height: 3px; background: transparent; z-index: 1000; pointer-events: none; }
-        #progress-bar { width: 0%; height: 100%; background-color: var(--accent-color); transition: width 0.3s ease, opacity 0.3s ease; opacity: 0; }
-
-        /* Toast 通知 (只用于同步成功等关键系统消息，TTS错误不显示) */
-        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: rgba(0,0,0,0.8); color: white; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; text-align: center; animation: fadeIn 0.3s ease; backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .toast.success { background: rgba(16, 185, 129, 0.9); }
-        .toast.error { background: rgba(239, 68, 68, 0.9); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .container { width: 100%; max-width: 600px; margin: 0 auto; position: relative; padding: 20px; flex: 1; display: flex; flex-direction: column; }
+        .container { 
+            width: 100%; max-width: 600px; margin: 0 auto; 
+            position: relative; box-sizing: border-box; padding: 20px;
+            flex: 1; display: flex; flex-direction: column; 
+        }
 
         /* Header */
-        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; padding-top: 20px; position: relative; }
+        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; position: relative; padding-top: 20px; }
         h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; }
         .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;}
         .header-actions { position: absolute; right: 0; top: 20px; display: flex; gap: 10px; }
-        .icon-btn { background: var(--bg-card); border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; }
+        .icon-btn { 
+            background: var(--bg-card); border: 1px solid var(--border-color); 
+            width: 40px; height: 40px; border-radius: 50%; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+            transition: all 0.2s;
+        }
         .icon-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
-        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; margin-top: 10px; font-weight: 500;}
+        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; margin-top: 10px; }
         .sync-badge.success { background: #dcfce7; color: #166534; }
         .sync-badge.error { background: #fee2e2; color: #991b1b; }
         .spin { animation: spin 1s infinite linear; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Card Area */
-        #notes-container { perspective: 1000px; position: relative; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 15vh; }
-        .note-card { background: var(--bg-card); border-radius: 24px; padding: 30px 24px; border: 1px solid var(--border-color); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08); position: relative; width: 100%; box-sizing: border-box; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; align-items: center; min-height: 50vh; cursor: pointer; user-select: none; }
+        /* 卡片区域 */
+        #notes-container { 
+            perspective: 1000px; position: relative; 
+            flex: 1; display: flex; flex-direction: column; justify-content: flex-end; 
+            padding-bottom: 15vh;
+        }
+
+        .note-card { 
+            background: var(--bg-card); border-radius: 24px; padding: 30px 24px; 
+            border: 1px solid var(--border-color); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08);
+            position: relative; width: 100%; box-sizing: border-box;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 50vh; 
+            cursor: pointer;
+            /* 防止选中文本导致的高亮 */
+            user-select: none;
+            -webkit-user-select: none;
+        }
         .note-card:not(:first-child) { display: none; }
 
         .note-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
-        .note-source { font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; margin-bottom: 25px; padding: 4px 10px; border-radius: 12px; background: rgba(0,0,0,0.03); max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .note-meaning { font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; white-space: pre-wrap; background: var(--bg-body); border-radius: 16px; padding: 20px; filter: blur(10px); opacity: 0.7; transition: all 0.3s; }
-        .note-meaning.revealed { filter: none; cursor: text; user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
+        .note-source { 
+            font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; 
+            margin-bottom: 25px; padding: 4px 10px; border-radius: 12px;
+            background: rgba(0,0,0,0.03); max-width: 90%;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .note-source:hover { background: rgba(0,0,0,0.06); color: var(--accent-color); }
+
+        .note-meaning { 
+            font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
+            display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
+            background: var(--bg-body); border-radius: 16px; padding: 20px; 
+            filter: blur(10px); opacity: 0.7; transition: all 0.3s;
+        }
+        .note-meaning.revealed { filter: none; cursor: text; user-select: text; -webkit-user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
         
-        /* TTS Button */
+        /* 播放按钮 */
         .tts-container { margin-top: auto; margin-bottom: 20px; z-index: 10; height: 60px; display: flex; align-items: center; justify-content: center; }
-        .tts-btn { background: transparent; border: none; width: 64px; height: 64px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        .tts-btn { 
+            background: transparent; border: none; width: 64px; height: 64px; 
+            color: var(--accent-color); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; 
+            transition: all 0.3s; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
         .tts-btn:hover { transform: scale(1.15); filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3)); }
         .tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; color: var(--accent-color); pointer-events: none; }
-        /* 只有按钮变红+抖动 */
         .tts-btn.error { color: var(--color-error); animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        
         @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 
         /* Controls */
-        .anki-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-top: 10px; opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s; }
+        .anki-controls { 
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-top: 10px;
+            opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s;
+        }
         .revealed ~ .anki-controls { opacity: 1; pointer-events: auto; transform: translateY(0); }
-        .anki-btn { padding: 12px 5px; border-radius: 12px; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-body); color: var(--text-secondary); transition: transform 0.1s, background 0.2s; position: relative; overflow: hidden; }
+        .anki-btn {
+            padding: 12px 5px; border-radius: 12px; border: none; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--bg-body); color: var(--text-secondary); transition: transform 0.1s, background 0.2s;
+            position: relative; overflow: hidden;
+        }
         .anki-btn:active { transform: scale(0.95); }
         .btn-label { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
         .btn-time { font-size: 0.75rem; font-weight: 400; opacity: 0.8; }
@@ -108,6 +137,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; font-weight: 600; }
         .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
+        
         .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; position: relative; }
         .tts-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
         .tts-url-input { flex: 2; }
@@ -117,6 +147,7 @@
         .btn-test:hover { background: #dcfce7; color: #166534; border-color: #86efac; }
         .btn-delete:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
         .btn-add { width: 100%; border-style: dashed; margin-bottom: 15px; }
+        
         .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 1rem; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
         .btn-save { background: var(--accent-color); color: white; }
@@ -130,16 +161,12 @@
 </head>
 <body>
 
-    <div id="progress-container"><div id="progress-bar"></div></div>
-    
-    <div id="toast-container"></div>
-
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
             <h2>⚙️ 设置</h2>
             <div class="form-group">
-                <label>TTS 语音源配置 (自动故障切换)</label>
-                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">支持 <code>{text}</code> 占位符。</div>
+                <label>TTS 语音源配置 (多路自动切换)</label>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">系统将按顺序尝试播放。支持 <code>{text}</code> 占位符。</div>
                 <div id="tts-config-list"></div>
                 <button class="btn btn-mini btn-add" onclick="addTTSConfig()">+ 添加语音源</button>
             </div>
@@ -147,17 +174,17 @@
             <div class="form-group"><label>GitHub User</label> <input type="text" id="gh-user"></div>
             <div class="form-group"><label>GitHub Repo</label> <input type="text" id="gh-repo"></div>
             <div class="form-group"><label>Access Token</label> <input type="password" id="gh-token" placeholder="ghp_..."></div>
-             <button class="btn btn-sync" id="manual-sync-btn" onclick="syncManager.sync()"><span>☁️</span> 立即同步</button>
+             <button class="btn btn-sync" id="manual-sync-btn" onclick="syncProgressToCloud(this)"><span>☁️</span> 同步进度</button>
             <div class="modal-actions">
-                <button class="btn btn-cancel" onclick="ui.closeSettings()">取消</button>
-                <button class="btn btn-save" onclick="ui.saveSettings()">保存</button>
+                <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="btn btn-save" onclick="saveSettings()">保存</button>
             </div>
         </div>
     </div>
 
     <div class="container">
         <header>
-            <div class="header-actions"><button class="icon-btn" onclick="ui.openSettings()" title="设置">⚙️</button></div>
+            <div class="header-actions"><button class="icon-btn" onclick="openSettings()" title="设置">⚙️</button></div>
             <h1>Anki Pro</h1>
             <div class="subtitle" id="deck-stats">正在准备数据...</div>
             <div id="sync-status" class="sync-badge"></div>
@@ -170,439 +197,424 @@
 
     <script>
         // ============================================
-        // 1. Core Utils (UI Feedback)
+        // Global Audio
         // ============================================
-        const ui = {
-            toast(msg, type = 'info') {
-                const box = document.createElement('div');
-                box.className = `toast ${type}`; box.innerText = msg;
-                document.getElementById('toast-container').appendChild(box);
-                setTimeout(() => { box.style.opacity = 0; setTimeout(() => box.remove(), 300) }, 3000);
-            },
-            progress(percent, visible = true) {
-                const bar = document.getElementById('progress-bar');
-                bar.style.opacity = visible ? 1 : 0;
-                bar.style.width = percent + '%';
-                if (!visible) setTimeout(() => { bar.style.width = '0%'; }, 300);
-            },
-            updateStatus(msg, type) {
-                const badge = document.getElementById('sync-status');
-                badge.style.display = 'inline-flex'; badge.className = `sync-badge ${type}`; badge.innerHTML = msg;
-                if(type !== 'loading') setTimeout(() => { badge.style.display = 'none'; }, 3000);
-            },
-            showError(msg) {
-                document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`;
-            },
-            openSettings() { 
-                document.getElementById('gh-user').value = USER_CONFIG.user;
-                document.getElementById('gh-repo').value = USER_CONFIG.repo;
-                document.getElementById('gh-token').value = USER_CONFIG.token;
-                this.renderTTSConfig();
-                document.getElementById('settingsModal').style.display = 'flex'; 
-            },
-            closeSettings() { document.getElementById('settingsModal').style.display = 'none'; },
-            saveSettings() {
-                USER_CONFIG.user = document.getElementById('gh-user').value.trim();
-                USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
-                USER_CONFIG.token = document.getElementById('gh-token').value.trim();
-                USER_CONFIG.ttsList = this.scrapeTTSConfigs();
-                if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
-                localStorage.setItem('gh_user', USER_CONFIG.user);
-                localStorage.setItem('gh_repo', USER_CONFIG.repo);
-                localStorage.setItem('gh_token', USER_CONFIG.token);
-                localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
-                this.closeSettings();
-                location.reload();
-            },
-            renderTTSConfig() {
-                const container = document.getElementById('tts-config-list'); container.innerHTML = '';
-                USER_CONFIG.ttsList.forEach((item, index) => {
-                    const div = document.createElement('div'); div.className = 'tts-config-item';
-                    div.innerHTML = `
-                        <div class="tts-row"><input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}"><input type="text" class="tts-token-input" placeholder="Token" value="${item.token||''}" data-idx="${index}"></div>
-                        <div class="tts-actions"><button class="btn-mini btn-test" onclick="audioManager.testTTS(${index}, this)">⚡</button><button class="btn-mini btn-delete" onclick="ui.removeTTS(${index})">🗑️</button></div>
-                    `;
-                    container.appendChild(div);
-                });
-            },
-            scrapeTTSConfigs() {
-                const res = [];
-                document.querySelectorAll('.tts-config-item').forEach((_, i) => {
-                    const url = document.querySelector(`.tts-url-input[data-idx="${i}"]`).value.trim();
-                    const token = document.querySelector(`.tts-token-input[data-idx="${i}"]`).value.trim();
-                    if(url) res.push({url, token});
-                });
-                return res;
-            },
-            addTTS() { USER_CONFIG.ttsList.push({url:'', token:''}); this.renderTTSConfig(); },
-            removeTTS(i) { USER_CONFIG.ttsList = this.scrapeTTSConfigs(); USER_CONFIG.ttsList.splice(i, 1); this.renderTTSConfig(); }
-        };
-        window.addTTSConfig = () => ui.addTTS();
-        window.removeTTSConfig = (i) => ui.removeTTS(i);
+        let globalAudio = null; 
+        function stopCurrentAudio() {
+            if (globalAudio) {
+                globalAudio.pause(); globalAudio.onended = null; globalAudio.onerror = null; globalAudio = null;
+            }
+        }
 
         // ============================================
-        // 2. Data & Config
+        // Config
         // ============================================
         const DEFAULT_TTS_LIST = [
             { url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
             { url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}', token: '' }
         ];
+
         let USER_CONFIG = {
             user: localStorage.getItem('gh_user') || 'moodHappy',
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
             token: localStorage.getItem('gh_token') || '',
             ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST))
         };
-        const SYNC_FILE_PATH = 'Notes/anki_data.json';
-        const LOCAL_DB_KEY = 'anki_db_v3'; 
+
+        const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
+        const LOCAL_DB_KEY = 'anki_db_v2'; 
 
         // ============================================
-        // 3. Audio Manager (Silent Fail)
-        // ============================================
-        const audioManager = {
-            current: null,
-            stop() { if(this.current) { this.current.pause(); this.current.onended=null; this.current.onerror=null; this.current=null; } },
-            
-            buildUrl(config, text) {
-                let url = config.url.replace('{text}', encodeURIComponent(text));
-                if(config.token && !url.includes('token=')) url += (url.includes('?')?'&':'?') + 'token=' + encodeURIComponent(config.token);
-                return url;
-            },
-
-            play(text, btnElement) {
-                this.stop();
-                btnElement.classList.remove('error');
-                btnElement.classList.add('playing');
-                this._playChain(text, btnElement, 0);
-            },
-
-            _playChain(text, btn, index) {
-                // 失败终点：只有视觉反馈，绝不弹窗
-                if(index >= USER_CONFIG.ttsList.length) {
-                    btn.classList.remove('playing'); 
-                    btn.classList.add('error'); // 变红 + 抖动
-                    setTimeout(()=>btn.classList.remove('error'), 1000); // 1秒后复原
-                    return; 
-                }
-                const url = this.buildUrl(USER_CONFIG.ttsList[index], text);
-                const audio = new Audio(url);
-                this.current = audio;
-                
-                audio.onended = () => { btn.classList.remove('playing'); this.current = null; };
-                audio.onerror = () => { console.warn(`Source ${index} failed`); this._playChain(text, btn, index+1); };
-                audio.play().catch(() => { this._playChain(text, btn, index+1); });
-            },
-
-            testTTS(index, btn) {
-                this.stop();
-                const config = ui.scrapeTTSConfigs()[index];
-                if(!config.url) return;
-                const originalText = btn.innerHTML; btn.innerHTML = '⏳';
-                const url = this.buildUrl(config, "Connection OK");
-                const audio = new Audio(url);
-                this.current = audio;
-                
-                const reset = (ok) => { 
-                    btn.innerHTML = ok ? '✅' : '❌'; 
-                    setTimeout(()=>btn.innerHTML=originalText, 2000); 
-                    this.current = null; 
-                };
-                audio.onended = () => reset(true);
-                audio.onerror = () => reset(false);
-                audio.play().catch(() => reset(false));
-            }
-        };
-
-        // ============================================
-        // 4. Anki Scheduler (With CRDT)
+        // Scheduler
         // ============================================
         class AnkiScheduler {
-            constructor() { 
-                this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); 
-            }
+            constructor() { this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); }
             save() { localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); }
-
-            mergeData(cloudData) {
-                if(!cloudData) return;
-                let changes = 0;
-                for (const id in cloudData) {
-                    const remoteItem = cloudData[id];
-                    const localItem = this.db[id];
-                    // Timestamp Win Strategy
-                    if (!localItem || (remoteItem.updatedAt || 0) > (localItem.updatedAt || 0)) {
-                        this.db[id] = remoteItem;
-                        changes++;
-                    }
-                }
-                if(changes > 0) this.save();
-                console.log(`Merged ${changes} items.`);
-            }
-
-            getCard(id) {
-                if(!this.db[id]) this.db[id] = { state: 'new', step: 0, interval: 0, ease: 2.5, due: 0, updatedAt: 0 };
+            loadExternalData(cloudData) { if (!cloudData) return; this.db = cloudData; this.save(); }
+            getCardState(id) {
+                if (!this.db[id]) this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0 };
                 return this.db[id];
             }
-
-            getIntervals(id) {
-                return { again: '1m', hard: '6m', good: '10m', easy: '4d' }; 
+            previewNextDue(id) {
+                const card = this.getCardState(id);
+                return {
+                    again: this.calculate(card, 1).timeText,
+                    hard:  this.calculate(card, 2).timeText,
+                    good:  this.calculate(card, 3).timeText,
+                    easy:  this.calculate(card, 4).timeText
+                };
             }
-
-            answer(id, rating) {
-                const c = this.getCard(id);
-                const now = Date.now();
-                if(rating === 1) { // Again
-                    c.state='learning'; c.step=0; c.due = now + 60000; c.ease = Math.max(1.3, c.ease-0.2);
-                } else if(c.state === 'new' || c.state === 'learning') {
-                    if(rating === 2) { c.due = now + 6*60000; }
-                    else if(rating === 3) { 
-                        if(c.step===0) { c.step=1; c.due=now+10*60000; }
-                        else { c.state='review'; c.interval=1; c.due=now+86400000; }
-                    }
-                    else if(rating === 4) { c.state='review'; c.interval=4; c.due=now+4*86400000; }
+            answerCard(id, rating) {
+                const card = this.getCardState(id);
+                const result = this.calculate(card, rating);
+                this.db[id] = result.card; this.save();
+                return result;
+            }
+            calculate(originalCard, rating) {
+                let card = JSON.parse(JSON.stringify(originalCard));
+                let nextIntervalMin = 0;
+                if (rating === 1) { // Again
+                    card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
+                    card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+                } else if (card.state === 'new' || card.state === 'learning') {
+                    if (rating === 2) { nextIntervalMin = 6; } // Hard
+                    else if (rating === 3) { if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; } } // Good
+                    else if (rating === 4) { card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; } // Easy
                 } else { // Review
-                    if(rating === 2) { c.interval *= 1.2; c.ease-=0.15; }
-                    else if(rating === 3) { c.interval *= c.ease; }
-                    else if(rating === 4) { c.interval *= c.ease * 1.3; c.ease+=0.15; }
-                    c.due = now + c.interval * 86400000;
+                    if (rating === 2) { card.interval = Math.max(1, Math.floor(card.interval * 1.2)); card.easeFactor -= 0.15; }
+                    else if (rating === 3) { card.interval = Math.floor(card.interval * card.easeFactor); }
+                    else if (rating === 4) { card.interval = Math.floor(card.interval * card.easeFactor * 1.3); card.easeFactor += 0.15; }
+                    nextIntervalMin = card.interval * 1440;
+                    if(card.easeFactor < 1.3) card.easeFactor = 1.3;
                 }
-                
-                c.updatedAt = Date.now(); 
-                this.save();
+                card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
+                let timeText = nextIntervalMin < 60 ? nextIntervalMin + 'm' : (nextIntervalMin < 1440 ? Math.round(nextIntervalMin/60) + 'h' : Math.round(nextIntervalMin/1440) + 'd');
+                return { card, timeText };
             }
         }
         const scheduler = new AnkiScheduler();
 
         // ============================================
-        // 5. Sync Manager
+        // Sync
         // ============================================
-        const syncManager = {
-            async sync() {
-                if(!USER_CONFIG.token) { ui.toast('请先配置 Token', 'error'); return; }
-                ui.progress(10, true);
-                ui.updateStatus('<span class="spin">🔄</span> 同步中...', 'loading');
-                
-                const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
-                
-                try {
-                    // 1. Pull
-                    ui.progress(30);
-                    let remoteSha = null;
-                    let cloudDB = {};
-                    
-                    const res = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
-                    if(res.ok) {
-                        const data = await res.json();
-                        remoteSha = data.sha;
-                        const content = decodeURIComponent(escape(atob(data.content)));
-                        cloudDB = JSON.parse(content);
-                    } else if(res.status !== 404) {
-                        throw new Error('Fetch Error');
-                    }
+        const uiSync = document.getElementById('sync-status');
+        function updateSyncStatus(msg, type) {
+            uiSync.style.display = 'inline-flex'; uiSync.className = `sync-badge ${type}`; uiSync.innerHTML = msg;
+            if(type !== 'loading') setTimeout(() => { uiSync.style.display = 'none'; }, 3000);
+        }
+        async function fetchCloudProgress() {
+            if(!USER_CONFIG.token) return;
+            updateSyncStatus('<span class="spin">🔄</span> 同步云端...', 'loading');
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
+            try {
+                const res = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                if(res.status === 404) { updateSyncStatus('无存档', 'success'); return; }
+                if(!res.ok) throw new Error('Fetch failed');
+                const data = await res.json();
+                const content = decodeURIComponent(escape(atob(data.content))); 
+                scheduler.loadExternalData(JSON.parse(content));
+                updateSyncStatus('✅ 已同步', 'success');
+                return data.sha;
+            } catch(e) { console.warn('Sync failed:', e); updateSyncStatus('❌ 失败', 'error'); }
+        }
+        async function syncProgressToCloud(btnElement) {
+            if(!USER_CONFIG.token) { alert('请先配置 Token'); return; }
+            const originalText = btnElement ? btnElement.innerHTML : '';
+            if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; }
+            else { updateSyncStatus('<span class="spin">☁️</span> 上传...', 'loading'); }
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
+            try {
+                let sha = null;
+                const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                if(getRes.ok) { sha = (await getRes.json()).sha; }
+                const contentStr = JSON.stringify(scheduler.db);
+                const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+                const putRes = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Update Anki Progress`, content: contentBase64, sha: sha })
+                });
+                if(!putRes.ok) throw new Error('Upload failed');
+                if(btnElement) {
+                    btnElement.innerHTML = `✅ 成功`; btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
+                    setTimeout(() => { btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; }, 2000);
+                } else { updateSyncStatus('✅ 成功', 'success'); }
+            } catch(e) {
+                alert('上传失败: ' + e.message);
+                if(btnElement) { btnElement.disabled = false; btnElement.innerHTML = originalText; }
+            }
+        }
 
-                    // 2. Merge
-                    ui.progress(60);
-                    scheduler.mergeData(cloudDB);
+        // ============================================
+        // App Logic
+        // ============================================
+        let cardQueue = [];
+        let GLOBAL_CONFIG = null;
+        let totalItemsCount = 0;
 
-                    // 3. Push
-                    ui.progress(80);
-                    const contentStr = JSON.stringify(scheduler.db);
-                    const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
-                    
-                    const putRes = await fetch(url, {
-                        method: 'PUT',
-                        headers: { 
-                            'Authorization': `token ${USER_CONFIG.token}`, 
-                            'Content-Type': 'application/json' 
-                        },
-                        body: JSON.stringify({ 
-                            message: `Sync: ${new Date().toLocaleString()}`, 
-                            content: contentBase64, 
-                            sha: remoteSha 
-                        })
-                    });
+        async function startApp() {
+            const syncPromise = fetchCloudProgress();
+            let sha = 'master';
+            try {
+                const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master`);
+                if(res.ok) sha = (await res.json()).sha;
+            } catch(e) {}
+            const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
+            try {
+                const scriptContent = await fetch(configUrl).then(r => r.ok ? r.text() : Promise.reject(r.status));
+                const blob = new Blob([scriptContent], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = async () => {
+                    if (typeof NotesConfig !== 'undefined') GLOBAL_CONFIG = NotesConfig;
+                    else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
+                    else if (window.NotesConfig) GLOBAL_CONFIG = window.NotesConfig;
+                    else if (window.NewsConfig) GLOBAL_CONFIG = window.NewsConfig;
+                    if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
+                    GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
+                    await syncPromise;
+                    loadAllCards(GLOBAL_CONFIG);
+                    URL.revokeObjectURL(url);
+                };
+                script.onerror = () => showError(`配置脚本加载错误`);
+                document.head.appendChild(script);
+            } catch (err) { showError(`无法加载配置: ${err.message}`); }
+        }
 
-                    if(!putRes.ok) throw new Error('Upload Error');
-                    
-                    ui.progress(100);
-                    ui.updateStatus('✅ 同步完成', 'success');
-                    ui.toast('同步成功', 'success');
-                    if(app.loaded) app.reload();
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
 
-                } catch(e) {
-                    console.error(e);
-                    ui.updateStatus('❌ 同步失败', 'error');
-                    ui.toast('同步失败: ' + e.message, 'error');
-                    ui.progress(0, false);
+        async function loadAllCards(config) {
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            let allItems = [];
+            const promises = [];
+            for (let y = currentYear; y >= currentYear - 1; y--) {
+                for (let m = 1; m <= 12; m++) {
+                    if (y === currentYear && m > today.getMonth() + 1) continue;
+                    promises.push(fetch(config.getUrl(y, m)).then(r => r.ok ? r.json() : []).catch(()=>[]));
                 }
             }
-        };
-
-        // ============================================
-        // 6. Application Controller
-        // ============================================
-        const app = {
-            loaded: false,
-            queue: [],
-            totalCount: 0,
+            const results = await Promise.all(promises);
+            results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
             
-            async init() {
-                ui.progress(10);
-                if(USER_CONFIG.token) { try { await syncManager.sync(); } catch(e) {} }
+            const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
+            totalItemsCount = uniqueItems.length;
+
+            const learning = [];
+            const review = [];
+            const newCards = [];
+            
+            uniqueItems.forEach(item => {
+                const s = scheduler.getCardState(item.id);
+                if (s.dueDate > Date.now()) return; 
                 
-                ui.progress(40);
-                let sha = 'master';
-                try {
-                    const r = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master`);
-                    if(r.ok) sha = (await r.json()).sha;
-                } catch(e){}
+                if (s.state === 'learning') learning.push(item);
+                else if (s.state === 'review') review.push(item);
+                else newCards.push(item);
+            });
 
-                const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
-                
-                try {
-                    const scriptText = await fetch(configUrl).then(r => r.ok?r.text():'');
-                    const blob = new Blob([scriptText], { type: 'application/javascript' });
-                    const url = URL.createObjectURL(blob);
-                    const script = document.createElement('script');
-                    script.src = url;
-                    script.onload = () => { this.loadPhrases(NotesConfig || NewsConfig, sha); };
-                    document.head.appendChild(script);
-                } catch(e) {
-                    ui.showError("配置文件加载失败");
-                }
-            },
+            shuffle(learning);
+            shuffle(review);
+            shuffle(newCards);
 
-            async loadPhrases(config, sha) {
-                config.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
-                const today = new Date();
-                const curYear = today.getFullYear();
-                let allItems = [];
-                const promises = [];
+            cardQueue = [...learning, ...review, ...newCards];
+            
+            updateDeckStats(); 
+            renderCard();
+        }
 
-                for (let y = curYear; y >= curYear - 1; y--) {
-                    for (let m = 1; m <= 12; m++) {
-                        if (y === curYear && m > today.getMonth() + 1) continue;
-                        promises.push(fetch(config.getUrl(y, m)).then(r => r.ok?r.json():[]).catch(()=>[]));
-                    }
-                }
-
-                ui.progress(70);
-                const results = await Promise.all(promises);
-                results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
-                
-                const uniqueMap = new Map();
-                allItems.forEach(item => uniqueMap.set(item.id, item));
-                const uniqueItems = Array.from(uniqueMap.values());
-                this.totalCount = uniqueItems.length;
-
-                this.buildQueue(uniqueItems);
-                this.loaded = true;
-                ui.progress(100);
-            },
-
-            buildQueue(items) {
-                const learning = [], review = [], newCards = [];
-                const now = Date.now();
-
-                items.forEach(item => {
-                    const s = scheduler.getCard(item.id);
-                    if (s.due > now) return; 
-
-                    if (s.state === 'learning') learning.push(item);
-                    else if (s.state === 'review') review.push(item);
-                    else newCards.push(item);
-                });
-
-                const shuffle = (a) => a.sort(() => Math.random() - 0.5);
-                // Priority: Learning > Review > New
-                this.queue = [...shuffle(learning), ...shuffle(review), ...shuffle(newCards)];
-                
-                this.render();
-            },
-
-            reload() { location.reload(); },
-
-            render() {
-                const container = document.getElementById('notes-container');
-                this.updateStats();
-
-                if (this.queue.length === 0) {
-                    container.innerHTML = `
-                        <div class="status-page">
-                            <div class="emoji-lg">🎉</div>
-                            <h2>今日任务完成！</h2>
-                            <p style="color:var(--text-secondary)">进度已保存。</p>
-                            <br><button class="btn btn-save" onclick="syncManager.sync()">☁️ 再次同步</button>
-                        </div>`;
-                    return;
-                }
-
-                const item = this.queue[0];
-                const safeText = item.text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                const srcTitle = item.pageTitle || 'Source';
-                const srcUrl = item.url || '#';
-                
+        function renderCard() {
+            const container = document.getElementById('notes-container');
+            if (cardQueue.length === 0) {
                 container.innerHTML = `
-                    <div class="note-card" id="current-card" onclick="app.handleCardClick(event)">
-                        <div class="note-word">${item.text}</div>
-                        <a href="${srcUrl}" target="_blank" class="note-source">${srcTitle}</a>
-                        <div class="note-meaning">${item.note}</div>
-                        
-                        <div class="tts-container">
-                            <button class="tts-btn" onclick="audioManager.play('${safeText}', this)">
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            </button>
-                        </div>
+                    <div class="status-page">
+                        <div class="emoji-lg">🎉</div>
+                        <h2>今日任务完成！</h2>
+                        <p style="color:var(--text-secondary)">记得去设置同步一下进度。</p>
+                        <br><button class="btn btn-save" onclick="openSettings()">☁️ 去同步</button>
+                    </div>`;
+                return;
+            }
 
-                        <div class="anki-controls">
-                            <button class="anki-btn btn-again" onclick="app.rate(1)">
-                                <span class="btn-label">重来</span><span class="btn-time">1m</span>
-                            </button>
-                            <button class="anki-btn btn-hard" onclick="app.rate(2)">
-                                <span class="btn-label">困难</span><span class="btn-time">6m</span>
-                            </button>
-                            <button class="anki-btn btn-good" onclick="app.rate(3)">
-                                <span class="btn-label">良好</span><span class="btn-time">10m</span>
-                            </button>
-                            <button class="anki-btn btn-easy" onclick="app.rate(4)">
-                                <span class="btn-label">简单</span><span class="btn-time">4d</span>
-                            </button>
-                        </div>
+            const item = cardQueue[0];
+            const rawText = item.text || '';
+            const times = scheduler.previewNextDue(item.id);
+            const sourceTitle = item.pageTitle || 'Source Link';
+            const sourceUrl = item.url || '#';
+
+            container.innerHTML = `
+                <div class="note-card" id="current-card" onclick="handleCardClick(event)">
+                    <div class="note-word">${item.text}</div>
+                    <a href="${sourceUrl}" target="_blank" class="note-source">${sourceTitle}</a>
+                    <div class="note-meaning">${item.note}</div>
+                    
+                    <div class="tts-container">
+                        <button class="tts-btn" onclick="playTTS(this)">
+                             <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="anki-controls">
+                        <button class="anki-btn btn-again" onclick="handleRate(1)">
+                            <span class="btn-label">重来</span><span class="btn-time">${times.again}</span>
+                        </button>
+                        <button class="anki-btn btn-hard" onclick="handleRate(2)">
+                            <span class="btn-label">困难</span><span class="btn-time">${times.hard}</span>
+                        </button>
+                        <button class="anki-btn btn-good" onclick="handleRate(3)">
+                            <span class="btn-label">良好</span><span class="btn-time">${times.good}</span>
+                        </button>
+                        <button class="anki-btn btn-easy" onclick="handleRate(4)">
+                            <span class="btn-label">简单</span><span class="btn-time">${times.easy}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function revealAnswer(el) { el.classList.add('revealed'); }
+
+        function handleCardClick(e) {
+            if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+            const meaning = document.querySelector('.note-meaning');
+            if (meaning && !meaning.classList.contains('revealed')) { revealAnswer(meaning); }
+        }
+
+        function handleRate(rating) {
+            stopCurrentAudio(); 
+            const item = cardQueue[0];
+            scheduler.answerCard(item.id, rating);
+            const cardEl = document.getElementById('current-card');
+            cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0';
+            
+            setTimeout(() => {
+                cardQueue.shift();
+                if (rating === 1) cardQueue.push(item);
+                updateDeckStats(); 
+                renderCard();
+            }, 250);
+        }
+
+        function updateDeckStats() {
+            const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
+            const reviewCount = cardQueue.length - newCount;
+            document.getElementById('deck-stats').innerText = 
+                `待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${totalItemsCount}`;
+        }
+
+        // ============================================
+        // TTS Logic
+        // ============================================
+        function constructTTSUrl(configObj, text) {
+            let url = configObj.url.replace('{text}', encodeURIComponent(text));
+            if (configObj.token && !url.includes('token=')) {
+                url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(configObj.token);
+            }
+            return url;
+        }
+
+        function playTTSChain(text, btn, index) {
+            if (index >= USER_CONFIG.ttsList.length) {
+                console.error("All TTS sources failed.");
+                btn.classList.remove('playing');
+                btn.classList.add('error'); setTimeout(() => btn.classList.remove('error'), 2000);
+                return;
+            }
+            const currentConfig = USER_CONFIG.ttsList[index];
+            const url = constructTTSUrl(currentConfig, text);
+            const audio = new Audio(url);
+            globalAudio = audio;
+            audio.onended = () => { btn.classList.remove('playing'); globalAudio = null; };
+            const handleError = (e) => { console.warn(`Source ${index} failed, trying next...`); playTTSChain(text, btn, index + 1); };
+            audio.onerror = handleError;
+            audio.play().catch(handleError);
+        }
+
+        function playTTS(btn) {
+            stopCurrentAudio();
+            btn.classList.remove('error'); btn.classList.add('playing');
+            const item = cardQueue[0];
+            const rawText = item.text || '';
+            playTTSChain(rawText, btn, 0);
+        }
+
+        function testSingleTTS(index, btn) {
+            stopCurrentAudio(); 
+            const config = getTTSConfigFromUI(index); 
+            if (!config.url) return;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳';
+            const url = constructTTSUrl(config, "Connection successful");
+            const audio = new Audio(url);
+            globalAudio = audio;
+            audio.onended = () => { btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = originalText, 2000); globalAudio = null; };
+            audio.onerror = () => { btn.innerHTML = '❌'; setTimeout(() => btn.innerHTML = originalText, 2000); globalAudio = null; };
+            audio.play().catch(() => { btn.innerHTML = '❌'; setTimeout(() => btn.innerHTML = originalText, 2000); globalAudio = null; });
+        }
+
+        // ============================================
+        // UI Helpers
+        // ============================================
+        function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
+        
+        function renderTTSConfigList() {
+            const container = document.getElementById('tts-config-list');
+            container.innerHTML = '';
+            const list = USER_CONFIG.ttsList;
+            list.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'tts-config-item';
+                div.innerHTML = `
+                    <div class="tts-row">
+                        <input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}">
+                        <input type="text" class="tts-token-input" placeholder="Token" value="${item.token || ''}" data-idx="${index}">
+                    </div>
+                    <div class="tts-actions">
+                        <button class="btn-mini btn-test" onclick="testSingleTTS(${index}, this)" title="测试">⚡</button>
+                        <button class="btn-mini btn-delete" onclick="removeTTSConfig(${index})" title="删除">🗑️</button>
                     </div>
                 `;
-            },
+                container.appendChild(div);
+            });
+        }
+        
+        function getTTSConfigFromUI(index) {
+            const urlInp = document.querySelector(`.tts-url-input[data-idx="${index}"]`);
+            const tokenInp = document.querySelector(`.tts-token-input[data-idx="${index}"]`);
+            return { url: urlInp ? urlInp.value.trim() : '', token: tokenInp ? tokenInp.value.trim() : '' };
+        }
 
-            updateStats() {
-                const newCount = this.queue.filter(i => scheduler.getCard(i.id).state === 'new').length;
-                const revCount = this.queue.length - newCount;
-                document.getElementById('deck-stats').innerText = `待复习: ${revCount} | 新卡: ${newCount} | 总计: ${this.totalCount}`;
-            },
+        function scrapeTTSConfigs() {
+            const items = document.querySelectorAll('.tts-config-item');
+            const newList = [];
+            items.forEach((item, index) => { newList.push(getTTSConfigFromUI(index)); });
+            return newList.filter(i => i.url.length > 0);
+        }
 
-            handleCardClick(e) {
-                if (e.target.closest('button') || e.target.closest('a')) return;
-                const m = document.querySelector('.note-meaning');
-                if (m && !m.classList.contains('revealed')) m.classList.add('revealed');
-            },
+        function addTTSConfig() { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.push({ url: '', token: '' }); renderTTSConfigList(); }
+        function removeTTSConfig(index) { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.splice(index, 1); renderTTSConfigList(); }
 
-            rate(rating) {
-                audioManager.stop();
-                const item = this.queue[0];
-                scheduler.answer(item.id, rating);
-                
-                const el = document.getElementById('current-card');
-                el.style.transform = 'translateY(-20px)'; el.style.opacity = '0';
-                
-                setTimeout(() => {
-                    this.queue.shift();
-                    if(rating === 1) this.queue.push(item);
-                    this.render();
-                }, 200);
+        function openSettings() {
+            document.getElementById('gh-user').value = USER_CONFIG.user;
+            document.getElementById('gh-repo').value = USER_CONFIG.repo;
+            document.getElementById('gh-token').value = USER_CONFIG.token;
+            renderTTSConfigList();
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+        
+        function saveSettings() {
+            USER_CONFIG.user = document.getElementById('gh-user').value.trim();
+            USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
+            USER_CONFIG.token = document.getElementById('gh-token').value.trim();
+            USER_CONFIG.ttsList = scrapeTTSConfigs();
+            if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
+
+            localStorage.setItem('gh_user', USER_CONFIG.user);
+            localStorage.setItem('gh_repo', USER_CONFIG.repo);
+            localStorage.setItem('gh_token', USER_CONFIG.token);
+            localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
+
+            closeSettings();
+            location.reload();
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if(document.querySelector('.note-meaning.revealed')) {
+                if(e.key==='1') handleRate(1); if(e.key==='2') handleRate(2); if(e.key==='3') handleRate(3); if(e.key==='4') handleRate(4);
+            } else if (e.key===' ' || e.key==='Enter') {
+                const el = document.querySelector('.note-meaning'); if(el) revealAnswer(el);
             }
-        };
+        });
+        document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
 
-        // Init
-        app.init();
-        document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) ui.closeSettings(); });
-
+        startApp();
     </script>
 </body>
 </html>
