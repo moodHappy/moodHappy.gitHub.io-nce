@@ -3,9 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (No Flash)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
+    <title>Anki Pro (Fixed Persistence)</title>
+    
+    
+        <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
+
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
+
+
+
+
+
+
+
+
 
     <style>
         :root { 
@@ -31,7 +42,7 @@
         /* 全屏布局 */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); display: flex; flex-direction: column; }
-        
+
         .container { 
             width: 100%; max-width: 600px; margin: 0 auto; 
             position: relative; box-sizing: border-box; padding: 20px;
@@ -72,7 +83,6 @@
             display: flex; flex-direction: column; align-items: center;
             min-height: 50vh; 
             cursor: pointer;
-            /* 防止选中文本导致的高亮 */
             user-select: none;
             -webkit-user-select: none;
         }
@@ -94,7 +104,7 @@
             filter: blur(10px); opacity: 0.7; transition: all 0.3s;
         }
         .note-meaning.revealed { filter: none; cursor: text; user-select: text; -webkit-user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
-        
+
         /* 播放按钮 */
         .tts-container { margin-top: auto; margin-bottom: 20px; z-index: 10; height: 60px; display: flex; align-items: center; justify-content: center; }
         .tts-btn { 
@@ -137,7 +147,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; font-weight: 600; }
         .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
-        
+
         .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; position: relative; }
         .tts-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
         .tts-url-input { flex: 2; }
@@ -147,7 +157,7 @@
         .btn-test:hover { background: #dcfce7; color: #166534; border-color: #86efac; }
         .btn-delete:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
         .btn-add { width: 100%; border-style: dashed; margin-bottom: 15px; }
-        
+
         .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 1rem; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
         .btn-save { background: var(--accent-color); color: white; }
@@ -225,16 +235,53 @@
         const LOCAL_DB_KEY = 'anki_db_v2'; 
 
         // ============================================
-        // Scheduler
+        // Scheduler (SM-2 with Fixes)
         // ============================================
         class AnkiScheduler {
-            constructor() { this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); }
-            save() { localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); }
-            loadExternalData(cloudData) { if (!cloudData) return; this.db = cloudData; this.save(); }
+            constructor() { 
+                this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); 
+            }
+            
+            save() { 
+                localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); 
+            }
+            
+            // 修复逻辑：合并数据而不是盲目覆盖
+            loadExternalData(cloudData) { 
+                if (!cloudData) return; 
+                
+                // 遍历云端数据，智能合并
+                for (const [id, cloudCard] of Object.entries(cloudData)) {
+                    const localCard = this.db[id];
+                    
+                    // 如果本地有记录，且本地记录的修改时间(lastModified)比云端晚（或者云端没有时间戳），则保留本地数据
+                    // 这防止了云端旧数据覆盖本地刚复习完的数据
+                    if (localCard && localCard.lastModified && cloudCard.lastModified) {
+                        if (localCard.lastModified >= cloudCard.lastModified) {
+                            continue; // 跳过，保留本地
+                        }
+                    }
+                    
+                    // 否则（本地没有，或云端更新），使用云端数据
+                    this.db[id] = cloudCard;
+                }
+                this.save(); 
+            }
+
             getCardState(id) {
-                if (!this.db[id]) this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0 };
+                if (!this.db[id]) {
+                    this.db[id] = { 
+                        state: 'new', 
+                        step: 0, 
+                        interval: 0, 
+                        easeFactor: 2.5, 
+                        dueDate: 0,
+                        lastModified: 0 // 新增：最后修改时间
+                    };
+                }
                 return this.db[id];
             }
+
             previewNextDue(id) {
                 const card = this.getCardState(id);
                 return {
@@ -244,30 +291,62 @@
                     easy:  this.calculate(card, 4).timeText
                 };
             }
+
             answerCard(id, rating) {
                 const card = this.getCardState(id);
                 const result = this.calculate(card, rating);
-                this.db[id] = result.card; this.save();
+                this.db[id] = result.card; 
+                this.save();
                 return result;
             }
+
             calculate(originalCard, rating) {
                 let card = JSON.parse(JSON.stringify(originalCard));
                 let nextIntervalMin = 0;
-                if (rating === 1) { // Again
-                    card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
+
+                // 标准 SM-2 逻辑微调
+                if (rating === 1) { // Again (重来)
+                    card.step = 0; 
+                    card.state = 'learning'; 
+                    nextIntervalMin = 1; 
                     card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
                 } else if (card.state === 'new' || card.state === 'learning') {
-                    if (rating === 2) { nextIntervalMin = 6; } // Hard
-                    else if (rating === 3) { if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; } } // Good
-                    else if (rating === 4) { card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; } // Easy
-                } else { // Review
-                    if (rating === 2) { card.interval = Math.max(1, Math.floor(card.interval * 1.2)); card.easeFactor -= 0.15; }
-                    else if (rating === 3) { card.interval = Math.floor(card.interval * card.easeFactor); }
-                    else if (rating === 4) { card.interval = Math.floor(card.interval * card.easeFactor * 1.3); card.easeFactor += 0.15; }
+                    if (rating === 2) { // Hard (困难)
+                        nextIntervalMin = 6; 
+                        // Hard 不推进 step，保持 learning
+                    } else if (rating === 3) { // Good (良好)
+                        if (card.step === 0) { 
+                            card.step = 1; 
+                            nextIntervalMin = 10; 
+                        } else { 
+                            card.state = 'review'; 
+                            card.interval = 1; // 毕业，进入复习，间隔1天
+                            nextIntervalMin = 1440; 
+                        } 
+                    } else if (rating === 4) { // Easy (简单)
+                        card.state = 'review'; 
+                        card.interval = 4; // 直接毕业，间隔4天
+                        nextIntervalMin = 5760; 
+                    } 
+                } else { // Review 阶段
+                    if (rating === 2) { 
+                        card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
+                        card.easeFactor -= 0.15; 
+                    } else if (rating === 3) { 
+                        card.interval = Math.floor(card.interval * card.easeFactor); 
+                    } else if (rating === 4) { 
+                        card.interval = Math.floor(card.interval * card.easeFactor * 1.3); 
+                        card.easeFactor += 0.15; 
+                    }
                     nextIntervalMin = card.interval * 1440;
                     if(card.easeFactor < 1.3) card.easeFactor = 1.3;
                 }
+
                 card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
+                
+                // 关键修复：更新最后修改时间戳
+                card.lastModified = Date.now();
+
                 let timeText = nextIntervalMin < 60 ? nextIntervalMin + 'm' : (nextIntervalMin < 1440 ? Math.round(nextIntervalMin/60) + 'h' : Math.round(nextIntervalMin/1440) + 'd');
                 return { card, timeText };
             }
@@ -292,8 +371,13 @@
                 if(!res.ok) throw new Error('Fetch failed');
                 const data = await res.json();
                 const content = decodeURIComponent(escape(atob(data.content))); 
+                
+                // 这里调用的是新的合并逻辑，而不是直接覆盖
                 scheduler.loadExternalData(JSON.parse(content));
+                
                 updateSyncStatus('✅ 已同步', 'success');
+                // 重新加载并渲染卡片，确保合并后的状态立即反映
+                if(GLOBAL_CONFIG) loadAllCards(GLOBAL_CONFIG);
                 return data.sha;
             } catch(e) { console.warn('Sync failed:', e); updateSyncStatus('❌ 失败', 'error'); }
         }
@@ -307,14 +391,19 @@
                 let sha = null;
                 const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 if(getRes.ok) { sha = (await getRes.json()).sha; }
+                
+                // 确保上传前也是最新状态
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+                
                 const putRes = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: `Update Anki Progress`, content: contentBase64, sha: sha })
                 });
+                
                 if(!putRes.ok) throw new Error('Upload failed');
+                
                 if(btnElement) {
                     btnElement.innerHTML = `✅ 成功`; btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
                     setTimeout(() => { btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; }, 2000);
@@ -333,13 +422,17 @@
         let totalItemsCount = 0;
 
         async function startApp() {
+            // 先尝试后台同步，但不阻塞配置加载
             const syncPromise = fetchCloudProgress();
+            
             let sha = 'master';
             try {
                 const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master`);
                 if(res.ok) sha = (await res.json()).sha;
             } catch(e) {}
+            
             const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
+            
             try {
                 const scriptContent = await fetch(configUrl).then(r => r.ok ? r.text() : Promise.reject(r.status));
                 const blob = new Blob([scriptContent], { type: 'application/javascript' });
@@ -351,9 +444,14 @@
                     else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
                     else if (window.NotesConfig) GLOBAL_CONFIG = window.NotesConfig;
                     else if (window.NewsConfig) GLOBAL_CONFIG = window.NewsConfig;
+                    
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
+                    
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
-                    await syncPromise;
+                    
+                    // 等待同步完成后再计算队列，确保使用的是合并后的最新进度
+                    await syncPromise; 
+                    
                     loadAllCards(GLOBAL_CONFIG);
                     URL.revokeObjectURL(url);
                 };
@@ -374,26 +472,30 @@
             const currentYear = today.getFullYear();
             let allItems = [];
             const promises = [];
+            
+            // 拉取最近两年的数据
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
                     promises.push(fetch(config.getUrl(y, m)).then(r => r.ok ? r.json() : []).catch(()=>[]));
                 }
             }
+            
             const results = await Promise.all(promises);
             results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
-            
+
             const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
             const learning = [];
             const review = [];
             const newCards = [];
-            
+
             uniqueItems.forEach(item => {
                 const s = scheduler.getCardState(item.id);
+                // 核心过滤：只有到期或全新的卡片才显示
                 if (s.dueDate > Date.now()) return; 
-                
+
                 if (s.state === 'learning') learning.push(item);
                 else if (s.state === 'review') review.push(item);
                 else newCards.push(item);
@@ -404,7 +506,7 @@
             shuffle(newCards);
 
             cardQueue = [...learning, ...review, ...newCards];
-            
+
             updateDeckStats(); 
             renderCard();
         }
@@ -416,8 +518,8 @@
                     <div class="status-page">
                         <div class="emoji-lg">🎉</div>
                         <h2>今日任务完成！</h2>
-                        <p style="color:var(--text-secondary)">记得去设置同步一下进度。</p>
-                        <br><button class="btn btn-save" onclick="openSettings()">☁️ 去同步</button>
+                        <p style="color:var(--text-secondary)">记得同步进度到云端。</p>
+                        <br><button class="btn btn-save" onclick="syncProgressToCloud(this)">☁️ 立即同步</button>
                     </div>`;
                 return;
             }
@@ -469,12 +571,16 @@
         function handleRate(rating) {
             stopCurrentAudio(); 
             const item = cardQueue[0];
+            
+            // 记录答案并保存到 localStorage
             scheduler.answerCard(item.id, rating);
+            
             const cardEl = document.getElementById('current-card');
             cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0';
-            
+
             setTimeout(() => {
                 cardQueue.shift();
+                // 如果是“重来”，稍后重试
                 if (rating === 1) cardQueue.push(item);
                 updateDeckStats(); 
                 renderCard();
@@ -542,7 +648,7 @@
         // UI Helpers
         // ============================================
         function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
-        
+
         function renderTTSConfigList() {
             const container = document.getElementById('tts-config-list');
             container.innerHTML = '';
@@ -563,7 +669,7 @@
                 container.appendChild(div);
             });
         }
-        
+
         function getTTSConfigFromUI(index) {
             const urlInp = document.querySelector(`.tts-url-input[data-idx="${index}"]`);
             const tokenInp = document.querySelector(`.tts-token-input[data-idx="${index}"]`);
@@ -588,7 +694,7 @@
             document.getElementById('settingsModal').style.display = 'flex';
         }
         function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-        
+
         function saveSettings() {
             USER_CONFIG.user = document.getElementById('gh-user').value.trim();
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
@@ -604,7 +710,7 @@
             closeSettings();
             location.reload();
         }
-        
+
         document.addEventListener('keydown', (e) => {
             if(document.querySelector('.note-meaning.revealed')) {
                 if(e.key==='1') handleRate(1); if(e.key==='2') handleRate(2); if(e.key==='3') handleRate(3); if(e.key==='4') handleRate(4);
