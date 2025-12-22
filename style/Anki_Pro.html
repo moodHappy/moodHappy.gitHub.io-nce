@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Logic Fix)</title>
+    <title>Anki Pro (Logic Fixed)</title>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/phrase.png">
 
@@ -266,12 +266,6 @@
                 let timeText = nextIntervalMin < 60 ? nextIntervalMin + 'm' : (nextIntervalMin < 1440 ? Math.round(nextIntervalMin/60) + 'h' : Math.round(nextIntervalMin/1440) + 'd');
                 return { card, timeText };
             }
-            getDueCards(items) { return items.filter(item => this.getCardState(item.id).dueDate <= Date.now()); }
-            getStats(items) {
-                let total=items.length, newC=0, learn=0, rev=0;
-                items.forEach(i => { const s = this.getCardState(i.id).state; if(s==='new') newC++; else if(s==='learning') learn++; else rev++; });
-                return { total, newC, learn, rev };
-            }
         }
         const scheduler = new AnkiScheduler();
 
@@ -331,6 +325,7 @@
         // ============================================
         let cardQueue = [];
         let GLOBAL_CONFIG = null;
+        let totalItemsCount = 0; // 修复总数逻辑
 
         async function startApp() {
             const syncPromise = fetchCloudProgress();
@@ -384,8 +379,9 @@
             results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
             
             const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
-            
-            // 核心修改：优先级分类逻辑
+            totalItemsCount = uniqueItems.length; // 记录总数
+
+            // 优先级分类：学习中 > 复习 > 新卡
             const learning = [];
             const review = [];
             const newCards = [];
@@ -400,15 +396,15 @@
                 else newCards.push(item);
             });
 
-            // 组内随机，但组间有序
+            // 组内随机，组间有序
             shuffle(learning);
             shuffle(review);
             shuffle(newCards);
 
-            // 最终队列：学习中 > 复习 > 新卡
+            // 最终队列：强制优先级
             cardQueue = [...learning, ...review, ...newCards];
             
-            updateStats(uniqueItems);
+            updateDeckStats(); // 初始化统计
             renderCard();
         }
 
@@ -463,8 +459,8 @@
 
         function revealAnswer(el) { el.classList.add('revealed'); }
 
+        // 全局点击翻面
         function handleCardClick(e) {
-            // 防误触：如果点击的是按钮、链接或输入框，不触发翻面
             if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
             const meaning = document.querySelector('.note-meaning');
             if (meaning && !meaning.classList.contains('revealed')) { revealAnswer(meaning); }
@@ -476,12 +472,24 @@
             scheduler.answerCard(item.id, rating);
             const cardEl = document.getElementById('current-card');
             cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0';
+            
             setTimeout(() => {
                 cardQueue.shift();
-                // 只有“重来”的卡片才放回当前队列末尾继续背
-                if (rating === 1) cardQueue.push(item);
+                if (rating === 1) cardQueue.push(item); // 只有重来的卡片才放回队尾
+                updateDeckStats(); // 实时更新统计
                 renderCard();
             }, 250);
+        }
+
+        // 核心修复：根据当前队列实时计算统计，避免逻辑错误
+        function updateDeckStats() {
+            // 计算队列中属于 New 状态的卡片数
+            const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
+            // 剩余的即为复习卡（包含 review 和 learning）
+            const reviewCount = cardQueue.length - newCount;
+            
+            document.getElementById('deck-stats').innerText = 
+                `待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${totalItemsCount}`;
         }
 
         // ============================================
@@ -537,10 +545,6 @@
         // ============================================
         // UI Helpers
         // ============================================
-        function updateStats(allItems) {
-            const s = scheduler.getStats(allItems);
-            document.getElementById('deck-stats').innerText = `待复习: ${cardQueue.length} | 新卡: ${s.newC} | 总计: ${s.total}`;
-        }
         function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
         
         function renderTTSConfigList() {
