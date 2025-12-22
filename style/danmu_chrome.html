@@ -50,52 +50,72 @@
         .reader-content-wrapper a { color: var(--primary); text-decoration: none; }
         .reader-content-wrapper a:hover { text-decoration: underline; }
         
-        /* --- 核心修复：笔记标题样式 --- */
-        /* 强制使用 block 布局，防止文字散开 */
+        /* --- 核心修复：标题与元数据区域 --- */
+        
+        /* 1. 标题样式：块级显示，底部粗蓝线 */
         .reader-content-wrapper h1 {
-            display: block !important; /* 关键修复：确保文字正常换行 */
+            display: block !important;
             margin-top: 0;
             line-height: 1.3;
             color: #1f2328;
-            /* 分隔线样式 */
-            border-bottom: 3px solid var(--primary);
+            border-bottom: 3px solid var(--primary); /* 粗蓝线 */
             padding-bottom: 15px;
             margin-bottom: 25px;
         }
 
-        /* --- 元数据卡片 (灰色阴影盒子) --- */
+        /* 2. 元数据卡片 (灰色背景盒子) */
         .reader-metadata-box {
-            background-color: #f6f8fa;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            background-color: #f6f8fa; /* 截图中的浅灰背景 */
+            padding: 15px;
+            border-radius: 6px;
             margin-bottom: 25px;
             font-size: 15px;
             color: var(--text-muted);
-            border: 1px solid rgba(0,0,0,0.05);
+            /* 防止长链接溢出 */
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
-        .reader-metadata-box p { margin: 8px 0; display: block; } /* 确保内部也是块级 */
-        .reader-metadata-box p:first-child { margin-top: 0; }
-        .reader-metadata-box p:last-child { margin-bottom: 0; }
-        
-        /* 图标着色逻辑 */
-        .reader-metadata-box p:first-child::first-letter { color: #cf222e; margin-right: 5px; font-weight: bold; } 
-        .reader-metadata-box a::before { content: '🔗'; margin-right: 5px; color: var(--primary); }
 
-        /* 内容分隔细线 */
-        .reader-content-separator { border-bottom: 1px solid #eaecef; margin-bottom: 30px; }
+        /* 元数据行样式 */
+        .reader-metadata-row {
+            margin-bottom: 8px;
+            line-height: 1.5;
+            display: flex; /* 使用 Flex 布局对齐图标和文字 */
+            align-items: flex-start;
+        }
+        .reader-metadata-row:last-child { margin-bottom: 0; }
+
+        /* 图标样式 */
+        .meta-icon {
+            margin-right: 8px;
+            font-style: normal;
+            display: inline-block;
+            flex-shrink: 0; /* 防止图标被压缩 */
+        }
+        
+        /* 日历图标颜色 (模仿截图中的微红色) */
+        .icon-calendar { font-size: 1.1em; } 
+        /* 链接图标颜色 */
+        .icon-link { font-size: 1.1em; }
+
+        /* 链接文字样式修复：强制断行 */
+        .reader-metadata-box a {
+            color: #0969da;
+            word-break: break-all; /* 关键：强制长链接换行，防止跑出盒子 */
+            display: inline; 
+        }
+
+        /* 3. 内容分隔细线 (灰色盒子下方) */
+        .reader-content-separator {
+            border-bottom: 1px solid #eaecef;
+            margin-bottom: 30px;
+            margin-top: -10px; /* 稍微拉近一点 */
+        }
 
 
         /* --- 列表与头部通用样式 --- */
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
-        
-        /* 关键修复：只让头部导航栏的 h1 使用 flex 布局 */
-        header h1 { 
-            margin: 0; font-size: 18px; 
-            display: flex; /* 这里才用 flex */
-            align-items: center; gap: 8px; 
-        }
-        
+        header h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
         .status-badge { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: #eee; color: #666; font-weight: normal; }
         .status-ready { background: #dafbe1; color: #1f883d; }
         .nav-btn { background: transparent; border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; color: var(--text-main); }
@@ -314,30 +334,89 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
 
-            // --- DOM 操作：应用图一结构 ---
+            // --- DOM 操作：重构标题和元数据区域 ---
             const h1 = doc.querySelector('h1');
             
-            let metadataWrapper = doc.createElement('div');
+            // 创建新的元数据容器
+            let metadataWrapper = document.createElement('div');
             metadataWrapper.className = 'reader-metadata-box';
+            
             let foundMetadata = false;
+            let nodesToRemove = [];
+
+            // 智能查找“归档时间”和“原文链接”
+            // 注意：我们通过遍历寻找，找到后提取内容，重新构造成标准的 HTML 结构
+            let timeText = '';
+            let linkHtml = '';
+
             let currentNode = h1 ? h1.nextElementSibling : doc.body.firstElementChild;
+            
+            // 扫描 H1 后的段落
             while (currentNode && currentNode.tagName === 'P') {
                 const text = currentNode.textContent;
-                if (text.includes('归档时间') || text.includes('原文链接') || currentNode.querySelector('a')) {
-                    let nextNode = currentNode.nextElementSibling;
-                    metadataWrapper.appendChild(currentNode); 
-                    currentNode = nextNode;
+                const innerHtml = currentNode.innerHTML;
+                
+                if (text.includes('归档时间')) {
+                    // 提取时间文本，去掉“归档时间”前后的干扰，保留时间
+                    // 假设格式是 "📅 归档时间: ..." 或 "归档时间: ..."
+                    // 简单起见，我们直接保留文本内容，但去掉已有的 emoji 以便统一添加
+                    timeText = text.replace(/📅/g, '').trim(); 
+                    nodesToRemove.push(currentNode);
+                    foundMetadata = true;
+                } 
+                else if (text.includes('原文链接') || currentNode.querySelector('a')) {
+                    // 提取链接部分
+                    if (currentNode.querySelector('a')) {
+                         linkHtml = currentNode.querySelector('a').outerHTML;
+                    } else if (currentNode.nextElementSibling && currentNode.nextElementSibling.tagName === 'A') {
+                         // 有时候链接在下一行
+                         linkHtml = currentNode.nextElementSibling.outerHTML;
+                         nodesToRemove.push(currentNode.nextElementSibling);
+                    } else {
+                         // 尝试从文本提取 url (兜底)
+                         linkHtml = innerHtml.replace(/🔗/g, '').replace('原文链接:', '').trim();
+                    }
+                    nodesToRemove.push(currentNode);
                     foundMetadata = true;
                 } else {
-                    break; 
+                    break; // 遇到普通正文，停止
                 }
+                currentNode = currentNode.nextElementSibling;
             }
 
-            if (foundMetadata && h1 && h1.parentNode) {
-                h1.parentNode.insertBefore(metadataWrapper, h1.nextSibling);
-                const separator = doc.createElement('div');
-                separator.className = 'reader-content-separator';
-                h1.parentNode.insertBefore(separator, metadataWrapper.nextSibling);
+            // 如果找到了元数据，构建标准结构
+            if (foundMetadata) {
+                // 1. 归档时间行
+                if (timeText) {
+                    const row = document.createElement('div');
+                    row.className = 'reader-metadata-row';
+                    row.innerHTML = `<span class="meta-icon icon-calendar">📅</span> <span>${timeText}</span>`;
+                    metadataWrapper.appendChild(row);
+                }
+                // 2. 原文链接行
+                if (linkHtml) {
+                    const row = document.createElement('div');
+                    row.className = 'reader-metadata-row';
+                    // 如果原内容里没有 "原文链接" 字样，手动加上
+                    let label = '原文链接: ';
+                    if (linkHtml.includes('原文链接')) label = '';
+                    
+                    // 强制清理一下 linkHtml，确保它只是个 clean 的 <a> 标签或者带文字
+                    row.innerHTML = `<span class="meta-icon icon-link">🔗</span> <span>原文链接: ${linkHtml}</span>`;
+                    metadataWrapper.appendChild(row);
+                }
+
+                // 移除旧的节点
+                nodesToRemove.forEach(n => n.remove());
+
+                // 插入新结构
+                if (h1 && h1.parentNode) {
+                    h1.parentNode.insertBefore(metadataWrapper, h1.nextSibling);
+                    // 插入细灰线
+                    const separator = document.createElement('div');
+                    separator.className = 'reader-content-separator';
+                    h1.parentNode.insertBefore(separator, metadataWrapper.nextSibling);
+                }
             }
 
             contentEl.innerHTML = doc.body.innerHTML;
@@ -351,6 +430,7 @@
         const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null, false);
         const textNodes = []; let node;
         while(node = walker.nextNode()) {
+            // 跳过脚本、样式以及元数据盒子
             if (node.parentElement.tagName !== 'SCRIPT' && node.parentElement.tagName !== 'STYLE' && !node.parentElement.closest('.reader-metadata-box')) {
                 textNodes.push(node);
             }
