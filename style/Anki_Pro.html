@@ -38,7 +38,11 @@
         }
 
         /* === 顶部 Header === */
-        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; position: relative; padding-top: 10px; }
+        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; position: relative; padding-top: 10px; transition: margin 0.3s; }
+        
+        /* 当隐藏归档面板时，减小Header下方的边距，更紧凑 */
+        body.hide-archive header { margin-bottom: 5px; }
+
         h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; font-size: 1.5rem; }
         .subtitle { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 5px;}
         .header-actions { position: absolute; right: 0; top: 10px; display: flex; gap: 10px; }
@@ -55,12 +59,11 @@
         .spin { animation: spin 1s infinite linear; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* === 新增：浏览归档面板 (Controls) === */
+        /* === 浏览归档面板 (Controls) === */
         .controls { 
             background: var(--bg-card); padding: 15px 20px; border-radius: 20px; 
             border: 1px solid var(--border-color); margin-bottom: 20px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); flex-shrink: 0;
-            /* 默认显示，JS控制隐藏 */
             display: block;
         }
         .controls.hidden { display: none !important; }
@@ -89,8 +92,18 @@
         /* === 卡片区域 === */
         #notes-container { 
             perspective: 1000px; position: relative; 
-            flex: 1; display: flex; flex-direction: column; justify-content: flex-end; 
-            padding-bottom: 10vh; /* 留出底部空间 */
+            flex: 1; display: flex; flex-direction: column; 
+            /* 默认：内容沉底，方便单手操作 */
+            justify-content: flex-end; 
+            padding-bottom: 10vh; 
+            transition: all 0.3s ease;
+        }
+
+        /* === 关键修改：紧凑模式样式 === */
+        /* 当归档面板隐藏时，内容改为居中偏上，消除顶部大留白 */
+        body.hide-archive #notes-container {
+            justify-content: center; /* 垂直居中，或者改为 flex-start 并配合 padding-top 实现更靠上 */
+            padding-bottom: 5vh;     /* 减少底部留白 */
         }
 
         .note-card { 
@@ -300,27 +313,31 @@
             token: localStorage.getItem('gh_token') || '',
             ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST)),
             enableDelete: localStorage.getItem('gh_enable_delete') === 'true',
-            showArchivePanel: localStorage.getItem('gh_show_archive_panel') !== 'false' // 默认开启
+            showArchivePanel: localStorage.getItem('gh_show_archive_panel') !== 'false' 
         };
 
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
         const LOCAL_DB_KEY = 'anki_db_v2'; 
         const DELETED_IDS_KEY = 'anki_deleted_ids'; 
 
-        // 当前选中的年月 (用于加载和删除)
         let CURRENT_VIEW_YEAR = new Date().getFullYear();
         let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
         let GLOBAL_CONFIG = null;
 
-        // 应用面板显示设置
+        // 应用面板显示设置 (新增：添加Body Class以触发紧凑布局)
         function applyViewSettings() {
             const controls = document.querySelector('.controls');
             if(controls) {
-                if(USER_CONFIG.showArchivePanel) controls.classList.remove('hidden');
-                else controls.classList.add('hidden');
+                if(USER_CONFIG.showArchivePanel) {
+                    controls.classList.remove('hidden');
+                    document.body.classList.remove('hide-archive');
+                } else {
+                    controls.classList.add('hidden');
+                    document.body.classList.add('hide-archive');
+                }
             }
         }
-        applyViewSettings(); // 初始化时应用
+        applyViewSettings(); 
 
         // ============================================
         // Scheduler
@@ -557,7 +574,6 @@
 
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
 
-                    // BaseUrl 指向 Notes/Notes/，方便 JS 拼接年份
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
 
                     initDateSelectors(GLOBAL_CONFIG);
@@ -573,33 +589,27 @@
             const start = config.startYear || 2025;
             const total = config.totalYears || 30;
 
-            // 初始化年份下拉框
             for (let y = start; y < start + total; y++) {
                 const opt = document.createElement('option');
                 opt.value = y; opt.text = `${y}年`;
                 yearSelect.appendChild(opt);
             }
 
-            // 自动定位到当前或最近的年份
             const today = new Date();
             let defaultYear = today.getFullYear();
             if (defaultYear < start) defaultYear = start;
             if (defaultYear >= start + total) defaultYear = start + total - 1;
             yearSelect.value = defaultYear;
 
-            // 监听年份变化
             yearSelect.addEventListener('change', (e) => loadMonthsForYear(parseInt(e.target.value)));
 
-            // 加载月份按钮
             loadMonthsForYear(defaultYear);
 
-            // 自动点击当前月份 (或者12月如果已经过了)
             const targetMonth = (defaultYear === today.getFullYear()) ? (today.getMonth() + 1) : 12;
             setTimeout(() => {
                 const btn = document.querySelector(`button[data-month="${targetMonth}"]`);
                 if(btn) btn.click();
                 else { 
-                    // 如果找不到（比如是未来年份的1月），点击第一个
                     const firstBtn = document.querySelector('.month-btn');
                     if(firstBtn) firstBtn.click();
                 }
@@ -616,7 +626,6 @@
                 btn.onclick = () => {
                     document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    // 切换月份，加载对应数据
                     loadCardsForDate(year, m);
                 };
                 monthContainer.appendChild(btn);
@@ -631,7 +640,7 @@
         }
 
         // ============================================
-        // Load Cards (Changed to load specific Month)
+        // Load Cards
         // ============================================
         async function loadCardsForDate(year, month) {
             CURRENT_VIEW_YEAR = year;
@@ -644,30 +653,23 @@
             let allItems = [];
 
             try {
-                // 读取单个文件
                 const url = GLOBAL_CONFIG.getUrl(year, month) + `?t=${Date.now()}`;
                 const res = await fetch(url);
                 if (res.ok) {
                     const items = await res.json();
-                    // 附加年月信息，方便删除时定位
                     items.forEach(item => { item._year = year; item._month = month; });
                     allItems = items;
                 } else {
-                    // 404 或者其他错误
                     console.log(`No data for ${year}-${month}`);
                 }
             } catch (e) {
                 console.warn(e);
             }
 
-            // 过滤黑名单
             const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
             const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
             
-            // 更新总计数量
             totalItemsCount = uniqueItems.length;
-
-            // 数据库清理 (可选，这里暂时不做，以免误删跨月复习进度)
 
             const learning = [];
             const review = [];
@@ -675,7 +677,6 @@
 
             uniqueItems.forEach(item => {
                 const s = scheduler.getCardState(item.id);
-                // Anki 核心过滤：未来的卡片不显示
                 if (s.dueDate > Date.now()) return; 
 
                 if (s.state === 'learning') learning.push(item);
@@ -696,7 +697,6 @@
         function renderCard() {
             const container = document.getElementById('notes-container');
             if (cardQueue.length === 0) {
-                // 只有当总数为0时，才显示无数据；否则显示任务完成
                 if (totalItemsCount === 0) {
                      container.innerHTML = `
                         <div class="status-page">
@@ -796,7 +796,6 @@
                 }, 300);
             };
 
-            // 使用当前的 View Year/Month 作为路径依据，或者 item 自身的 _year/_month
             const y = item._year || CURRENT_VIEW_YEAR;
             const m = item._month || CURRENT_VIEW_MONTH;
 
@@ -869,7 +868,6 @@
         function updateDeckStats() {
             const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
             const reviewCount = cardQueue.length - newCount;
-            // 显示当前月份和总计
             document.getElementById('deck-stats').innerText = 
                 `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${totalItemsCount}`;
         }
@@ -971,9 +969,7 @@
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-token').value = USER_CONFIG.token;
             document.getElementById('enable-delete').checked = USER_CONFIG.enableDelete;
-            // 设置开关状态
             document.getElementById('show-archive-panel').checked = USER_CONFIG.showArchivePanel;
-            
             renderTTSConfigList();
             document.getElementById('settingsModal').style.display = 'flex';
         }
@@ -984,7 +980,6 @@
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
             USER_CONFIG.enableDelete = document.getElementById('enable-delete').checked;
-            // 保存面板显示设置
             USER_CONFIG.showArchivePanel = document.getElementById('show-archive-panel').checked;
 
             USER_CONFIG.ttsList = scrapeTTSConfigs();
