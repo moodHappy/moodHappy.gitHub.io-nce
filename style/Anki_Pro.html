@@ -75,6 +75,15 @@
         }
         .note-card:not(:first-child) { display: none; }
 
+        /* 删除按钮样式 */
+        .btn-delete-card {
+            position: absolute; left: 20px; top: 20px;
+            background: transparent; border: none; color: var(--text-secondary);
+            cursor: pointer; padding: 8px; border-radius: 50%;
+            transition: all 0.2s; z-index: 20; opacity: 0.5;
+        }
+        .btn-delete-card:hover { background: #fee2e2; color: #ef4444; opacity: 1; }
+
         .note-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
         .note-source { 
             font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; 
@@ -135,6 +144,15 @@
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; font-weight: 600; }
         .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
 
+        /* Switch Toggle */
+        .switch-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
         .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; position: relative; }
         .tts-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
         .tts-url-input { flex: 2; }
@@ -166,6 +184,15 @@
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
             <h2>⚙️ 设置</h2>
+
+            <div class="switch-group">
+                <label>启用云端删除按钮 (需 Token)</label>
+                <label class="switch">
+                    <input type="checkbox" id="enable-delete">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <div class="form-group">
                 <label>TTS 语音源配置 (多路自动切换)</label>
                 <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">系统将按顺序尝试播放。支持 <code>{text}</code> 占位符。</div>
@@ -232,7 +259,8 @@
             user: localStorage.getItem('gh_user') || 'moodHappy',
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
             token: localStorage.getItem('gh_token') || '',
-            ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST))
+            ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST)),
+            enableDelete: localStorage.getItem('gh_enable_delete') === 'true' // 默认关闭
         };
 
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
@@ -505,8 +533,13 @@
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
-                    // ★★★ 修复：添加 ?t=时间戳，强制刷新 JSON 数据，防止缓存 ★★★
-                    promises.push(fetch(config.getUrl(y, m) + `?t=${Date.now()}`).then(r => r.ok ? r.json() : []).catch(()=>[]));
+                    // ★★★ 更新：在加载数据的同时，标记来源的年份和月份，以便删除时定位文件 ★★★
+                    promises.push(
+                        fetch(config.getUrl(y, m) + `?t=${Date.now()}`)
+                            .then(r => r.ok ? r.json() : [])
+                            .then(items => items.map(item => ({...item, _year: y, _month: m}))) // 附加源信息
+                            .catch(()=>[])
+                    );
                 }
             }
 
@@ -566,10 +599,17 @@
                 // 格式: url#:~:text=ENCODED_PHRASE
                 sourceUrl = `${sourceUrl}#:~:text=${encodeURIComponent(item.text)}`;
             }
+            
+            // 决定是否显示删除按钮
+            let deleteBtnHtml = '';
+            if (USER_CONFIG.enableDelete) {
+                deleteBtnHtml = `<button class="btn-delete-card" onclick="deleteCurrentCard(this)" title="从云端永久删除">🗑️</button>`;
+            }
             // ★★★ 修改代码结束 ★★★
 
             container.innerHTML = `
                 <div class="note-card" id="current-card" onclick="handleCardClick(event)">
+                    ${deleteBtnHtml}
                     <div class="note-word">${item.text}</div>
                     <a href="${sourceUrl}" target="_blank" class="note-source">${sourceTitle}</a>
                     <div class="note-meaning">${item.note}</div>
@@ -596,6 +636,94 @@
                     </div>
                 </div>
             `;
+        }
+
+        // ============================================
+        // Delete Functionality
+        // ============================================
+        async function deleteCurrentCard(btn) {
+            // 防止冒泡触发卡片翻转
+            if(event) event.stopPropagation();
+
+            if (!USER_CONFIG.token) {
+                alert("错误：请先在设置中填写 Access Token 才能执行删除操作。");
+                openSettings();
+                return;
+            }
+
+            if (!confirm("确定要从 GitHub 源文件中永久删除这张卡片吗？此操作不可逆。")) return;
+
+            const item = cardQueue[0];
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳';
+            btn.disabled = true;
+
+            // 构造文件路径，假设结构为 Notes/{year}/{month}.json
+            // 根据 loadAllCards 中附加的 _year 和 _month 确定文件位置
+            if (!item._year || !item._month) {
+                alert("无法定位源文件路径，删除失败。");
+                btn.innerHTML = originalText; btn.disabled = false;
+                return;
+            }
+
+            const filePath = `Notes/${item._year}/${item._month}.json`;
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
+
+            try {
+                // 1. 获取当前文件内容
+                const getRes = await fetch(url + `?t=${Date.now()}`, { 
+                    headers: { 'Authorization': `token ${USER_CONFIG.token}` } 
+                });
+                
+                if (!getRes.ok) throw new Error("无法读取源文件: " + getRes.status);
+                
+                const data = await getRes.json();
+                const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                
+                // 2. 过滤掉当前卡片
+                const newContent = content.filter(c => c.id !== item.id);
+                
+                if (newContent.length === content.length) {
+                    alert("在源文件中未找到该 ID，可能已被删除或文件不匹配。");
+                    btn.innerHTML = originalText; btn.disabled = false;
+                    return;
+                }
+
+                // 3. 上传更新后的文件
+                const contentStr = JSON.stringify(newContent, null, 2); // 保持格式美观
+                const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+                const putRes = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `token ${USER_CONFIG.token}`, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ 
+                        message: `Delete card ${item.id} via Anki Pro`, 
+                        content: contentBase64, 
+                        sha: data.sha 
+                    })
+                });
+
+                if (!putRes.ok) throw new Error("更新文件失败: " + putRes.status);
+
+                // 4. 成功后处理：从当前队列移除并刷新 UI
+                stopCurrentAudio();
+                const cardEl = document.getElementById('current-card');
+                cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
+                
+                setTimeout(() => {
+                    cardQueue.shift(); // 移除当前卡片
+                    totalItemsCount--; // 更新总数
+                    updateDeckStats();
+                    renderCard(); // 渲染下一张
+                }, 300);
+
+            } catch (e) {
+                alert("删除失败: " + e.message);
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
         }
 
         function revealAnswer(el) { el.classList.add('revealed'); }
@@ -728,6 +856,8 @@
             document.getElementById('gh-user').value = USER_CONFIG.user;
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-token').value = USER_CONFIG.token;
+            // 设置开关状态
+            document.getElementById('enable-delete').checked = USER_CONFIG.enableDelete;
             renderTTSConfigList();
             document.getElementById('settingsModal').style.display = 'flex';
         }
@@ -737,12 +867,14 @@
             USER_CONFIG.user = document.getElementById('gh-user').value.trim();
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
+            USER_CONFIG.enableDelete = document.getElementById('enable-delete').checked; // 保存开关状态
             USER_CONFIG.ttsList = scrapeTTSConfigs();
             if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
 
             localStorage.setItem('gh_user', USER_CONFIG.user);
             localStorage.setItem('gh_repo', USER_CONFIG.repo);
             localStorage.setItem('gh_token', USER_CONFIG.token);
+            localStorage.setItem('gh_enable_delete', USER_CONFIG.enableDelete); // 持久化
             localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
 
             closeSettings();
