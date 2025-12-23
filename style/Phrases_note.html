@@ -210,7 +210,7 @@
 
     <script>
         // ============================================
-        // 1. TTS 配置 (已更新)
+        // 1. TTS 配置
         // ============================================
         const TTS_CONFIG = {
             useBackup: false, // false = 使用主力(read-aloud), true = 使用备用(libre)
@@ -226,10 +226,9 @@
             if (old) { old.pause(); old.remove(); }
 
             let audioUrl = "";
-            
+
             if (!TTS_CONFIG.useBackup) {
                 // 主力接口: read-aloud-bay
-                // 参数: text, voiceName, rate, pitch, volume
                 const params = new URLSearchParams({
                     text: text,
                     voiceName: TTS_CONFIG.voice,
@@ -240,7 +239,6 @@
                 audioUrl = `https://read-aloud-bay.vercel.app/api/synthesis?${params.toString()}`;
             } else {
                 // 备用接口: libre-tts
-                // 参数: t, v, r, p
                 const safeText = encodeURIComponent(text);
                 const safeVoice = encodeURIComponent(TTS_CONFIG.voice);
                 audioUrl = `https://libre-tts-nu.vercel.app/api/tts?t=${safeText}&v=${safeVoice}&r=0&p=0`;
@@ -264,6 +262,7 @@
         let USER_CONFIG = {
             user: localStorage.getItem('gh_user') || 'moodHappy',
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
+            // 注意：这里默认值保留为 Notes/Notes/
             path: localStorage.getItem('gh_path') || 'Notes/Notes/',
             token: localStorage.getItem('gh_token') || ''
         };
@@ -353,6 +352,7 @@
             GLOBAL_CONFIG = config;
 
             // 强制覆盖 Config 中的 BaseUrl，使用用户设置的 Path + SHA
+            // 结果：https://.../Notes/Notes/
             config.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${LATEST_SHA}/${USER_CONFIG.path}`;
 
             yearSelect.disabled = false; yearSelect.innerHTML = '';
@@ -409,7 +409,7 @@
             if(!query) { alert("请输入关键词"); return; }
             if(!GLOBAL_CONFIG) return;
 
-            // 搜索时不保留当前年月上下文，禁止删除操作（因为删除需要定位具体文件）
+            // 搜索时不保留当前年月上下文
             CURRENT_VIEW_YEAR = null; 
             CURRENT_VIEW_MONTH = null;
 
@@ -443,8 +443,11 @@
             if (!CURRENT_VIEW_YEAR || !CURRENT_VIEW_MONTH) { alert("只能在浏览特定月份列表时删除，不支持在搜索结果中直接删除。"); return; }
 
             const fileName = GLOBAL_CONFIG.getFileName(CURRENT_VIEW_YEAR, CURRENT_VIEW_MONTH);
-            // 注意：API 路径不包含 Notes/Notes/ 前缀，而是基于 Repo 根目录
-            // 用户配置的 path 通常是 Notes/Notes/，所以 API 路径 = path + filename
+            
+            // 注意：API 路径 = path + filename
+            // User Path: "Notes/Notes/"
+            // JS Filename: "2026/Note_2026-01.json"
+            // Result: "Notes/Notes/2026/Note_2026-01.json"
             const apiUrl = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${USER_CONFIG.path}${fileName}`;
 
             // 显示 Loading 遮罩
@@ -452,15 +455,15 @@
             if(btn) { btn.innerText = "删除中..."; btn.disabled = true; }
 
             try {
-                // 1. 获取当前文件内容 (需要 SHA 来更新)
+                // 1. 获取当前文件内容
                 const getRes = await fetch(apiUrl, {
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' }
                 });
 
-                if(!getRes.ok) throw new Error("无法读取文件，请检查 Token 权限");
+                if(!getRes.ok) throw new Error("无法读取文件，请检查 Token 权限或文件是否存在");
                 const fileData = await getRes.json();
 
-                // Base64 解码 (处理中文)
+                // Base64 解码
                 const content = decodeURIComponent(escape(atob(fileData.content)));
                 let json = JSON.parse(content);
 
@@ -470,7 +473,6 @@
                 if (newJson.length === json.length) { throw new Error("未找到对应 ID，文件可能已被修改"); }
 
                 // 3. 重新编码并上传
-                // 使用 unescape + encodeURIComponent 处理 UTF-8 字符转 Base64
                 const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(newJson, null, 2))));
 
                 const putRes = await fetch(apiUrl, {
@@ -479,16 +481,14 @@
                     body: JSON.stringify({
                         message: `Delete phrase ID: ${id} via Web`,
                         content: newContent,
-                        sha: fileData.sha // 必须带上 SHA
+                        sha: fileData.sha
                     })
                 });
 
                 if(!putRes.ok) throw new Error("更新 GitHub 失败");
 
                 alert("✅ 删除成功！页面将刷新。");
-                // 刷新当前列表
-                // 更新 SHA 保证读到最新的
-                startApp(); // 简单粗暴重新走一遍流程，或者只调用 fetchNotes
+                startApp();
 
             } catch (err) {
                 alert(`❌ 错误: ${err.message}`);
@@ -508,7 +508,7 @@
                 info.innerHTML = `✅ 找到 ${items.length} 个结果`; notesContainer.appendChild(info);
             }
 
-            const hasToken = !!USER_CONFIG.token && !isSearchResult; // 只有配了 Token 且非搜索结果页才显示删除
+            const hasToken = !!USER_CONFIG.token && !isSearchResult;
 
             items.forEach(item => {
                 const card = document.createElement('div');
@@ -522,7 +522,7 @@
 
                 const svgIcon = `<svg class="tts-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path class="tts-body" d="M3 9v6h4l5 5V4L7 9H3z"/><path class="tts-waves tts-wave-1" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path class="tts-waves tts-wave-2" d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
 
-                // 删除按钮 HTML (如果配置了Token)
+                // 删除按钮
                 const deleteBtnHtml = hasToken 
                     ? `<button class="delete-btn" onclick="deleteNote('${item.id}')">🗑️ 删除</button>` 
                     : '';
@@ -545,7 +545,6 @@
                 notesContainer.appendChild(card);
             });
 
-            // 如果配了Token但没看到删除按钮（比如首次加载），强制显示
             if(hasToken) {
                 const style = document.createElement('style');
                 style.innerHTML = `.delete-btn { display: block !important; }`;
