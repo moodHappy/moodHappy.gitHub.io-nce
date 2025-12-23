@@ -418,7 +418,7 @@
                 let sha = null;
                 // 先获取一下当前的 SHA，防止冲突
                 try {
-                    const getRes = await fetch(url, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                    const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
                 } catch(e) {}
 
@@ -457,7 +457,8 @@
 
             let sha = 'master';
             try {
-                const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master`);
+                // ★★★ 修复：添加 ?t=时间戳，强制不缓存 Commit SHA ★★★
+                const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master?t=${Date.now()}`);
                 if(res.ok) sha = (await res.json()).sha;
             } catch(e) {}
 
@@ -504,7 +505,8 @@
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
-                    promises.push(fetch(config.getUrl(y, m)).then(r => r.ok ? r.json() : []).catch(()=>[]));
+                    // ★★★ 修复：添加 ?t=时间戳，强制刷新 JSON 数据，防止缓存 ★★★
+                    promises.push(fetch(config.getUrl(y, m) + `?t=${Date.now()}`).then(r => r.ok ? r.json() : []).catch(()=>[]));
                 }
             }
 
@@ -555,7 +557,7 @@
             const rawText = item.text || '';
             const times = scheduler.previewNextDue(item.id);
             const sourceTitle = item.pageTitle || 'Source Link';
-            
+
             // ★★★ 新增/修改代码开始 ★★★
             // 功能：构建包含 Text Fragment 的 URL，实现点击直接跳转并高亮短语
             let sourceUrl = item.url || '#';
