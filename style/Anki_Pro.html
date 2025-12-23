@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Smart Fix)</title>
+    <title>Anki Pro (Final Fix)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
@@ -283,6 +283,8 @@
                 let updateCount = 0;
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
                     const localCard = this.db[id];
+                    // 只有当本地没有，或者云端数据更新时才覆盖
+                    // 这会导致已删除卡片复活，因此必须依赖 "Safe GC" 和 "Auto Sync"
                     if (localCard) {
                         const localTime = localCard.lastModified || 0;
                         const cloudTime = cloudCard.lastModified || 0;
@@ -402,11 +404,19 @@
             }
         }
 
-        async function syncProgressToCloud(btnElement) {
-            if(!USER_CONFIG.token) { alert('请先配置 Token'); return; }
-            const originalText = btnElement ? btnElement.innerHTML : '';
-            if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; }
-            else { updateSyncStatus('<span class="spin">☁️</span> 上传...', 'loading'); }
+        async function syncProgressToCloud(btnElement, isSilent = false) {
+            if(!USER_CONFIG.token) { 
+                if(!isSilent) alert('请先配置 Token'); 
+                return; 
+            }
+            
+            const originalText = (btnElement && !isSilent) ? btnElement.innerHTML : '';
+            if(btnElement && !isSilent) { 
+                btnElement.disabled = true; 
+                btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; 
+            } else { 
+                updateSyncStatus('<span class="spin">☁️</span> 上传中...', 'loading'); 
+            }
 
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
@@ -427,13 +437,16 @@
 
                 if(!putRes.ok) throw new Error('Upload failed');
 
-                if(btnElement) {
+                if(btnElement && !isSilent) {
                     btnElement.innerHTML = `✅ 成功`; btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
                     setTimeout(() => { btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; }, 2000);
-                } else { updateSyncStatus('✅ 成功', 'success'); }
+                } else { 
+                    updateSyncStatus('✅ 进度已同步', 'success'); 
+                }
             } catch(e) {
-                alert('上传失败: ' + e.message);
-                if(btnElement) { btnElement.disabled = false; btnElement.innerHTML = originalText; }
+                if(!isSilent) alert('上传失败: ' + e.message);
+                if(btnElement && !isSilent) { btnElement.disabled = false; btnElement.innerHTML = originalText; }
+                updateSyncStatus('❌ 同步失败', 'error');
             }
         }
 
@@ -488,6 +501,7 @@
             const today = new Date();
             const currentYear = today.getFullYear();
             let allItems = [];
+            let allSuccess = true; // ★★★ 标记：是否所有文件都加载成功 ★★★
             const promises = [];
 
             for (let y = currentYear; y >= currentYear - 1; y--) {
@@ -495,9 +509,16 @@
                     if (y === currentYear && m > today.getMonth() + 1) continue;
                     promises.push(
                         fetch(config.getUrl(y, m) + `?t=${Date.now()}`)
-                            .then(r => r.ok ? r.json() : [])
+                            .then(r => {
+                                if (!r.ok) throw new Error(r.status);
+                                return r.json();
+                            })
                             .then(items => items.map(item => ({...item, _year: y, _month: m}))) 
-                            .catch(()=>[])
+                            .catch(e => {
+                                console.warn(`加载 ${y}/${m} 失败:`, e);
+                                allSuccess = false; // 有一个失败，就不执行危险的清理操作
+                                return [];
+                            })
                     );
                 }
             }
@@ -508,18 +529,23 @@
             const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
-            // ★★★ 数据库自愈 (清理已被删除卡片的进度记录) ★★★
-            const currentIds = new Set(uniqueItems.map(item => item.id));
-            let dirty = false;
-            for (const dbId in scheduler.db) {
-                if (!currentIds.has(dbId)) {
-                    delete scheduler.db[dbId]; 
-                    dirty = true;
+            // ★★★ 数据库自愈 (Safe GC) ★★★
+            // 只有当所有网络请求都成功时，才敢断定本地DB里多余的ID是“僵尸数据”
+            if (allSuccess && uniqueItems.length > 0) {
+                const currentIds = new Set(uniqueItems.map(item => item.id));
+                let dirty = false;
+                for (const dbId in scheduler.db) {
+                    if (!currentIds.has(dbId)) {
+                        delete scheduler.db[dbId]; 
+                        dirty = true;
+                    }
                 }
-            }
-            if (dirty) {
-                console.log('Cleaning orphaned records...');
-                scheduler.save(); 
+                if (dirty) {
+                    console.log('Safe GC: Cleaned orphaned records.');
+                    scheduler.save(); 
+                }
+            } else {
+                console.warn('Skipping GC due to network errors or empty content.');
             }
 
             const learning = [];
@@ -605,7 +631,7 @@
         }
 
         // ============================================
-        // Delete Functionality (Fixed for 404)
+        // Delete Functionality (Fixed)
         // ============================================
         async function deleteCurrentCard(btn) {
             if(event) event.stopPropagation();
@@ -633,10 +659,16 @@
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
 
             // 提取公共清理函数
-            const forceCleanLocal = () => {
+            const finalizeDelete = async () => {
+                // 1. 本地删除
                 delete scheduler.db[item.id];
                 scheduler.save();
                 
+                // 2. ★★★ 关键修复：立即静默上传干净的进度，防止云端旧进度复活卡片 ★★★
+                // 我们不等待它完全结束再刷新UI，让它在后台跑，或者为了保险稍微等一下
+                await syncProgressToCloud(null, true); 
+
+                // 3. UI 刷新
                 stopCurrentAudio();
                 const cardEl = document.getElementById('current-card');
                 cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
@@ -654,14 +686,11 @@
                     headers: { 'Authorization': `token ${USER_CONFIG.token}` } 
                 });
                 
-                // ★★★ 修复核心：如果文件不存在 (404)，询问是否强制清理本地 ★★★
                 if (getRes.status === 404) {
                     if(confirm("检测到云端源文件不存在（404）。\n卡片可能已经被删除。\n\n是否强制清除本地缓存中的此卡片？")) {
-                        forceCleanLocal();
+                        await finalizeDelete();
                         return;
-                    } else {
-                        throw new Error("取消强制删除");
-                    }
+                    } else { throw new Error("取消强制删除"); }
                 }
 
                 if (!getRes.ok) throw new Error("无法读取源文件: " + getRes.status);
@@ -669,20 +698,15 @@
                 const data = await getRes.json();
                 const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 
-                // 过滤掉当前卡片
                 const newContent = content.filter(c => c.id !== item.id);
                 
-                // ★★★ 如果内容里也没找到卡片，说明已经删了，同样询问强制清理 ★★★
                 if (newContent.length === content.length) {
                     if(confirm("在云端文件中未找到此卡片ID。\n卡片可能已经被删除。\n\n是否强制清除本地缓存？")) {
-                        forceCleanLocal();
+                        await finalizeDelete();
                         return;
-                    } else {
-                        throw new Error("取消操作");
-                    }
+                    } else { throw new Error("取消操作"); }
                 }
 
-                // 上传更新
                 const contentStr = JSON.stringify(newContent, null, 2);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
 
@@ -701,8 +725,8 @@
 
                 if (!putRes.ok) throw new Error("更新文件失败: " + putRes.status);
 
-                // 正常删除成功，执行本地清理
-                forceCleanLocal();
+                // 正常删除成功
+                await finalizeDelete();
 
             } catch (e) {
                 alert("删除操作终止: " + e.message);
