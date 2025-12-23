@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Fixed Persistence)</title>
+    <title>Anki Pro (Smart Fix)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
@@ -260,7 +260,7 @@
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
             token: localStorage.getItem('gh_token') || '',
             ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST)),
-            enableDelete: localStorage.getItem('gh_enable_delete') === 'true' // 默认关闭
+            enableDelete: localStorage.getItem('gh_enable_delete') === 'true'
         };
 
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
@@ -278,26 +278,16 @@
                 localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); 
             }
 
-            // 修复逻辑：合并数据而不是盲目覆盖
             loadExternalData(cloudData) { 
                 if (!cloudData) return; 
                 let updateCount = 0;
-
-                // 遍历云端数据，智能合并
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
                     const localCard = this.db[id];
-
-                    // 逻辑：如果本地记录存在，且本地记录的修改时间比云端晚（说明本地刚背过），则忽略云端旧数据
-                    // 只有当本地没有，或者云端数据更新（timestamp更大）时才采用
                     if (localCard) {
                         const localTime = localCard.lastModified || 0;
                         const cloudTime = cloudCard.lastModified || 0;
-                        if (localTime >= cloudTime) {
-                            continue; // 本地更新，跳过云端
-                        }
+                        if (localTime >= cloudTime) continue;
                     }
-
-                    // 否则采用云端数据
                     this.db[id] = cloudCard;
                     updateCount++;
                 }
@@ -308,18 +298,10 @@
             getCardState(id) {
                 if (!this.db[id]) {
                     this.db[id] = { 
-                        state: 'new', 
-                        step: 0, 
-                        interval: 0, 
-                        easeFactor: 2.5, 
-                        dueDate: 0,
-                        lastModified: 0 // 初始化时间戳
+                        state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 
                     };
                 }
-                // 确保旧数据也有时间戳字段，防止比较出错
-                if (this.db[id].lastModified === undefined) {
-                    this.db[id].lastModified = 0;
-                }
+                if (this.db[id].lastModified === undefined) this.db[id].lastModified = 0;
                 return this.db[id];
             }
 
@@ -337,7 +319,7 @@
                 const card = this.getCardState(id);
                 const result = this.calculate(card, rating);
                 this.db[id] = result.card; 
-                this.save(); // 立即保存到 LocalStorage
+                this.save();
                 return result;
             }
 
@@ -345,30 +327,18 @@
                 let card = JSON.parse(JSON.stringify(originalCard));
                 let nextIntervalMin = 0;
 
-                // 标准 SM-2 逻辑
-                if (rating === 1) { // Again
-                    card.step = 0; 
-                    card.state = 'learning'; 
-                    nextIntervalMin = 1; 
+                if (rating === 1) { 
+                    card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
                     card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
                 } else if (card.state === 'new' || card.state === 'learning') {
-                    if (rating === 2) { // Hard
-                        nextIntervalMin = 6; 
-                    } else if (rating === 3) { // Good
-                        if (card.step === 0) { 
-                            card.step = 1; 
-                            nextIntervalMin = 10; 
-                        } else { 
-                            card.state = 'review'; 
-                            card.interval = 1; 
-                            nextIntervalMin = 1440; 
-                        } 
-                    } else if (rating === 4) { // Easy
-                        card.state = 'review'; 
-                        card.interval = 4; 
-                        nextIntervalMin = 5760; 
+                    if (rating === 2) nextIntervalMin = 6; 
+                    else if (rating === 3) { 
+                        if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } 
+                        else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; } 
+                    } else if (rating === 4) { 
+                        card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; 
                     } 
-                } else { // Review
+                } else { 
                     if (rating === 2) { 
                         card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
                         card.easeFactor -= 0.15; 
@@ -383,8 +353,7 @@
                 }
 
                 card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
-                card.lastModified = Date.now(); // 关键：更新修改时间戳
-
+                card.lastModified = Date.now(); 
                 let timeText = nextIntervalMin < 60 ? nextIntervalMin + 'm' : (nextIntervalMin < 1440 ? Math.round(nextIntervalMin/60) + 'h' : Math.round(nextIntervalMin/1440) + 'd');
                 return { card, timeText };
             }
@@ -407,7 +376,6 @@
 
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
-                // 添加时间戳防止缓存
                 const res = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 if(res.status === 404) { 
                     if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
@@ -417,7 +385,6 @@
                 const data = await res.json();
                 const content = decodeURIComponent(escape(atob(data.content))); 
 
-                // 执行合并
                 const count = scheduler.loadExternalData(JSON.parse(content));
 
                 if(btnElement) {
@@ -425,7 +392,7 @@
                     btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
                     setTimeout(() => { 
                         btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; 
-                        location.reload(); // 只有手动下载才刷新页面
+                        location.reload(); 
                     }, 1500);
                 }
                 return data.sha;
@@ -444,7 +411,6 @@
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
                 let sha = null;
-                // 先获取一下当前的 SHA，防止冲突
                 try {
                     const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
@@ -479,18 +445,12 @@
         let totalItemsCount = 0;
 
         async function startApp() {
-            // ★★★ 核心修复：移除启动时的自动同步 ★★★
-            // 之前这里调用 fetchCloudProgress() 会导致云端旧数据覆盖本地新数据
-            // 现在只依赖 LocalStorage，保证刷新后进度不丢失
-
             let sha = 'master';
             try {
-                // ★★★ 修复：添加 ?t=时间戳，强制不缓存 Commit SHA ★★★
                 const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master?t=${Date.now()}`);
                 if(res.ok) sha = (await res.json()).sha;
             } catch(e) {}
 
-            // 加载配置 JS
             const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
 
             try {
@@ -533,11 +493,10 @@
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
-                    // ★★★ 更新：在加载数据的同时，标记来源的年份和月份，以便删除时定位文件 ★★★
                     promises.push(
                         fetch(config.getUrl(y, m) + `?t=${Date.now()}`)
                             .then(r => r.ok ? r.json() : [])
-                            .then(items => items.map(item => ({...item, _year: y, _month: m}))) // 附加源信息
+                            .then(items => items.map(item => ({...item, _year: y, _month: m}))) 
                             .catch(()=>[])
                     );
                 }
@@ -549,13 +508,26 @@
             const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
+            // ★★★ 数据库自愈 (清理已被删除卡片的进度记录) ★★★
+            const currentIds = new Set(uniqueItems.map(item => item.id));
+            let dirty = false;
+            for (const dbId in scheduler.db) {
+                if (!currentIds.has(dbId)) {
+                    delete scheduler.db[dbId]; 
+                    dirty = true;
+                }
+            }
+            if (dirty) {
+                console.log('Cleaning orphaned records...');
+                scheduler.save(); 
+            }
+
             const learning = [];
             const review = [];
             const newCards = [];
 
             uniqueItems.forEach(item => {
                 const s = scheduler.getCardState(item.id);
-                // 核心过滤：只有到期或全新的卡片才显示
                 if (s.dueDate > Date.now()) return; 
 
                 if (s.state === 'learning') learning.push(item);
@@ -591,21 +563,15 @@
             const times = scheduler.previewNextDue(item.id);
             const sourceTitle = item.pageTitle || 'Source Link';
 
-            // ★★★ 新增/修改代码开始 ★★★
-            // 功能：构建包含 Text Fragment 的 URL，实现点击直接跳转并高亮短语
             let sourceUrl = item.url || '#';
             if (sourceUrl !== '#' && item.text) {
-                // 使用 encodeURIComponent 处理特殊字符，生成锚点
-                // 格式: url#:~:text=ENCODED_PHRASE
                 sourceUrl = `${sourceUrl}#:~:text=${encodeURIComponent(item.text)}`;
             }
             
-            // 决定是否显示删除按钮
             let deleteBtnHtml = '';
             if (USER_CONFIG.enableDelete) {
                 deleteBtnHtml = `<button class="btn-delete-card" onclick="deleteCurrentCard(this)" title="从云端永久删除">🗑️</button>`;
             }
-            // ★★★ 修改代码结束 ★★★
 
             container.innerHTML = `
                 <div class="note-card" id="current-card" onclick="handleCardClick(event)">
@@ -639,10 +605,9 @@
         }
 
         // ============================================
-        // Delete Functionality
+        // Delete Functionality (Fixed for 404)
         // ============================================
         async function deleteCurrentCard(btn) {
-            // 防止冒泡触发卡片翻转
             if(event) event.stopPropagation();
 
             if (!USER_CONFIG.token) {
@@ -658,8 +623,6 @@
             btn.innerHTML = '⏳';
             btn.disabled = true;
 
-            // 构造文件路径，假设结构为 Notes/{year}/{month}.json
-            // 根据 loadAllCards 中附加的 _year 和 _month 确定文件位置
             if (!item._year || !item._month) {
                 alert("无法定位源文件路径，删除失败。");
                 btn.innerHTML = originalText; btn.disabled = false;
@@ -669,28 +632,58 @@
             const filePath = `Notes/${item._year}/${item._month}.json`;
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
 
+            // 提取公共清理函数
+            const forceCleanLocal = () => {
+                delete scheduler.db[item.id];
+                scheduler.save();
+                
+                stopCurrentAudio();
+                const cardEl = document.getElementById('current-card');
+                cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
+                
+                setTimeout(() => {
+                    cardQueue.shift(); 
+                    totalItemsCount--; 
+                    updateDeckStats();
+                    renderCard(); 
+                }, 300);
+            };
+
             try {
-                // 1. 获取当前文件内容
                 const getRes = await fetch(url + `?t=${Date.now()}`, { 
                     headers: { 'Authorization': `token ${USER_CONFIG.token}` } 
                 });
                 
+                // ★★★ 修复核心：如果文件不存在 (404)，询问是否强制清理本地 ★★★
+                if (getRes.status === 404) {
+                    if(confirm("检测到云端源文件不存在（404）。\n卡片可能已经被删除。\n\n是否强制清除本地缓存中的此卡片？")) {
+                        forceCleanLocal();
+                        return;
+                    } else {
+                        throw new Error("取消强制删除");
+                    }
+                }
+
                 if (!getRes.ok) throw new Error("无法读取源文件: " + getRes.status);
                 
                 const data = await getRes.json();
                 const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 
-                // 2. 过滤掉当前卡片
+                // 过滤掉当前卡片
                 const newContent = content.filter(c => c.id !== item.id);
                 
+                // ★★★ 如果内容里也没找到卡片，说明已经删了，同样询问强制清理 ★★★
                 if (newContent.length === content.length) {
-                    alert("在源文件中未找到该 ID，可能已被删除或文件不匹配。");
-                    btn.innerHTML = originalText; btn.disabled = false;
-                    return;
+                    if(confirm("在云端文件中未找到此卡片ID。\n卡片可能已经被删除。\n\n是否强制清除本地缓存？")) {
+                        forceCleanLocal();
+                        return;
+                    } else {
+                        throw new Error("取消操作");
+                    }
                 }
 
-                // 3. 上传更新后的文件
-                const contentStr = JSON.stringify(newContent, null, 2); // 保持格式美观
+                // 上传更新
+                const contentStr = JSON.stringify(newContent, null, 2);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
 
                 const putRes = await fetch(url, {
@@ -708,20 +701,11 @@
 
                 if (!putRes.ok) throw new Error("更新文件失败: " + putRes.status);
 
-                // 4. 成功后处理：从当前队列移除并刷新 UI
-                stopCurrentAudio();
-                const cardEl = document.getElementById('current-card');
-                cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
-                
-                setTimeout(() => {
-                    cardQueue.shift(); // 移除当前卡片
-                    totalItemsCount--; // 更新总数
-                    updateDeckStats();
-                    renderCard(); // 渲染下一张
-                }, 300);
+                // 正常删除成功，执行本地清理
+                forceCleanLocal();
 
             } catch (e) {
-                alert("删除失败: " + e.message);
+                alert("删除操作终止: " + e.message);
                 btn.innerHTML = originalText; btn.disabled = false;
             }
         }
@@ -737,8 +721,6 @@
         function handleRate(rating) {
             stopCurrentAudio(); 
             const item = cardQueue[0];
-
-            // 记录答案并保存到 localStorage
             scheduler.answerCard(item.id, rating);
 
             const cardEl = document.getElementById('current-card');
@@ -746,7 +728,6 @@
 
             setTimeout(() => {
                 cardQueue.shift();
-                // 如果是“重来”，稍后重试
                 if (rating === 1) cardQueue.push(item);
                 updateDeckStats(); 
                 renderCard();
@@ -856,7 +837,6 @@
             document.getElementById('gh-user').value = USER_CONFIG.user;
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-token').value = USER_CONFIG.token;
-            // 设置开关状态
             document.getElementById('enable-delete').checked = USER_CONFIG.enableDelete;
             renderTTSConfigList();
             document.getElementById('settingsModal').style.display = 'flex';
@@ -867,14 +847,14 @@
             USER_CONFIG.user = document.getElementById('gh-user').value.trim();
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
-            USER_CONFIG.enableDelete = document.getElementById('enable-delete').checked; // 保存开关状态
+            USER_CONFIG.enableDelete = document.getElementById('enable-delete').checked;
             USER_CONFIG.ttsList = scrapeTTSConfigs();
             if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
 
             localStorage.setItem('gh_user', USER_CONFIG.user);
             localStorage.setItem('gh_repo', USER_CONFIG.repo);
             localStorage.setItem('gh_token', USER_CONFIG.token);
-            localStorage.setItem('gh_enable_delete', USER_CONFIG.enableDelete); // 持久化
+            localStorage.setItem('gh_enable_delete', USER_CONFIG.enableDelete);
             localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
 
             closeSettings();
