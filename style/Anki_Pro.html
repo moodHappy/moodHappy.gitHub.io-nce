@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Blacklist Fix)</title>
+    <title>Anki Pro (Archive Mode)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
@@ -16,6 +16,7 @@
             --color-again: #ff5252; --color-hard: #ffab40;
             --color-good: #69f0ae; --color-easy: #40c4ff;
             --color-error: #ef4444;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
@@ -32,32 +33,60 @@
 
         .container { 
             width: 100%; max-width: 600px; margin: 0 auto; 
-            position: relative; box-sizing: border-box; padding: 20px;
+            position: relative; box-sizing: border-box; padding: 15px 20px;
             flex: 1; display: flex; flex-direction: column; 
         }
 
-        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; position: relative; padding-top: 20px; }
-        h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; }
-        .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;}
-        .header-actions { position: absolute; right: 0; top: 20px; display: flex; gap: 10px; }
+        /* === 顶部 Header === */
+        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; position: relative; padding-top: 10px; }
+        h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; font-size: 1.5rem; }
+        .subtitle { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 5px;}
+        .header-actions { position: absolute; right: 0; top: 10px; display: flex; gap: 10px; }
         .icon-btn { 
             background: var(--bg-card); border: 1px solid var(--border-color); 
-            width: 40px; height: 40px; border-radius: 50%; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; font-size: 18px;
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
             transition: all 0.2s;
         }
-        .icon-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
-        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; margin-top: 10px; }
+        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; margin-top: 5px; }
         .sync-badge.success { background: #dcfce7; color: #166534; }
         .sync-badge.error { background: #fee2e2; color: #991b1b; }
         .spin { animation: spin 1s infinite linear; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
+        /* === 新增：浏览归档面板 (Controls) === */
+        .controls { 
+            background: var(--bg-card); padding: 15px 20px; border-radius: 20px; 
+            border: 1px solid var(--border-color); margin-bottom: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); flex-shrink: 0;
+        }
+        .controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .controls-title { font-weight: 600; display: flex; align-items: center; gap: 6px; font-size: 1rem; }
+        
+        select#year-select { 
+            padding: 6px 12px; font-size: 14px; border-radius: 8px; 
+            border: 1px solid var(--border-color); background: var(--bg-body); 
+            color: var(--text-primary); outline: none; font-weight: 500;
+        }
+        
+        .months-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+        .month-btn { 
+            padding: 8px 0; background: transparent; border: 1px solid transparent; 
+            border-radius: 8px; cursor: pointer; color: var(--text-secondary); 
+            transition: all 0.2s; font-size: 0.9rem; font-family: 'Inter', sans-serif;
+        }
+        .month-btn:hover { background: var(--bg-body); color: var(--text-primary); }
+        .month-btn.active { 
+            background: var(--accent-color); color: white; font-weight: 600; 
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); 
+        }
+
+        /* === 卡片区域 === */
         #notes-container { 
             perspective: 1000px; position: relative; 
             flex: 1; display: flex; flex-direction: column; justify-content: flex-end; 
-            padding-bottom: 15vh;
+            padding-bottom: 10vh; /* 留出底部空间 */
         }
 
         .note-card { 
@@ -66,10 +95,9 @@
             position: relative; width: 100%; box-sizing: border-box;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             display: flex; flex-direction: column; align-items: center;
-            min-height: 50vh; 
+            min-height: 45vh; 
             cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
+            user-select: none; -webkit-user-select: none;
         }
         .note-card:not(:first-child) { display: none; }
 
@@ -131,6 +159,7 @@
         .btn-good::after { background: var(--color-good); } 
         .btn-easy::after { background: var(--color-easy); }
 
+        /* === 模态框 === */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal { background: var(--bg-card); padding: 20px; border-radius: 20px; width: 95%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
         .modal h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 15px; }
@@ -164,7 +193,7 @@
         .btn-sync-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-size: 0.9rem; font-weight: 600;}
         .btn-sync-action:active { transform: scale(0.98); }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-        .status-page { text-align: center; padding-bottom: 20px; }
+        .status-page { text-align: center; padding: 40px 0; }
         .emoji-lg { font-size: 4rem; margin-bottom: 20px; display: block; }
         .error-box { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 12px; font-size: 0.9rem; text-align: left; margin-top: 20px;}
     </style>
@@ -221,6 +250,14 @@
             <div id="sync-status" class="sync-badge"></div>
         </header>
 
+        <div class="controls">
+            <div class="controls-header">
+                <span class="controls-title">📅 浏览归档</span>
+                <select id="year-select" disabled><option>加载中...</option></select>
+            </div>
+            <div class="months-grid" id="month-container"></div>
+        </div>
+
         <div id="notes-container">
             <div class="status-page"><div class="emoji-lg">⏳</div><div>正在初始化...</div></div>
         </div>
@@ -238,7 +275,7 @@
         }
 
         // ============================================
-        // Config
+        // Config & Globals
         // ============================================
         const DEFAULT_TTS_LIST = [
             { url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
@@ -256,6 +293,11 @@
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
         const LOCAL_DB_KEY = 'anki_db_v2'; 
         const DELETED_IDS_KEY = 'anki_deleted_ids'; 
+
+        // 当前选中的年月 (用于加载和删除)
+        let CURRENT_VIEW_YEAR = new Date().getFullYear();
+        let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
+        let GLOBAL_CONFIG = null;
 
         // ============================================
         // Scheduler
@@ -370,7 +412,7 @@
         }
 
         // ============================================
-        // Sync
+        // Sync Logic
         // ============================================
         const uiSync = document.getElementById('sync-status');
         function updateSyncStatus(msg, type) {
@@ -385,7 +427,6 @@
 
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
-                // 强制刷新 Cache
                 const res = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 if(res.status === 404) { 
                     if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
@@ -464,11 +505,13 @@
         }
 
         // ============================================
-        // App Logic
+        // App Logic (初始化 & 面板控制)
         // ============================================
         let cardQueue = [];
-        let GLOBAL_CONFIG = null;
         let totalItemsCount = 0;
+
+        const yearSelect = document.getElementById('year-select');
+        const monthContainer = document.getElementById('month-container');
 
         async function startApp() {
             let sha = 'master';
@@ -491,15 +534,70 @@
                     
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
 
-                    // ★★★ 修改点：将 BaseUrl 设为 Notes/Notes/，以便 JS Config 里的年份拼接 ★★★
+                    // BaseUrl 指向 Notes/Notes/，方便 JS 拼接年份
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
 
-                    loadAllCards(GLOBAL_CONFIG);
+                    initDateSelectors(GLOBAL_CONFIG);
                     URL.revokeObjectURL(url);
                 };
                 script.onerror = () => showError(`配置脚本加载错误`);
                 document.head.appendChild(script);
             } catch (err) { showError(`无法加载配置: ${err.message}`); }
+        }
+
+        function initDateSelectors(config) {
+            yearSelect.disabled = false; yearSelect.innerHTML = '';
+            const start = config.startYear || 2025;
+            const total = config.totalYears || 30;
+
+            // 初始化年份下拉框
+            for (let y = start; y < start + total; y++) {
+                const opt = document.createElement('option');
+                opt.value = y; opt.text = `${y}年`;
+                yearSelect.appendChild(opt);
+            }
+
+            // 自动定位到当前或最近的年份
+            const today = new Date();
+            let defaultYear = today.getFullYear();
+            if (defaultYear < start) defaultYear = start;
+            if (defaultYear >= start + total) defaultYear = start + total - 1;
+            yearSelect.value = defaultYear;
+
+            // 监听年份变化
+            yearSelect.addEventListener('change', (e) => loadMonthsForYear(parseInt(e.target.value)));
+
+            // 加载月份按钮
+            loadMonthsForYear(defaultYear);
+
+            // 自动点击当前月份 (或者12月如果已经过了)
+            const targetMonth = (defaultYear === today.getFullYear()) ? (today.getMonth() + 1) : 12;
+            setTimeout(() => {
+                const btn = document.querySelector(`button[data-month="${targetMonth}"]`);
+                if(btn) btn.click();
+                else { 
+                    // 如果找不到（比如是未来年份的1月），点击第一个
+                    const firstBtn = document.querySelector('.month-btn');
+                    if(firstBtn) firstBtn.click();
+                }
+            }, 100);
+        }
+
+        function loadMonthsForYear(year) {
+            monthContainer.innerHTML = '';
+            for (let m = 1; m <= 12; m++) {
+                const btn = document.createElement('button');
+                btn.className = 'month-btn';
+                btn.innerText = `${m}月`;
+                btn.dataset.month = m;
+                btn.onclick = () => {
+                    document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    // 切换月份，加载对应数据
+                    loadCardsForDate(year, m);
+                };
+                monthContainer.appendChild(btn);
+            }
         }
 
         function shuffle(array) {
@@ -509,59 +607,52 @@
             }
         }
 
-        async function loadAllCards(config) {
-            // ★★★ 修改点：使用配置中的年份范围（30年） ★★★
-            const startYear = config.startYear || 2025;
-            const totalYears = config.totalYears || 2; 
-            const endYear = startYear + totalYears; 
-            const today = new Date();
+        // ============================================
+        // Load Cards (Changed to load specific Month)
+        // ============================================
+        async function loadCardsForDate(year, month) {
+            CURRENT_VIEW_YEAR = year;
+            CURRENT_VIEW_MONTH = month;
+            
+            const container = document.getElementById('notes-container');
+            container.innerHTML = `<div class="status-page"><div class="spin" style="font-size:3rem">⏳</div><div>读取 ${year}年${month}月...</div></div>`;
 
-            let allItems = [];
-            const promises = [];
             const blacklist = getBlacklist();
+            let allItems = [];
 
-            // 循环遍历 Config 定义的所有年份
-            for (let y = startYear; y < endYear; y++) {
-                // 如果是未来的年份，全部读取；如果是当年，只读取到现在为止的月份？
-                // 根据需求，用户似乎想预览所有产生的JSON，所以这里我们读取所有可能的月份
-                let maxMonth = 12;
-                if (y > today.getFullYear() + 2) maxMonth = 0; // 稍微限制一下太久远的未来，避免404太多
-
-                for (let m = 1; m <= maxMonth; m++) {
-                    promises.push(
-                        fetch(config.getUrl(y, m) + `?t=${Date.now()}`)
-                            .then(r => r.ok ? r.json() : [])
-                            .then(items => items.map(item => ({...item, _year: y, _month: m}))) 
-                            .catch(e => [])
-                    );
+            try {
+                // 读取单个文件
+                const url = GLOBAL_CONFIG.getUrl(year, month) + `?t=${Date.now()}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const items = await res.json();
+                    // 附加年月信息，方便删除时定位
+                    items.forEach(item => { item._year = year; item._month = month; });
+                    allItems = items;
+                } else {
+                    // 404 或者其他错误
+                    console.log(`No data for ${year}-${month}`);
                 }
+            } catch (e) {
+                console.warn(e);
             }
 
-            const results = await Promise.all(promises);
-            results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
-
+            // 过滤黑名单
             const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
             const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
-            // 数据库自愈
-            const currentIds = new Set(uniqueItems.map(item => item.id));
-            let dirty = false;
-            for (const dbId in scheduler.db) {
-                if (blacklist.includes(dbId) || (!currentIds.has(dbId) && uniqueItems.length > 0)) {
-                    delete scheduler.db[dbId]; 
-                    dirty = true;
-                }
-            }
-            if (dirty) { scheduler.save(); }
-
+            // 数据库清理 (可选，这里暂时不做，以免误删跨月复习进度)
+            
             const learning = [];
             const review = [];
             const newCards = [];
 
             uniqueItems.forEach(item => {
                 const s = scheduler.getCardState(item.id);
+                // Anki 核心过滤：未来的卡片不显示
                 if (s.dueDate > Date.now()) return; 
+
                 if (s.state === 'learning') learning.push(item);
                 else if (s.state === 'review') review.push(item);
                 else newCards.push(item);
@@ -572,6 +663,7 @@
             shuffle(newCards);
 
             cardQueue = [...learning, ...review, ...newCards];
+            
             updateDeckStats(); 
             renderCard();
         }
@@ -579,13 +671,23 @@
         function renderCard() {
             const container = document.getElementById('notes-container');
             if (cardQueue.length === 0) {
-                container.innerHTML = `
-                    <div class="status-page">
-                        <div class="emoji-lg">🎉</div>
-                        <h2>今日任务完成！</h2>
-                        <p style="color:var(--text-secondary)">记得同步进度到云端。</p>
-                        <br><button class="btn btn-save" onclick="syncProgressToCloud(this)">☁️ 立即同步</button>
-                    </div>`;
+                // 只有当总数为0时，才显示无数据；否则显示任务完成
+                if (totalItemsCount === 0) {
+                     container.innerHTML = `
+                        <div class="status-page">
+                            <div class="emoji-lg">📭</div>
+                            <h2>本月暂无数据</h2>
+                            <p style="color:var(--text-secondary)">请切换其他月份查看。</p>
+                        </div>`;
+                } else {
+                    container.innerHTML = `
+                        <div class="status-page">
+                            <div class="emoji-lg">🎉</div>
+                            <h2>今日任务完成！</h2>
+                            <p style="color:var(--text-secondary)">当前月份已无待复习卡片。</p>
+                            <br><button class="btn btn-save" onclick="syncProgressToCloud(this)">☁️ 立即同步</button>
+                        </div>`;
+                }
                 return;
             }
 
@@ -635,7 +737,7 @@
         }
 
         // ============================================
-        // Delete Functionality (Fixed Path)
+        // Delete Functionality
         // ============================================
         async function deleteCurrentCard(btn) {
             if(event) event.stopPropagation();
@@ -669,17 +771,13 @@
                 }, 300);
             };
 
-            if (!item._year || !item._month) {
-                alert("源文件路径未知，执行本地强制删除。");
-                finalizeDelete();
-                return;
-            }
+            // 使用当前的 View Year/Month 作为路径依据，或者 item 自身的 _year/_month
+            const y = item._year || CURRENT_VIEW_YEAR;
+            const m = item._month || CURRENT_VIEW_MONTH;
 
-            // ★★★ 核心修改：路径拼接逻辑 ★★★
-            // 目标: Notes/Notes/2026/Note_2026-02.json
-            const mm = item._month.toString().padStart(2, '0');
-            const fileName = `Note_${item._year}-${mm}.json`;
-            const filePath = `Notes/Notes/${item._year}/${fileName}`;
+            const mm = m.toString().padStart(2, '0');
+            const fileName = `Note_${y}-${mm}.json`;
+            const filePath = `Notes/Notes/${y}/${fileName}`;
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
 
             try {
@@ -746,8 +844,9 @@
         function updateDeckStats() {
             const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
             const reviewCount = cardQueue.length - newCount;
+            // 显示当前月份
             document.getElementById('deck-stats').innerText = 
-                `待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${totalItemsCount}`;
+                `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount}`;
         }
 
         // ============================================
@@ -801,7 +900,7 @@
         }
 
         // ============================================
-        // UI Helpers
+        // UI Helpers & Settings
         // ============================================
         function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
 
