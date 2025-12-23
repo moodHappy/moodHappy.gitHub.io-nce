@@ -6,9 +6,7 @@
     <title>danmu</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
-
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
-
 
     <style>
         :root {
@@ -19,8 +17,11 @@
             --text-main: #1f2328;
             --text-muted: #656d76;
             --folder-color: #54aeff;
-            --pinned-bg: #e6f6ff; /* 置顶区域背景 */
+            --pinned-bg: #e6f6ff;
             --pinned-border: #b6e3ff;
+            --danger-bg: #ffebe9;
+            --danger-text: #cf222e;
+            --danger-border: #d1242f;
         }
 
         body {
@@ -109,12 +110,40 @@
             transition: background 0.2s; cursor: pointer; border-radius: 4px;
         }
         .list-item:hover { background-color: #f6f8fa; }
-        .item-icon { margin-right: 10px; font-size: 18px; }
+        
+        .item-left-group {
+            display: flex; align-items: center; flex-grow: 1; min-width: 0;
+        }
+
+        .item-icon { margin-right: 10px; font-size: 18px; flex-shrink: 0; }
         .folder-icon { color: var(--folder-color); }
         .file-icon { color: var(--text-muted); }
-        .item-info { flex-grow: 1; min-width: 0; }
+        
+        .item-info { min-width: 0; }
         .item-name { font-weight: 600; font-size: 15px; display: block; }
         .item-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 删除按钮样式 */
+        .delete-btn {
+            background-color: var(--danger-bg);
+            color: var(--danger-text);
+            border: 1px solid rgba(209, 36, 47, 0.3);
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 12px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .delete-btn:hover {
+            background-color: var(--danger-text);
+            color: white;
+            border-color: var(--danger-text);
+        }
 
         .loading, .error { text-align: center; padding: 30px; color: var(--text-muted); }
         .error { color: #cf222e; background: #ffebe9; border-radius: 6px; }
@@ -127,8 +156,18 @@
         .modal h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
-        .form-group input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; }
+        .form-group input[type="text"], 
+        .form-group input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; }
         .form-group .hint { font-size: 12px; color: #666; margin-top: 4px; }
+        
+        /* 开关样式 */
+        .toggle-group {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #f8f8f8; padding: 10px; border-radius: 4px; border: 1px solid #eee;
+        }
+        .toggle-group label { margin: 0; cursor: pointer; color: var(--danger-text); }
+        .toggle-group input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
         .btn { padding: 8px 16px; cursor: pointer; border: none; border-radius: 4px; font-size: 14px; }
         .btn-secondary { background: #f3f4f6; color: #24292f; margin-right: 10px; }
         .btn-primary { background: var(--primary); color: white; }
@@ -154,10 +193,16 @@
 <div id="settings-modal" class="modal-overlay">
     <div class="modal">
         <h3>🔧 配置</h3>
+        
+        <div class="form-group toggle-group">
+            <label for="cfg-del-enable">🔴 开启删除模式 (Delete Mode)</label>
+            <input type="checkbox" id="cfg-del-enable">
+        </div>
+
         <div class="form-group">
-            <label>GitHub Token (PAT)</label>
+            <label>GitHub Token (PAT) <span style="color:red">*</span></label>
             <input type="password" id="cfg-token" placeholder="github_pat_...">
-            <div class="hint">🔒 Token 保存在本地，可大幅提升加载速度。</div>
+            <div class="hint">🔒 Token 必须具备 repo 权限才能删除文件。</div>
         </div>
         <div class="form-group">
             <label>GitHub 用户名</label>
@@ -184,14 +229,16 @@
         user: 'moodHappy',
         repo: 'moodHappy.gitHub.io-nce',
         rootPath: 'Notes/danmu',
-        token: ''
+        token: '',
+        enableDelete: false // 默认为关闭
     };
 
     let currentPath = ''; 
     let config = {};
 
     function getConfig() {
-        const stored = localStorage.getItem('gh_nav_config_v4'); // 升级存储版本
+        // 更新存储键名为 v5，以防旧数据冲突
+        const stored = localStorage.getItem('gh_nav_config_v5'); 
         return stored ? { ...DEFAULTS, ...JSON.parse(stored) } : DEFAULTS;
     }
 
@@ -202,16 +249,29 @@
     }
 
     // 通用 Fetch 函数，带 Token
-    async function ghFetch(url) {
-        const headers = {};
+    async function ghFetch(url, options = {}) {
+        const headers = options.headers || {};
         if (config.token && config.token.trim() !== '') {
             headers['Authorization'] = `token ${config.token}`;
         }
-        const response = await fetch(url, { headers: headers });
+        
+        const fetchOpts = { ...options, headers: headers };
+        
+        const response = await fetch(url, fetchOpts);
+        
+        // 特殊处理 204 No Content (删除成功)
+        if (response.status === 204) return true;
+
         if (!response.ok) {
-            if (response.status === 403) throw new Error("API 访问受限 (403)，请在设置中配置 Token。");
-            if (response.status === 404) throw new Error("路径未找到 (404)。");
-            throw new Error(`HTTP Error: ${response.status}`);
+            let errMsg = `HTTP Error: ${response.status}`;
+            try {
+                const errJson = await response.json();
+                if (errJson.message) errMsg += ` - ${errJson.message}`;
+            } catch(e) {}
+
+            if (response.status === 403) throw new Error("API 访问受限 (403)，请检查 Token 权限或频率限制。");
+            if (response.status === 404) throw new Error("资源未找到 (404)。");
+            throw new Error(errMsg);
         }
         return await response.json();
     }
@@ -219,19 +279,19 @@
     async function loadPath(path) {
         currentPath = path;
         renderBreadcrumb(path);
-        
+
         const listContainer = document.getElementById('file-list');
         const latestContainer = document.getElementById('latest-container');
-        
+
         // 清空置顶区域（仅在根目录计算后显示）
         latestContainer.innerHTML = ''; 
         listContainer.innerHTML = '<div class="loading">正在获取列表...</div>';
 
         const apiUrl = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`;
-        
+
         try {
             const data = await ghFetch(apiUrl);
-            
+
             if (!Array.isArray(data)) {
                 window.location.href = data.html_url || data.download_url;
                 return;
@@ -250,13 +310,11 @@
             if (path === config.rootPath) {
                 // 找到看起来像年份的文件夹 (4位数字)
                 const yearDirs = dirs.filter(d => /^\d{4}$/.test(d.name));
-                
+
                 if (yearDirs.length > 0) {
-                    // 取最大年份 (dirs 已经按倒序排好了，取第一个即可)
                     const latestYearDir = yearDirs[0];
-                    // 显示加载提示在置顶区，不影响下面列表
                     latestContainer.innerHTML = '<div style="text-align:center; color:#999; font-size:12px; margin-bottom:10px;">正在检查最新笔记...</div>';
-                    
+
                     // 异步获取最新年份文件夹的内容
                     fetchLatestInDir(latestYearDir).then(latestFile => {
                         if (latestFile) {
@@ -284,10 +342,12 @@
         items.forEach(item => {
             if (item.name.toLowerCase() === 'index.html') return;
 
+            // GitHub API 返回的 item 包含 sha 字段，这对删除很重要
             if (item.type === 'dir') {
                 dirsArr.push(item);
-            } else if (item.name.endsWith('.html')) {
-                const match = item.name.match(/_(\d{13})\.html$/);
+            } else if (item.name.endsWith('.html') || item.name.endsWith('.json')) { 
+                // 允许 HTML 和 JSON (如果文件夹里有 JSON 也会被列出)
+                const match = item.name.match(/_(\d{13})\./); // 稍微放宽正则以匹配后缀前的时间戳
                 const timestamp = match ? parseInt(match[1]) : 0;
                 filesArr.push({
                     ...item,
@@ -305,18 +365,57 @@
         if (!Array.isArray(data)) return null;
 
         let subFiles = [];
-        let subDirs = []; // 不需要用到，但占位
+        let subDirs = []; 
         processItems(data, subDirs, subFiles);
-        
+
         // 按时间倒序
         subFiles.sort((a, b) => b.timestamp - a.timestamp);
-        
+
         return subFiles.length > 0 ? subFiles[0] : null;
+    }
+
+    // --- 删除文件逻辑 ---
+    async function deleteFile(event, path, sha) {
+        event.preventDefault();     // 阻止链接跳转
+        event.stopPropagation();    // 阻止冒泡
+
+        if (!config.token) {
+            alert("❌ 错误：请先在设置中配置 GitHub Token！");
+            openSettings();
+            return;
+        }
+
+        const confirmMsg = `⚠️ 警告 \n\n确定要永久删除云端文件吗？\n文件路径: ${path}\n\n此操作不可恢复！`;
+        if (!confirm(confirmMsg)) return;
+
+        const deleteBtn = event.target.closest('button');
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = "⏳";
+        deleteBtn.disabled = true;
+
+        const url = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`;
+        const body = {
+            message: `Delete ${path} via Web Client`,
+            sha: sha
+        };
+
+        try {
+            await ghFetch(url, {
+                method: 'DELETE',
+                body: JSON.stringify(body)
+            });
+            alert("✅ 删除成功！");
+            loadPath(currentPath); // 刷新当前列表
+        } catch (e) {
+            alert("❌ 删除失败：\n" + e.message);
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+        }
     }
 
     function renderLatestCard(file, year) {
         const container = document.getElementById('latest-container');
-        let displayName = file.name.replace('.html', '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
+        let displayName = file.name.replace(/\.(html|json)$/, '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
         let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
 
         container.innerHTML = `
@@ -345,14 +444,16 @@
 
         let html = '<ul>';
 
-        // 文件夹
+        // 文件夹 (不显示删除按钮)
         dirs.forEach(dir => {
             html += `
                 <li onclick="loadPath('${dir.path}')">
                     <div class="list-item">
-                        <span class="item-icon folder-icon">📁</span>
-                        <div class="item-info">
-                            <span class="item-name">${dir.name}</span>
+                        <div class="item-left-group">
+                            <span class="item-icon folder-icon">📁</span>
+                            <div class="item-info">
+                                <span class="item-name">${dir.name}</span>
+                            </div>
                         </div>
                         <span style="color:#ccc">›</span>
                     </div>
@@ -360,18 +461,32 @@
             `;
         });
 
-        // 文件
+        // 文件 (根据配置显示删除按钮)
         files.forEach(file => {
-            let displayName = file.name.replace('.html', '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
+            let displayName = file.name.replace(/\.(html|json)$/, '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
             let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
+
+            // 生成删除按钮 HTML
+            let deleteBtnHtml = '';
+            if (config.enableDelete) {
+                // 将 path 和 sha 传递给删除函数
+                deleteBtnHtml = `
+                    <button class="delete-btn" onclick="deleteFile(event, '${file.path}', '${file.sha}')" title="删除文件">
+                        🗑️
+                    </button>
+                `;
+            }
 
             html += `
                 <li>
                     <a href="${fileUrl}" target="_blank" class="list-item">
-                        <span class="item-icon file-icon">📄</span>
-                        <div class="item-info">
-                            <span class="item-name">${displayName}</span>
-                            ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
+                        <div class="item-left-group">
+                            ${deleteBtnHtml}
+                            <span class="item-icon file-icon">📄</span>
+                            <div class="item-info">
+                                <span class="item-name">${displayName}</span>
+                                ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
+                            </div>
                         </div>
                     </a>
                 </li>
@@ -385,7 +500,7 @@
     function renderBreadcrumb(path) {
         const container = document.getElementById('breadcrumb');
         let html = `<span class="breadcrumb-item" onclick="loadPath('${config.rootPath}')">🏠 首页</span>`;
-        
+
         if (path !== config.rootPath && path.startsWith(config.rootPath)) {
             const relativePath = path.substring(config.rootPath.length);
             const parts = relativePath.split('/').filter(p => p);
@@ -410,6 +525,7 @@
         document.getElementById('cfg-repo').value = config.repo;
         document.getElementById('cfg-root').value = config.rootPath;
         document.getElementById('cfg-token').value = config.token || '';
+        document.getElementById('cfg-del-enable').checked = config.enableDelete || false;
         document.getElementById('settings-modal').style.display = 'flex';
     }
 
@@ -422,9 +538,11 @@
             user: document.getElementById('cfg-user').value.trim(),
             repo: document.getElementById('cfg-repo').value.trim(),
             rootPath: document.getElementById('cfg-root').value.trim().replace(/\/+$/, ''),
-            token: document.getElementById('cfg-token').value.trim()
+            token: document.getElementById('cfg-token').value.trim(),
+            enableDelete: document.getElementById('cfg-del-enable').checked
         };
-        localStorage.setItem('gh_nav_config_v4', JSON.stringify(newConfig));
+        // 升级存储版本号到 v5
+        localStorage.setItem('gh_nav_config_v5', JSON.stringify(newConfig));
         closeSettings();
         location.reload();
     }
