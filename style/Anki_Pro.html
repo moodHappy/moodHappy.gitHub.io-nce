@@ -255,7 +255,7 @@
 
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
         const LOCAL_DB_KEY = 'anki_db_v2'; 
-        const DELETED_IDS_KEY = 'anki_deleted_ids'; // ★★★ 新增：黑名单Key ★★★
+        const DELETED_IDS_KEY = 'anki_deleted_ids'; 
 
         // ============================================
         // Scheduler
@@ -272,11 +272,10 @@
             loadExternalData(cloudData) { 
                 if (!cloudData) return; 
                 let updateCount = 0;
-                // ★★★ 加载时过滤掉在黑名单里的ID ★★★
                 const blacklist = getBlacklist();
-                
+
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
-                    if (blacklist.includes(id)) continue; // 如果在黑名单，直接跳过，不合并
+                    if (blacklist.includes(id)) continue; 
 
                     const localCard = this.db[id];
                     if (localCard) {
@@ -418,7 +417,7 @@
                 if(!isSilent) alert('请先配置 Token'); 
                 return; 
             }
-            
+
             const originalText = (btnElement && !isSilent) ? btnElement.innerHTML : '';
             if(btnElement && !isSilent) { 
                 btnElement.disabled = true; 
@@ -435,12 +434,11 @@
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
                 } catch(e) {}
 
-                // ★★★ 核心：在上传前，再次确保本地数据库里没有黑名单的ID ★★★
                 const blacklist = getBlacklist();
                 for (const id of blacklist) {
                     if (scheduler.db[id]) delete scheduler.db[id];
                 }
-                
+
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
 
@@ -490,11 +488,10 @@
                 script.onload = async () => {
                     if (typeof NotesConfig !== 'undefined') GLOBAL_CONFIG = NotesConfig;
                     else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
-                    else if (window.NotesConfig) GLOBAL_CONFIG = window.NotesConfig;
-                    else if (window.NewsConfig) GLOBAL_CONFIG = window.NewsConfig;
-
+                    
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
 
+                    // ★★★ 修改点：将 BaseUrl 设为 Notes/Notes/，以便 JS Config 里的年份拼接 ★★★
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
 
                     loadAllCards(GLOBAL_CONFIG);
@@ -513,18 +510,24 @@
         }
 
         async function loadAllCards(config) {
+            // ★★★ 修改点：使用配置中的年份范围（30年） ★★★
+            const startYear = config.startYear || 2025;
+            const totalYears = config.totalYears || 2; 
+            const endYear = startYear + totalYears; 
             const today = new Date();
-            const currentYear = today.getFullYear();
+
             let allItems = [];
             const promises = [];
-
-            // 获取黑名单
             const blacklist = getBlacklist();
 
-            for (let y = currentYear; y >= currentYear - 1; y--) {
-                for (let m = 1; m <= 12; m++) {
-                    if (y === currentYear && m > today.getMonth() + 1) continue;
-                    // ★★★ 必须加上时间戳 Bust Cache ★★★
+            // 循环遍历 Config 定义的所有年份
+            for (let y = startYear; y < endYear; y++) {
+                // 如果是未来的年份，全部读取；如果是当年，只读取到现在为止的月份？
+                // 根据需求，用户似乎想预览所有产生的JSON，所以这里我们读取所有可能的月份
+                let maxMonth = 12;
+                if (y > today.getFullYear() + 2) maxMonth = 0; // 稍微限制一下太久远的未来，避免404太多
+
+                for (let m = 1; m <= maxMonth; m++) {
                     promises.push(
                         fetch(config.getUrl(y, m) + `?t=${Date.now()}`)
                             .then(r => r.ok ? r.json() : [])
@@ -537,26 +540,20 @@
             const results = await Promise.all(promises);
             results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
 
-            // ★★★ 核心过滤：即使 GitHub 返回了该卡片，如果ID在黑名单，也直接过滤掉 ★★★
             const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
-
             const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
-            // 数据库自愈 (清理已被过滤掉的卡片的进度)
+            // 数据库自愈
             const currentIds = new Set(uniqueItems.map(item => item.id));
             let dirty = false;
             for (const dbId in scheduler.db) {
-                // 如果数据库里有，但黑名单里也有，删掉数据库的
                 if (blacklist.includes(dbId) || (!currentIds.has(dbId) && uniqueItems.length > 0)) {
                     delete scheduler.db[dbId]; 
                     dirty = true;
                 }
             }
-            if (dirty) {
-                console.log('Database cleaned based on Blacklist/Garbage Collection.');
-                scheduler.save(); 
-            }
+            if (dirty) { scheduler.save(); }
 
             const learning = [];
             const review = [];
@@ -565,7 +562,6 @@
             uniqueItems.forEach(item => {
                 const s = scheduler.getCardState(item.id);
                 if (s.dueDate > Date.now()) return; 
-
                 if (s.state === 'learning') learning.push(item);
                 else if (s.state === 'review') review.push(item);
                 else newCards.push(item);
@@ -576,7 +572,6 @@
             shuffle(newCards);
 
             cardQueue = [...learning, ...review, ...newCards];
-
             updateDeckStats(); 
             renderCard();
         }
@@ -602,7 +597,7 @@
             if (sourceUrl !== '#' && item.text) {
                 sourceUrl = `${sourceUrl}#:~:text=${encodeURIComponent(item.text)}`;
             }
-            
+
             let deleteBtnHtml = '';
             if (USER_CONFIG.enableDelete) {
                 deleteBtnHtml = `<button class="btn-delete-card" onclick="deleteCurrentCard(this)" title="从云端永久删除">🗑️</button>`;
@@ -640,7 +635,7 @@
         }
 
         // ============================================
-        // Delete Functionality (Blacklist Enforced)
+        // Delete Functionality (Fixed Path)
         // ============================================
         async function deleteCurrentCard(btn) {
             if(event) event.stopPropagation();
@@ -654,26 +649,18 @@
             if (!confirm("确定要从 GitHub 源文件中永久删除这张卡片吗？此操作不可逆。")) return;
 
             const item = cardQueue[0];
-            const originalText = btn.innerHTML;
             btn.innerHTML = '⏳';
             btn.disabled = true;
 
-            // ★★★ 第一步：立即加入本地黑名单 ★★★
-            // 无论 GitHub 是否删除成功，本地先判死刑
             addToBlacklist(item.id);
-            // 立即删除数据库记录
             delete scheduler.db[item.id];
             scheduler.save();
 
             const finalizeDelete = async () => {
-                // 静默上传清理后的进度
                 await syncProgressToCloud(null, true); 
-
-                // UI 移除
                 stopCurrentAudio();
                 const cardEl = document.getElementById('current-card');
                 cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
-                
                 setTimeout(() => {
                     cardQueue.shift(); 
                     totalItemsCount--; 
@@ -683,32 +670,33 @@
             };
 
             if (!item._year || !item._month) {
-                // 如果找不到源文件，直接执行本地清理流程
                 alert("源文件路径未知，执行本地强制删除。");
                 finalizeDelete();
                 return;
             }
 
-            const filePath = `Notes/${item._year}/${item._month}.json`;
+            // ★★★ 核心修改：路径拼接逻辑 ★★★
+            // 目标: Notes/Notes/2026/Note_2026-02.json
+            const mm = item._month.toString().padStart(2, '0');
+            const fileName = `Note_${item._year}-${mm}.json`;
+            const filePath = `Notes/Notes/${item._year}/${fileName}`;
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
 
             try {
                 const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
-                
+
                 if (getRes.status === 404) {
-                    // 404 视为已删除
                     await finalizeDelete();
                     return;
                 }
 
                 if (!getRes.ok) throw new Error("无法读取源文件: " + getRes.status);
-                
+
                 const data = await getRes.json();
                 const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 const newContent = content.filter(c => c.id !== item.id);
-                
+
                 if (newContent.length === content.length) {
-                    // 源文件里本来就没有，视为已删除
                     await finalizeDelete();
                     return;
                 }
@@ -723,12 +711,9 @@
                 });
 
                 if (!putRes.ok) throw new Error("更新文件失败: " + putRes.status);
-
-                // 成功
                 await finalizeDelete();
 
             } catch (e) {
-                // 即使网络报错，因为已经加入了黑名单，本地依然会删除
                 alert("GitHub删除遇到问题，但已执行本地强制删除。\n错误: " + e.message);
                 await finalizeDelete();
             }
