@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Final Fix)</title>
+    <title>Anki Pro (Blacklist Fix)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
@@ -36,7 +36,6 @@
             flex: 1; display: flex; flex-direction: column; 
         }
 
-        /* Header */
         header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; position: relative; padding-top: 20px; }
         h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; }
         .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;}
@@ -55,7 +54,6 @@
         .spin { animation: spin 1s infinite linear; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* 卡片区域 */
         #notes-container { 
             perspective: 1000px; position: relative; 
             flex: 1; display: flex; flex-direction: column; justify-content: flex-end; 
@@ -75,7 +73,6 @@
         }
         .note-card:not(:first-child) { display: none; }
 
-        /* 删除按钮样式 */
         .btn-delete-card {
             position: absolute; left: 20px; top: 20px;
             background: transparent; border: none; color: var(--text-secondary);
@@ -101,7 +98,6 @@
         }
         .note-meaning.revealed { filter: none; cursor: text; user-select: text; -webkit-user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
 
-        /* 播放按钮 */
         .tts-container { margin-top: auto; margin-bottom: 20px; z-index: 10; height: 60px; display: flex; align-items: center; justify-content: center; }
         .tts-btn { 
             background: transparent; border: none; width: 64px; height: 64px; 
@@ -115,7 +111,6 @@
         @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 
-        /* Controls */
         .anki-controls { 
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-top: 10px;
             opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s;
@@ -136,7 +131,6 @@
         .btn-good::after { background: var(--color-good); } 
         .btn-easy::after { background: var(--color-easy); }
 
-        /* Settings UI */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal { background: var(--bg-card); padding: 20px; border-radius: 20px; width: 95%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
         .modal h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 15px; }
@@ -144,7 +138,6 @@
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; font-weight: 600; }
         .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
 
-        /* Switch Toggle */
         .switch-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -167,13 +160,10 @@
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
         .btn-save { background: var(--accent-color); color: white; }
 
-        /* Sync Buttons */
         .sync-row { display: flex; gap: 10px; margin-bottom: 20px; }
         .btn-sync-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-size: 0.9rem; font-weight: 600;}
         .btn-sync-action:active { transform: scale(0.98); }
-
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-
         .status-page { text-align: center; padding-bottom: 20px; }
         .emoji-lg { font-size: 4rem; margin-bottom: 20px; display: block; }
         .error-box { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 12px; font-size: 0.9rem; text-align: left; margin-top: 20px;}
@@ -265,9 +255,10 @@
 
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
         const LOCAL_DB_KEY = 'anki_db_v2'; 
+        const DELETED_IDS_KEY = 'anki_deleted_ids'; // ★★★ 新增：黑名单Key ★★★
 
         // ============================================
-        // Scheduler (SM-2 with Fixes)
+        // Scheduler
         // ============================================
         class AnkiScheduler {
             constructor() { 
@@ -281,10 +272,13 @@
             loadExternalData(cloudData) { 
                 if (!cloudData) return; 
                 let updateCount = 0;
+                // ★★★ 加载时过滤掉在黑名单里的ID ★★★
+                const blacklist = getBlacklist();
+                
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
+                    if (blacklist.includes(id)) continue; // 如果在黑名单，直接跳过，不合并
+
                     const localCard = this.db[id];
-                    // 只有当本地没有，或者云端数据更新时才覆盖
-                    // 这会导致已删除卡片复活，因此必须依赖 "Safe GC" 和 "Auto Sync"
                     if (localCard) {
                         const localTime = localCard.lastModified || 0;
                         const cloudTime = cloudCard.lastModified || 0;
@@ -363,6 +357,20 @@
         const scheduler = new AnkiScheduler();
 
         // ============================================
+        // Blacklist Helper
+        // ============================================
+        function getBlacklist() {
+            return JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+        }
+        function addToBlacklist(id) {
+            const list = getBlacklist();
+            if (!list.includes(id)) {
+                list.push(id);
+                localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(list));
+            }
+        }
+
+        // ============================================
         // Sync
         // ============================================
         const uiSync = document.getElementById('sync-status');
@@ -378,6 +386,7 @@
 
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
+                // 强制刷新 Cache
                 const res = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 if(res.status === 404) { 
                     if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
@@ -426,6 +435,12 @@
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
                 } catch(e) {}
 
+                // ★★★ 核心：在上传前，再次确保本地数据库里没有黑名单的ID ★★★
+                const blacklist = getBlacklist();
+                for (const id of blacklist) {
+                    if (scheduler.db[id]) delete scheduler.db[id];
+                }
+                
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
 
@@ -501,24 +516,20 @@
             const today = new Date();
             const currentYear = today.getFullYear();
             let allItems = [];
-            let allSuccess = true; // ★★★ 标记：是否所有文件都加载成功 ★★★
             const promises = [];
+
+            // 获取黑名单
+            const blacklist = getBlacklist();
 
             for (let y = currentYear; y >= currentYear - 1; y--) {
                 for (let m = 1; m <= 12; m++) {
                     if (y === currentYear && m > today.getMonth() + 1) continue;
+                    // ★★★ 必须加上时间戳 Bust Cache ★★★
                     promises.push(
                         fetch(config.getUrl(y, m) + `?t=${Date.now()}`)
-                            .then(r => {
-                                if (!r.ok) throw new Error(r.status);
-                                return r.json();
-                            })
+                            .then(r => r.ok ? r.json() : [])
                             .then(items => items.map(item => ({...item, _year: y, _month: m}))) 
-                            .catch(e => {
-                                console.warn(`加载 ${y}/${m} 失败:`, e);
-                                allSuccess = false; // 有一个失败，就不执行危险的清理操作
-                                return [];
-                            })
+                            .catch(e => [])
                     );
                 }
             }
@@ -526,26 +537,25 @@
             const results = await Promise.all(promises);
             results.forEach(arr => { if(Array.isArray(arr)) allItems.push(...arr); });
 
-            const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
+            // ★★★ 核心过滤：即使 GitHub 返回了该卡片，如果ID在黑名单，也直接过滤掉 ★★★
+            const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
+
+            const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
-            // ★★★ 数据库自愈 (Safe GC) ★★★
-            // 只有当所有网络请求都成功时，才敢断定本地DB里多余的ID是“僵尸数据”
-            if (allSuccess && uniqueItems.length > 0) {
-                const currentIds = new Set(uniqueItems.map(item => item.id));
-                let dirty = false;
-                for (const dbId in scheduler.db) {
-                    if (!currentIds.has(dbId)) {
-                        delete scheduler.db[dbId]; 
-                        dirty = true;
-                    }
+            // 数据库自愈 (清理已被过滤掉的卡片的进度)
+            const currentIds = new Set(uniqueItems.map(item => item.id));
+            let dirty = false;
+            for (const dbId in scheduler.db) {
+                // 如果数据库里有，但黑名单里也有，删掉数据库的
+                if (blacklist.includes(dbId) || (!currentIds.has(dbId) && uniqueItems.length > 0)) {
+                    delete scheduler.db[dbId]; 
+                    dirty = true;
                 }
-                if (dirty) {
-                    console.log('Safe GC: Cleaned orphaned records.');
-                    scheduler.save(); 
-                }
-            } else {
-                console.warn('Skipping GC due to network errors or empty content.');
+            }
+            if (dirty) {
+                console.log('Database cleaned based on Blacklist/Garbage Collection.');
+                scheduler.save(); 
             }
 
             const learning = [];
@@ -585,7 +595,6 @@
             }
 
             const item = cardQueue[0];
-            const rawText = item.text || '';
             const times = scheduler.previewNextDue(item.id);
             const sourceTitle = item.pageTitle || 'Source Link';
 
@@ -631,7 +640,7 @@
         }
 
         // ============================================
-        // Delete Functionality (Fixed)
+        // Delete Functionality (Blacklist Enforced)
         // ============================================
         async function deleteCurrentCard(btn) {
             if(event) event.stopPropagation();
@@ -649,26 +658,18 @@
             btn.innerHTML = '⏳';
             btn.disabled = true;
 
-            if (!item._year || !item._month) {
-                alert("无法定位源文件路径，删除失败。");
-                btn.innerHTML = originalText; btn.disabled = false;
-                return;
-            }
+            // ★★★ 第一步：立即加入本地黑名单 ★★★
+            // 无论 GitHub 是否删除成功，本地先判死刑
+            addToBlacklist(item.id);
+            // 立即删除数据库记录
+            delete scheduler.db[item.id];
+            scheduler.save();
 
-            const filePath = `Notes/${item._year}/${item._month}.json`;
-            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
-
-            // 提取公共清理函数
             const finalizeDelete = async () => {
-                // 1. 本地删除
-                delete scheduler.db[item.id];
-                scheduler.save();
-                
-                // 2. ★★★ 关键修复：立即静默上传干净的进度，防止云端旧进度复活卡片 ★★★
-                // 我们不等待它完全结束再刷新UI，让它在后台跑，或者为了保险稍微等一下
+                // 静默上传清理后的进度
                 await syncProgressToCloud(null, true); 
 
-                // 3. UI 刷新
+                // UI 移除
                 stopCurrentAudio();
                 const cardEl = document.getElementById('current-card');
                 cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
@@ -681,30 +682,35 @@
                 }, 300);
             };
 
+            if (!item._year || !item._month) {
+                // 如果找不到源文件，直接执行本地清理流程
+                alert("源文件路径未知，执行本地强制删除。");
+                finalizeDelete();
+                return;
+            }
+
+            const filePath = `Notes/${item._year}/${item._month}.json`;
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
+
             try {
-                const getRes = await fetch(url + `?t=${Date.now()}`, { 
-                    headers: { 'Authorization': `token ${USER_CONFIG.token}` } 
-                });
+                const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 
                 if (getRes.status === 404) {
-                    if(confirm("检测到云端源文件不存在（404）。\n卡片可能已经被删除。\n\n是否强制清除本地缓存中的此卡片？")) {
-                        await finalizeDelete();
-                        return;
-                    } else { throw new Error("取消强制删除"); }
+                    // 404 视为已删除
+                    await finalizeDelete();
+                    return;
                 }
 
                 if (!getRes.ok) throw new Error("无法读取源文件: " + getRes.status);
                 
                 const data = await getRes.json();
                 const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-                
                 const newContent = content.filter(c => c.id !== item.id);
                 
                 if (newContent.length === content.length) {
-                    if(confirm("在云端文件中未找到此卡片ID。\n卡片可能已经被删除。\n\n是否强制清除本地缓存？")) {
-                        await finalizeDelete();
-                        return;
-                    } else { throw new Error("取消操作"); }
+                    // 源文件里本来就没有，视为已删除
+                    await finalizeDelete();
+                    return;
                 }
 
                 const contentStr = JSON.stringify(newContent, null, 2);
@@ -712,25 +718,19 @@
 
                 const putRes = await fetch(url, {
                     method: 'PUT',
-                    headers: { 
-                        'Authorization': `token ${USER_CONFIG.token}`, 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({ 
-                        message: `Delete card ${item.id} via Anki Pro`, 
-                        content: contentBase64, 
-                        sha: data.sha 
-                    })
+                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Delete card ${item.id}`, content: contentBase64, sha: data.sha })
                 });
 
                 if (!putRes.ok) throw new Error("更新文件失败: " + putRes.status);
 
-                // 正常删除成功
+                // 成功
                 await finalizeDelete();
 
             } catch (e) {
-                alert("删除操作终止: " + e.message);
-                btn.innerHTML = originalText; btn.disabled = false;
+                // 即使网络报错，因为已经加入了黑名单，本地依然会删除
+                alert("GitHub删除遇到问题，但已执行本地强制删除。\n错误: " + e.message);
+                await finalizeDelete();
             }
         }
 
