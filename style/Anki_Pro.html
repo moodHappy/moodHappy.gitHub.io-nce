@@ -60,16 +60,20 @@
             background: var(--bg-card); padding: 15px 20px; border-radius: 20px; 
             border: 1px solid var(--border-color); margin-bottom: 20px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); flex-shrink: 0;
+            /* 默认显示，JS控制隐藏 */
+            display: block;
         }
+        .controls.hidden { display: none !important; }
+
         .controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .controls-title { font-weight: 600; display: flex; align-items: center; gap: 6px; font-size: 1rem; }
-        
+
         select#year-select { 
             padding: 6px 12px; font-size: 14px; border-radius: 8px; 
             border: 1px solid var(--border-color); background: var(--bg-body); 
             color: var(--text-primary); outline: none; font-weight: 500;
         }
-        
+
         .months-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
         .month-btn { 
             padding: 8px 0; background: transparent; border: 1px solid transparent; 
@@ -205,6 +209,14 @@
             <h2>⚙️ 设置</h2>
 
             <div class="switch-group">
+                <label>显示归档面板 (年月选择)</label>
+                <label class="switch">
+                    <input type="checkbox" id="show-archive-panel">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="switch-group">
                 <label>启用云端删除按钮 (需 Token)</label>
                 <label class="switch">
                     <input type="checkbox" id="enable-delete">
@@ -287,7 +299,8 @@
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
             token: localStorage.getItem('gh_token') || '',
             ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST)),
-            enableDelete: localStorage.getItem('gh_enable_delete') === 'true'
+            enableDelete: localStorage.getItem('gh_enable_delete') === 'true',
+            showArchivePanel: localStorage.getItem('gh_show_archive_panel') !== 'false' // 默认开启
         };
 
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
@@ -298,6 +311,16 @@
         let CURRENT_VIEW_YEAR = new Date().getFullYear();
         let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
         let GLOBAL_CONFIG = null;
+
+        // 应用面板显示设置
+        function applyViewSettings() {
+            const controls = document.querySelector('.controls');
+            if(controls) {
+                if(USER_CONFIG.showArchivePanel) controls.classList.remove('hidden');
+                else controls.classList.add('hidden');
+            }
+        }
+        applyViewSettings(); // 初始化时应用
 
         // ============================================
         // Scheduler
@@ -531,7 +554,7 @@
                 script.onload = async () => {
                     if (typeof NotesConfig !== 'undefined') GLOBAL_CONFIG = NotesConfig;
                     else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
-                    
+
                     if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
 
                     // BaseUrl 指向 Notes/Notes/，方便 JS 拼接年份
@@ -613,7 +636,7 @@
         async function loadCardsForDate(year, month) {
             CURRENT_VIEW_YEAR = year;
             CURRENT_VIEW_MONTH = month;
-            
+
             const container = document.getElementById('notes-container');
             container.innerHTML = `<div class="status-page"><div class="spin" style="font-size:3rem">⏳</div><div>读取 ${year}年${month}月...</div></div>`;
 
@@ -640,10 +663,12 @@
             // 过滤黑名单
             const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
             const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
+            
+            // 更新总计数量
             totalItemsCount = uniqueItems.length;
 
             // 数据库清理 (可选，这里暂时不做，以免误删跨月复习进度)
-            
+
             const learning = [];
             const review = [];
             const newCards = [];
@@ -663,7 +688,7 @@
             shuffle(newCards);
 
             cardQueue = [...learning, ...review, ...newCards];
-            
+
             updateDeckStats(); 
             renderCard();
         }
@@ -844,9 +869,9 @@
         function updateDeckStats() {
             const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
             const reviewCount = cardQueue.length - newCount;
-            // 显示当前月份
+            // 显示当前月份和总计
             document.getElementById('deck-stats').innerText = 
-                `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount}`;
+                `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${totalItemsCount}`;
         }
 
         // ============================================
@@ -946,6 +971,9 @@
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-token').value = USER_CONFIG.token;
             document.getElementById('enable-delete').checked = USER_CONFIG.enableDelete;
+            // 设置开关状态
+            document.getElementById('show-archive-panel').checked = USER_CONFIG.showArchivePanel;
+            
             renderTTSConfigList();
             document.getElementById('settingsModal').style.display = 'flex';
         }
@@ -956,6 +984,9 @@
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
             USER_CONFIG.enableDelete = document.getElementById('enable-delete').checked;
+            // 保存面板显示设置
+            USER_CONFIG.showArchivePanel = document.getElementById('show-archive-panel').checked;
+
             USER_CONFIG.ttsList = scrapeTTSConfigs();
             if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
 
@@ -963,6 +994,7 @@
             localStorage.setItem('gh_repo', USER_CONFIG.repo);
             localStorage.setItem('gh_token', USER_CONFIG.token);
             localStorage.setItem('gh_enable_delete', USER_CONFIG.enableDelete);
+            localStorage.setItem('gh_show_archive_panel', USER_CONFIG.showArchivePanel);
             localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
 
             closeSettings();
