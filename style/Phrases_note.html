@@ -68,12 +68,22 @@
         .modal h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: var(--text-secondary); }
-        .form-group input {
+        .form-group input[type="text"], .form-group input[type="password"] {
             width: 100%; padding: 10px; border-radius: 8px;
             border: 1px solid var(--border-color);
             background: var(--bg-body); color: var(--text-primary);
-            box-sizing: border-box; /* 防止padding撑破宽度 */
+            box-sizing: border-box; 
         }
+
+        /* 开关 Switch 样式 */
+        .switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
@@ -113,15 +123,15 @@
         .note-word { font-family: 'Merriweather', serif; font-size: 1.4rem; font-weight: 700; color: #000000; word-break: break-word; margin: 0; flex-grow: 1; }
         @media (prefers-color-scheme: dark) { .note-word { color: #ffffff; } }
 
-        /* 删除按钮 (仅当配置了Token时显示) */
+        /* 删除按钮 */
         .delete-btn {
             background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary);
             border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;
             position: absolute; bottom: 20px; right: 20px; opacity: 0; transition: all 0.2s;
-            display: none; /* 默认隐藏 */
+            display: none; /* 默认隐藏，JS 动态控制显示 */
         }
         .delete-btn:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border-color: var(--danger-color); }
-        .note-card:hover .delete-btn { opacity: 1; } /* 鼠标悬停卡片时显示 */
+        .note-card:hover .delete-btn { opacity: 1; }
 
         /* TTS 按钮 */
         .tts-btn {
@@ -174,6 +184,16 @@
                 <label>Personal Access Token (必填)</label>
                 <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
             </div>
+            
+            <div class="form-group switch-container">
+                <label for="gh-show-delete" style="cursor: pointer; margin-bottom: 0;">启用删除按钮 (Show Delete)</label>
+                <label class="switch">
+                    <input type="checkbox" id="gh-show-delete">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 15px;">关闭此选项可防止误删短语。</div>
+
             <div class="modal-actions">
                 <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
                 <button class="btn btn-save" onclick="saveSettings()">保存配置</button>
@@ -183,7 +203,7 @@
 
     <div class="container">
         <header>
-            <button class="settings-btn" onclick="openSettings()" title="设置 GitHub Token">⚙️</button>
+            <button class="settings-btn" onclick="openSettings()" title="设置">⚙️</button>
             <h1>English Phrases Archive</h1>
             <div class="subtitle">Vocabulary & Context | 2025 - 2054</div>
         </header>
@@ -213,7 +233,7 @@
         // 1. TTS 配置
         // ============================================
         const TTS_CONFIG = {
-            useBackup: false, // false = 使用主力(read-aloud), true = 使用备用(libre)
+            useBackup: false,
             voices: [ "en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-AndrewNeural", "en-US-AvaNeural", "en-US-BrianNeural", "en-US-ChristopherNeural", "en-US-CoraNeural", "en-US-DavisNeural", "en-US-ElizabethNeural", "en-US-EricNeural", "en-US-GuyNeural", "en-US-JennyNeural", "en-US-MichelleNeural", "en-US-RogerNeural", "en-US-SteffanNeural", "en-US-TonyNeural" ],
             voice: "en-US-JennyNeural"
         };
@@ -226,19 +246,10 @@
             if (old) { old.pause(); old.remove(); }
 
             let audioUrl = "";
-
             if (!TTS_CONFIG.useBackup) {
-                // 主力接口: read-aloud-bay
-                const params = new URLSearchParams({
-                    text: text,
-                    voiceName: TTS_CONFIG.voice,
-                    rate: "+0%",
-                    pitch: "+0Hz",
-                    volume: "100"
-                });
+                const params = new URLSearchParams({ text: text, voiceName: TTS_CONFIG.voice, rate: "+0%", pitch: "+0Hz", volume: "100" });
                 audioUrl = `https://read-aloud-bay.vercel.app/api/synthesis?${params.toString()}`;
             } else {
-                // 备用接口: libre-tts
                 const safeText = encodeURIComponent(text);
                 const safeVoice = encodeURIComponent(TTS_CONFIG.voice);
                 audioUrl = `https://libre-tts-nu.vercel.app/api/tts?t=${safeText}&v=${safeVoice}&r=0&p=0`;
@@ -256,15 +267,14 @@
         }
 
         // ============================================
-        // 2. GitHub 配置管理
+        // 2. GitHub 配置管理 (含开关)
         // ============================================
-        // 从 LocalStorage 加载配置，如果没有则使用默认值
         let USER_CONFIG = {
             user: localStorage.getItem('gh_user') || 'moodHappy',
             repo: localStorage.getItem('gh_repo') || 'HelloWorld',
-            // 注意：这里默认值保留为 Notes/Notes/
             path: localStorage.getItem('gh_path') || 'Notes/Notes/',
-            token: localStorage.getItem('gh_token') || ''
+            token: localStorage.getItem('gh_token') || '',
+            showDelete: localStorage.getItem('gh_show_delete') === 'true' // 默认为 false
         };
 
         function openSettings() {
@@ -272,6 +282,9 @@
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-path').value = USER_CONFIG.path;
             document.getElementById('gh-token').value = USER_CONFIG.token;
+            // 设置开关状态
+            document.getElementById('gh-show-delete').checked = USER_CONFIG.showDelete;
+            
             document.getElementById('settingsModal').style.display = 'flex';
         }
 
@@ -283,19 +296,21 @@
             const user = document.getElementById('gh-user').value.trim();
             const repo = document.getElementById('gh-repo').value.trim();
             let path = document.getElementById('gh-path').value.trim();
-            if(path && !path.endsWith('/')) path += '/'; // 确保路径以 / 结尾
+            if(path && !path.endsWith('/')) path += '/';
             const token = document.getElementById('gh-token').value.trim();
+            // 获取开关状态
+            const showDelete = document.getElementById('gh-show-delete').checked;
 
             localStorage.setItem('gh_user', user);
             localStorage.setItem('gh_repo', repo);
             localStorage.setItem('gh_path', path);
             localStorage.setItem('gh_token', token);
+            localStorage.setItem('gh_show_delete', showDelete);
 
-            USER_CONFIG = { user, repo, path, token };
+            USER_CONFIG = { user, repo, path, token, showDelete };
             closeSettings();
             alert('配置已保存，即将刷新应用...');
 
-            // 重新初始化
             LATEST_SHA = 'master'; 
             startApp();
         }
@@ -319,7 +334,6 @@
 
         async function startApp() {
             try {
-                // 使用配置中的 User/Repo
                 const response = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/${GITHUB_BRANCH}`);
                 if (response.ok) {
                     const data = await response.json();
@@ -331,7 +345,6 @@
         }
 
         function loadRemoteConfig() {
-            // 动态加载 JS 配置文件
             const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${LATEST_SHA}/${CONFIG_FILE_PATH}`;
             fetch(configUrl)
                 .then(res => res.ok ? res.text() : Promise.reject(res.status))
@@ -350,9 +363,6 @@
             let config = (typeof NotesConfig !== 'undefined') ? NotesConfig : ((typeof NewsConfig !== 'undefined') ? NewsConfig : null);
             if (!config) return;
             GLOBAL_CONFIG = config;
-
-            // 强制覆盖 Config 中的 BaseUrl，使用用户设置的 Path + SHA
-            // 结果：https://.../Notes/Notes/
             config.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${LATEST_SHA}/${USER_CONFIG.path}`;
 
             yearSelect.disabled = false; yearSelect.innerHTML = '';
@@ -392,7 +402,6 @@
         function fetchNotes(year, month, config) {
             CURRENT_VIEW_YEAR = year;
             CURRENT_VIEW_MONTH = month;
-
             const targetUrl = config.getUrl(year, month);
             notesContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>读取中: ${year}-${month}</div>`;
             fetch(targetUrl).then(res => {
@@ -409,10 +418,7 @@
             if(!query) { alert("请输入关键词"); return; }
             if(!GLOBAL_CONFIG) return;
 
-            // 搜索时不保留当前年月上下文
-            CURRENT_VIEW_YEAR = null; 
-            CURRENT_VIEW_MONTH = null;
-
+            CURRENT_VIEW_YEAR = null; CURRENT_VIEW_MONTH = null;
             searchBtn.disabled = true; searchBtn.innerText = "搜索中...";
             document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
             notesContainer.innerHTML = `<div class="status-msg"><div class="spinner"></div>搜索中: "${query}"...</div>`;
@@ -443,53 +449,27 @@
             if (!CURRENT_VIEW_YEAR || !CURRENT_VIEW_MONTH) { alert("只能在浏览特定月份列表时删除，不支持在搜索结果中直接删除。"); return; }
 
             const fileName = GLOBAL_CONFIG.getFileName(CURRENT_VIEW_YEAR, CURRENT_VIEW_MONTH);
-            
-            // 注意：API 路径 = path + filename
-            // User Path: "Notes/Notes/"
-            // JS Filename: "2026/Note_2026-01.json"
-            // Result: "Notes/Notes/2026/Note_2026-01.json"
             const apiUrl = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${USER_CONFIG.path}${fileName}`;
-
-            // 显示 Loading 遮罩
             const btn = document.activeElement;
             if(btn) { btn.innerText = "删除中..."; btn.disabled = true; }
 
             try {
-                // 1. 获取当前文件内容
-                const getRes = await fetch(apiUrl, {
-                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' }
-                });
-
+                const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' } });
                 if(!getRes.ok) throw new Error("无法读取文件，请检查 Token 权限或文件是否存在");
                 const fileData = await getRes.json();
-
-                // Base64 解码
                 const content = decodeURIComponent(escape(atob(fileData.content)));
                 let json = JSON.parse(content);
-
-                // 2. 过滤掉要删除的 ID
                 const newJson = json.filter(item => item.id !== id);
-
                 if (newJson.length === json.length) { throw new Error("未找到对应 ID，文件可能已被修改"); }
-
-                // 3. 重新编码并上传
                 const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(newJson, null, 2))));
-
                 const putRes = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: `Delete phrase ID: ${id} via Web`,
-                        content: newContent,
-                        sha: fileData.sha
-                    })
+                    body: JSON.stringify({ message: `Delete phrase ID: ${id} via Web`, content: newContent, sha: fileData.sha })
                 });
-
                 if(!putRes.ok) throw new Error("更新 GitHub 失败");
-
                 alert("✅ 删除成功！页面将刷新。");
                 startApp();
-
             } catch (err) {
                 alert(`❌ 错误: ${err.message}`);
                 if(btn) { btn.innerText = "🗑️ 删除"; btn.disabled = false; }
@@ -508,7 +488,8 @@
                 info.innerHTML = `✅ 找到 ${items.length} 个结果`; notesContainer.appendChild(info);
             }
 
-            const hasToken = !!USER_CONFIG.token && !isSearchResult;
+            // 判断是否显示删除按钮：必须有 Token 且 设置中开启了删除功能 且 不是搜索结果
+            const canDelete = !!USER_CONFIG.token && USER_CONFIG.showDelete && !isSearchResult;
 
             items.forEach(item => {
                 const card = document.createElement('div');
@@ -522,8 +503,8 @@
 
                 const svgIcon = `<svg class="tts-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path class="tts-body" d="M3 9v6h4l5 5V4L7 9H3z"/><path class="tts-waves tts-wave-1" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path class="tts-waves tts-wave-2" d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
 
-                // 删除按钮
-                const deleteBtnHtml = hasToken 
+                // 如果条件允许，渲染删除按钮 HTML
+                const deleteBtnHtml = canDelete 
                     ? `<button class="delete-btn" onclick="deleteNote('${item.id}')">🗑️ 删除</button>` 
                     : '';
 
@@ -545,17 +526,16 @@
                 notesContainer.appendChild(card);
             });
 
-            if(hasToken) {
+            // 如果允许删除，注入 CSS 强制显示按钮（默认是 display: none）
+            if(canDelete) {
                 const style = document.createElement('style');
                 style.innerHTML = `.delete-btn { display: block !important; }`;
                 document.head.appendChild(style);
             }
         }
 
-        // 启动
         startApp();
 
-        // 辅助：点击模态框外部关闭
         document.getElementById('settingsModal').addEventListener('click', function(e) {
             if (e.target === this) closeSettings();
         });
