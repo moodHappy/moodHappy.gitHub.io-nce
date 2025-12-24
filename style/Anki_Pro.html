@@ -93,17 +93,14 @@
         #notes-container { 
             perspective: 1000px; position: relative; 
             flex: 1; display: flex; flex-direction: column; 
-            /* 默认：内容沉底，方便单手操作 */
             justify-content: flex-end; 
             padding-bottom: 10vh; 
             transition: all 0.3s ease;
         }
 
-        /* === 关键修改：紧凑模式样式 === */
-        /* 当归档面板隐藏时，内容改为居中偏上，消除顶部大留白 */
         body.hide-archive #notes-container {
-            justify-content: center; /* 垂直居中，或者改为 flex-start 并配合 padding-top 实现更靠上 */
-            padding-bottom: 5vh;     /* 减少底部留白 */
+            justify-content: center; 
+            padding-bottom: 5vh;     
         }
 
         .note-card { 
@@ -324,7 +321,7 @@
         let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
         let GLOBAL_CONFIG = null;
 
-        // 应用面板显示设置 (新增：添加Body Class以触发紧凑布局)
+        // 应用面板显示设置
         function applyViewSettings() {
             const controls = document.querySelector('.controls');
             if(controls) {
@@ -340,7 +337,7 @@
         applyViewSettings(); 
 
         // ============================================
-        // Scheduler (UPDATED FOR 4AM REFRESH)
+        // Scheduler (Fixed NaNd Bug)
         // ============================================
         class AnkiScheduler {
             constructor() { 
@@ -378,7 +375,10 @@
                         state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 
                     };
                 }
+                // 确保数据完整性，防止 NaN
+                if (this.db[id].easeFactor === undefined || isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
                 if (this.db[id].lastModified === undefined) this.db[id].lastModified = 0;
+                
                 return this.db[id];
             }
 
@@ -402,6 +402,17 @@
 
             calculate(originalCard, rating) {
                 let card = JSON.parse(JSON.stringify(originalCard));
+                
+                // === BUG FIX: 数据清洗 (Sanity Check) ===
+                // 修复本地数据损坏导致的 NaNd 问题
+                if (typeof card.easeFactor !== 'number' || isNaN(card.easeFactor) || card.easeFactor < 1.3) {
+                    card.easeFactor = 2.5; // 重置为默认 250%
+                }
+                if (typeof card.interval !== 'number' || isNaN(card.interval)) {
+                    card.interval = 1; // 重置为默认 1天
+                }
+                // === END FIX ===
+
                 let nextIntervalMin = 0;
 
                 if (rating === 1) { 
@@ -416,6 +427,7 @@
                         card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; 
                     } 
                 } else { 
+                    // Review 状态
                     if (rating === 2) { 
                         card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
                         card.easeFactor -= 0.15; 
@@ -429,26 +441,18 @@
                     if(card.easeFactor < 1.3) card.easeFactor = 1.3;
                 }
 
-                // === 关键修改：实现 04:00 AM 刷新机制 ===
+                // 凌晨 04:00 AM 刷新机制
                 if (nextIntervalMin < 1440) {
-                    // 如果间隔小于1天（比如学习阶段的1分钟、10分钟），仍然使用精确时间
                     card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
                 } else {
-                    // 如果间隔大于等于1天，计算目标日期的凌晨04:00
                     const daysToAdd = Math.round(nextIntervalMin / 1440);
                     const targetDate = new Date();
-                    
-                    // 在当前日期基础上增加天数
                     targetDate.setDate(targetDate.getDate() + daysToAdd);
-                    
-                    // 设置时间为凌晨 04:00:00
                     targetDate.setHours(4, 0, 0, 0);
 
-                    // 如果计算出的时间比现在还早（防止极端情况），强制设为明天的4点
                     if (targetDate.getTime() <= Date.now()) {
                          targetDate.setDate(targetDate.getDate() + 1);
                     }
-                    
                     card.dueDate = targetDate.getTime();
                 }
 
@@ -567,7 +571,7 @@
         }
 
         // ============================================
-        // App Logic (初始化 & 面板控制)
+        // App Logic
         // ============================================
         let cardQueue = [];
         let totalItemsCount = 0;
