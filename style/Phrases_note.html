@@ -21,6 +21,7 @@
             /* Anki Specific Colors */
             --color-again: #ff5252; --color-hard: #ffab40;
             --color-good: #69f0ae; --color-easy: #40c4ff;
+            --color-error: #ef4444;
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
@@ -78,6 +79,7 @@
             width: 90%; max-width: 400px;
             box-shadow: var(--shadow-hover); border: 1px solid var(--border-color);
             max-height: 90vh; overflow-y: auto;
+            display: flex; flex-direction: column;
         }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: var(--text-secondary); }
@@ -134,7 +136,9 @@
             box-sizing: border-box;
         }
 
-        .v2-header { flex-shrink: 0; text-align: center; margin-bottom: 15px; position: relative; padding-top: 15px; }
+        .v2-header { flex-shrink: 0; text-align: center; margin-bottom: 15px; position: relative; padding-top: 15px; transition: margin 0.3s;}
+        body.mode-anki.hide-archive .v2-header { margin-bottom: 5px; }
+
         .v2-header h1 { font-family: 'Merriweather', serif; margin: 0 0 8px 0; font-size: 1.8rem; font-weight: 700; }
         .v2-header-actions { position: absolute; right: 0; top: 15px; }
         .v2-icon-btn { background: var(--bg-card); border: 1px solid var(--border-color); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -146,7 +150,7 @@
             padding: 4px 12px; border-radius: 20px;
         }
 
-        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; margin: 5px auto; width: fit-content;}
+        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; margin: 5px auto; width: fit-content; align-items: center; gap: 5px;}
         .sync-badge.success { background: #dcfce7; color: #166534; }
         .sync-badge.error { background: #fee2e2; color: #991b1b; }
 
@@ -159,11 +163,7 @@
             display: flex; flex-direction: column; justify-content: flex-end; 
             padding-bottom: 10vh; transition: all 0.3s; 
         }
-        
-        /* MODIFIED HERE: 
-           当 .hide-archive 激活时，不再垂直居中(center)，而是顶部对齐(flex-start)
-           并给一点点 padding-top 避免完全顶住，消除大片空白
-        */
+
         body.mode-anki.hide-archive #v2-card-stage { 
             justify-content: flex-start; 
             padding-top: 10px; 
@@ -177,11 +177,15 @@
             display: flex; flex-direction: column; align-items: center;
             position: relative; cursor: pointer; user-select: none;
         }
-        .v2-delete-card-btn { position: absolute; top: 20px; left: 20px; background: transparent; border: none; font-size: 1.2rem; opacity: 0.3; cursor: pointer; }
-        .v2-delete-card-btn:hover { opacity: 1; color: var(--danger-color); }
+        .v2-delete-card-btn { 
+            position: absolute; top: 20px; left: 20px; background: transparent; border: none; font-size: 1.2rem; opacity: 0.3; cursor: pointer; 
+            transition: all 0.2s;
+        }
+        .v2-delete-card-btn:hover { opacity: 1; color: var(--danger-color); transform: scale(1.1); }
 
-        .v2-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; }
+        .v2-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
         .v2-source { font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 4px 10px; border-radius: 12px; margin-bottom: 25px; text-decoration: none; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        .v2-source:hover { background: rgba(0,0,0,0.06); color: var(--accent-color); }
 
         .v2-meaning { 
             font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
@@ -191,10 +195,14 @@
         }
         .v2-meaning.revealed { filter: none; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px; cursor: text; user-select: text;}
 
-        .v2-tts-container { margin-top: auto; margin-bottom: 20px; height: 60px; display: flex; align-items: center; justify-content: center; }
-        .v2-tts-btn { background: transparent; border: none; width: 64px; height: 64px; color: var(--accent-color); cursor: pointer; transition: transform 0.2s; }
-        .v2-tts-btn:hover { transform: scale(1.1); }
-        .v2-tts-btn.playing { animation: pulse 1.5s infinite; }
+        .v2-tts-container { margin-top: auto; margin-bottom: 20px; height: 60px; display: flex; align-items: center; justify-content: center; z-index: 10;}
+        .v2-tts-btn { background: transparent; border: none; width: 64px; height: 64px; color: var(--accent-color); cursor: pointer; transition: transform 0.2s; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        .v2-tts-btn:hover { transform: scale(1.15); filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3)); }
+        .v2-tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; pointer-events: none; }
+        .v2-tts-btn.error { color: var(--color-error); animation: shake 0.5s both; }
+
+        @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 
         .v2-anki-controls { 
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-top: 10px;
@@ -207,6 +215,7 @@
             display: flex; flex-direction: column; align-items: center; 
             background: var(--bg-body); color: var(--text-secondary);
             position: relative; overflow: hidden;
+            transition: transform 0.1s, background 0.2s;
         }
         .anki-btn:active { transform: scale(0.95); }
         .anki-btn span:first-child { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
@@ -240,7 +249,8 @@
         .tts-row { display: flex; gap: 5px; margin-bottom: 5px; }
         .tts-row input { flex: 1; padding: 6px; font-size: 0.85rem; }
         .sync-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-sync-action { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .btn-sync-action { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-weight: 600; font-size: 0.9rem; display:flex; align-items:center; justify-content:center; gap:6px;}
+        .btn-sync-action:active { transform: scale(0.98); }
 
         /* Utils */
         .status-msg { text-align: center; padding: 40px; color: var(--text-secondary); }
@@ -330,8 +340,8 @@
                 <div class="form-group">
                     <label>云端同步 (anki_data.json)</label>
                     <div class="sync-row">
-                        <button class="btn-sync-action" onclick="AppV2.syncDown(this)">⬇️ 下载进度</button>
-                        <button class="btn-sync-action" style="color:var(--accent-color); border-color:var(--accent-color)" onclick="AppV2.syncUp(this)">☁️ 上传进度</button>
+                        <button class="btn-sync-action" onclick="AppV2.syncDown(this)"><span>⬇️</span> 从云端下载</button>
+                        <button class="btn-sync-action" style="color:var(--accent-color); border-color:var(--accent-color)" onclick="AppV2.syncUp(this)"><span>☁️</span> 上传进度</button>
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -405,13 +415,12 @@
                 localStorage.setItem('gh_repo', this.data.repo);
                 localStorage.setItem('gh_token', this.data.token);
 
-                const switchBtnId = source === 'v1' ? 'v1-show-switch' : 'v1-show-switch'; // Fixed ID logic to ensure consistency
                 const v1Switch = document.getElementById('v1-show-switch');
                 const v2Switch = document.getElementById('v2-show-switch');
-                // Sync switch state
+                
                 if(source === 'v1' && v1Switch) this.data.showSwitchBtn = v1Switch.checked;
                 if(source === 'v2' && v2Switch) this.data.showSwitchBtn = v2Switch.checked;
-                
+
                 localStorage.setItem('gh_show_switch', this.data.showSwitchBtn);
                 ModeManager.updateBtnState();
 
@@ -607,7 +616,7 @@
         };
 
         // ============================================
-        // 2. App Logic: Version 2 (Anki) - Optimized
+        // 2. App Logic: Version 2 (Anki - RESTORED)
         // ============================================
         const AppV2 = {
             db: JSON.parse(localStorage.getItem('anki_db_v2') || '{}'),
@@ -687,6 +696,13 @@
                 }
             },
 
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            },
+
             async loadDeck(year, month) {
                 this.viewYear = year; this.viewMonth = month;
                 this.stage.innerHTML = `<div class="status-msg"><div class="spin"></div> 加载 ${year}年${month}月...</div>`;
@@ -701,24 +717,32 @@
                     const items = data.filter(i => !this.blacklist.includes(i.id));
                     items.forEach(i => { i._year = year; i._month = month; });
 
-                    // Store total count for display
-                    this.totalMonthCount = items.length;
+                    const uniqueItems = Array.from(new Map(items.map(item => [item.id, item])).values());
+                    this.totalMonthCount = uniqueItems.length;
 
-                    // Scheduler Logic
+                    // === RESTORED LOGIC: STRICT ORDERING ===
+                    const learning = [];
+                    const review = [];
+                    const newCards = [];
                     const now = Date.now();
-                    const dueItems = items.filter(i => {
-                        const s = this.getCardState(i.id);
-                        return s.dueDate <= now;
+
+                    uniqueItems.forEach(item => {
+                        const s = this.getCardState(item.id);
+                        if (s.dueDate > now) return; 
+
+                        if (s.state === 'learning') learning.push(item);
+                        else if (s.state === 'review') review.push(item);
+                        else newCards.push(item);
                     });
 
-                    // Shuffle
-                    for (let i = dueItems.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [dueItems[i], dueItems[j]] = [dueItems[j], dueItems[i]];
-                    }
+                    this.shuffle(learning);
+                    this.shuffle(review);
+                    this.shuffle(newCards);
 
-                    this.queue = dueItems;
-                    this.updateStats(); // Initial stats update
+                    // Priority: Learning > Review > New
+                    this.queue = [...learning, ...review, ...newCards];
+                    
+                    this.updateStats(); 
                     this.renderCard();
 
                 } catch(e) {
@@ -730,16 +754,16 @@
             },
 
             updateStats() {
-                const due = this.queue.length;
-                const newCount = this.queue.filter(i => this.getCardState(i.id).state === 'new').length;
-                this.statsEl.innerText = `${this.viewYear}年${this.viewMonth}月 | 待复习: ${due} | 新卡: ${newCount} | 总计: ${this.totalMonthCount}`;
+                // RESTORED LOGIC: Stats based on state, not just list length
+                const newCount = this.queue.filter(item => this.getCardState(item.id).state === 'new').length;
+                const reviewCount = this.queue.length - newCount;
+                this.statsEl.innerText = `${this.viewYear}年${this.viewMonth}月 | 待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${this.totalMonthCount}`;
             },
 
             renderCard() {
                 this.updateStats();
 
                 if(this.queue.length === 0) {
-                    // Optimized Finished State UI matching the request
                     this.stage.innerHTML = `
                         <div class="finished-state">
                             <div class="finished-icon">🎉</div>
@@ -755,7 +779,15 @@
 
                 const item = this.queue[0];
                 this.currentCard = item;
-                const times = this.calcNextTimes(item.id);
+                
+                // Use preview logic
+                const times = {
+                    again: this.calc(item.id, 1).timeText,
+                    hard:  this.calc(item.id, 2).timeText,
+                    good:  this.calc(item.id, 3).timeText,
+                    easy:  this.calc(item.id, 4).timeText
+                };
+
                 const safeText = item.text.replace(/'/g, "\\'");
                 const deleteHtml = SharedConfig.data.enableDeleteV2 ? `<button class="v2-delete-card-btn" onclick="AppV2.deleteCard()" title="云端删除">🗑️</button>` : '';
 
@@ -783,45 +815,88 @@
             },
 
             getCardState(id) {
-                if(!this.db[id]) this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0 };
+                if(!this.db[id]) {
+                    this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 };
+                }
+                // === RESTORED: SANITY CHECK ===
+                if (typeof this.db[id].easeFactor !== 'number' || isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
+                if (typeof this.db[id].lastModified === undefined) this.db[id].lastModified = 0;
                 return this.db[id];
             },
-            calc(card, rating) {
-                let c = JSON.parse(JSON.stringify(card));
-                let nextMin = 0;
-                if(rating === 1) {
-                    c.step = 0; c.state = 'learning'; nextMin = 1; c.easeFactor = Math.max(1.3, c.easeFactor - 0.2);
-                } else if (c.state === 'new' || c.state === 'learning') {
-                    if(rating === 2) nextMin = 6;
-                    else if(rating === 3) { if(c.step===0) { c.step=1; nextMin=10; } else { c.state='review'; c.interval=1; nextMin=1440; } }
-                    else if(rating === 4) { c.state='review'; c.interval=4; nextMin=5760; }
+
+            // === RESTORED LOGIC: CALC FUNCTION ===
+            calc(id, rating) {
+                const originalCard = this.getCardState(id);
+                let card = JSON.parse(JSON.stringify(originalCard));
+
+                // Sanity Check Inside Calc
+                if (typeof card.easeFactor !== 'number' || isNaN(card.easeFactor) || card.easeFactor < 1.3) {
+                    card.easeFactor = 2.5;
+                }
+                if (typeof card.interval !== 'number' || isNaN(card.interval)) {
+                    card.interval = 1;
+                }
+
+                let nextIntervalMin = 0;
+
+                if (rating === 1) { 
+                    card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
+                    card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+                } else if (card.state === 'new' || card.state === 'learning') {
+                    if (rating === 2) nextIntervalMin = 6; 
+                    else if (rating === 3) { 
+                        if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } 
+                        else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; } 
+                    } else if (rating === 4) { 
+                        card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; 
+                    } 
+                } else { 
+                    // Review State
+                    if (rating === 2) { 
+                        card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
+                        card.easeFactor -= 0.15; 
+                    } else if (rating === 3) { 
+                        card.interval = Math.floor(card.interval * card.easeFactor); 
+                    } else if (rating === 4) { 
+                        card.interval = Math.floor(card.interval * card.easeFactor * 1.3); 
+                        card.easeFactor += 0.15; 
+                    }
+                    nextIntervalMin = card.interval * 1440;
+                    if(card.easeFactor < 1.3) card.easeFactor = 1.3;
+                }
+
+                // 4:00 AM Logic
+                if (nextIntervalMin < 1440) {
+                    card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
                 } else {
-                    if(rating === 2) { c.interval = Math.max(1, Math.floor(c.interval * 1.2)); c.easeFactor -= 0.15; }
-                    else if(rating === 3) { c.interval = Math.floor(c.interval * c.easeFactor); }
-                    else if(rating === 4) { c.interval = Math.floor(c.interval * c.easeFactor * 1.3); c.easeFactor += 0.15; }
-                    nextMin = c.interval * 1440;
-                    if(c.easeFactor < 1.3) c.easeFactor = 1.3;
+                    const daysToAdd = Math.round(nextIntervalMin / 1440);
+                    const targetDate = new Date();
+                    targetDate.setDate(targetDate.getDate() + daysToAdd);
+                    targetDate.setHours(4, 0, 0, 0);
+                    if (targetDate.getTime() <= Date.now()) {
+                         targetDate.setDate(targetDate.getDate() + 1);
+                    }
+                    card.dueDate = targetDate.getTime();
                 }
-                if(nextMin < 1440) c.dueDate = Date.now() + (nextMin * 60000);
-                else {
-                    const d = new Date(); d.setDate(d.getDate() + Math.round(nextMin/1440)); d.setHours(4,0,0,0);
-                    c.dueDate = d.getTime();
-                }
-                c.lastModified = Date.now();
-                let txt = nextMin < 60 ? nextMin+'m' : nextMin < 1440 ? Math.round(nextMin/60)+'h' : Math.round(nextMin/1440)+'d';
-                return { card: c, text: txt };
+
+                card.lastModified = Date.now(); 
+
+                // Time Text Formatting
+                let timeText;
+                if (nextIntervalMin < 60) timeText = nextIntervalMin + 'm';
+                else if (nextIntervalMin < 1440) timeText = Math.round(nextIntervalMin / 60) + 'h';
+                else if (nextIntervalMin < 43200) timeText = Math.round(nextIntervalMin / 1440) + 'd';
+                else if (nextIntervalMin < 525600) timeText = Math.round(nextIntervalMin / 43200) + 'mo';
+                else timeText = Math.round(nextIntervalMin / 525600) + 'y';
+
+                return { card, timeText };
             },
-            calcNextTimes(id) {
-                const c = this.getCardState(id);
-                return {
-                    again: this.calc(c, 1).text, hard: this.calc(c, 2).text,
-                    good: this.calc(c, 3).text, easy: this.calc(c, 4).text
-                };
-            },
+
             answer(rating) {
+                if(this.audio) { this.audio.pause(); this.audio=null; }
                 const item = this.queue[0];
-                const res = this.calc(this.getCardState(item.id), rating);
-                this.db[item.id] = res.card;
+                const result = this.calc(item.id, rating);
+                this.db[item.id] = result.card; 
                 localStorage.setItem('anki_db_v2', JSON.stringify(this.db));
 
                 const cardEl = document.querySelector('.v2-card');
@@ -836,7 +911,7 @@
 
             async syncDown(btn) {
                 if(!SharedConfig.data.token) return alert("Missing Token");
-                const old = btn.innerHTML; btn.innerHTML = "🔄..."; btn.disabled=true;
+                const old = btn.innerHTML; btn.innerHTML = '<span class="spin">🔄</span>...'; btn.disabled=true;
                 try {
                     const res = await fetch(`https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/Notes/anki_data.json`, {
                         headers: {'Authorization': `token ${SharedConfig.data.token}`}
@@ -860,9 +935,9 @@
             async syncUp(btn) {
                 if(!SharedConfig.data.token) return alert("请先在设置中配置 Token");
                 const oldText = btn ? btn.innerHTML : ''; 
-                if(btn) { btn.innerHTML = "☁️ 正在上传..."; btn.disabled=true; }
+                if(btn) { btn.innerHTML = '<span class="spin">☁️</span> ...'; btn.disabled=true; }
                 const badge = document.getElementById('v2-sync-status');
-                badge.style.display='inline-block'; badge.innerText='Syncing...';
+                badge.style.display='inline-flex'; badge.innerHTML='<span class="spin">☁️</span> Syncing...';
 
                 try {
                     const url = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/Notes/anki_data.json`;
@@ -879,12 +954,12 @@
                     });
                     if(!res.ok) throw new Error("Upload Failed");
 
-                    if(btn) { btn.innerHTML = "✅ 同步成功"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
-                    badge.className = 'sync-badge success'; badge.innerText = '✅ Saved';
+                    if(btn) { btn.innerHTML = "✅ 成功"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
+                    badge.className = 'sync-badge success'; badge.innerHTML = '✅ Saved';
                     setTimeout(() => badge.style.display='none', 3000);
                 } catch(e) {
                     if(btn) { btn.innerHTML = "❌ 失败"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
-                    badge.className = 'sync-badge error'; badge.innerText = 'Error';
+                    badge.className = 'sync-badge error'; badge.innerHTML = 'Error';
                 }
             },
 
@@ -927,12 +1002,18 @@
                 this.playTTSChain(text, () => btn.classList.remove('playing'));
             },
             playTTSChain(text, onEnd, idx = 0) {
-                if(idx >= SharedConfig.data.ttsList.length) { onEnd(); return; }
+                if(idx >= SharedConfig.data.ttsList.length) { 
+                     // All failed
+                     const btn = document.querySelector('.v2-tts-btn.playing');
+                     if(btn) { btn.classList.remove('playing'); btn.classList.add('error'); setTimeout(()=>btn.classList.remove('error'), 1000); }
+                     onEnd(); 
+                     return; 
+                }
                 const cfg = SharedConfig.data.ttsList[idx];
                 if(!cfg.url) { this.playTTSChain(text, onEnd, idx+1); return; }
 
                 let url = cfg.url.replace('{text}', encodeURIComponent(text));
-                if(cfg.token && !url.includes('token=')) url += `&token=${encodeURIComponent(cfg.token)}`;
+                if(cfg.token && !url.includes('token=')) url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(cfg.token);
 
                 const audio = new Audio(url);
                 this.audio = audio;
@@ -955,7 +1036,7 @@
                 const div = document.createElement('div'); div.className = 'tts-config-item';
                 div.innerHTML = `
                     <div class="tts-row"><input type="text" class="inp-url" placeholder="URL" value="${data.url}"></div>
-                    <div class="tts-row"><input type="text" class="inp-token" placeholder="Token (Optional)" value="${data.token}"><button class="btn-mini" onclick="this.parentElement.parentElement.remove()" style="color:red">🗑️</button></div>
+                    <div class="tts-row"><input type="text" class="inp-token" placeholder="Token (Optional)" value="${data.token}"><button class="btn-mini" onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:transparent; cursor:pointer">🗑️</button></div>
                 `;
                 document.getElementById('v2-tts-list').appendChild(div);
             },
