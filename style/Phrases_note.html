@@ -35,7 +35,7 @@
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); margin: 0; padding: 0; transition: background 0.3s; }
-        
+
         /* 模式切换按钮 */
         #mode-toggle-btn {
             position: fixed; bottom: 30px; right: 30px; z-index: 9999;
@@ -107,7 +107,7 @@
         .search-box { display: flex; gap: 10px; background: var(--bg-card); padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; }
         .search-input { flex-grow: 1; border: none; background: transparent; font-size: 16px; color: var(--text-primary); outline: none; }
         .search-btn { background-color: var(--accent-color); color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
-        
+
         .v1-notes-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
         @media(min-width: 768px) { .v1-notes-grid { grid-template-columns: repeat(2, 1fr); } }
         .v1-note-card { background: var(--bg-card); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); display: flex; flex-direction: column; position: relative; transition: all 0.3s; }
@@ -126,7 +126,7 @@
            3. V2: Anki Pro Mode Specific CSS
            ========================================= */
         body.mode-anki { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
-        
+
         #app-v2 { 
             width: 100%; max-width: 600px; margin: 0 auto; 
             padding: 15px 20px; height: 100vh;
@@ -152,14 +152,23 @@
 
         .v2-controls { background: var(--bg-card); padding: 15px 20px; border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 20px; flex-shrink: 0; display: block; }
         .v2-controls.hidden { display: none !important; }
-        
+
         /* V2 Card Stage */
         #v2-card-stage { 
             perspective: 1000px; position: relative; flex: 1; 
             display: flex; flex-direction: column; justify-content: flex-end; 
             padding-bottom: 10vh; transition: all 0.3s; 
         }
-        body.mode-anki.hide-archive #v2-card-stage { justify-content: center; padding-bottom: 5vh; }
+        
+        /* MODIFIED HERE: 
+           当 .hide-archive 激活时，不再垂直居中(center)，而是顶部对齐(flex-start)
+           并给一点点 padding-top 避免完全顶住，消除大片空白
+        */
+        body.mode-anki.hide-archive #v2-card-stage { 
+            justify-content: flex-start; 
+            padding-top: 10px; 
+            padding-bottom: 5vh; 
+        }
 
         .v2-card { 
             background: var(--bg-card); border-radius: 24px; padding: 30px 24px; 
@@ -173,7 +182,7 @@
 
         .v2-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; }
         .v2-source { font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 4px 10px; border-radius: 12px; margin-bottom: 25px; text-decoration: none; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
-        
+
         .v2-meaning { 
             font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
             display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
@@ -192,7 +201,7 @@
             opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s;
         }
         .v2-meaning.revealed ~ .v2-anki-controls { opacity: 1; pointer-events: auto; transform: translateY(0); }
-        
+
         .anki-btn { 
             padding: 12px 5px; border-radius: 12px; border: none; cursor: pointer;
             display: flex; flex-direction: column; align-items: center; 
@@ -232,7 +241,7 @@
         .tts-row input { flex: 1; padding: 6px; font-size: 0.85rem; }
         .sync-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .btn-sync-action { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
-        
+
         /* Utils */
         .status-msg { text-align: center; padding: 40px; color: var(--text-secondary); }
         .spin { animation: spin 1s infinite linear; display: inline-block; }
@@ -368,7 +377,7 @@
                 enableDeleteV2: localStorage.getItem('gh_enable_delete_v2') === 'true',
                 showPanelV2: localStorage.getItem('gh_show_archive_panel') !== 'false'
             },
-            
+
             defaultTTS: [
                 { url: 'https://read-aloud-bay.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
                 { url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}', token: '' }
@@ -383,7 +392,7 @@
                 const userInp = document.querySelectorAll('.shared-gh-user');
                 const repoInp = document.querySelectorAll('.shared-gh-repo');
                 const tokenInp = document.querySelectorAll('.shared-gh-token');
-                
+
                 const activeUser = source === 'v1' ? userInp[0].value : userInp[1].value;
                 const activeRepo = source === 'v1' ? repoInp[0].value : repoInp[1].value;
                 const activeToken = source === 'v1' ? tokenInp[0].value : tokenInp[1].value;
@@ -396,8 +405,13 @@
                 localStorage.setItem('gh_repo', this.data.repo);
                 localStorage.setItem('gh_token', this.data.token);
 
-                const switchBtnId = source === 'v1' ? 'v1-show-switch' : 'v2-show-switch';
-                this.data.showSwitchBtn = document.getElementById(switchBtnId).checked;
+                const switchBtnId = source === 'v1' ? 'v1-show-switch' : 'v1-show-switch'; // Fixed ID logic to ensure consistency
+                const v1Switch = document.getElementById('v1-show-switch');
+                const v2Switch = document.getElementById('v2-show-switch');
+                // Sync switch state
+                if(source === 'v1' && v1Switch) this.data.showSwitchBtn = v1Switch.checked;
+                if(source === 'v2' && v2Switch) this.data.showSwitchBtn = v2Switch.checked;
+                
                 localStorage.setItem('gh_show_switch', this.data.showSwitchBtn);
                 ModeManager.updateBtnState();
 
@@ -424,8 +438,8 @@
                 document.querySelectorAll('.shared-gh-user').forEach(el => el.value = this.data.user);
                 document.querySelectorAll('.shared-gh-repo').forEach(el => el.value = this.data.repo);
                 document.querySelectorAll('.shared-gh-token').forEach(el => el.value = this.data.token);
-                document.getElementById('v1-show-switch').checked = this.data.showSwitchBtn;
-                document.getElementById('v2-show-switch').checked = this.data.showSwitchBtn;
+                if(document.getElementById('v1-show-switch')) document.getElementById('v1-show-switch').checked = this.data.showSwitchBtn;
+                if(document.getElementById('v2-show-switch')) document.getElementById('v2-show-switch').checked = this.data.showSwitchBtn;
             }
         };
 
@@ -438,7 +452,7 @@
         const AppV1 = {
             viewYear: null,
             viewMonth: null,
-            
+
             init() {
                 this.notesGrid = document.getElementById('v1-notes-grid');
                 this.yearSelect = document.getElementById('v1-year-select');
@@ -451,7 +465,7 @@
             async start() {
                 if(!REMOTE_CONFIG) await Loader.loadConfig();
                 if(!REMOTE_CONFIG) return;
-                
+
                 this.yearSelect.innerHTML = '';
                 const start = REMOTE_CONFIG.startYear || 2025;
                 const total = REMOTE_CONFIG.totalYears || 30;
@@ -462,7 +476,7 @@
                 this.yearSelect.value = (today.getFullYear() >= start) ? today.getFullYear() : start;
                 this.yearSelect.onchange = (e) => this.renderMonths(parseInt(e.target.value));
                 this.renderMonths(parseInt(this.yearSelect.value));
-                
+
                 setTimeout(() => {
                     const m = today.getMonth() + 1;
                     const btn = this.monthContainer.querySelector(`button[data-m="${m}"]`);
@@ -502,7 +516,7 @@
             renderCards(items, isSearch = false) {
                 this.notesGrid.innerHTML = '';
                 items.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
-                
+
                 if(SharedConfig.data.showDeleteV1 && SharedConfig.data.token) {
                     const style = document.createElement('style');
                     style.innerHTML = `.v1-delete-btn { display: block !important; }`;
@@ -513,7 +527,7 @@
                     const card = document.createElement('div'); card.className = 'v1-note-card';
                     const safeText = item.text.replace(/'/g, "\\'");
                     const sourceUrl = item.url ? `${item.url}#:~:text=${encodeURIComponent(item.text)}` : '#';
-                    
+
                     card.innerHTML = `
                         <div class="v1-card-header">
                             <div class="v1-word">${item.text}</div>
@@ -540,12 +554,12 @@
                 const q = this.searchInput.value.trim().toLowerCase();
                 if(!q) return;
                 this.notesGrid.innerHTML = `<div class="status-msg"><div class="spin"></div> 全局搜索 "${q}"...</div>`;
-                
+
                 const results = [];
                 const promises = [];
                 const start = REMOTE_CONFIG.startYear;
                 const end = new Date().getFullYear();
-                
+
                 for(let y=start; y<=end; y++) {
                     for(let m=1; m<=12; m++) {
                         promises.push(fetch(REMOTE_CONFIG.getUrl(y,m)).then(r=>r.ok?r.json():[]).then(data => {
@@ -565,10 +579,10 @@
             async deleteNote(id) {
                 if(!confirm("确定要从 GitHub 删除吗？")) return;
                 if(!SharedConfig.data.token) return alert("请在设置中配置 Token");
-                
+
                 const fileName = REMOTE_CONFIG.getFileName(this.viewYear, this.viewMonth);
                 const apiUrl = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/${SharedConfig.data.pathV1}${fileName}`;
-                
+
                 try {
                     const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${SharedConfig.data.token}`}});
                     if(!getRes.ok) throw new Error("Fetch Failed");
@@ -576,7 +590,7 @@
                     const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
                     const newContent = content.filter(i => i.id !== id);
                     if(newContent.length === content.length) throw new Error("ID not found");
-                    
+
                     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(newContent, null, 2))));
                     await fetch(apiUrl, {
                         method: 'PUT',
@@ -611,7 +625,7 @@
                 this.monthContainer = document.getElementById('v2-month-container');
                 this.statsEl = document.getElementById('v2-deck-stats');
                 this.applySettings();
-                
+
                 document.addEventListener('keydown', (e) => {
                     if(document.body.classList.contains('mode-anki') && !document.getElementById('v2-modal').offsetParent) {
                         if(e.key === ' ' || e.key === 'Enter') {
@@ -640,7 +654,7 @@
 
             async start() {
                 if(!REMOTE_CONFIG) await Loader.loadConfig();
-                
+
                 this.yearSelect.innerHTML = '';
                 const start = REMOTE_CONFIG.startYear || 2025;
                 const total = REMOTE_CONFIG.totalYears || 30;
@@ -677,16 +691,16 @@
                 this.viewYear = year; this.viewMonth = month;
                 this.stage.innerHTML = `<div class="status-msg"><div class="spin"></div> 加载 ${year}年${month}月...</div>`;
                 this.statsEl.innerText = "正在获取...";
-                
+
                 try {
                     const res = await fetch(REMOTE_CONFIG.getUrl(year, month));
                     if(!res.ok) throw new Error();
                     const data = await res.json();
-                    
+
                     // Filter Blacklist
                     const items = data.filter(i => !this.blacklist.includes(i.id));
                     items.forEach(i => { i._year = year; i._month = month; });
-                    
+
                     // Store total count for display
                     this.totalMonthCount = items.length;
 
@@ -696,13 +710,13 @@
                         const s = this.getCardState(i.id);
                         return s.dueDate <= now;
                     });
-                    
+
                     // Shuffle
                     for (let i = dueItems.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [dueItems[i], dueItems[j]] = [dueItems[j], dueItems[i]];
                     }
-                    
+
                     this.queue = dueItems;
                     this.updateStats(); // Initial stats update
                     this.renderCard();
@@ -738,13 +752,13 @@
                     `;
                     return;
                 }
-                
+
                 const item = this.queue[0];
                 this.currentCard = item;
                 const times = this.calcNextTimes(item.id);
                 const safeText = item.text.replace(/'/g, "\\'");
                 const deleteHtml = SharedConfig.data.enableDeleteV2 ? `<button class="v2-delete-card-btn" onclick="AppV2.deleteCard()" title="云端删除">🗑️</button>` : '';
-                
+
                 this.stage.innerHTML = `
                     <div class="v2-card" onclick="this.querySelector('.v2-meaning').classList.add('revealed')">
                         ${deleteHtml}
@@ -809,17 +823,17 @@
                 const res = this.calc(this.getCardState(item.id), rating);
                 this.db[item.id] = res.card;
                 localStorage.setItem('anki_db_v2', JSON.stringify(this.db));
-                
+
                 const cardEl = document.querySelector('.v2-card');
                 if(cardEl) { cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0'; }
-                
+
                 setTimeout(() => {
                     this.queue.shift();
                     if(rating === 1) this.queue.push(item);
                     this.renderCard();
                 }, 200);
             },
-            
+
             async syncDown(btn) {
                 if(!SharedConfig.data.token) return alert("Missing Token");
                 const old = btn.innerHTML; btn.innerHTML = "🔄..."; btn.disabled=true;
@@ -830,7 +844,7 @@
                     if(!res.ok) throw new Error("Sync Failed");
                     const data = await res.json();
                     const cloudDB = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-                    
+
                     let count = 0;
                     for(let id in cloudDB) {
                         if(this.blacklist.includes(id)) continue;
@@ -849,22 +863,22 @@
                 if(btn) { btn.innerHTML = "☁️ 正在上传..."; btn.disabled=true; }
                 const badge = document.getElementById('v2-sync-status');
                 badge.style.display='inline-block'; badge.innerText='Syncing...';
-                
+
                 try {
                     const url = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/Notes/anki_data.json`;
                     let sha = null;
                     try { const r = await fetch(url, {headers: {'Authorization': `token ${SharedConfig.data.token}`}}); if(r.ok) sha = (await r.json()).sha; } catch(e){}
-                    
+
                     this.blacklist.forEach(id => delete this.db[id]);
                     const content = btoa(unescape(encodeURIComponent(JSON.stringify(this.db))));
-                    
+
                     const res = await fetch(url, {
                         method: 'PUT',
                         headers: {'Authorization': `token ${SharedConfig.data.token}`, 'Content-Type': 'application/json'},
                         body: JSON.stringify({ message: 'Update Progress', content: content, sha: sha })
                     });
                     if(!res.ok) throw new Error("Upload Failed");
-                    
+
                     if(btn) { btn.innerHTML = "✅ 同步成功"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
                     badge.className = 'sync-badge success'; badge.innerText = '✅ Saved';
                     setTimeout(() => badge.style.display='none', 3000);
@@ -873,7 +887,7 @@
                     badge.className = 'sync-badge error'; badge.innerText = 'Error';
                 }
             },
-            
+
             async deleteCard() {
                 if(!confirm("从云端永久删除？")) return;
                 const item = this.queue[0];
@@ -881,10 +895,10 @@
                 delete this.db[item.id];
                 localStorage.setItem('anki_deleted_ids', JSON.stringify(this.blacklist));
                 localStorage.setItem('anki_db_v2', JSON.stringify(this.db));
-                
+
                 const fileName = REMOTE_CONFIG.getFileName(item._year, item._month);
                 const apiUrl = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/${SharedConfig.data.pathV1}${fileName}`;
-                
+
                 try {
                     const r = await fetch(apiUrl, {headers: {'Authorization': `token ${SharedConfig.data.token}`}});
                     if(r.ok) {
@@ -899,7 +913,7 @@
                         });
                     }
                 } catch(e) { console.error(e); }
-                
+
                 this.syncUp();
                 this.queue.shift();
                 this.totalMonthCount--; // Decrement visual total
@@ -916,17 +930,17 @@
                 if(idx >= SharedConfig.data.ttsList.length) { onEnd(); return; }
                 const cfg = SharedConfig.data.ttsList[idx];
                 if(!cfg.url) { this.playTTSChain(text, onEnd, idx+1); return; }
-                
+
                 let url = cfg.url.replace('{text}', encodeURIComponent(text));
                 if(cfg.token && !url.includes('token=')) url += `&token=${encodeURIComponent(cfg.token)}`;
-                
+
                 const audio = new Audio(url);
                 this.audio = audio;
                 audio.onended = onEnd;
                 audio.onerror = () => { console.log('TTS Fail', idx); this.playTTSChain(text, onEnd, idx+1); };
                 audio.play().catch(e => audio.onerror());
             },
-            
+
             scrapeTTS() {
                 const list = [];
                 document.querySelectorAll('#v2-tts-list .tts-config-item').forEach(el => {
@@ -945,7 +959,7 @@
                 `;
                 document.getElementById('v2-tts-list').appendChild(div);
             },
-            
+
             openSettings() {
                 SharedConfig.fillInputs(); 
                 document.getElementById('v2-tts-list').innerHTML = '';
@@ -961,7 +975,7 @@
                     const res = await fetch(`https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/commits/master`);
                     if(res.ok) LATEST_SHA = (await res.json()).sha;
                 } catch(e) {}
-                
+
                 const scriptUrl = `https://cdn.jsdelivr.net/gh/${SharedConfig.data.user}/${SharedConfig.data.repo}@${LATEST_SHA}/Notes/Phrases_note.js`;
                 return new Promise(resolve => {
                     const script = document.createElement('script');
@@ -980,7 +994,7 @@
         const ModeManager = {
             mode: 'v1',
             toggleBtn: document.getElementById('mode-toggle-btn'),
-            
+
             init() {
                 this.toggleBtn.onclick = () => this.switchMode();
                 this.updateBtnState();
@@ -1001,7 +1015,7 @@
                 this.mode = target;
                 localStorage.setItem('app_mode', this.mode);
                 document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
-                
+
                 if(target === 'v1') {
                     document.body.classList.remove('mode-anki');
                     document.body.classList.add('mode-v1');
