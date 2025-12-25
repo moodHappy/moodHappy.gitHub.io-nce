@@ -212,7 +212,7 @@
             <span>阅读助手</span>
         </div>
         <div class="nav-actions">
-            <button class="icon-btn" id="pushBtn" title="推送当前内容到 moodHappy.gitHub.io-nce">
+            <button class="icon-btn" id="pushBtn" title="推送当前内容到云端">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
@@ -378,7 +378,7 @@
         };
         const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
 
-        // --- GitHub 推送配置 (新增) ---
+        // --- GitHub 推送配置 ---
         const PUSH_CONFIG = {
             owner: 'moodHappy',
             repo: 'moodHappy.gitHub.io-nce',
@@ -620,7 +620,6 @@
 
         // 用于生成微小说的同步 (保持旧逻辑)
         async function uploadToGitHub(content, token) {
-            // 注意：这里使用的是 GH_CONFIG (HelloWorld 仓库)
             const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
             const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
             const body = { message: "Update via AI Reader", content: utf8_to_b64(content), committer: { name: "AI Reader", email: "bot@ai-reader.com" } };
@@ -630,7 +629,7 @@
             return true;
         }
 
-        // --- 新增: 推送当前内容到 moodHappy.gitHub.io-nce ---
+        // --- 核心更新: 推送当前内容 (适配移动端 + 首句标题) ---
         async function pushCurrentContent() {
             const btn = document.getElementById('pushBtn');
             const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
@@ -655,33 +654,57 @@
                 const clone = contentDiv.cloneNode(true);
                 clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
 
-                // 3. 包装成完整的 HTML 格式
+                // 3. 提取第一句话作为标题
+                const rawText = clone.innerText.trim();
+                // 匹配第一句话（以句号、问号、感叹号或换行符结束）
+                const titleMatch = rawText.match(/^[^。！？.!?\r\n]+[。！？.!?]?/);
+                let articleTitle = titleMatch ? titleMatch[0].substring(0, 60) : `Article ${new Date().toLocaleDateString()}`;
+                // 清理掉可能存在的特殊符号
+                articleTitle = articleTitle.replace(/[\r\n]/g, '').trim();
+
+                // 4. 包装成适配移动端的 HTML 格式
                 const fileContent = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Saved Article ${new Date().toLocaleString()}</title>
-<style>body{font-family:'Noto Serif SC',serif;max-width:800px;margin:20px auto;padding:0 20px;line-height:1.8;color:#333;background:#fcfbf9;}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>${articleTitle}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+  body {
+    font-family: 'Noto Serif SC', serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    line-height: 1.8;
+    color: #2c2c2c;
+    background: #fcfbf9;
+    font-size: 18px; /* 增大字号适配移动端 */
+    word-wrap: break-word;
+  }
+  h1 { font-size: 1.4em; color: #8b7355; margin-bottom: 25px; border-bottom: 1px dashed #dcd3c3; padding-bottom: 10px; line-height: 1.4; }
+  img { max-width: 100%; height: auto; display: block; margin: 15px auto; }
+</style>
 </head>
 <body>
+<h1>${articleTitle}</h1>
 ${clone.innerHTML}
 </body>
 </html>`;
 
-                // 4. 生成文件名 (使用时间戳避免覆盖)
+                // 5. 生成文件名 (使用时间戳避免覆盖)
                 const filename = `article_${Date.now()}.html`;
                 const fullPath = `${PUSH_CONFIG.path}/${filename}`;
                 const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
 
-                // 5. 构建请求体
+                // 6. 构建请求体
                 const body = {
-                    message: `Push via AI Reader: ${filename}`,
+                    message: `Push via AI Reader: ${articleTitle}`,
                     content: utf8_to_b64(fileContent),
                     committer: { name: "AI Reader", email: "bot@reader.app" }
                 };
 
-                // 6. 发送 PUT 请求
+                // 7. 发送 PUT 请求
                 const res = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: { 
@@ -697,7 +720,7 @@ ${clone.innerHTML}
                     throw new Error(errData.message || "GitHub API 错误");
                 }
 
-                alert(`推送成功！\n文件已保存至: ${fullPath}`);
+                alert(`推送成功！\n标题: ${articleTitle}\n文件: ${filename}`);
 
             } catch (e) {
                 alert(`推送失败: ${e.message}`);
