@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 阅读 & 创作助手 (GitHub实时版)</title>
+    <title>AI 阅读 & 创作助手 (GitHub版)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
@@ -88,7 +88,7 @@
         .bar:nth-child(3) { animation-delay: 0.2s; height: 8px; }
         @keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
 
-        /* 旋转动画 (用于刷新按钮) */
+        /* 旋转动画 (用于加载) */
         .spin-anim { animation: spin 1s linear infinite; }
 
         /* --- 正文区域 --- */
@@ -162,7 +162,7 @@
             border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 1em; background: #fff;
         }
         .save-btn { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; }
-        
+
         /* 范围滑块样式 */
         .range-slider-container { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .range-slider { -webkit-appearance: none; width: 100%; height: 6px; background: #e0d5ca; border-radius: 5px; outline: none; }
@@ -212,8 +212,12 @@
             <span>阅读助手</span>
         </div>
         <div class="nav-actions">
-            <button class="icon-btn" id="refreshBtn" title="刷新获取最新文章">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <button class="icon-btn" id="pushBtn" title="推送当前内容到 moodHappy.gitHub.io-nce">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
             </button>
 
             <button id="readAloudButton" class="read-btn-top" title="朗读全文">
@@ -336,8 +340,9 @@
                     <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
                 </div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token</label>
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token (PAT)</label>
                     <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
+                    <small style="color:#999; display:block; margin-top:-10px; margin-bottom:10px;">用于生成小说同步及云端推送功能</small>
                 </div>
                 <div class="settings-group">
                     <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">模型</label>
@@ -365,8 +370,22 @@
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
 
+        // --- GitHub 读取配置 (保持不变) ---
+        const GH_CONFIG = {
+            owner: 'moodHappy',
+            repo: 'HelloWorld',
+            path: 'Notes/B1.md'
+        };
+        const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+
+        // --- GitHub 推送配置 (新增) ---
+        const PUSH_CONFIG = {
+            owner: 'moodHappy',
+            repo: 'moodHappy.gitHub.io-nce',
+            path: 'Notes/danmu/Prose'
+        };
+
         // --- TTS 语音数据 ---
-        // 新增了 zh-CN-XiaobeiNeural
         const TTS_VOICES = {
             'en': [
                 { id: 'en-US-GuyNeural', name: '🇺🇸 Guy (男, 标准)' },
@@ -398,14 +417,6 @@
             }
         ];
 
-        // --- GitHub 配置 ---
-        const GH_CONFIG = {
-            owner: 'moodHappy',
-            repo: 'HelloWorld',
-            path: 'Notes/B1.md'
-        };
-        const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
-
         // --- 状态变量 ---
         let currentAudio = null;
         let isReading = false;
@@ -432,21 +443,13 @@
         }
         function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
 
-        // --- 实时刷新逻辑 (关键修复) ---
-        function loadContent(forceRefresh = false) {
+        // --- 初始内容加载 ---
+        function loadContent() {
             const container = document.getElementById('dynamic-content');
-            const refreshBtnSvg = document.querySelector('#refreshBtn svg');
+            container.innerHTML = '加载中...';
             
-            if (forceRefresh) {
-                refreshBtnSvg.classList.add('spin-anim');
-                container.style.opacity = '0.5';
-            } else {
-                container.innerHTML = '加载中...';
-            }
-
             const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
-            // 加上时间戳 ?t=... 强制避开 GitHub 的缓存
-            const fetchUrl = `${rawUrl}?t=${Date.now()}`;
+            const fetchUrl = `${rawUrl}?t=${Date.now()}`; // 避开缓存
 
             fetch(fetchUrl)
                 .then(r => {
@@ -456,17 +459,9 @@
                 .then(d => {
                     container.innerHTML = d.replace(/\n/g, '<br>');
                     injectAIButtons();
-                    container.style.opacity = '1';
-                    if(forceRefresh) {
-                        setTimeout(() => refreshBtnSvg.classList.remove('spin-anim'), 500);
-                        // 清除旧的按钮高亮记录，防止位置错乱
-                        localStorage.removeItem(LAST_CLICKED_KEY);
-                    }
                 })
                 .catch(e => {
                     container.innerHTML = "加载失败，请检查网络或配置。<br>" + e.message;
-                    container.style.opacity = '1';
-                    refreshBtnSvg.classList.remove('spin-anim');
                 });
         }
 
@@ -547,7 +542,7 @@
                     const params = new URLSearchParams();
                     params.append('text', textSegment);
                     params.append('voiceName', voiceName);
-                    
+
                     if (domain.paramType === 'percent') {
                         const rateStr = parseInt(speedVal) >= 0 ? `+${speedVal}%` : `${speedVal}%`;
                         params.append('rate', rateStr);
@@ -611,24 +606,107 @@
             return data.choices[0]?.message?.content || "";
         }
 
-        // --- GitHub 操作 ---
-        async function getGitHubSHA(token) {
-            const res = await fetch(GH_API_BASE, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+        // --- GitHub API 基础操作 ---
+        function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+
+        async function getGitHubSHA(token, owner, repo, path) {
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
             if (res.status === 404) return null;
             if (!res.ok) throw new Error(`GitHub 读取失败: ${res.status}`);
             const data = await res.json();
             return data.sha;
         }
 
-        function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
-
+        // 用于生成微小说的同步 (保持旧逻辑)
         async function uploadToGitHub(content, token) {
-            const sha = await getGitHubSHA(token);
+            // 注意：这里使用的是 GH_CONFIG (HelloWorld 仓库)
+            const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+            const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
             const body = { message: "Update via AI Reader", content: utf8_to_b64(content), committer: { name: "AI Reader", email: "bot@ai-reader.com" } };
             if (sha) body.sha = sha;
-            const res = await fetch(GH_API_BASE, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const res = await fetch(apiUrl, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             if (!res.ok) { const err = await res.json(); throw new Error(err.message || "上传失败"); }
             return true;
+        }
+
+        // --- 新增: 推送当前内容到 moodHappy.gitHub.io-nce ---
+        async function pushCurrentContent() {
+            const btn = document.getElementById('pushBtn');
+            const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
+
+            if (!token) {
+                alert("请先在设置中配置 GitHub Token 才能使用推送功能");
+                openModal('settingsModal');
+                return;
+            }
+
+            // 视觉反馈：变为旋转的加载圈
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div>';
+            btn.disabled = true;
+
+            try {
+                // 1. 获取当前内容区
+                const contentDiv = document.getElementById('dynamic-content');
+                if (!contentDiv) throw new Error("找不到内容区域");
+
+                // 2. 克隆节点并移除 AI 分析按钮（保持 HTML 纯净）
+                const clone = contentDiv.cloneNode(true);
+                clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
+
+                // 3. 包装成完整的 HTML 格式
+                const fileContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saved Article ${new Date().toLocaleString()}</title>
+<style>body{font-family:'Noto Serif SC',serif;max-width:800px;margin:20px auto;padding:0 20px;line-height:1.8;color:#333;background:#fcfbf9;}</style>
+</head>
+<body>
+${clone.innerHTML}
+</body>
+</html>`;
+
+                // 4. 生成文件名 (使用时间戳避免覆盖)
+                const filename = `article_${Date.now()}.html`;
+                const fullPath = `${PUSH_CONFIG.path}/${filename}`;
+                const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
+
+                // 5. 构建请求体
+                const body = {
+                    message: `Push via AI Reader: ${filename}`,
+                    content: utf8_to_b64(fileContent),
+                    committer: { name: "AI Reader", email: "bot@reader.app" }
+                };
+
+                // 6. 发送 PUT 请求
+                const res = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`, 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if(!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.message || "GitHub API 错误");
+                }
+
+                alert(`推送成功！\n文件已保存至: ${fullPath}`);
+
+            } catch (e) {
+                alert(`推送失败: ${e.message}`);
+                console.error(e);
+            } finally {
+                // 恢复按钮状态
+                btn.innerHTML = originalIcon;
+                btn.disabled = false;
+            }
         }
 
         // --- 分析功能 ---
@@ -757,32 +835,30 @@
                 localStorage.removeItem(LAST_CLICKED_KEY);
                 statusDiv.innerText = "同步成功！";
                 closeModal('generateModal');
-                // 创作完成后，强制刷新以显示最新内容
-                loadContent(true); 
+                // 创作完成后，刷新内容
+                loadContent(); 
             } catch(err) { statusDiv.innerText = "失败: " + err.message; }
         }
 
         // --- 初始化 ---
         window.openModal = id => { if(id === 'generateModal') populateSelectors(); document.getElementById(id).classList.add('active'); };
         window.closeModal = id => document.getElementById(id).classList.remove('active');
-        
+
         // 双击关闭模态框
         document.querySelectorAll('.modal-card').forEach(card => {
             card.addEventListener('dblclick', function(e) {
-                // 如果用户选中了文字，不关闭
                 if(window.getSelection().toString().length > 0) return;
-                // 如果是输入框，不关闭
                 if(['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-                
                 const modalId = this.closest('.modal-overlay').id;
-                // 仅针对 AI 深度分析窗口或通用的逻辑，这里都适用
                 if(modalId === 'aiResultModal') {
                     closeModal(modalId);
                 }
             });
         });
 
-        document.getElementById('refreshBtn').onclick = () => loadContent(true);
+        // 绑定推送按钮事件
+        document.getElementById('pushBtn').onclick = pushCurrentContent;
+
         document.getElementById('readAloudButton').onclick = () => { if(isReading) { stopTTS(); } else { const c = document.getElementById('dynamic-content').cloneNode(true); c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove()); startTTS(c.innerText); } };
         document.getElementById('ttsSpeedRange').oninput = function() { document.getElementById('ttsSpeedDisplay').innerText = this.value; };
         document.getElementById('settingsBtn').onclick = () => { loadTTSConfig(); openModal('settingsModal'); };
