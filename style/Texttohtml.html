@@ -378,7 +378,7 @@
         };
         const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
 
-        // --- GitHub 推送配置 ---
+        // --- GitHub 推送配置 (新增) ---
         const PUSH_CONFIG = {
             owner: 'moodHappy',
             repo: 'moodHappy.gitHub.io-nce',
@@ -620,6 +620,7 @@
 
         // 用于生成微小说的同步 (保持旧逻辑)
         async function uploadToGitHub(content, token) {
+            // 注意：这里使用的是 GH_CONFIG (HelloWorld 仓库)
             const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
             const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
             const body = { message: "Update via AI Reader", content: utf8_to_b64(content), committer: { name: "AI Reader", email: "bot@ai-reader.com" } };
@@ -629,7 +630,7 @@
             return true;
         }
 
-        // --- 核心更新: 推送当前内容 (适配移动端 + 首句标题) ---
+        // --- 新增: 推送当前内容到 moodHappy.gitHub.io-nce ---
         async function pushCurrentContent() {
             const btn = document.getElementById('pushBtn');
             const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
@@ -650,61 +651,72 @@
                 const contentDiv = document.getElementById('dynamic-content');
                 if (!contentDiv) throw new Error("找不到内容区域");
 
-                // 2. 克隆节点并移除 AI 分析按钮（保持 HTML 纯净）
+                // 2. 提取第一句话作为标题
+                let rawText = contentDiv.innerText.trim();
+                let firstSentence = rawText.split(/[。.!?！？]/)[0].trim();
+                if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "..."; // 标题过长截断
+                if (firstSentence.length === 0) firstSentence = `Saved Article ${new Date().toLocaleDateString()}`;
+
+                // 3. 克隆节点并移除 AI 分析按钮（保持 HTML 纯净）
                 const clone = contentDiv.cloneNode(true);
                 clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
 
-                // 3. 提取第一句话作为标题
-                const rawText = clone.innerText.trim();
-                // 匹配第一句话（以句号、问号、感叹号或换行符结束）
-                const titleMatch = rawText.match(/^[^。！？.!?\r\n]+[。！？.!?]?/);
-                let articleTitle = titleMatch ? titleMatch[0].substring(0, 60) : `Article ${new Date().toLocaleDateString()}`;
-                // 清理掉可能存在的特殊符号
-                articleTitle = articleTitle.replace(/[\r\n]/g, '').trim();
-
-                // 4. 包装成适配移动端的 HTML 格式
+                // 4. 构建移动端适配的 HTML 模板
+                // meta viewport 关键用于移动端适配
+                // CSS 中加入 font-size 18px 和 padding 提升手机阅读体验
                 const fileContent = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>${articleTitle}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
-  body {
-    font-family: 'Noto Serif SC', serif;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 24px 20px;
-    line-height: 1.8;
-    color: #2c2c2c;
-    background: #fcfbf9;
-    font-size: 18px; /* 增大字号适配移动端 */
-    word-wrap: break-word;
-  }
-  h1 { font-size: 1.4em; color: #8b7355; margin-bottom: 25px; border-bottom: 1px dashed #dcd3c3; padding-bottom: 10px; line-height: 1.4; }
-  img { max-width: 100%; height: auto; display: block; margin: 15px auto; }
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>${firstSentence}</title>
+    <style>
+        body {
+            font-family: 'Noto Serif SC', 'Times New Roman', serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.8;
+            font-size: 18px; /* 移动端字号优化 */
+            color: #333;
+            background: #fcfbf9;
+            word-wrap: break-word;
+        }
+        h1 { font-size: 1.3em; margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 10px; color: #5a4a3f; }
+        img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+        @media (max-width: 600px) {
+            body { padding: 15px; font-size: 17px; }
+        }
+    </style>
 </head>
 <body>
-<h1>${articleTitle}</h1>
-${clone.innerHTML}
+    <h1>${firstSentence}</h1>
+    ${clone.innerHTML}
 </body>
 </html>`;
 
-                // 5. 生成文件名 (使用时间戳避免覆盖)
-                const filename = `article_${Date.now()}.html`;
+                // 5. 生成文件名 (清洗第一句话中的特殊字符)
+                let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
+                if (safeFilename.length > 50) safeFilename = safeFilename.substring(0, 50); // 文件名不宜过长
+                // 如果处理后文件名为空，回退到时间戳
+                if (!safeFilename) safeFilename = `article_${Date.now()}`;
+                
+                const filename = `${safeFilename}.html`;
                 const fullPath = `${PUSH_CONFIG.path}/${filename}`;
                 const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
 
                 // 6. 构建请求体
                 const body = {
-                    message: `Push via AI Reader: ${articleTitle}`,
+                    message: `Push via AI Reader: ${filename}`,
                     content: utf8_to_b64(fileContent),
                     committer: { name: "AI Reader", email: "bot@reader.app" }
                 };
 
-                // 7. 发送 PUT 请求
+                // 7. 发送 PUT 请求 (注意：如果同名文件存在会报错，这里暂不处理覆盖逻辑，因为使用了带内容的文件名通常不会重复，除非内容完全一样且未加时间戳)
+                // 检查文件是否存在，如果存在则获取 sha 进行更新
+                const existingSha = await getGitHubSHA(token, PUSH_CONFIG.owner, PUSH_CONFIG.repo, fullPath);
+                if(existingSha) body.sha = existingSha;
+
                 const res = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: { 
@@ -720,7 +732,7 @@ ${clone.innerHTML}
                     throw new Error(errData.message || "GitHub API 错误");
                 }
 
-                alert(`推送成功！\n标题: ${articleTitle}\n文件: ${filename}`);
+                alert(`推送成功！\n\n标题: ${firstSentence}\n路径: ${fullPath}`);
 
             } catch (e) {
                 alert(`推送失败: ${e.message}`);
