@@ -447,7 +447,7 @@
         function loadContent() {
             const container = document.getElementById('dynamic-content');
             container.innerHTML = '加载中...';
-            
+
             const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
             const fetchUrl = `${rawUrl}?t=${Date.now()}`; // 避开缓存
 
@@ -618,9 +618,8 @@
             return data.sha;
         }
 
-        // 用于生成微小说的同步 (保持旧逻辑)
+        // 用于生成微小说的同步
         async function uploadToGitHub(content, token) {
-            // 注意：这里使用的是 GH_CONFIG (HelloWorld 仓库)
             const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
             const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
             const body = { message: "Update via AI Reader", content: utf8_to_b64(content), committer: { name: "AI Reader", email: "bot@ai-reader.com" } };
@@ -630,7 +629,7 @@
             return true;
         }
 
-        // --- 新增: 推送当前内容到 moodHappy.gitHub.io-nce ---
+        // --- 核心修改: 推送当前内容到 moodHappy.gitHub.io-nce ---
         async function pushCurrentContent() {
             const btn = document.getElementById('pushBtn');
             const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
@@ -641,30 +640,42 @@
                 return;
             }
 
-            // 视觉反馈：变为旋转的加载圈
+            // 视觉反馈
             const originalIcon = btn.innerHTML;
             btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div>';
             btn.disabled = true;
 
             try {
-                // 1. 获取当前内容区
+                // 1. 获取内容和标题
                 const contentDiv = document.getElementById('dynamic-content');
                 if (!contentDiv) throw new Error("找不到内容区域");
 
-                // 2. 提取第一句话作为标题
                 let rawText = contentDiv.innerText.trim();
                 let firstSentence = rawText.split(/[。.!?！？]/)[0].trim();
-                if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "..."; // 标题过长截断
-                if (firstSentence.length === 0) firstSentence = `Saved Article ${new Date().toLocaleDateString()}`;
+                if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "...";
+                if (firstSentence.length === 0) firstSentence = `Saved Article`;
 
-                // 3. 克隆节点并移除 AI 分析按钮（保持 HTML 纯净）
+                // 2. 生成详细时间戳 (YYYY/MM/DD HH:mm:ss)
+                const now = new Date();
+                const pad = (n) => n.toString().padStart(2, '0');
+                const yyyy = now.getFullYear();
+                const mm = pad(now.getMonth() + 1);
+                const dd = pad(now.getDate());
+                const timeStr = `${yyyy}/${mm}/${dd} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                // 生成文件名用的时间戳 (紧凑格式)
+                const fileTimePrefix = `${yyyy}${mm}${dd}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+                // 3. 准备 HTML 内容
                 const clone = contentDiv.cloneNode(true);
                 clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
 
-                // 4. 构建移动端适配的 HTML 模板
-                // meta viewport 关键用于移动端适配
-                // CSS 中加入 font-size 18px 和 padding 提升手机阅读体验
-                const fileContent = `<!DOCTYPE html>
+                // ⚠️ 关键修改：添加 Front Matter (YAML头) 和 页面内的可视时间
+                const fileContent = `---
+title: "${firstSentence.replace(/"/g, '\\"')}"
+date: "${timeStr}"
+layout: post
+---
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
@@ -673,49 +684,41 @@
     <style>
         body {
             font-family: 'Noto Serif SC', 'Times New Roman', serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.8;
-            font-size: 18px; /* 移动端字号优化 */
-            color: #333;
-            background: #fcfbf9;
-            word-wrap: break-word;
+            max-width: 800px; margin: 0 auto; padding: 20px;
+            line-height: 1.8; font-size: 18px; color: #333;
+            background: #fcfbf9; word-wrap: break-word;
         }
-        h1 { font-size: 1.3em; margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 10px; color: #5a4a3f; }
+        h1 { font-size: 1.3em; margin-bottom: 10px; color: #5a4a3f; line-height: 1.4; }
+        .article-meta { 
+            font-size: 0.85em; color: #999; margin-bottom: 25px; 
+            border-bottom: 1px dashed #ccc; padding-bottom: 15px;
+            display: flex; align-items: center; gap: 6px;
+        }
         img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
-        @media (max-width: 600px) {
-            body { padding: 15px; font-size: 17px; }
-        }
+        @media (max-width: 600px) { body { padding: 15px; font-size: 17px; } }
     </style>
 </head>
 <body>
     <h1>${firstSentence}</h1>
+    <div class="article-meta">📅 ${timeStr}</div>
     ${clone.innerHTML}
 </body>
 </html>`;
 
-                // 5. 生成文件名 (清洗第一句话中的特殊字符)
+                // 4. 生成文件名 (时间前缀 + 标题) 以确保物理排序
                 let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
-                if (safeFilename.length > 50) safeFilename = safeFilename.substring(0, 50); // 文件名不宜过长
-                // 如果处理后文件名为空，回退到时间戳
-                if (!safeFilename) safeFilename = `article_${Date.now()}`;
-                
-                const filename = `${safeFilename}.html`;
+                if (safeFilename.length > 30) safeFilename = safeFilename.substring(0, 30); 
+                // 文件名格式: 20251225204201_Title.html (保证最新文件在列表最下方或最上方，取决于排序规则)
+                const filename = `${fileTimePrefix}_${safeFilename}.html`;
                 const fullPath = `${PUSH_CONFIG.path}/${filename}`;
                 const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
 
-                // 6. 构建请求体
+                // 5. 推送
                 const body = {
-                    message: `Push via AI Reader: ${filename}`,
+                    message: `Push: ${filename}`,
                     content: utf8_to_b64(fileContent),
                     committer: { name: "AI Reader", email: "bot@reader.app" }
                 };
-
-                // 7. 发送 PUT 请求 (注意：如果同名文件存在会报错，这里暂不处理覆盖逻辑，因为使用了带内容的文件名通常不会重复，除非内容完全一样且未加时间戳)
-                // 检查文件是否存在，如果存在则获取 sha 进行更新
-                const existingSha = await getGitHubSHA(token, PUSH_CONFIG.owner, PUSH_CONFIG.repo, fullPath);
-                if(existingSha) body.sha = existingSha;
 
                 const res = await fetch(apiUrl, {
                     method: 'PUT',
@@ -732,13 +735,12 @@
                     throw new Error(errData.message || "GitHub API 错误");
                 }
 
-                alert(`推送成功！\n\n标题: ${firstSentence}\n路径: ${fullPath}`);
+                alert(`推送成功！\n\n标题: ${firstSentence}\n时间: ${timeStr}`);
 
             } catch (e) {
                 alert(`推送失败: ${e.message}`);
                 console.error(e);
             } finally {
-                // 恢复按钮状态
                 btn.innerHTML = originalIcon;
                 btn.disabled = false;
             }
