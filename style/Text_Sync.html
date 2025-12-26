@@ -3,13 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>GitHub 同步助手 (AI 阅读版)</title>
+  <title>GitHub 同步助手 (AI 阅读 & 推送版)</title>
 
-
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
-    
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
-
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
@@ -27,6 +24,7 @@
       --button-danger-bg: #f44336;
       --button-generate-bg: #800080;
       --button-read-bg: #e6b800;
+      --button-push-bg: #FF9800; /* 新增：推送按钮颜色 */
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -125,6 +123,7 @@
     button.delete { background-color: var(--button-danger-bg); }
     button.generate { background-color: var(--button-generate-bg); }
     button.read { background-color: var(--button-read-bg); }
+    button.push { background-color: var(--button-push-bg); } /* 新增 */
 
     #status {
       margin-top: 10px;
@@ -153,7 +152,7 @@
       z-index: 999;
       backdrop-filter: blur(2px);
     }
-    
+
     .modal-content {
       background: var(--modal-content-bg);
       color: var(--text-color);
@@ -182,7 +181,7 @@
         z-index: 10;
         padding-bottom: 15px;
     }
-    
+
     .header-title-area {
         padding: 20px 20px 10px 20px;
         display:flex; 
@@ -204,56 +203,45 @@
         line-height: 1.6;
         max-height: 150px; 
         overflow-y: auto;
-        
-        /* 关键：使用 block 布局，允许内部元素自然流动 */
         display: block; 
     }
-    
+
     body.theme-dark .ai-original-sentence {
         background: #303134; 
         color: #e8eaed;
     }
-    
+
     .ai-original-text {
-        display: inline; /* 文字行内显示 */
+        display: inline; 
         word-break: break-word;
     }
 
-    /* --- 修复核心：朗读按钮样式 --- */
+    /* --- 朗读按钮样式 --- */
     .ai-read-sentence-btn {
-        display: inline-flex; /* 关键：作为行内块元素紧跟文字 */
-        
-        /* 固定尺寸 */
+        display: inline-flex; 
         width: 34px !important;
         height: 34px !important;
         min-width: 34px !important;
         min-height: 34px !important;
         border-radius: 50%;
-        
-        background-color: #d7e3f4; /* 淡蓝背景 */
-        /* 不依赖 color 属性，颜色直接写在 SVG 里 */
-        
+        background-color: #d7e3f4;
         border: none;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: background-color 0.2s;
-        
-        /* 对齐微调 */
         vertical-align: middle;
-        margin-left: 8px; /* 间距 */
+        margin-left: 8px; 
         position: relative;
-        top: -3px; /* 视觉修正，向上微调使其与文字行高居中 */
-        
+        top: -3px; 
         padding: 0;
         flex-shrink: 0;
     }
 
-    /* 图标样式 */
     .ai-read-sentence-btn svg {
         width: 20px; 
         height: 20px;
-        display: block; /* 防止 SVG 下方有空隙 */
+        display: block; 
         pointer-events: none;
     }
 
@@ -267,7 +255,6 @@
     body.theme-dark .ai-read-sentence-btn:hover {
         background-color: rgba(138, 180, 248, 0.35);
     }
-    /* -------------------------- */
 
     .modal-scroll-body {
         padding: 20px;
@@ -443,7 +430,7 @@
         color: #8b7355; position: relative; top: -1px; transition: all 0.2s;
         font-size: 0;
     }
-    
+
     body.theme-dark .ai-analyze-btn {
         background-color: rgba(255, 255, 255, 0.15);
         border-color: rgba(255, 255, 255, 0.3);
@@ -462,7 +449,7 @@
         transform: scale(1.15);
         z-index: 10;
     }
-    
+
     .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
     /* AI 结果内容 Markdown 样式 */
@@ -486,7 +473,7 @@
         .modal {
             align-items: flex-end; /* 底部对齐 */
         }
-        
+
         .modal-content {
             width: 100%;
             max-width: 100%;
@@ -504,6 +491,7 @@
 
   <div class="button-container">
     <button onclick="submitContent()">提交</button>
+    <button class="push" onclick="pushCurrentContent()">推送</button>
     <button class="delete" onclick="deleteContent()">删除</button>
     <button class="copy" onclick="copyContent()">复制</button>
     <button class="generate" onclick="openThemeModal()">生成</button>
@@ -612,7 +600,7 @@
       <h4>AI 分析设置</h4>
       <label for="analysis-prompt-input">分析指令 (System Prompt)</label>
       <textarea id="analysis-prompt-input" rows="5" placeholder="自定义分析指令..."></textarea>
-      
+
       <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
 
       <h4>朗读设置</h4>
@@ -662,6 +650,13 @@
     const SETTINGS_KEY = "github_sync_assistant_settings";
     const CUSTOM_STYLES_KEY = "github_sync_assistant_custom_styles";
 
+    // --- 推送配置 (新增) ---
+    const PUSH_CONFIG = {
+        owner: 'moodHappy',
+        repo: 'moodHappy.gitHub.io-nce',
+        path: 'Notes/danmu/Prose' // 存储路径
+    };
+
     const DEFAULT_KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions";
     const DEFAULT_KIMI_MODEL = "moonshot-v1-8k";
 
@@ -707,7 +702,7 @@
     const aiApiUrlInput = document.getElementById('ai-api-url');
     const aiCustomApiKeyInput = document.getElementById('ai-custom-api-key');
     const aiCustomModelNameInput = document.getElementById('ai-custom-model-name');
-    
+
     // Analysis Elements
     const analysisPromptInput = document.getElementById('analysis-prompt-input');
     const aiResultModal = document.getElementById('aiResultModal');
@@ -841,7 +836,7 @@
         aiApiUrlInput.value = savedSettings.aiApiUrl;
         aiCustomApiKeyInput.value = savedSettings.aiCustomApiKey;
         aiCustomModelNameInput.value = savedSettings.aiCustomModelName;
-        
+
         analysisPromptInput.value = savedSettings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
 
         // Load TTS settings into modal
@@ -922,6 +917,8 @@
       };
     }
 
+    function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+
     async function getCurrentFileShaAndContent() {
       try {
         const res = await fetch(apiUrl, { headers: getHeaders() });
@@ -997,6 +994,135 @@
       } else {
         statusDiv.textContent = "❌ 删除失败：" + (await res.json()).message;
       }
+    }
+
+    // --- Push Functionality (新增) ---
+    async function pushCurrentContent() {
+        if (!GITHUB_TOKEN) {
+            alert("请先设置 GitHub Token");
+            return;
+        }
+
+        // 1. 获取内容 (优先获取可视区域内容)
+        let innerHtmlContent = "";
+        let plainTextContent = "";
+
+        if (renderedDiv.style.display !== 'none') {
+            // 阅读模式：克隆节点以移除分析按钮，保持HTML结构
+            const clone = renderedDiv.cloneNode(true);
+            clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
+            innerHtmlContent = clone.innerHTML;
+            plainTextContent = clone.innerText.trim();
+        } else {
+            // 编辑模式：将换行转换为简单的段落标签
+            const rawText = textarea.value.trim();
+            if (!rawText) {
+                alert("内容为空，无法推送");
+                return;
+            }
+            plainTextContent = rawText;
+            innerHtmlContent = rawText.split(/\n{2,}/).map(p => `<p>${p}</p>`).join('\n');
+        }
+
+        if (!plainTextContent) {
+            alert("内容为空");
+            return;
+        }
+
+        const btn = document.querySelector('button.push');
+        const originalText = btn.textContent;
+        btn.textContent = "⏳ 推送中...";
+        btn.disabled = true;
+
+        try {
+            // 2. 提取标题
+            let firstSentence = plainTextContent.split(/[。.!?！？\n]/)[0].trim();
+            if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "...";
+            if (firstSentence.length === 0) firstSentence = `Saved Article`;
+
+            // 3. 生成详细时间戳
+            const now = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            const yyyy = now.getFullYear();
+            const mm = pad(now.getMonth() + 1);
+            const dd = pad(now.getDate());
+            const timeStr = `${yyyy}/${mm}/${dd} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+            // 4. 准备完整 HTML 内容 (Template)
+            const fileContent = `---
+title: "${firstSentence.replace(/"/g, '\\"')}"
+date: "${timeStr}"
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>${firstSentence}</title>
+    <style>
+        body {
+            font-family: 'Noto Serif SC', 'Times New Roman', serif;
+            max-width: 800px; margin: 0 auto; padding: 40px 20px;
+            line-height: 2.2; font-size: 22px; color: #333;
+            background: #fcfbf9; word-wrap: break-word;
+        }
+        h1 { font-size: 1.5em; margin-bottom: 20px; color: #5a4a3f; line-height: 1.4; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
+        .article-meta { 
+            font-size: 0.8em; color: #999; margin-bottom: 30px; 
+            display: flex; align-items: center; gap: 6px;
+        }
+        img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+        @media (max-width: 600px) { body { padding: 20px; font-size: 20px; line-height: 2.0; } }
+    </style>
+</head>
+<body>
+    <h1>${firstSentence}</h1>
+    <div class="article-meta">📅 ${timeStr}</div>
+    ${innerHtmlContent}
+</body>
+</html>`;
+
+            // 5. 生成文件名
+            let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
+            if (safeFilename.length > 30) safeFilename = safeFilename.substring(0, 30); 
+            const timestampSuffix = Date.now(); 
+            const filename = `${safeFilename}_${timestampSuffix}.html`;
+
+            const fullPath = `${PUSH_CONFIG.path}/${filename}`;
+            const targetUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
+
+            // 6. 推送请求
+            const body = {
+                message: `Push: ${filename}`,
+                content: utf8_to_b64(fileContent),
+                committer: { name: "AI Reader", email: "bot@reader.app" }
+            };
+
+            const res = await fetch(targetUrl, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${GITHUB_TOKEN}`, 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if(!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || "GitHub API 错误");
+            }
+
+            alert(`推送成功！\n\n标题: ${firstSentence}\n文件: ${filename}`);
+
+        } catch (e) {
+            alert(`推送失败: ${e.message}`);
+            console.error(e);
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     }
 
     // --- AI Generation Functions & API ---
@@ -1379,7 +1505,7 @@
                 n.parentNode.replaceChild(f, n);
             }
         });
-        
+
         // 恢复高亮状态
         const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
         if (lastClickedIndex !== null) {
@@ -1416,7 +1542,7 @@
         const allBtns = document.querySelectorAll('.ai-analyze-btn');
         allBtns.forEach(b => b.classList.remove('last-clicked'));
         btn.classList.add('last-clicked');
-        
+
         const btnIndex = Array.from(allBtns).indexOf(btn);
         if (btnIndex !== -1) localStorage.setItem(LAST_CLICKED_KEY, btnIndex);
 
@@ -1426,10 +1552,10 @@
         // Modal Setup
         const resultBox = document.getElementById('aiResultContent');
         const sentenceBox = document.getElementById('aiOriginalSentence');
-        
+
         // --- 修复后的 DOM 结构逻辑 (Inline Flow + 强制图标) ---
         sentenceBox.innerHTML = ''; 
-        
+
         // 1. Text Node 
         const textNode = document.createElement('span');
         textNode.className = "ai-original-text";
