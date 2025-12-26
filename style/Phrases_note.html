@@ -417,7 +417,7 @@
 
                 const v1Switch = document.getElementById('v1-show-switch');
                 const v2Switch = document.getElementById('v2-show-switch');
-                
+
                 if(source === 'v1' && v1Switch) this.data.showSwitchBtn = v1Switch.checked;
                 if(source === 'v2' && v2Switch) this.data.showSwitchBtn = v2Switch.checked;
 
@@ -741,7 +741,7 @@
 
                     // Priority: Learning > Review > New
                     this.queue = [...learning, ...review, ...newCards];
-                    
+
                     this.updateStats(); 
                     this.renderCard();
 
@@ -779,7 +779,7 @@
 
                 const item = this.queue[0];
                 this.currentCard = item;
-                
+
                 // Use preview logic
                 const times = {
                     again: this.calc(item.id, 1).timeText,
@@ -934,10 +934,14 @@
             },
             async syncUp(btn) {
                 if(!SharedConfig.data.token) return alert("请先在设置中配置 Token");
+                
                 const oldText = btn ? btn.innerHTML : ''; 
-                if(btn) { btn.innerHTML = '<span class="spin">☁️</span> ...'; btn.disabled=true; }
+                // 修改：按钮文字不带 spin 类，去掉转动效果
+                if(btn) { btn.innerHTML = '☁️ Syncing...'; btn.disabled=true; }
+                
                 const badge = document.getElementById('v2-sync-status');
-                badge.style.display='inline-flex'; badge.innerHTML='<span class="spin">☁️</span> Syncing...';
+                // 修改：顶部不再显示加载转动云
+                // badge.style.display='inline-flex'; badge.innerHTML='<span class="spin">☁️</span> Syncing...';
 
                 try {
                     const url = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/Notes/anki_data.json`;
@@ -955,11 +959,12 @@
                     if(!res.ok) throw new Error("Upload Failed");
 
                     if(btn) { btn.innerHTML = "✅ 成功"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
-                    badge.className = 'sync-badge success'; badge.innerHTML = '✅ Saved';
+                    badge.className = 'sync-badge success'; badge.innerText = 'Saved';
+                    badge.style.display='inline-block';
                     setTimeout(() => badge.style.display='none', 3000);
                 } catch(e) {
                     if(btn) { btn.innerHTML = "❌ 失败"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
-                    badge.className = 'sync-badge error'; badge.innerHTML = 'Error';
+                    badge.className = 'sync-badge error'; badge.innerText = 'Error';
                 }
             },
 
