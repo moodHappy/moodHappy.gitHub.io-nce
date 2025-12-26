@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>GitHub 同步助手 (AI 阅读 & 推送版)</title>
+  <title>GitHub 同步助手 (双排按钮版)</title>
 
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* CSS Variables for theming and typography */
+    /* CSS Variables */
     :root {
       --bg-color: #f9f9f9;
       --text-color: #222;
@@ -24,7 +24,7 @@
       --button-danger-bg: #f44336;
       --button-generate-bg: #800080;
       --button-read-bg: #e6b800;
-      --button-push-bg: #FF9800; /* 新增：推送按钮颜色 */
+      --button-push-bg: #FF9800;
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
@@ -92,16 +92,17 @@
       border-color: var(--textarea-border-color);
     }
 
-    /* Button Container Styles */
-    .button-container {
+    /* Button Container Styles - Modified for Rows */
+    .button-row {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap; /* 禁止换行，强制一行显示 */
         gap: 10px;
         margin-bottom: 10px;
+        width: 100%;
     }
 
     button {
-      padding: 10px 16px;
+      padding: 10px 0; /* 减少左右内边距，适应小屏 */
       font-size: 16px;
       border-radius: 6px;
       border: none;
@@ -109,9 +110,9 @@
       cursor: pointer;
       background-color: var(--button-primary-bg);
       min-height: 44px;
-      min-width: 44px;
-      flex: 1 1 auto;
+      flex: 1; /* 每个按钮平分宽度 */
       transition: background-color 0.3s;
+      white-space: nowrap;
     }
 
     button:disabled {
@@ -123,7 +124,7 @@
     button.delete { background-color: var(--button-danger-bg); }
     button.generate { background-color: var(--button-generate-bg); }
     button.read { background-color: var(--button-read-bg); }
-    button.push { background-color: var(--button-push-bg); } /* 新增 */
+    button.push { background-color: var(--button-push-bg); }
 
     #status {
       margin-top: 10px;
@@ -166,7 +167,6 @@
       transition: transform 0.3s ease-out;
     }
 
-    /* AI Analysis Modal Specific Styles (Sticky Header) */
     #aiResultModal .modal-content {
         padding: 0; 
         display: flex;
@@ -189,11 +189,7 @@
         align-items:center;
     }
 
-    /* --- 原句容器样式 --- */
-    .ai-original-sentence-container {
-        padding: 0 20px; 
-    }
-
+    .ai-original-sentence-container { padding: 0 20px; }
     .ai-original-sentence {
         background: #f1f3f4; 
         color: #202124;
@@ -205,294 +201,101 @@
         overflow-y: auto;
         display: block; 
     }
+    body.theme-dark .ai-original-sentence { background: #303134; color: #e8eaed; }
+    .ai-original-text { display: inline; word-break: break-word; }
 
-    body.theme-dark .ai-original-sentence {
-        background: #303134; 
-        color: #e8eaed;
-    }
-
-    .ai-original-text {
-        display: inline; 
-        word-break: break-word;
-    }
-
-    /* --- 朗读按钮样式 --- */
     .ai-read-sentence-btn {
-        display: inline-flex; 
-        width: 34px !important;
-        height: 34px !important;
-        min-width: 34px !important;
-        min-height: 34px !important;
-        border-radius: 50%;
-        background-color: #d7e3f4;
-        border: none;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        vertical-align: middle;
-        margin-left: 8px; 
-        position: relative;
-        top: -3px; 
-        padding: 0;
-        flex-shrink: 0;
+        display: inline-flex; width: 34px !important; height: 34px !important;
+        min-width: 34px !important; min-height: 34px !important;
+        border-radius: 50%; background-color: #d7e3f4; border: none;
+        align-items: center; justify-content: center; cursor: pointer;
+        transition: background-color 0.2s; vertical-align: middle;
+        margin-left: 8px; position: relative; top: -3px; padding: 0; flex-shrink: 0;
     }
+    .ai-read-sentence-btn svg { width: 20px; height: 20px; display: block; pointer-events: none; }
+    body.theme-dark .ai-read-sentence-btn { background-color: rgba(138, 180, 248, 0.2); }
+    .ai-read-sentence-btn:hover { background-color: #c2d7fa; }
+    body.theme-dark .ai-read-sentence-btn:hover { background-color: rgba(138, 180, 248, 0.35); }
 
-    .ai-read-sentence-btn svg {
-        width: 20px; 
-        height: 20px;
-        display: block; 
-        pointer-events: none;
-    }
-
-    body.theme-dark .ai-read-sentence-btn {
-        background-color: rgba(138, 180, 248, 0.2);
-    }
-
-    .ai-read-sentence-btn:hover {
-        background-color: #c2d7fa;
-    }
-    body.theme-dark .ai-read-sentence-btn:hover {
-        background-color: rgba(138, 180, 248, 0.35);
-    }
-
-    .modal-scroll-body {
-        padding: 20px;
-        overflow-y: auto;
-        flex: 1; 
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .modal-content h3 {
-      margin-top: 0;
-    }
+    .modal-scroll-body { padding: 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+    .modal-content h3 { margin-top: 0; }
     .modal-content input, .modal-content select, .modal-content textarea {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid var(--input-border-color);
-      background-color: var(--textarea-bg-color);
-      color: var(--text-color);
-      box-sizing: border-box;
+      width: 100%; padding: 10px; margin-top: 10px; font-size: 16px;
+      border-radius: 5px; border: 1px solid var(--input-border-color);
+      background-color: var(--textarea-bg-color); color: var(--text-color); box-sizing: border-box;
     }
+    .modal-content select[multiple] { height: 100px; }
+    .modal-content label { display: block; margin-top: 15px; font-size: 14px; color: var(--status-color); }
+    .modal-buttons { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--textarea-border-color); }
+    
+    article.immersive-content { line-height: var(--line-height); font-size: var(--font-size); }
+    article.immersive-content p { margin-bottom: 1em; white-space: pre-wrap; }
+    .ai-inputs { display: none; }
 
-    .modal-content select[multiple] {
-        height: 100px;
-    }
+    #storyThemeModal .modal-buttons-container { display: flex; gap: 10px; margin-top: 10px; }
+    #storyThemeModal .modal-buttons-container button { flex: 1; }
+    #storyThemeModal .modal-buttons-container button.confirm-btn { background-color: var(--button-primary-bg); }
+    #storyThemeModal .modal-buttons-container button.generate-topics-btn { background-color: #800080; }
+    #storyThemeModal .modal-buttons-container button:nth-child(3) { background-color: #6c757d; }
 
-    .modal-content label {
-      display: block;
-      margin-top: 15px;
-      font-size: 14px;
-      color: var(--status-color);
-    }
-
-    article.immersive-content {
-      line-height: var(--line-height);
-      font-size: var(--font-size);
-    }
-    article.immersive-content p {
-      margin-bottom: 1em;
-      white-space: pre-wrap;
-    }
-
-    .ai-inputs {
-        display: none;
-    }
-
-    .modal-buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 20px;
-      padding-top: 10px;
-      border-top: 1px solid var(--textarea-border-color);
-    }
-
-    .modal-buttons button {
-      flex: 1 1 auto;
-      margin-top: 0;
-    }
-
-    #storyThemeModal .modal-buttons-container {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    #storyThemeModal .modal-buttons-container button {
-        flex: 1;
-    }
-
-    #storyThemeModal .modal-buttons-container button.confirm-btn {
-        background-color: var(--button-primary-bg);
-    }
-
-    #storyThemeModal .modal-buttons-container button.generate-topics-btn {
-        background-color: #800080;
-    }
-
-    #storyThemeModal .modal-buttons-container button:nth-child(3) {
-        background-color: #6c757d; 
-    }
-
-    #randomTopicsList {
-        margin-top: 20px;
-        padding: 0;
-        list-style: none;
-    }
+    #randomTopicsList { margin-top: 20px; padding: 0; list-style: none; }
     #randomTopicsList li {
-        padding: 10px;
-        border: 1px solid var(--textarea-border-color);
-        border-radius: 5px;
-        margin-bottom: 8px;
-        cursor: pointer;
+        padding: 10px; border: 1px solid var(--textarea-border-color);
+        border-radius: 5px; margin-bottom: 8px; cursor: pointer;
         transition: background-color 0.2s, border-color 0.2s;
     }
-    #randomTopicsList li:hover {
-        background-color: var(--textarea-border-color);
-    }
+    #randomTopicsList li:hover { background-color: var(--textarea-border-color); }
 
-    .select-container {
-        display: flex;
-        gap: 10px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-    }
+    .select-container { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .select-container select { flex: 1 1 30%; }
 
-    .select-container select {
-      flex: 1 1 30%;
-    }
+    #customStyleList { padding: 0; list-style: none; max-height: 150px; overflow-y: auto; border: 1px solid var(--textarea-border-color); border-radius: 5px; margin-top: 10px; }
+    #customStyleList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--textarea-border-color); }
+    #customStyleList li:last-child { border-bottom: none; }
+    #customStyleList .delete-style-btn { background: var(--button-danger-bg); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+    .style-input-container { display: flex; gap: 10px; margin-top: 10px; }
+    .style-input-container input { flex: 1; }
+    .style-input-container button { flex: none; width: 100px; margin-top: 0; }
 
-    /* Style Management Modal Specifics */
-    #styleManagementModal h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: var(--text-color);
-    }
-
-    #customStyleList {
-        padding: 0;
-        list-style: none;
-        max-height: 150px;
-        overflow-y: auto;
-        border: 1px solid var(--textarea-border-color);
-        border-radius: 5px;
-        margin-top: 10px;
-    }
-
-    #customStyleList li {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px;
-        border-bottom: 1px solid var(--textarea-border-color);
-    }
-
-    #customStyleList li:last-child {
-        border-bottom: none;
-    }
-
-    #customStyleList .delete-style-btn {
-        background: var(--button-danger-bg);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 4px 8px;
-        cursor: pointer;
-        font-size: 12px;
-    }
-
-    .style-input-container {
-        display: flex;
-        gap: 10px;
-        margin-top: 10px;
-    }
-
-    .style-input-container input {
-        flex: 1;
-    }
-
-    .style-input-container button {
-        flex: none;
-        width: 100px;
-        margin-top: 0;
-    }
-
-    /* --- AI 分析按钮及结果相关样式 --- */
     .ai-analyze-btn {
         display: inline-flex; align-items: center; justify-content: center;
-        background-color: rgba(139, 115, 85, 0.15); 
-        border: 1px solid rgba(139, 115, 85, 0.3);
+        background-color: rgba(139, 115, 85, 0.15); border: 1px solid rgba(139, 115, 85, 0.3);
         border-radius: 50%; width: 20px; height: 20px; margin: 0 4px; cursor: pointer;
-        color: #8b7355; position: relative; top: -1px; transition: all 0.2s;
-        font-size: 0;
+        color: #8b7355; position: relative; top: -1px; transition: all 0.2s; font-size: 0;
     }
-
-    body.theme-dark .ai-analyze-btn {
-        background-color: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-        color: #e0e0e0;
-    }
-
+    body.theme-dark .ai-analyze-btn { background-color: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); color: #e0e0e0; }
     .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
     body.theme-dark .ai-analyze-btn:hover { background-color: #aaa; color: #121212; }
-
-    /* 红色高亮样式 - 持久化 */
     .ai-analyze-btn.last-clicked {
-        background-color: #d32f2f !important;
-        color: white !important;
-        border-color: #d32f2f !important;
-        box-shadow: 0 0 6px rgba(211, 47, 47, 0.5);
-        transform: scale(1.15);
-        z-index: 10;
+        background-color: #d32f2f !important; color: white !important; border-color: #d32f2f !important;
+        box-shadow: 0 0 6px rgba(211, 47, 47, 0.5); transform: scale(1.15); z-index: 10;
     }
-
     .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
-    /* AI 结果内容 Markdown 样式 */
     .ai-result-content { font-size: 15px; line-height: 1.7; }
     .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { margin-top: 1em; margin-bottom: 0.5em; font-size: 1.1em; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
     .ai-result-content strong { color: var(--button-primary-bg); background: rgba(0,0,0,0.05); padding: 0 4px; border-radius: 3px; }
-
     .ai-loading { text-align: center; padding: 20px; color: var(--status-color); }
 
-    /* --- 移动端适配 (重点修改) --- */
     @media (max-width: 600px) {
-        .button-container {
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
-        button {
-            flex: 1 1 calc(20% - 8px);
-        }
-
-        /* 移动端弹窗改为底部抽屉样式，铺满宽度 */
-        .modal {
-            align-items: flex-end; /* 底部对齐 */
-        }
-
-        .modal-content {
-            width: 100%;
-            max-width: 100%;
-            margin: 0;
-            border-radius: 20px 20px 0 0; /* 仅顶部圆角 */
-            max-height: 90vh; /* 增高高度利用率 */
-        }
+        /* 移动端调整 */
+        .modal { align-items: flex-end; }
+        .modal-content { width: 100%; max-width: 100%; margin: 0; border-radius: 20px 20px 0 0; max-height: 90vh; }
+        .button-row { gap: 8px; } /* 小屏下间距稍小 */
     }
-
   </style>
 </head>
 <body>
   <div id="settings-icon" title="设置" onclick="openSettingsModal()">⚙️</div>
   <h2>📤 GitHub 同步助手</h2>
 
-  <div class="button-container">
+  <div class="button-row">
     <button onclick="submitContent()">提交</button>
     <button class="push" onclick="pushCurrentContent()">推送</button>
     <button class="delete" onclick="deleteContent()">删除</button>
+  </div>
+
+  <div class="button-row">
     <button class="copy" onclick="copyContent()">复制</button>
     <button class="generate" onclick="openThemeModal()">生成</button>
     <button class="read" onclick="readContent()">朗读</button>
