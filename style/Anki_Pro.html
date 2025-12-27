@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Archive Mode)</title>
+    <title>Anki Pro (Mobile Sidebar)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
 
     <style>
         :root { 
-            --bg-body: #f0f2f5; --bg-card: #ffffff; 
+            --bg-body: #f0f2f5; --bg-card: #ffffff; --bg-sidebar: #ffffff;
             --text-primary: #1a1a1a; --text-secondary: #65676b; 
             --accent-color: #2563eb; --border-color: #e4e6eb; 
             --color-again: #ff5252; --color-hard: #ffab40;
             --color-good: #69f0ae; --color-easy: #40c4ff;
             --color-error: #ef4444;
+            --color-new: #42a5f5; --color-learn: #ff7043; --color-review: #66bb6a;
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --sidebar-width: 280px;
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
-                --bg-body: #18191a; --bg-card: #242526; 
+                --bg-body: #18191a; --bg-card: #242526; --bg-sidebar: #242526;
                 --text-primary: #e4e6eb; --text-secondary: #b0b3b8; 
                 --accent-color: #60a5fa; --border-color: #3e4042; 
                 --color-good: #00e676; 
@@ -33,248 +35,310 @@
 
         .container { 
             width: 100%; max-width: 600px; margin: 0 auto; 
-            position: relative; box-sizing: border-box; padding: 15px 20px;
+            position: relative; box-sizing: border-box; padding: 10px 20px;
             flex: 1; display: flex; flex-direction: column; 
+            transition: margin 0.3s ease;
         }
 
-        /* === 顶部 Header === */
-        header { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; position: relative; padding-top: 10px; transition: margin 0.3s; }
+        /* === Header === */
+        header { 
+            flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; 
+            margin-bottom: 15px; position: relative; padding-top: 10px; height: 50px;
+        }
 
-        /* 当隐藏归档面板时，减小Header下方的边距，更紧凑 */
-        body.hide-archive header { margin-bottom: 5px; }
+        .header-title-group { text-align: center; flex: 1; }
+        h1 { font-family: 'Merriweather', serif; margin: 0; font-size: 1.4rem; }
+        .subtitle { color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;}
 
-        h1 { font-family: 'Merriweather', serif; margin: 0 0 5px 0; font-size: 1.5rem; }
-        .subtitle { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 5px;}
-        .header-actions { position: absolute; right: 0; top: 10px; display: flex; gap: 10px; }
         .icon-btn { 
-            background: var(--bg-card); border: 1px solid var(--border-color); 
-            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; font-size: 16px;
+            background: transparent; border: none; color: var(--text-primary);
+            width: 40px; height: 40px; border-radius: 50%; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; font-size: 22px;
             transition: all 0.2s;
         }
+        .icon-btn:active { background: rgba(0,0,0,0.05); }
 
-        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; margin-top: 5px; }
+        /* === 侧边栏 (Sidebar) === */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: var(--sidebar-width); background: var(--bg-sidebar);
+            z-index: 1001; transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 2px 0 12px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+        }
+        .sidebar.active { transform: translateX(0); }
+
+        .sidebar-header {
+            padding: 25px 20px; border-bottom: 1px solid var(--border-color);
+            background: var(--bg-body);
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+        
+        .sidebar-menu { padding: 10px 0; overflow-y: auto; flex: 1; }
+        .menu-item {
+            padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.03);
+            font-size: 0.95rem; color: var(--text-primary);
+        }
+        .menu-item:active { background: rgba(0,0,0,0.05); }
+        .menu-item.action { color: var(--accent-color); font-weight: 500; }
+        .menu-icon { width: 24px; text-align: center; margin-right: 12px; font-size: 1.1rem; }
+        
+        /* Sidebar Toggle Switch */
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        input:checked + .toggle-slider { background-color: var(--accent-color); }
+        input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        /* === 统计面板 (Statistics) === */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-card { 
+            background: var(--bg-body); border-radius: 12px; padding: 12px; 
+            text-align: center; border: 1px solid var(--border-color);
+        }
+        .stat-val { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; display: block; }
+        .stat-label { font-size: 0.75rem; color: var(--text-secondary); }
+        
+        .chart-container { margin-bottom: 20px; padding: 0 5px; }
+        .chart-bar-bg { height: 12px; background: var(--border-color); border-radius: 6px; overflow: hidden; display: flex; }
+        .chart-seg { height: 100%; transition: width 0.5s; }
+        .chart-legend { display: flex; gap: 15px; margin-top: 10px; font-size: 0.8rem; justify-content: center; color: var(--text-secondary); }
+        .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+
+        /* === 原始样式保留 === */
+        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); z-index: 50; }
         .sync-badge.success { background: #dcfce7; color: #166534; }
         .sync-badge.error { background: #fee2e2; color: #991b1b; }
         .spin { animation: spin 1s infinite linear; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* === 浏览归档面板 (Controls) === */
         .controls { 
             background: var(--bg-card); padding: 15px 20px; border-radius: 20px; 
             border: 1px solid var(--border-color); margin-bottom: 20px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03); flex-shrink: 0;
-            display: block;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); flex-shrink: 0; display: block;
         }
         .controls.hidden { display: none !important; }
 
-        .controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .controls-title { font-weight: 600; display: flex; align-items: center; gap: 6px; font-size: 1rem; }
+        .controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        select#year-select { padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); }
+        .months-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+        .month-btn { padding: 8px 0; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; color: var(--text-secondary); font-size: 0.85rem; }
+        .month-btn.active { background: var(--accent-color); color: white; font-weight: 600; }
+        .month-btn:hover { background: var(--bg-body); }
 
-        select#year-select { 
-            padding: 6px 12px; font-size: 14px; border-radius: 8px; 
-            border: 1px solid var(--border-color); background: var(--bg-body); 
-            color: var(--text-primary); outline: none; font-weight: 500;
-        }
-
-        .months-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-        .month-btn { 
-            padding: 8px 0; background: transparent; border: 1px solid transparent; 
-            border-radius: 8px; cursor: pointer; color: var(--text-secondary); 
-            transition: all 0.2s; font-size: 0.9rem; font-family: 'Inter', sans-serif;
-        }
-        .month-btn:hover { background: var(--bg-body); color: var(--text-primary); }
-        .month-btn.active { 
-            background: var(--accent-color); color: white; font-weight: 600; 
-            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); 
-        }
-
-        /* === 卡片区域 === */
         #notes-container { 
-            perspective: 1000px; position: relative; 
-            flex: 1; display: flex; flex-direction: column; 
-            justify-content: flex-end; 
-            padding-bottom: 10vh; 
-            transition: all 0.3s ease;
+            perspective: 1000px; position: relative; flex: 1; display: flex; flex-direction: column; 
+            justify-content: flex-end; padding-bottom: 10vh; transition: all 0.3s ease;
         }
-
-        body.hide-archive #notes-container {
-            justify-content: center; 
-            padding-bottom: 5vh;     
-        }
+        body.hide-archive #notes-container { justify-content: center; padding-bottom: 5vh; }
 
         .note-card { 
             background: var(--bg-card); border-radius: 24px; padding: 30px 24px; 
             border: 1px solid var(--border-color); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08);
-            position: relative; width: 100%; box-sizing: border-box;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex; flex-direction: column; align-items: center;
-            min-height: 45vh; 
-            cursor: pointer;
+            position: relative; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; min-height: 45vh; 
             user-select: none; -webkit-user-select: none;
         }
-        .note-card:not(:first-child) { display: none; }
-
         .btn-delete-card {
-            position: absolute; left: 20px; top: 20px;
-            background: transparent; border: none; color: var(--text-secondary);
-            cursor: pointer; padding: 8px; border-radius: 50%;
-            transition: all 0.2s; z-index: 20; opacity: 0.5;
+            position: absolute; left: 20px; top: 20px; background: transparent; border: none; 
+            color: var(--text-secondary); cursor: pointer; padding: 8px; border-radius: 50%; opacity: 0.5; z-index: 20;
         }
         .btn-delete-card:hover { background: #fee2e2; color: #ef4444; opacity: 1; }
 
-        .note-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
-        .note-source { 
-            font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; 
-            margin-bottom: 25px; padding: 4px 10px; border-radius: 12px;
-            background: rgba(0,0,0,0.03); max-width: 90%;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .note-source:hover { background: rgba(0,0,0,0.06); color: var(--accent-color); }
-
+        .note-word { font-family: 'Merriweather', serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
+        .note-source { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; padding: 4px 10px; border-radius: 12px; background: rgba(0,0,0,0.03); max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;}
+        
         .note-meaning { 
             font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
             display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
             background: var(--bg-body); border-radius: 16px; padding: 20px; 
             filter: blur(10px); opacity: 0.7; transition: all 0.3s;
         }
-        .note-meaning.revealed { filter: none; cursor: text; user-select: text; -webkit-user-select: text; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px;}
+        .note-meaning.revealed { filter: none; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px; user-select: text;}
 
-        .tts-container { margin-top: auto; margin-bottom: 20px; z-index: 10; height: 60px; display: flex; align-items: center; justify-content: center; }
-        .tts-btn { 
-            background: transparent; border: none; width: 64px; height: 64px; 
-            color: var(--accent-color); cursor: pointer;
-            display: flex; align-items: center; justify-content: center; 
-            transition: all 0.3s; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-        }
-        .tts-btn:hover { transform: scale(1.15); filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3)); }
-        .tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; color: var(--accent-color); pointer-events: none; }
-        .tts-btn.error { color: var(--color-error); animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        .tts-container { margin-top: auto; margin-bottom: 15px; height: 50px; display: flex; align-items: center; justify-content: center; }
+        .tts-btn { background: transparent; border: none; color: var(--accent-color); cursor: pointer; transition: all 0.3s; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center;}
+        .tts-btn:hover { transform: scale(1.1); }
+        .tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; pointer-events: none;}
+        .tts-btn.error { color: var(--color-error); animation: shake 0.5s; }
+        @keyframes breathe { 50% { opacity: 0.6; transform: scale(1.1); } }
+        @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } }
 
         .anki-controls { 
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-top: 10px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; margin-top: 10px;
             opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s;
         }
         .revealed ~ .anki-controls { opacity: 1; pointer-events: auto; transform: translateY(0); }
         .anki-btn {
-            padding: 12px 5px; border-radius: 12px; border: none; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: var(--bg-body); color: var(--text-secondary); transition: transform 0.1s, background 0.2s;
-            position: relative; overflow: hidden;
+            padding: 12px 4px; border-radius: 12px; border: none; cursor: pointer;
+            background: var(--bg-body); color: var(--text-secondary); position: relative; overflow: hidden;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
         }
-        .anki-btn:active { transform: scale(0.95); }
-        .btn-label { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
-        .btn-time { font-size: 0.75rem; font-weight: 400; opacity: 0.8; }
-        .anki-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; }
+        .anki-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
         .btn-again::after { background: var(--color-again); } 
         .btn-hard::after { background: var(--color-hard); } 
         .btn-good::after { background: var(--color-good); } 
         .btn-easy::after { background: var(--color-easy); }
+        .btn-label { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px;}
+        .btn-time { font-size: 0.7rem; opacity: 0.8; }
 
-        /* === 模态框 === */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal { background: var(--bg-card); padding: 20px; border-radius: 20px; width: 95%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
+        /* === 模态框 (Modal) === */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal { background: var(--bg-card); padding: 20px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
         .modal h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 15px; }
+        
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; font-weight: 600; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.85em; font-weight: 600; }
         .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
-
-        .switch-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        input:checked + .slider { background-color: var(--accent-color); }
-        input:checked + .slider:before { transform: translateX(22px); }
-
-        .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 10px; position: relative; }
-        .tts-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-        .tts-url-input { flex: 2; }
-        .tts-token-input { flex: 1; }
-        .tts-actions { display: flex; gap: 8px; justify-content: flex-end; }
-        .btn-mini { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-        .btn-test:hover { background: #dcfce7; color: #166534; border-color: #86efac; }
-        .btn-delete:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-        .btn-add { width: 100%; border-style: dashed; margin-bottom: 15px; }
-
-        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 1rem; }
+        
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+        .btn-save { background: var(--accent-color); color: white; width: 100%; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
-        .btn-save { background: var(--accent-color); color: white; }
+        
+        .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+        .tts-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .tts-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-mini { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-size:12px; }
 
-        .sync-row { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn-sync-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-size: 0.9rem; font-weight: 600;}
-        .btn-sync-action:active { transform: scale(0.98); }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
         .status-page { text-align: center; padding: 40px 0; }
-        .emoji-lg { font-size: 4rem; margin-bottom: 20px; display: block; }
+        .emoji-lg { font-size: 3.5rem; margin-bottom: 15px; display: block; }
         .error-box { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 12px; font-size: 0.9rem; text-align: left; margin-top: 20px;}
     </style>
 </head>
 <body>
 
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2><span style="font-size:1.5rem">🗂️</span> Anki Pro</h2>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:5px;">Study smart, not hard.</div>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item">
+                <span style="display:flex; align-items:center"><span class="menu-icon">📅</span> 显示月份面板</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sidebar-show-archive" onchange="toggleConfig('showArchivePanel', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="menu-item">
+                <span style="display:flex; align-items:center"><span class="menu-icon">🗑️</span> 启用云端删除</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sidebar-enable-delete" onchange="toggleConfig('enableDelete', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="menu-item action" onclick="openStatsModal()">
+                <span style="display:flex; align-items:center"><span class="menu-icon">📊</span> 查看统计数据</span>
+                <span>›</span>
+            </div>
+
+            <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 20px;">
+            
+            <div class="menu-item action" onclick="fetchCloudProgress(this)">
+                <span style="display:flex; align-items:center"><span class="menu-icon">⬇️</span> 从云端下载进度</span>
+            </div>
+            <div class="menu-item action" onclick="syncProgressToCloud(this)">
+                <span style="display:flex; align-items:center"><span class="menu-icon">☁️</span> 上传进度到云端</span>
+            </div>
+        </div>
+        <div style="padding: 20px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
+            Version 3.0 Mobile
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>学习统计</h2>
+                <button class="icon-btn" style="width:30px; height:30px; font-size:18px;" onclick="document.getElementById('statsModal').style.display='none'">✕</button>
+            </div>
+            
+            <div class="chart-container">
+                <div style="margin-bottom:8px; font-size:0.9rem; font-weight:600;">卡片熟练度分布</div>
+                <div class="chart-bar-bg" id="stat-bar-container">
+                    </div>
+                <div class="chart-legend">
+                    <div><span class="legend-dot" style="background:var(--color-new)"></span>新卡</div>
+                    <div><span class="legend-dot" style="background:var(--color-learn)"></span>学习中</div>
+                    <div><span class="legend-dot" style="background:var(--color-review)"></span>复习</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-val" id="stat-total">0</span>
+                    <span class="stat-label">总卡片数</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-val" id="stat-due">0</span>
+                    <span class="stat-label">今日到期</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-val" id="stat-learned">0</span>
+                    <span class="stat-label">已掌握 (Mature)</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-val" id="stat-ease">0%</span>
+                    <span class="stat-label">平均难度系数</span>
+                </div>
+            </div>
+            <button class="btn btn-save" onclick="document.getElementById('statsModal').style.display='none'">关闭</button>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
-            <h2>⚙️ 设置</h2>
-
-            <div class="switch-group">
-                <label>显示归档面板 (年月选择)</label>
-                <label class="switch">
-                    <input type="checkbox" id="show-archive-panel">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="switch-group">
-                <label>启用云端删除按钮 (需 Token)</label>
-                <label class="switch">
-                    <input type="checkbox" id="enable-delete">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
+            <h2>⚙️ 高级配置</h2>
+            
             <div class="form-group">
                 <label>TTS 语音源配置 (多路自动切换)</label>
                 <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">系统将按顺序尝试播放。支持 <code>{text}</code> 占位符。</div>
                 <div id="tts-config-list"></div>
-                <button class="btn btn-mini btn-add" onclick="addTTSConfig()">+ 添加语音源</button>
+                <button class="btn-mini" style="width:100%; border-style:dashed; padding:10px;" onclick="addTTSConfig()">+ 添加语音源</button>
             </div>
             <hr style="border:0; border-top:1px solid var(--border-color); margin: 15px 0;">
             <div class="form-group"><label>GitHub User</label> <input type="text" id="gh-user"></div>
             <div class="form-group"><label>GitHub Repo</label> <input type="text" id="gh-repo"></div>
             <div class="form-group"><label>Access Token</label> <input type="password" id="gh-token" placeholder="ghp_..."></div>
 
-            <div class="form-group">
-                <label>云端同步</label>
-                <div class="sync-row">
-                    <button class="btn-sync-action" onclick="fetchCloudProgress(this)">
-                        <span>⬇️</span> 从云端下载
-                    </button>
-                    <button class="btn-sync-action" style="background:var(--bg-body); border-color:var(--accent-color); color:var(--accent-color)" onclick="syncProgressToCloud(this)">
-                        <span>☁️</span> 上传进度
-                    </button>
-                </div>
-            </div>
-
-            <div class="modal-actions">
-                <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
-                <button class="btn btn-save" onclick="saveSettings()">保存</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-cancel" onclick="document.getElementById('settingsModal').style.display='none'" style="flex:1">取消</button>
+                <button class="btn btn-save" onclick="saveSettings()" style="flex:1">保存</button>
             </div>
         </div>
     </div>
 
     <div class="container">
         <header>
-            <div class="header-actions"><button class="icon-btn" onclick="openSettings()" title="设置">⚙️</button></div>
-            <h1>Anki Pro</h1>
-            <div class="subtitle" id="deck-stats">正在准备数据...</div>
+            <button class="icon-btn" onclick="toggleSidebar(true)" title="菜单">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            
+            <div class="header-title-group">
+                <h1>Anki Pro</h1>
+                <div class="subtitle" id="deck-stats">正在准备数据...</div>
+            </div>
+
+            <button class="icon-btn" onclick="openSettings()" title="高级设置">⚙️</button>
             <div id="sync-status" class="sync-badge"></div>
         </header>
 
-        <div class="controls">
+        <div class="controls" id="archive-panel">
             <div class="controls-header">
-                <span class="controls-title">📅 浏览归档</span>
+                <span style="font-weight:600; display:flex; align-items:center; gap:6px;">📅 归档浏览</span>
                 <select id="year-select" disabled><option>加载中...</option></select>
             </div>
             <div class="months-grid" id="month-container"></div>
@@ -287,7 +351,7 @@
 
     <script>
         // ============================================
-        // Global Audio
+        // Global Audio & Config
         // ============================================
         let globalAudio = null; 
         function stopCurrentAudio() {
@@ -296,9 +360,6 @@
             }
         }
 
-        // ============================================
-        // Config & Globals
-        // ============================================
         const DEFAULT_TTS_LIST = [
             { url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
             { url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}', token: '' }
@@ -320,50 +381,26 @@
         let CURRENT_VIEW_YEAR = new Date().getFullYear();
         let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
         let GLOBAL_CONFIG = null;
-
-        // 应用面板显示设置
-        function applyViewSettings() {
-            const controls = document.querySelector('.controls');
-            if(controls) {
-                if(USER_CONFIG.showArchivePanel) {
-                    controls.classList.remove('hidden');
-                    document.body.classList.remove('hide-archive');
-                } else {
-                    controls.classList.add('hidden');
-                    document.body.classList.add('hide-archive');
-                }
-            }
-        }
-        applyViewSettings(); 
+        let cardQueue = [], totalItemsCount = 0;
 
         // ============================================
-        // Scheduler (Fixed NaNd Bug)
+        // Scheduler (Original Logic)
         // ============================================
         class AnkiScheduler {
-            constructor() { 
-                this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); 
-            }
-
-            save() { 
-                localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); 
-            }
+            constructor() { this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); }
+            save() { localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); }
 
             loadExternalData(cloudData) { 
                 if (!cloudData) return; 
                 let updateCount = 0;
-                const blacklist = getBlacklist();
-
+                const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
                 for (const [id, cloudCard] of Object.entries(cloudData)) {
                     if (blacklist.includes(id)) continue; 
-
                     const localCard = this.db[id];
-                    if (localCard) {
-                        const localTime = localCard.lastModified || 0;
-                        const cloudTime = cloudCard.lastModified || 0;
-                        if (localTime >= cloudTime) continue;
+                    if (!localCard || (localCard.lastModified||0) < (cloudCard.lastModified||0)) {
+                        this.db[id] = cloudCard;
+                        updateCount++;
                     }
-                    this.db[id] = cloudCard;
-                    updateCount++;
                 }
                 this.save(); 
                 return updateCount;
@@ -371,14 +408,9 @@
 
             getCardState(id) {
                 if (!this.db[id]) {
-                    this.db[id] = { 
-                        state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 
-                    };
+                    this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 };
                 }
-                // 确保数据完整性，防止 NaN
-                if (this.db[id].easeFactor === undefined || isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
-                if (this.db[id].lastModified === undefined) this.db[id].lastModified = 0;
-
+                if (isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
                 return this.db[id];
             }
 
@@ -393,28 +425,16 @@
             }
 
             answerCard(id, rating) {
-                const card = this.getCardState(id);
-                const result = this.calculate(card, rating);
-                this.db[id] = result.card; 
-                this.save();
+                const result = this.calculate(this.getCardState(id), rating);
+                this.db[id] = result.card; this.save();
                 return result;
             }
 
             calculate(originalCard, rating) {
                 let card = JSON.parse(JSON.stringify(originalCard));
-
-                // === BUG FIX: 数据清洗 (Sanity Check) ===
-                // 修复本地数据损坏导致的 NaNd 问题
-                if (typeof card.easeFactor !== 'number' || isNaN(card.easeFactor) || card.easeFactor < 1.3) {
-                    card.easeFactor = 2.5; // 重置为默认 250%
-                }
-                if (typeof card.interval !== 'number' || isNaN(card.interval)) {
-                    card.interval = 1; // 重置为默认 1天
-                }
-                // === END FIX ===
+                if (card.easeFactor < 1.3 || isNaN(card.easeFactor)) card.easeFactor = 2.5;
 
                 let nextIntervalMin = 0;
-
                 if (rating === 1) { 
                     card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
                     card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
@@ -423,63 +443,31 @@
                     else if (rating === 3) { 
                         if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } 
                         else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; } 
-                    } else if (rating === 4) { 
-                        card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; 
-                    } 
+                    } else if (rating === 4) { card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; } 
                 } else { 
-                    // Review 状态
-                    if (rating === 2) { 
-                        card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
-                        card.easeFactor -= 0.15; 
-                    } else if (rating === 3) { 
-                        card.interval = Math.floor(card.interval * card.easeFactor); 
-                    } else if (rating === 4) { 
-                        card.interval = Math.floor(card.interval * card.easeFactor * 1.3); 
-                        card.easeFactor += 0.15; 
-                    }
+                    if (rating === 2) { card.interval = Math.max(1, Math.floor(card.interval * 1.2)); card.easeFactor -= 0.15; } 
+                    else if (rating === 3) { card.interval = Math.floor(card.interval * card.easeFactor); } 
+                    else if (rating === 4) { card.interval = Math.floor(card.interval * card.easeFactor * 1.3); card.easeFactor += 0.15; }
                     nextIntervalMin = card.interval * 1440;
-                    if(card.easeFactor < 1.3) card.easeFactor = 1.3;
                 }
 
-                // 凌晨 04:00 AM 刷新机制
-                if (nextIntervalMin < 1440) {
-                    card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
-                } else {
+                if (nextIntervalMin < 1440) card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
+                else {
                     const daysToAdd = Math.round(nextIntervalMin / 1440);
                     const targetDate = new Date();
                     targetDate.setDate(targetDate.getDate() + daysToAdd);
                     targetDate.setHours(4, 0, 0, 0);
-
-                    if (targetDate.getTime() <= Date.now()) {
-                         targetDate.setDate(targetDate.getDate() + 1);
-                    }
+                    if (targetDate.getTime() <= Date.now()) targetDate.setDate(targetDate.getDate() + 1);
                     card.dueDate = targetDate.getTime();
                 }
-
                 card.lastModified = Date.now(); 
-                
-                // === 优化显示逻辑 (Updated Time Format) ===
+
                 let timeText;
-                // 分钟: < 60 mins
-                if (nextIntervalMin < 60) {
-                    timeText = nextIntervalMin + 'm';
-                } 
-                // 小时: < 1440 mins (24 hours)
-                else if (nextIntervalMin < 1440) {
-                    timeText = Math.round(nextIntervalMin / 60) + 'h';
-                } 
-                // 天: < 43200 mins (30 days)
-                else if (nextIntervalMin < 43200) {
-                    timeText = Math.round(nextIntervalMin / 1440) + 'd';
-                } 
-                // 月: < 525600 mins (365 days)
-                else if (nextIntervalMin < 525600) {
-                    timeText = Math.round(nextIntervalMin / 43200) + 'mo';
-                } 
-                // 年: >= 365 days
-                else {
-                    timeText = Math.round(nextIntervalMin / 525600) + 'y';
-                }
+                if (nextIntervalMin < 60) timeText = nextIntervalMin + 'm';
+                else if (nextIntervalMin < 1440) timeText = Math.round(nextIntervalMin / 60) + 'h';
+                else if (nextIntervalMin < 43200) timeText = Math.round(nextIntervalMin / 1440) + 'd';
+                else if (nextIntervalMin < 525600) timeText = Math.round(nextIntervalMin / 43200) + 'mo';
+                else timeText = Math.round(nextIntervalMin / 525600) + 'y';
 
                 return { card, timeText };
             }
@@ -487,21 +475,93 @@
         const scheduler = new AnkiScheduler();
 
         // ============================================
-        // Blacklist Helper
+        // Sidebar & UI Logic
         // ============================================
-        function getBlacklist() {
-            return JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
-        }
-        function addToBlacklist(id) {
-            const list = getBlacklist();
-            if (!list.includes(id)) {
-                list.push(id);
-                localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(list));
+        function toggleSidebar(show) {
+            const sb = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if(show) { 
+                sb.classList.add('active'); overlay.classList.add('active'); 
+                // 同步侧边栏开关状态
+                document.getElementById('sidebar-show-archive').checked = USER_CONFIG.showArchivePanel;
+                document.getElementById('sidebar-enable-delete').checked = USER_CONFIG.enableDelete;
+            } else { 
+                sb.classList.remove('active'); overlay.classList.remove('active'); 
             }
         }
 
+        // 快捷切换配置 (无需保存按钮)
+        function toggleConfig(key, value) {
+            USER_CONFIG[key] = value;
+            localStorage.setItem('gh_' + key, value);
+            if(key === 'showArchivePanel') applyViewSettings();
+            if(key === 'enableDelete') renderCard();
+        }
+
+        function applyViewSettings() {
+            const panel = document.getElementById('archive-panel');
+            if(USER_CONFIG.showArchivePanel) {
+                panel.classList.remove('hidden');
+                document.body.classList.remove('hide-archive');
+            } else {
+                panel.classList.add('hidden');
+                document.body.classList.add('hide-archive');
+            }
+        }
+
+        // 统计图表逻辑
+        function openStatsModal() {
+            toggleSidebar(false);
+            const db = scheduler.db;
+            const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+            
+            let stats = { new: 0, learn: 0, review: 0, total: 0, due: 0, mature: 0, easeSum: 0, easeCount: 0 };
+            const now = Date.now();
+
+            Object.keys(db).forEach(id => {
+                if(blacklist.includes(id)) return;
+                const c = db[id];
+                stats.total++;
+                
+                if (c.state === 'new') stats.new++;
+                else if (c.state === 'learning') stats.learn++;
+                else {
+                    stats.review++;
+                    if (c.interval > 21) stats.mature++;
+                    stats.easeSum += (c.easeFactor || 2.5);
+                    stats.easeCount++;
+                }
+                if (c.dueDate && c.dueDate < now) stats.due++;
+            });
+
+            document.getElementById('stat-total').innerText = stats.total;
+            document.getElementById('stat-due').innerText = stats.due;
+            document.getElementById('stat-learned').innerText = stats.mature;
+            const avgEase = stats.easeCount > 0 ? Math.round((stats.easeSum / stats.easeCount) * 100) : 250;
+            document.getElementById('stat-ease').innerText = avgEase + '%';
+
+            // 绘制条形图
+            const barContainer = document.getElementById('stat-bar-container');
+            barContainer.innerHTML = '';
+            if (stats.total > 0) {
+                const addSeg = (count, color) => {
+                    if(count === 0) return;
+                    const d = document.createElement('div');
+                    d.className = 'chart-seg';
+                    d.style.width = (count / stats.total * 100) + '%';
+                    d.style.backgroundColor = color;
+                    barContainer.appendChild(d);
+                };
+                addSeg(stats.new, 'var(--color-new)');
+                addSeg(stats.learn, 'var(--color-learn)');
+                addSeg(stats.review, 'var(--color-review)');
+            }
+
+            document.getElementById('statsModal').style.display = 'flex';
+        }
+
         // ============================================
-        // Sync Logic
+        // Sync Logic (Original Robust Version)
         // ============================================
         const uiSync = document.getElementById('sync-status');
         function updateSyncStatus(msg, type) {
@@ -510,15 +570,19 @@
         }
 
         async function fetchCloudProgress(btnElement) {
-            if(!USER_CONFIG.token) { alert("请先填写 Token"); return; }
+            if(btnElement) toggleSidebar(false); // 如果是从侧边栏点击的，关闭侧边栏
+            if(!USER_CONFIG.token) { alert("请先在高级设置中填写 Token"); return; }
+            
             const originalText = btnElement ? btnElement.innerHTML : '';
-            if(btnElement) { btnElement.disabled = true; btnElement.innerHTML = `<span class="spin">🔄</span> 下载中...`; }
+            if(btnElement) { btnElement.style.pointerEvents='none'; btnElement.innerHTML = `<span class="spin">🔄</span> 下载中...`; }
+            else updateSyncStatus('<span class="spin">🔄</span> 下载中...', 'loading');
 
             const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
             try {
                 const res = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
                 if(res.status === 404) { 
-                    if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
+                    if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.style.pointerEvents='auto';}, 2000); }
+                    else updateSyncStatus('无存档', 'error');
                     return; 
                 }
                 if(!res.ok) throw new Error('Fetch failed');
@@ -529,20 +593,19 @@
 
                 if(btnElement) {
                     btnElement.innerHTML = `✅ 更新${count}条`;
-                    btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
-                    setTimeout(() => { 
-                        btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; 
-                        location.reload(); 
-                    }, 1500);
+                    setTimeout(() => { location.reload(); }, 1000);
+                } else {
+                    updateSyncStatus(`✅ 更新${count}条`, 'success');
+                    setTimeout(() => { location.reload(); }, 1500);
                 }
-                return data.sha;
             } catch(e) { 
-                console.warn('Sync failed:', e); 
-                if(btnElement) { btnElement.innerHTML = '❌ 失败'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.disabled = false;}, 2000); }
+                if(btnElement) { btnElement.innerHTML = '❌ 失败'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.style.pointerEvents='auto';}, 2000); }
+                else updateSyncStatus('❌ 同步失败', 'error');
             }
         }
 
         async function syncProgressToCloud(btnElement, isSilent = false) {
+            if(btnElement) toggleSidebar(false);
             if(!USER_CONFIG.token) { 
                 if(!isSilent) alert('请先配置 Token'); 
                 return; 
@@ -550,7 +613,7 @@
 
             const originalText = (btnElement && !isSilent) ? btnElement.innerHTML : '';
             if(btnElement && !isSilent) { 
-                btnElement.disabled = true; 
+                btnElement.style.pointerEvents='none'; 
                 btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; 
             } else { 
                 updateSyncStatus('<span class="spin">☁️</span> 上传中...', 'loading'); 
@@ -564,10 +627,9 @@
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
                 } catch(e) {}
 
-                const blacklist = getBlacklist();
-                for (const id of blacklist) {
-                    if (scheduler.db[id]) delete scheduler.db[id];
-                }
+                // 清理黑名单数据
+                const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+                for (const id of blacklist) { if (scheduler.db[id]) delete scheduler.db[id]; }
 
                 const contentStr = JSON.stringify(scheduler.db);
                 const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
@@ -581,14 +643,14 @@
                 if(!putRes.ok) throw new Error('Upload failed');
 
                 if(btnElement && !isSilent) {
-                    btnElement.innerHTML = `✅ 成功`; btnElement.style.background = '#dcfce7'; btnElement.style.color = '#166534';
-                    setTimeout(() => { btnElement.disabled = false; btnElement.innerHTML = originalText; btnElement.style.background = ''; btnElement.style.color = ''; }, 2000);
+                    btnElement.innerHTML = `✅ 成功`;
+                    setTimeout(() => { btnElement.style.pointerEvents='auto'; btnElement.innerHTML = originalText; }, 2000);
                 } else { 
                     updateSyncStatus('✅ 进度已同步', 'success'); 
                 }
             } catch(e) {
                 if(!isSilent) alert('上传失败: ' + e.message);
-                if(btnElement && !isSilent) { btnElement.disabled = false; btnElement.innerHTML = originalText; }
+                if(btnElement && !isSilent) { btnElement.style.pointerEvents='auto'; btnElement.innerHTML = originalText; }
                 updateSyncStatus('❌ 同步失败', 'error');
             }
         }
@@ -596,13 +658,8 @@
         // ============================================
         // App Logic
         // ============================================
-        let cardQueue = [];
-        let totalItemsCount = 0;
-
-        const yearSelect = document.getElementById('year-select');
-        const monthContainer = document.getElementById('month-container');
-
         async function startApp() {
+            applyViewSettings();
             let sha = 'master';
             try {
                 const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master?t=${Date.now()}`);
@@ -621,19 +678,18 @@
                     if (typeof NotesConfig !== 'undefined') GLOBAL_CONFIG = NotesConfig;
                     else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
 
-                    if (!GLOBAL_CONFIG) { showError("配置加载失败: 未找到 Config 对象"); return; }
-
+                    if (!GLOBAL_CONFIG) { showError("配置加载失败"); return; }
                     GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
-
                     initDateSelectors(GLOBAL_CONFIG);
                     URL.revokeObjectURL(url);
                 };
-                script.onerror = () => showError(`配置脚本加载错误`);
+                script.onerror = () => showError(`配置加载错误`);
                 document.head.appendChild(script);
             } catch (err) { showError(`无法加载配置: ${err.message}`); }
         }
 
         function initDateSelectors(config) {
+            const yearSelect = document.getElementById('year-select');
             yearSelect.disabled = false; yearSelect.innerHTML = '';
             const start = config.startYear || 2025;
             const total = config.totalYears || 30;
@@ -645,27 +701,19 @@
             }
 
             const today = new Date();
-            let defaultYear = today.getFullYear();
-            if (defaultYear < start) defaultYear = start;
-            if (defaultYear >= start + total) defaultYear = start + total - 1;
-            yearSelect.value = defaultYear;
-
+            yearSelect.value = today.getFullYear();
             yearSelect.addEventListener('change', (e) => loadMonthsForYear(parseInt(e.target.value)));
+            loadMonthsForYear(today.getFullYear());
 
-            loadMonthsForYear(defaultYear);
-
-            const targetMonth = (defaultYear === today.getFullYear()) ? (today.getMonth() + 1) : 12;
             setTimeout(() => {
-                const btn = document.querySelector(`button[data-month="${targetMonth}"]`);
+                const btn = document.querySelector(`button[data-month="${today.getMonth() + 1}"]`);
                 if(btn) btn.click();
-                else { 
-                    const firstBtn = document.querySelector('.month-btn');
-                    if(firstBtn) firstBtn.click();
-                }
+                else { const first = document.querySelector('.month-btn'); if(first) first.click(); }
             }, 100);
         }
 
         function loadMonthsForYear(year) {
+            const monthContainer = document.getElementById('month-container');
             monthContainer.innerHTML = '';
             for (let m = 1; m <= 12; m++) {
                 const btn = document.createElement('button');
@@ -681,64 +729,40 @@
             }
         }
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        // ============================================
-        // Load Cards
-        // ============================================
         async function loadCardsForDate(year, month) {
-            CURRENT_VIEW_YEAR = year;
-            CURRENT_VIEW_MONTH = month;
-
+            CURRENT_VIEW_YEAR = year; CURRENT_VIEW_MONTH = month;
             const container = document.getElementById('notes-container');
             container.innerHTML = `<div class="status-page"><div class="spin" style="font-size:3rem">⏳</div><div>读取 ${year}年${month}月...</div></div>`;
 
-            const blacklist = getBlacklist();
             let allItems = [];
-
             try {
                 const url = GLOBAL_CONFIG.getUrl(year, month) + `?t=${Date.now()}`;
                 const res = await fetch(url);
-                if (res.ok) {
-                    const items = await res.json();
-                    items.forEach(item => { item._year = year; item._month = month; });
-                    allItems = items;
-                } else {
-                    console.log(`No data for ${year}-${month}`);
-                }
-            } catch (e) {
-                console.warn(e);
-            }
+                if (res.ok) allItems = await res.json();
+            } catch (e) { console.warn(e); }
 
+            allItems.forEach(item => { item._year = year; item._month = month; });
+
+            const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
             const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
+            // Deduplicate
             const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
-
             totalItemsCount = uniqueItems.length;
 
-            const learning = [];
-            const review = [];
-            const newCards = [];
-
+            const learning = [], review = [], newCards = [];
             uniqueItems.forEach(item => {
                 const s = scheduler.getCardState(item.id);
                 if (s.dueDate > Date.now()) return; 
-
                 if (s.state === 'learning') learning.push(item);
                 else if (s.state === 'review') review.push(item);
                 else newCards.push(item);
             });
 
-            shuffle(learning);
-            shuffle(review);
-            shuffle(newCards);
+            // Shuffle
+            const shuffle = (arr) => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}};
+            shuffle(learning); shuffle(review); shuffle(newCards);
 
             cardQueue = [...learning, ...review, ...newCards];
-
             updateDeckStats(); 
             renderCard();
         }
@@ -746,33 +770,14 @@
         function renderCard() {
             const container = document.getElementById('notes-container');
             if (cardQueue.length === 0) {
-                if (totalItemsCount === 0) {
-                     container.innerHTML = `
-                        <div class="status-page">
-                            <div class="emoji-lg">📭</div>
-                            <h2>本月暂无数据</h2>
-                            <p style="color:var(--text-secondary)">请切换其他月份查看。</p>
-                        </div>`;
-                } else {
-                    container.innerHTML = `
-                        <div class="status-page">
-                            <div class="emoji-lg">🎉</div>
-                            <h2>今日任务完成！</h2>
-                            <p style="color:var(--text-secondary)">当前月份已无待复习卡片。</p>
-                            <br><button class="btn btn-save" onclick="syncProgressToCloud(this)">☁️ 立即同步</button>
-                        </div>`;
-                }
+                if (totalItemsCount === 0) container.innerHTML = `<div class="status-page"><div class="emoji-lg">📭</div><h2>本月暂无数据</h2><p style="color:var(--text-secondary)">请切换其他月份查看。</p></div>`;
+                else container.innerHTML = `<div class="status-page"><div class="emoji-lg">🎉</div><h2>今日任务完成！</h2><br><button class="btn btn-save" onclick="syncProgressToCloud(this)">☁️ 立即同步</button></div>`;
                 return;
             }
 
             const item = cardQueue[0];
             const times = scheduler.previewNextDue(item.id);
-            const sourceTitle = item.pageTitle || 'Source Link';
-
-            let sourceUrl = item.url || '#';
-            if (sourceUrl !== '#' && item.text) {
-                sourceUrl = `${sourceUrl}#:~:text=${encodeURIComponent(item.text)}`;
-            }
+            const sourceUrl = item.url ? `${item.url}#:~:text=${encodeURIComponent(item.text||'')}` : '#';
 
             let deleteBtnHtml = '';
             if (USER_CONFIG.enableDelete) {
@@ -783,7 +788,7 @@
                 <div class="note-card" id="current-card" onclick="handleCardClick(event)">
                     ${deleteBtnHtml}
                     <div class="note-word">${item.text}</div>
-                    <a href="${sourceUrl}" target="_blank" class="note-source">${sourceTitle}</a>
+                    <a href="${sourceUrl}" target="_blank" class="note-source">${item.pageTitle || 'Source Link'}</a>
                     <div class="note-meaning">${item.note}</div>
                     
                     <div class="tts-container">
@@ -811,85 +816,8 @@
         }
 
         // ============================================
-        // Delete Functionality
+        // Interaction & Delete Logic
         // ============================================
-        async function deleteCurrentCard(btn) {
-            if(event) event.stopPropagation();
-
-            if (!USER_CONFIG.token) {
-                alert("错误：请先在设置中填写 Access Token 才能执行删除操作。");
-                openSettings();
-                return;
-            }
-
-            if (!confirm("确定要从 GitHub 源文件中永久删除这张卡片吗？此操作不可逆。")) return;
-
-            const item = cardQueue[0];
-            btn.innerHTML = '⏳';
-            btn.disabled = true;
-
-            addToBlacklist(item.id);
-            delete scheduler.db[item.id];
-            scheduler.save();
-
-            const finalizeDelete = async () => {
-                await syncProgressToCloud(null, true); 
-                stopCurrentAudio();
-                const cardEl = document.getElementById('current-card');
-                cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
-                setTimeout(() => {
-                    cardQueue.shift(); 
-                    totalItemsCount--; 
-                    updateDeckStats();
-                    renderCard(); 
-                }, 300);
-            };
-
-            const y = item._year || CURRENT_VIEW_YEAR;
-            const m = item._month || CURRENT_VIEW_MONTH;
-
-            const mm = m.toString().padStart(2, '0');
-            const fileName = `Note_${y}-${mm}.json`;
-            const filePath = `Notes/Notes/${y}/${fileName}`;
-            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${filePath}`;
-
-            try {
-                const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
-
-                if (getRes.status === 404) {
-                    await finalizeDelete();
-                    return;
-                }
-
-                if (!getRes.ok) throw new Error("无法读取源文件: " + getRes.status);
-
-                const data = await getRes.json();
-                const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-                const newContent = content.filter(c => c.id !== item.id);
-
-                if (newContent.length === content.length) {
-                    await finalizeDelete();
-                    return;
-                }
-
-                const contentStr = JSON.stringify(newContent, null, 2);
-                const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
-
-                const putRes = await fetch(url, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: `Delete card ${item.id}`, content: contentBase64, sha: data.sha })
-                });
-
-                if (!putRes.ok) throw new Error("更新文件失败: " + putRes.status);
-                await finalizeDelete();
-
-            } catch (e) {
-                alert("GitHub删除遇到问题，但已执行本地强制删除。\n错误: " + e.message);
-                await finalizeDelete();
-            }
-        }
-
         function revealAnswer(el) { el.classList.add('revealed'); }
 
         function handleCardClick(e) {
@@ -902,10 +830,8 @@
             stopCurrentAudio(); 
             const item = cardQueue[0];
             scheduler.answerCard(item.id, rating);
-
             const cardEl = document.getElementById('current-card');
             cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0';
-
             setTimeout(() => {
                 cardQueue.shift();
                 if (rating === 1) cardQueue.push(item);
@@ -918,11 +844,66 @@
             const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
             const reviewCount = cardQueue.length - newCount;
             document.getElementById('deck-stats').innerText = 
-                `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${totalItemsCount}`;
+                `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount}`;
+        }
+
+        async function deleteCurrentCard(btn) {
+            if(event) event.stopPropagation();
+            if (!USER_CONFIG.token) { alert("错误：请先在设置中填写 Access Token"); openSettings(); return; }
+            if (!confirm("确定要从 GitHub 源文件中永久删除这张卡片吗？此操作不可逆。")) return;
+
+            const item = cardQueue[0];
+            btn.innerHTML = '⏳'; btn.disabled = true;
+
+            // Local Delete
+            const bl = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+            bl.push(item.id);
+            localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(bl));
+            delete scheduler.db[item.id]; scheduler.save();
+
+            const finalizeDelete = async () => {
+                await syncProgressToCloud(null, true); 
+                stopCurrentAudio();
+                const cardEl = document.getElementById('current-card');
+                cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
+                setTimeout(() => {
+                    cardQueue.shift(); totalItemsCount--; updateDeckStats(); renderCard(); 
+                }, 300);
+            };
+
+            // GitHub Delete
+            const y = item._year || CURRENT_VIEW_YEAR;
+            const m = item._month || CURRENT_VIEW_MONTH;
+            const fileName = `Note_${y}-${m.toString().padStart(2, '0')}.json`;
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/Notes/Notes/${y}/${fileName}`;
+
+            try {
+                const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                if (!getRes.ok) throw new Error("无法读取源文件");
+                const data = await getRes.json();
+                const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                const newContent = content.filter(c => c.id !== item.id);
+
+                if (newContent.length === content.length) { await finalizeDelete(); return; }
+
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(newContent, null, 2))));
+                const putRes = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Delete card ${item.id}`, content: contentBase64, sha: data.sha })
+                });
+
+                if (!putRes.ok) throw new Error("更新文件失败");
+                await finalizeDelete();
+
+            } catch (e) {
+                alert("GitHub删除遇到问题，但已执行本地强制删除。\n错误: " + e.message);
+                await finalizeDelete();
+            }
         }
 
         // ============================================
-        // TTS Logic
+        // TTS Logic (Original Robust Version)
         // ============================================
         function constructTTSUrl(configObj, text) {
             let url = configObj.url.replace('{text}', encodeURIComponent(text));
@@ -934,17 +915,18 @@
 
         function playTTSChain(text, btn, index) {
             if (index >= USER_CONFIG.ttsList.length) {
-                console.error("All TTS sources failed.");
                 btn.classList.remove('playing');
                 btn.classList.add('error'); setTimeout(() => btn.classList.remove('error'), 2000);
                 return;
             }
             const currentConfig = USER_CONFIG.ttsList[index];
+            if(!currentConfig.url) { playTTSChain(text, btn, index + 1); return; }
+
             const url = constructTTSUrl(currentConfig, text);
             const audio = new Audio(url);
             globalAudio = audio;
             audio.onended = () => { btn.classList.remove('playing'); globalAudio = null; };
-            const handleError = (e) => { console.warn(`Source ${index} failed, trying next...`); playTTSChain(text, btn, index + 1); };
+            const handleError = (e) => { console.warn(`Source ${index} failed`); playTTSChain(text, btn, index + 1); };
             audio.onerror = handleError;
             audio.play().catch(handleError);
         }
@@ -953,8 +935,7 @@
             stopCurrentAudio();
             btn.classList.remove('error'); btn.classList.add('playing');
             const item = cardQueue[0];
-            const rawText = item.text || '';
-            playTTSChain(rawText, btn, 0);
+            playTTSChain(item.text || '', btn, 0);
         }
 
         function testSingleTTS(index, btn) {
@@ -972,25 +953,22 @@
         }
 
         // ============================================
-        // UI Helpers & Settings
+        // Settings UI Logic
         // ============================================
-        function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
-
         function renderTTSConfigList() {
             const container = document.getElementById('tts-config-list');
             container.innerHTML = '';
-            const list = USER_CONFIG.ttsList;
-            list.forEach((item, index) => {
+            USER_CONFIG.ttsList.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'tts-config-item';
                 div.innerHTML = `
                     <div class="tts-row">
-                        <input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}">
-                        <input type="text" class="tts-token-input" placeholder="Token" value="${item.token || ''}" data-idx="${index}">
+                        <input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}" style="flex:2">
+                        <input type="text" class="tts-token-input" placeholder="Token" value="${item.token || ''}" data-idx="${index}" style="flex:1">
                     </div>
                     <div class="tts-actions">
-                        <button class="btn-mini btn-test" onclick="testSingleTTS(${index}, this)" title="测试">⚡</button>
-                        <button class="btn-mini btn-delete" onclick="removeTTSConfig(${index})" title="删除">🗑️</button>
+                        <button class="btn-mini" onclick="testSingleTTS(${index}, this)" title="测试">⚡ 测试</button>
+                        <button class="btn-mini" onclick="removeTTSConfig(${index})" title="删除" style="color:red">🗑️ 删除</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -1014,37 +992,34 @@
         function removeTTSConfig(index) { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.splice(index, 1); renderTTSConfigList(); }
 
         function openSettings() {
+            toggleSidebar(false);
             document.getElementById('gh-user').value = USER_CONFIG.user;
             document.getElementById('gh-repo').value = USER_CONFIG.repo;
             document.getElementById('gh-token').value = USER_CONFIG.token;
-            document.getElementById('enable-delete').checked = USER_CONFIG.enableDelete;
-            document.getElementById('show-archive-panel').checked = USER_CONFIG.showArchivePanel;
             renderTTSConfigList();
             document.getElementById('settingsModal').style.display = 'flex';
         }
-        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
 
         function saveSettings() {
             USER_CONFIG.user = document.getElementById('gh-user').value.trim();
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
-            USER_CONFIG.enableDelete = document.getElementById('enable-delete').checked;
-            USER_CONFIG.showArchivePanel = document.getElementById('show-archive-panel').checked;
-
-            USER_CONFIG.ttsList = scrapeTTSConfigs();
-            if (USER_CONFIG.ttsList.length === 0) USER_CONFIG.ttsList = DEFAULT_TTS_LIST;
+            
+            const newTTS = scrapeTTSConfigs();
+            if(newTTS.length > 0) USER_CONFIG.ttsList = newTTS;
 
             localStorage.setItem('gh_user', USER_CONFIG.user);
             localStorage.setItem('gh_repo', USER_CONFIG.repo);
             localStorage.setItem('gh_token', USER_CONFIG.token);
-            localStorage.setItem('gh_enable_delete', USER_CONFIG.enableDelete);
-            localStorage.setItem('gh_show_archive_panel', USER_CONFIG.showArchivePanel);
             localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
-
-            closeSettings();
+            
+            document.getElementById('settingsModal').style.display = 'none';
             location.reload();
         }
 
+        function showError(msg) { document.getElementById('notes-container').innerHTML = `<div class="status-page"><div class="error-box">${msg}</div></div>`; }
+        
+        // Init
         document.addEventListener('keydown', (e) => {
             if(document.querySelector('.note-meaning.revealed')) {
                 if(e.key==='1') handleRate(1); if(e.key==='2') handleRate(2); if(e.key==='3') handleRate(3); if(e.key==='4') handleRate(4);
@@ -1052,8 +1027,7 @@
                 const el = document.querySelector('.note-meaning'); if(el) revealAnswer(el);
             }
         });
-        document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
-
+        
         startApp();
     </script>
 </body>
