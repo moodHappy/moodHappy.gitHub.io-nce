@@ -1014,37 +1014,102 @@
             if(item) playTTSChain(item.text || '', btn, 0);
         }
 
-        function renderTTSConfigList() { /* UI Logic Same as before */ 
-            const container = document.getElementById('tts-config-list'); container.innerHTML = '';
+        // ============================================
+        // Settings UI Logic (修正版 - 找回测试功能)
+        // ============================================
+        function renderTTSConfigList() {
+            const container = document.getElementById('tts-config-list');
+            container.innerHTML = '';
             USER_CONFIG.ttsList.forEach((item, index) => {
-                const div = document.createElement('div'); div.className = 'tts-config-item';
-                div.innerHTML = `<div class="tts-row"><input type="text" class="tts-url-input" value="${item.url}" data-idx="${index}" style="flex:2"><input type="text" class="tts-token-input" value="${item.token||''}" data-idx="${index}" style="flex:1"></div><div class="tts-actions"><button class="btn-mini" onclick="removeTTSConfig(${index})" style="color:red">🗑️ 删除</button></div>`;
+                const div = document.createElement('div');
+                div.className = 'tts-config-item';
+                div.innerHTML = `
+                    <div class="tts-row">
+                        <input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}" style="flex:2">
+                        <input type="text" class="tts-token-input" placeholder="Token" value="${item.token || ''}" data-idx="${index}" style="flex:1">
+                    </div>
+                    <div class="tts-actions">
+                        <button class="btn-mini" onclick="testSingleTTS(${index}, this)" title="测试">⚡ 测试</button>
+                        <button class="btn-mini" onclick="removeTTSConfig(${index})" title="删除" style="color:red">🗑️ 删除</button>
+                    </div>
+                `;
                 container.appendChild(div);
             });
         }
-        function scrapeTTSConfigs() {
-            const items = document.querySelectorAll('.tts-config-item'); const newList = [];
-            items.forEach((item, index) => { 
-                newList.push({ 
-                    url: document.querySelector(`.tts-url-input[data-idx="${index}"]`).value.trim(), 
-                    token: document.querySelector(`.tts-token-input[data-idx="${index}"]`).value.trim() 
-                }); 
+
+        // 漏掉的测试函数
+        function testSingleTTS(index, btn) {
+            stopCurrentAudio(); 
+            const config = getTTSConfigFromUI(index); 
+            if (!config.url) return;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳';
+            // 使用标准测试语
+            const url = constructTTSUrl(config, "Connection successful");
+            const audio = new Audio(url);
+            globalAudio = audio;
+            
+            // 成功回调
+            audio.onended = () => { 
+                btn.innerHTML = '✅'; 
+                setTimeout(() => btn.innerHTML = originalText, 2000); 
+                globalAudio = null; 
+            };
+            // 失败回调
+            audio.onerror = () => { 
+                btn.innerHTML = '❌'; 
+                setTimeout(() => btn.innerHTML = originalText, 2000); 
+                globalAudio = null; 
+            };
+            
+            audio.play().catch(() => { 
+                btn.innerHTML = '❌'; 
+                setTimeout(() => btn.innerHTML = originalText, 2000); 
+                globalAudio = null; 
             });
+        }
+
+        function getTTSConfigFromUI(index) {
+            const urlInp = document.querySelector(`.tts-url-input[data-idx="${index}"]`);
+            const tokenInp = document.querySelector(`.tts-token-input[data-idx="${index}"]`);
+            return { url: urlInp ? urlInp.value.trim() : '', token: tokenInp ? tokenInp.value.trim() : '' };
+        }
+
+        function scrapeTTSConfigs() {
+            const items = document.querySelectorAll('.tts-config-item');
+            const newList = [];
+            items.forEach((item, index) => { newList.push(getTTSConfigFromUI(index)); });
             return newList.filter(i => i.url.length > 0);
         }
+
         function addTTSConfig() { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.push({ url: '', token: '' }); renderTTSConfigList(); }
         function removeTTSConfig(index) { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.splice(index, 1); renderTTSConfigList(); }
-        function openSettings() { toggleSidebar(false); document.getElementById('gh-user').value = USER_CONFIG.user; document.getElementById('gh-repo').value = USER_CONFIG.repo; document.getElementById('gh-token').value = USER_CONFIG.token; renderTTSConfigList(); document.getElementById('settingsModal').style.display = 'flex'; }
+
+        function openSettings() {
+            toggleSidebar(false);
+            document.getElementById('gh-user').value = USER_CONFIG.user;
+            document.getElementById('gh-repo').value = USER_CONFIG.repo;
+            document.getElementById('gh-token').value = USER_CONFIG.token;
+            renderTTSConfigList();
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
         function saveSettings() {
             USER_CONFIG.user = document.getElementById('gh-user').value.trim();
             USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
             USER_CONFIG.token = document.getElementById('gh-token').value.trim();
-            const newTTS = scrapeTTSConfigs(); if(newTTS.length > 0) USER_CONFIG.ttsList = newTTS;
-            localStorage.setItem('gh_user', USER_CONFIG.user); localStorage.setItem('gh_repo', USER_CONFIG.repo);
-            localStorage.setItem('gh_token', USER_CONFIG.token); localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
-            document.getElementById('settingsModal').style.display = 'none'; location.reload();
-        }
 
+            const newTTS = scrapeTTSConfigs();
+            if(newTTS.length > 0) USER_CONFIG.ttsList = newTTS;
+
+            localStorage.setItem('gh_user', USER_CONFIG.user);
+            localStorage.setItem('gh_repo', USER_CONFIG.repo);
+            localStorage.setItem('gh_token', USER_CONFIG.token);
+            localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
+
+            document.getElementById('settingsModal').style.display = 'none';
+            location.reload();
+        }
         // Stats Chart Logic
         function openStatsModal() {
             sessionStats = getDailyStats(); toggleSidebar(false); document.getElementById('statsModal').style.display = 'flex';
