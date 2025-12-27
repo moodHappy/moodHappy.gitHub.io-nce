@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Data Viz Edition)</title>
+    <title>Anki Pro (Fixed Stats)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
@@ -277,7 +277,7 @@
             </div>
         </div>
         <div style="padding: 20px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
-            Version 4.0 Chart Edition
+            Version 4.1 Fixed Stats
         </div>
     </div>
 
@@ -301,7 +301,7 @@
                     </div>
                     <div class="summary-card">
                         <span class="summary-val" id="sum-retention">0%</span>
-                        <span class="summary-label">复习保留率</span>
+                        <span class="summary-label">今日复习保留率</span>
                     </div>
                 </div>
 
@@ -339,7 +339,7 @@
                         <canvas id="chartHourly"></canvas>
                     </div>
                 </div>
-                
+
                 </div>
         </div>
     </div>
@@ -422,12 +422,34 @@
         const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
         const LOCAL_DB_KEY = 'anki_db_v2'; 
         const DELETED_IDS_KEY = 'anki_deleted_ids'; 
+        const DAILY_STATS_KEY = 'anki_daily_stats_v1'; // 新增持久化Key
 
-        // Session Stats (Reset on reload, mimic "Today" for analytics)
-        let sessionStats = {
-            buttons: {1:0, 2:0, 3:0, 4:0},
-            hourly: new Array(24).fill(0)
-        };
+        // Helper: Manage Daily Stats
+        function getDailyStats() {
+            const todayStr = new Date().toLocaleDateString();
+            let data = JSON.parse(localStorage.getItem(DAILY_STATS_KEY) || 'null');
+            
+            // If no data or date changed, reset
+            if (!data || data.date !== todayStr) {
+                data = {
+                    date: todayStr,
+                    buttons: {1:0, 2:0, 3:0, 4:0},
+                    hourly: new Array(24).fill(0)
+                };
+            }
+            return data;
+        }
+
+        function updateDailyStats(rating) {
+            let data = getDailyStats();
+            data.buttons[rating]++;
+            data.hourly[new Date().getHours()]++;
+            localStorage.setItem(DAILY_STATS_KEY, JSON.stringify(data));
+            return data; // Return updated data to update UI variable
+        }
+
+        // Session Stats initialized from LocalStorage
+        let sessionStats = getDailyStats();
 
         let CURRENT_VIEW_YEAR = new Date().getFullYear();
         let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
@@ -485,9 +507,8 @@
                 this.db[id] = result.card; 
                 this.save();
 
-                // Update Session Stats
-                sessionStats.buttons[rating]++;
-                sessionStats.hourly[new Date().getHours()]++;
+                // Update Daily Stats (Persistent)
+                sessionStats = updateDailyStats(rating);
 
                 return result;
             }
@@ -542,6 +563,8 @@
         let charts = {}; // Store chart instances
 
         function openStatsModal() {
+            // Force refresh stats from storage before opening
+            sessionStats = getDailyStats();
             toggleSidebar(false);
             document.getElementById('statsModal').style.display = 'flex';
             renderAllCharts();
@@ -550,7 +573,7 @@
         function renderAllCharts() {
             const db = scheduler.db;
             const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
-            const validCards = Object.values(db).filter(c => !blacklist.includes(c.id)); // Assuming ID is key or property
+            const validCards = Object.values(db).filter(c => !blacklist.includes(c.id)); 
 
             // Prepare Data Containers
             const now = Date.now();
@@ -593,7 +616,7 @@
             const avgInt = reviewCountForAvg > 0 ? (totalInterval / reviewCountForAvg).toFixed(1) : 0;
             document.getElementById('sum-due').innerText = dueToday;
             document.getElementById('sum-avg-int').innerText = avgInt + 'd';
-            // Simple retention estimation based on session ease buttons (Good+Easy / Total)
+            // Simple retention estimation based on DAILY ease buttons (Good+Easy / Total)
             const totalSess = sessionStats.buttons[1]+sessionStats.buttons[2]+sessionStats.buttons[3]+sessionStats.buttons[4];
             const passRate = totalSess > 0 ? Math.round(((sessionStats.buttons[3]+sessionStats.buttons[4])/totalSess)*100) : '--';
             document.getElementById('sum-retention').innerText = passRate + '%';
@@ -654,16 +677,23 @@
             }, { ...chartDefaults, scales: { x: { title:{display:true, text:'天数'} } } });
 
             // Chart 4: Buttons (Pie)
+            // CHECK IF EMPTY to prevent chartjs crash or ugly render
+            const buttonsData = [sessionStats.buttons[1], sessionStats.buttons[2], sessionStats.buttons[3], sessionStats.buttons[4]];
+            const buttonsHasData = buttonsData.some(x => x > 0);
+            
             createOrUpdateChart('chartButtons', 'pie', {
                 labels: ['Again', 'Hard', 'Good', 'Easy'],
                 datasets: [{
-                    data: [sessionStats.buttons[1], sessionStats.buttons[2], sessionStats.buttons[3], sessionStats.buttons[4]],
-                    backgroundColor: ['#ff5252', '#ffab40', '#69f0ae', '#40c4ff'],
+                    data: buttonsHasData ? buttonsData : [1], // If empty, show 1 gray segment
+                    backgroundColor: buttonsHasData ? ['#ff5252', '#ffab40', '#69f0ae', '#40c4ff'] : ['#e0e0e0'],
                     borderWidth: 0
                 }]
             }, { 
                 ...chartDefaults, 
-                plugins: { legend: { display: true, position: 'bottom' } } 
+                plugins: { 
+                    legend: { display: true, position: 'bottom' },
+                    tooltip: { enabled: buttonsHasData }
+                } 
             });
 
              // Chart 5: Hourly (Line/Area)
@@ -680,7 +710,7 @@
                 }]
              }, {
                  ...chartDefaults,
-                 scales: { x: { title:{display:true, text:'小时 (24h)'} } }
+                 scales: { x: { title:{display:true, text:'小时 (24h)'} }, y: { beginAtZero: true, suggestedMax: 5 } }
              });
         }
 
