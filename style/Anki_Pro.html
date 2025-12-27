@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anki Pro (Mobile Sidebar)</title>
+    <title>Anki Pro (Data Viz Edition)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root { 
@@ -16,7 +18,12 @@
             --color-again: #ff5252; --color-hard: #ffab40;
             --color-good: #69f0ae; --color-easy: #40c4ff;
             --color-error: #ef4444;
-            --color-new: #42a5f5; --color-learn: #ff7043; --color-review: #66bb6a;
+            /* Anki 统计配色 */
+            --color-new: #42a5f5; 
+            --color-learn: #ff7043; 
+            --color-young: #ffa726; /* Young (Review < 21d) */
+            --color-mature: #66bb6a; /* Mature (Review >= 21d) */
+            --color-suspended: #bdbdbd;
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
             --sidebar-width: 280px;
         }
@@ -93,7 +100,7 @@
         .menu-item.action { color: var(--accent-color); font-weight: 500; }
         .menu-icon { width: 24px; text-align: center; margin-right: 12px; font-size: 1.1rem; }
         
-        /* Sidebar Toggle Switch */
+        /* Toggle Switch */
         .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
@@ -101,20 +108,19 @@
         input:checked + .toggle-slider { background-color: var(--accent-color); }
         input:checked + .toggle-slider:before { transform: translateX(20px); }
 
-        /* === 统计面板 (Statistics) === */
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .stat-card { 
-            background: var(--bg-body); border-radius: 12px; padding: 12px; 
-            text-align: center; border: 1px solid var(--border-color);
+        /* === 统计面板 (Advanced) === */
+        .chart-section {
+            background: var(--bg-body); border-radius: 12px; padding: 15px; margin-bottom: 15px;
+            border: 1px solid var(--border-color);
         }
-        .stat-val { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; display: block; }
-        .stat-label { font-size: 0.75rem; color: var(--text-secondary); }
+        .chart-header { font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); border-left: 3px solid var(--accent-color); padding-left: 8px; }
+        .chart-canvas-container { position: relative; height: 200px; width: 100%; }
         
-        .chart-container { margin-bottom: 20px; padding: 0 5px; }
-        .chart-bar-bg { height: 12px; background: var(--border-color); border-radius: 6px; overflow: hidden; display: flex; }
-        .chart-seg { height: 100%; transition: width 0.5s; }
-        .chart-legend { display: flex; gap: 15px; margin-top: 10px; font-size: 0.8rem; justify-content: center; color: var(--text-secondary); }
-        .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+        /* Stats Summary Cards */
+        .stats-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+        .summary-card { background: var(--bg-body); padding: 10px 5px; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
+        .summary-val { font-size: 1.1rem; font-weight: 800; display: block; }
+        .summary-label { font-size: 0.7rem; color: var(--text-secondary); }
 
         /* === 原始样式保留 === */
         .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); z-index: 50; }
@@ -194,8 +200,9 @@
 
         /* === 模态框 (Modal) === */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal { background: var(--bg-card); padding: 20px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
-        .modal h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 15px; }
+        .modal { background: var(--bg-card); padding: 25px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .modal.full-height { height: 85vh; }
+        .modal h2 { margin-top: 0; font-size: 1.3rem; margin-bottom: 20px; text-align: center; font-weight: 800; }
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.85em; font-weight: 600; }
@@ -221,11 +228,11 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2><span style="font-size:1.5rem">🗂️</span> Anki Pro</h2>
-            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:5px;">Study smart, not hard.</div>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:5px;">Advanced Analytics</div>
         </div>
         <div class="sidebar-menu">
             <div class="menu-item">
-                <span style="display:flex; align-items:center"><span class="menu-icon">📅</span> 显示月份面板</span>
+                <span style="display:flex; align-items:center"><span class="menu-icon">📅</span> 显示归档面板</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="sidebar-show-archive" onchange="toggleConfig('showArchivePanel', this.checked)">
                     <span class="toggle-slider"></span>
@@ -241,7 +248,7 @@
             </div>
 
             <div class="menu-item action" onclick="openStatsModal()">
-                <span style="display:flex; align-items:center"><span class="menu-icon">📊</span> 查看统计数据</span>
+                <span style="display:flex; align-items:center"><span class="menu-icon">📊</span> 统计数据 (Statistics)</span>
                 <span>›</span>
             </div>
 
@@ -255,47 +262,73 @@
             </div>
         </div>
         <div style="padding: 20px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
-            Version 3.0 Mobile
+            Version 4.0 Chart Edition
         </div>
     </div>
 
     <div class="modal-overlay" id="statsModal">
-        <div class="modal">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h2>学习统计</h2>
+        <div class="modal full-height">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
+                <h2 style="margin:0">📊 牌组统计</h2>
                 <button class="icon-btn" style="width:30px; height:30px; font-size:18px;" onclick="document.getElementById('statsModal').style.display='none'">✕</button>
             </div>
-            
-            <div class="chart-container">
-                <div style="margin-bottom:8px; font-size:0.9rem; font-weight:600;">卡片熟练度分布</div>
-                <div class="chart-bar-bg" id="stat-bar-container">
-                    </div>
-                <div class="chart-legend">
-                    <div><span class="legend-dot" style="background:var(--color-new)"></span>新卡</div>
-                    <div><span class="legend-dot" style="background:var(--color-learn)"></span>学习中</div>
-                    <div><span class="legend-dot" style="background:var(--color-review)"></span>复习</div>
-                </div>
-            </div>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-val" id="stat-total">0</span>
-                    <span class="stat-label">总卡片数</span>
+            <div style="flex:1; overflow-y:auto; padding-right:5px;">
+                
+                <div class="stats-summary-grid">
+                    <div class="summary-card">
+                        <span class="summary-val" id="sum-due" style="color:var(--color-again)">0</span>
+                        <span class="summary-label">今日到期</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-val" id="sum-avg-int">0d</span>
+                        <span class="summary-label">平均间隔</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-val" id="sum-retention">0%</span>
+                        <span class="summary-label">复习保留率</span>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-val" id="stat-due">0</span>
-                    <span class="stat-label">今日到期</span>
+
+                <div class="chart-section">
+                    <div class="chart-header">将来到期的复习 (Forecast)</div>
+                    <div class="chart-canvas-container">
+                        <canvas id="chartForecast"></canvas>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-val" id="stat-learned">0</span>
-                    <span class="stat-label">已掌握 (Mature)</span>
+
+                <div class="chart-section">
+                    <div class="chart-header">卡片数量 (Card Counts)</div>
+                    <div class="chart-canvas-container" style="height:250px;">
+                        <canvas id="chartCounts"></canvas>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-val" id="stat-ease">0%</span>
-                    <span class="stat-label">平均难度系数</span>
+
+                <div class="chart-section">
+                    <div class="chart-header">复习间隔 (Review Intervals)</div>
+                    <div class="chart-canvas-container">
+                        <canvas id="chartIntervals"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="chart-header">本次学习回答分布 (Answer Buttons)</div>
+                    <div class="chart-canvas-container">
+                        <canvas id="chartButtons"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <div class="chart-header">今日逐小时分析 (Hourly Breakdown)</div>
+                    <div class="chart-canvas-container">
+                        <canvas id="chartHourly"></canvas>
+                    </div>
+                </div>
+
+                <div style="font-size:0.7rem; color:var(--text-secondary); text-align:center; padding:10px;">
+                    * 统计数据基于当前本地缓存。<br>FSRS 相关指标(难度/稳定性)已隐藏。
                 </div>
             </div>
-            <button class="btn btn-save" onclick="document.getElementById('statsModal').style.display='none'">关闭</button>
         </div>
     </div>
 
@@ -378,13 +411,19 @@
         const LOCAL_DB_KEY = 'anki_db_v2'; 
         const DELETED_IDS_KEY = 'anki_deleted_ids'; 
 
+        // Session Stats (Reset on reload, mimic "Today" for analytics)
+        let sessionStats = {
+            buttons: {1:0, 2:0, 3:0, 4:0},
+            hourly: new Array(24).fill(0)
+        };
+
         let CURRENT_VIEW_YEAR = new Date().getFullYear();
         let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
         let GLOBAL_CONFIG = null;
         let cardQueue = [], totalItemsCount = 0;
 
         // ============================================
-        // Scheduler (Original Logic)
+        // Scheduler & Logic
         // ============================================
         class AnkiScheduler {
             constructor() { this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); }
@@ -408,7 +447,7 @@
 
             getCardState(id) {
                 if (!this.db[id]) {
-                    this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 };
+                    this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0, laps: 0, reviews: 0 };
                 }
                 if (isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
                 return this.db[id];
@@ -426,7 +465,18 @@
 
             answerCard(id, rating) {
                 const result = this.calculate(this.getCardState(id), rating);
-                this.db[id] = result.card; this.save();
+                // Update internal stats
+                result.card.reviews = (result.card.reviews || 0) + 1;
+                if(rating === 1) result.card.laps = (result.card.laps || 0) + 1;
+                
+                // Save to DB
+                this.db[id] = result.card; 
+                this.save();
+
+                // Update Session Stats
+                sessionStats.buttons[rating]++;
+                sessionStats.hourly[new Date().getHours()]++;
+
                 return result;
             }
 
@@ -475,6 +525,162 @@
         const scheduler = new AnkiScheduler();
 
         // ============================================
+        // Chart & Statistics Implementation
+        // ============================================
+        let charts = {}; // Store chart instances
+
+        function openStatsModal() {
+            toggleSidebar(false);
+            document.getElementById('statsModal').style.display = 'flex';
+            renderAllCharts();
+        }
+
+        function renderAllCharts() {
+            const db = scheduler.db;
+            const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+            const validCards = Object.values(db).filter(c => !blacklist.includes(c.id)); // Assuming ID is key or property
+
+            // Prepare Data Containers
+            const now = Date.now();
+            const forecast = {};
+            const counts = { new:0, learn:0, young:0, mature:0, suspended:0 };
+            const intervals = {};
+            let totalInterval = 0;
+            let reviewCountForAvg = 0;
+            let dueToday = 0;
+
+            // --- 1. Process Data ---
+            validCards.forEach(c => {
+                // Counts
+                if (c.state === 'new') counts.new++;
+                else if (c.state === 'learning') counts.learn++;
+                else if (c.state === 'review') {
+                    if (c.interval >= 21) counts.mature++;
+                    else counts.young++;
+                    
+                    // Intervals
+                    const days = Math.round(c.interval);
+                    intervals[days] = (intervals[days] || 0) + 1;
+                    totalInterval += days;
+                    reviewCountForAvg++;
+                }
+
+                // Forecast
+                if (c.dueDate > now) {
+                    const diffTime = c.dueDate - now;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    if (diffDays <= 30) {
+                        forecast[diffDays] = (forecast[diffDays] || 0) + 1;
+                    }
+                } else if (c.state !== 'new') {
+                    dueToday++;
+                }
+            });
+
+            // Calculate Summaries
+            const avgInt = reviewCountForAvg > 0 ? (totalInterval / reviewCountForAvg).toFixed(1) : 0;
+            document.getElementById('sum-due').innerText = dueToday;
+            document.getElementById('sum-avg-int').innerText = avgInt + 'd';
+            // Simple retention estimation based on session ease buttons (Good+Easy / Total)
+            const totalSess = sessionStats.buttons[1]+sessionStats.buttons[2]+sessionStats.buttons[3]+sessionStats.buttons[4];
+            const passRate = totalSess > 0 ? Math.round(((sessionStats.buttons[3]+sessionStats.buttons[4])/totalSess)*100) : '--';
+            document.getElementById('sum-retention').innerText = passRate + '%';
+
+            // --- 2. Render Charts ---
+
+            // Config for Charts
+            const chartDefaults = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            };
+
+            // Chart 1: Forecast (Bar)
+            const forecastLabels = Array.from({length: 30}, (_, i) => i + 1);
+            const forecastData = forecastLabels.map(d => forecast[d] || 0);
+            
+            createOrUpdateChart('chartForecast', 'bar', {
+                labels: forecastLabels,
+                datasets: [{
+                    label: '复习数',
+                    data: forecastData,
+                    backgroundColor: '#bdc3c7',
+                    hoverBackgroundColor: '#2563eb',
+                    barPercentage: 0.8
+                }]
+            }, {
+                ...chartDefaults,
+                scales: { x: { display:true, title:{display:true, text:'天数'} }, y: { beginAtZero: true } }
+            });
+
+            // Chart 2: Card Counts (Doughnut)
+            createOrUpdateChart('chartCounts', 'doughnut', {
+                labels: ['New', 'Learn', 'Young', 'Mature'],
+                datasets: [{
+                    data: [counts.new, counts.learn, counts.young, counts.mature],
+                    backgroundColor: ['#42a5f5', '#ff7043', '#ffa726', '#66bb6a'],
+                    borderWidth: 0
+                }]
+            }, {
+                ...chartDefaults,
+                plugins: { legend: { display: true, position: 'right' } }
+            });
+
+            // Chart 3: Intervals (Bar)
+            const intLabels = Object.keys(intervals).map(Number).sort((a,b)=>a-b);
+            // Limit to top 20 distinct intervals or buckets if too many (simplification for mobile)
+            const displayIntLabels = intLabels.length > 30 ? intLabels.slice(0,30) : intLabels; 
+            const intData = displayIntLabels.map(d => intervals[d]);
+            
+            createOrUpdateChart('chartIntervals', 'bar', {
+                labels: displayIntLabels,
+                datasets: [{
+                    label: '卡片数',
+                    data: intData,
+                    backgroundColor: '#26a69a'
+                }]
+            }, { ...chartDefaults, scales: { x: { title:{display:true, text:'天数'} } } });
+
+            // Chart 4: Buttons (Pie)
+            createOrUpdateChart('chartButtons', 'pie', {
+                labels: ['Again', 'Hard', 'Good', 'Easy'],
+                datasets: [{
+                    data: [sessionStats.buttons[1], sessionStats.buttons[2], sessionStats.buttons[3], sessionStats.buttons[4]],
+                    backgroundColor: ['#ff5252', '#ffab40', '#69f0ae', '#40c4ff'],
+                    borderWidth: 0
+                }]
+            }, { 
+                ...chartDefaults, 
+                plugins: { legend: { display: true, position: 'bottom' } } 
+            });
+
+             // Chart 5: Hourly (Line/Area)
+             const hourLabels = sessionStats.hourly.map((_, i) => i);
+             createOrUpdateChart('chartHourly', 'line', {
+                labels: hourLabels,
+                datasets: [{
+                    label: '复习次数',
+                    data: sessionStats.hourly,
+                    borderColor: '#7e57c2',
+                    backgroundColor: 'rgba(126, 87, 194, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+             }, {
+                 ...chartDefaults,
+                 scales: { x: { title:{display:true, text:'小时 (24h)'} } }
+             });
+        }
+
+        function createOrUpdateChart(canvasId, type, data, options) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+            charts[canvasId] = new Chart(ctx, { type, data, options });
+        }
+
+        // ============================================
         // Sidebar & UI Logic
         // ============================================
         function toggleSidebar(show) {
@@ -482,7 +688,6 @@
             const overlay = document.getElementById('sidebarOverlay');
             if(show) { 
                 sb.classList.add('active'); overlay.classList.add('active'); 
-                // 同步侧边栏开关状态
                 document.getElementById('sidebar-show-archive').checked = USER_CONFIG.showArchivePanel;
                 document.getElementById('sidebar-enable-delete').checked = USER_CONFIG.enableDelete;
             } else { 
@@ -490,7 +695,6 @@
             }
         }
 
-        // 快捷切换配置 (无需保存按钮)
         function toggleConfig(key, value) {
             USER_CONFIG[key] = value;
             localStorage.setItem('gh_' + key, value);
@@ -509,59 +713,8 @@
             }
         }
 
-        // 统计图表逻辑
-        function openStatsModal() {
-            toggleSidebar(false);
-            const db = scheduler.db;
-            const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
-            
-            let stats = { new: 0, learn: 0, review: 0, total: 0, due: 0, mature: 0, easeSum: 0, easeCount: 0 };
-            const now = Date.now();
-
-            Object.keys(db).forEach(id => {
-                if(blacklist.includes(id)) return;
-                const c = db[id];
-                stats.total++;
-                
-                if (c.state === 'new') stats.new++;
-                else if (c.state === 'learning') stats.learn++;
-                else {
-                    stats.review++;
-                    if (c.interval > 21) stats.mature++;
-                    stats.easeSum += (c.easeFactor || 2.5);
-                    stats.easeCount++;
-                }
-                if (c.dueDate && c.dueDate < now) stats.due++;
-            });
-
-            document.getElementById('stat-total').innerText = stats.total;
-            document.getElementById('stat-due').innerText = stats.due;
-            document.getElementById('stat-learned').innerText = stats.mature;
-            const avgEase = stats.easeCount > 0 ? Math.round((stats.easeSum / stats.easeCount) * 100) : 250;
-            document.getElementById('stat-ease').innerText = avgEase + '%';
-
-            // 绘制条形图
-            const barContainer = document.getElementById('stat-bar-container');
-            barContainer.innerHTML = '';
-            if (stats.total > 0) {
-                const addSeg = (count, color) => {
-                    if(count === 0) return;
-                    const d = document.createElement('div');
-                    d.className = 'chart-seg';
-                    d.style.width = (count / stats.total * 100) + '%';
-                    d.style.backgroundColor = color;
-                    barContainer.appendChild(d);
-                };
-                addSeg(stats.new, 'var(--color-new)');
-                addSeg(stats.learn, 'var(--color-learn)');
-                addSeg(stats.review, 'var(--color-review)');
-            }
-
-            document.getElementById('statsModal').style.display = 'flex';
-        }
-
         // ============================================
-        // Sync Logic (Original Robust Version)
+        // Sync Logic
         // ============================================
         const uiSync = document.getElementById('sync-status');
         function updateSyncStatus(msg, type) {
@@ -570,7 +723,7 @@
         }
 
         async function fetchCloudProgress(btnElement) {
-            if(btnElement) toggleSidebar(false); // 如果是从侧边栏点击的，关闭侧边栏
+            if(btnElement) toggleSidebar(false); 
             if(!USER_CONFIG.token) { alert("请先在高级设置中填写 Token"); return; }
             
             const originalText = btnElement ? btnElement.innerHTML : '';
@@ -627,7 +780,6 @@
                     if(getRes.ok) { sha = (await getRes.json()).sha; }
                 } catch(e) {}
 
-                // 清理黑名单数据
                 const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
                 for (const id of blacklist) { if (scheduler.db[id]) delete scheduler.db[id]; }
 
@@ -745,7 +897,6 @@
 
             const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
             const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
-            // Deduplicate
             const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
             totalItemsCount = uniqueItems.length;
 
@@ -758,7 +909,6 @@
                 else newCards.push(item);
             });
 
-            // Shuffle
             const shuffle = (arr) => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}};
             shuffle(learning); shuffle(review); shuffle(newCards);
 
@@ -903,7 +1053,7 @@
         }
 
         // ============================================
-        // TTS Logic (Original Robust Version)
+        // TTS Logic
         // ============================================
         function constructTTSUrl(configObj, text) {
             let url = configObj.url.replace('{text}', encodeURIComponent(text));
