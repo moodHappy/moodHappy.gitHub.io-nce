@@ -7,11 +7,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#ffffff">
     <meta name="format-detection" content="telephone=no">
-    
+
     <title>英语词汇笔记</title>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
+
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3389/3389081.png">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3389/3389081.png">
 
@@ -131,8 +131,10 @@
         }
 
         .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-        .app-name { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
-        .status-badge { font-size: 12px; padding: 4px 10px; background: rgba(0,0,0,0.05); border-radius: 10px; margin-top: 10px;}
+        .app-name { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+        
+        /* 新增：副标题样式 */
+        .app-subtitle { font-size: 14px; color: var(--text-sub); font-weight: 400; letter-spacing: 0.5px; }
 
         /* 列表项 */
         .result-list { display: none; } /* 初始隐藏 */
@@ -217,14 +219,6 @@
         .md-content strong { color: #000; font-weight: 700; background: linear-gradient(180deg, transparent 65%, rgba(46, 134, 222, 0.2) 65%); }
         .md-content hr { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
 
-        /* 加载动画 */
-        .spinner {
-            width: 20px; height: 20px; border: 2px solid #ddd;
-            border-top-color: var(--accent); border-radius: 50%;
-            animation: spin 0.8s linear infinite; margin: 0 auto 10px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
     </style>
 </head>
 <body>
@@ -243,13 +237,11 @@
         <div id="emptyState" class="empty-state">
             <div style="font-size: 60px; margin-bottom: 20px;">📘</div>
             <div class="app-name">Dictionary App</div>
-            <div class="status-badge" id="statusBadge">
-                <div class="spinner"></div> 正在同步数据...
-            </div>
+            <div class="app-subtitle">English Vocabulary Notes</div>
         </div>
 
         <div id="resultList" class="result-list">
-            </div>
+        </div>
     </div>
 
     <div id="detailView">
@@ -282,7 +274,6 @@
         clearBtn: document.getElementById('clearBtn'),
         emptyState: document.getElementById('emptyState'),
         resultList: document.getElementById('resultList'),
-        statusBadge: document.getElementById('statusBadge'),
         detailView: document.getElementById('detailView'),
         detailContent: document.getElementById('detailContent')
     };
@@ -291,22 +282,22 @@
     window.addEventListener('DOMContentLoaded', initApp);
 
     async function initApp() {
-        // 策略：先读缓存(秒开)，再请求网络(更新)
+        // 策略：先读缓存(秒开)，再后台静默请求网络(更新)
         const cached = localStorage.getItem(CONFIG.cacheKey);
-        
+
         if (cached) {
             try {
                 store.data = JSON.parse(cached);
-                updateStatus(`Ready (${store.data.length} words)`, false);
+                // 缓存加载完毕，但不显示任何提示
             } catch(e) { console.error('Cache error', e); }
         }
 
-        // 网络请求
+        // 网络请求 (静默执行，不更新UI状态文本)
         try {
             const res = await fetch(CONFIG.url);
             if (!res.ok) throw new Error("Net Err");
             const text = await res.text();
-            
+
             // 混合解析：JSON Array 或 NDJSON
             let newData = [];
             try {
@@ -323,14 +314,11 @@
             if (JSON.stringify(newData) !== cached) {
                 store.data = newData;
                 localStorage.setItem(CONFIG.cacheKey, JSON.stringify(newData));
-                updateStatus(`Updated (${store.data.length} words)`, false);
+                console.log('Data silently updated via network');
             }
         } catch (err) {
-            if (store.data.length === 0) {
-                updateStatus('Offline - No Data', false, true);
-            } else {
-                console.log('Using offline cache');
-            }
+            // 静默失败，仅在控制台记录
+            console.log('Background sync failed or offline');
         }
 
         // 处理物理返回键 (History API)
@@ -339,13 +327,6 @@
                 closeDetailView();
             }
         });
-    }
-
-    function updateStatus(msg, loading = true, error = false) {
-        UI.statusBadge.innerHTML = loading 
-            ? `<div class="spinner"></div> ${msg}` 
-            : msg;
-        UI.statusBadge.style.color = error ? '#e74c3c' : '#2d3436';
     }
 
     // --- 2. 搜索逻辑 ---
@@ -410,13 +391,13 @@
 
         // 渲染 Markdown
         const html = item.content ? marked.parse(item.content) : '<p>No content</p>';
-        
+
         // 组装详情页 HTML (加入大标题)
         UI.detailContent.innerHTML = `<h1>${item.word}</h1>${html}`;
 
         // 显示页面
         UI.detailView.classList.add('active');
-        
+
         // 收起键盘
         UI.input.blur();
 
