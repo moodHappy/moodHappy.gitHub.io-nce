@@ -144,7 +144,7 @@
 
         #notes-container { 
             perspective: 1000px; position: relative; flex: 1; display: flex; flex-direction: column; 
-            justify-content: flex-end; padding-bottom: 10vh; transition: all 0.3s ease;
+            justify-content: flex-end; padding-bottom: 20px; transition: all 0.3s ease;
         }
         body.hide-archive #notes-container { justify-content: center; padding-bottom: 5vh; }
 
@@ -190,7 +190,7 @@
         }
         /* 当 meaning 被 reveal 时，显示 control */
         .note-meaning.revealed ~ .anki-controls { opacity: 1; pointer-events: auto; transform: translateY(0); }
-        
+
         .anki-btn {
             padding: 12px 4px; border-radius: 12px; border: none; cursor: pointer;
             background: var(--bg-body); color: var(--text-secondary); position: relative; overflow: hidden;
@@ -203,6 +203,19 @@
         .btn-easy::after { background: var(--color-easy); }
         .btn-label { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px;}
         .btn-time { font-size: 0.7rem; opacity: 0.8; }
+
+        /* === 底部统计栏 (New Feature) === */
+        .bottom-stats-bar {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            padding: 15px 0 5px 0;
+            width: 100%;
+            margin-top: auto;
+            flex-shrink: 0;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
 
         /* === 模态框 (Modal) === */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -235,6 +248,7 @@
             .chart-header { font-size: 0.85rem; padding-left: 6px; margin-bottom: 8px; }
             .chart-canvas-container { height: 180px; }
             .chart-section { padding: 10px; margin-bottom: 10px; }
+            .bottom-stats-bar { font-size: 0.7rem; padding-bottom: 0; }
         }
     </style>
 </head>
@@ -278,7 +292,7 @@
             </div>
         </div>
         <div style="padding: 20px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
-            Version 4.2 Optimized
+            Version 4.3 Optimized
         </div>
     </div>
 
@@ -345,7 +359,7 @@
         </div>
 
         <div id="notes-container">
-            
+
             <div id="state-message" class="status-page">
                 <div class="emoji-lg" id="msg-emoji">⏳</div>
                 <div id="msg-title" style="font-weight:700; margin-bottom:5px;">初始化中...</div>
@@ -355,12 +369,12 @@
 
             <div id="static-card" class="note-card hidden-el" onclick="handleCardClick(event)">
                 <button id="btn-delete-card" class="btn-delete-card hidden-el" onclick="deleteCurrentCard(this)" title="从云端永久删除">🗑️</button>
-                
+
                 <div id="card-word" class="note-word">--</div>
                 <a id="card-source" href="#" target="_blank" class="note-source">Source Link</a>
-                
+
                 <div id="card-meaning" class="note-meaning">--</div>
-                
+
                 <div class="tts-container">
                     <button id="btn-play-tts" class="tts-btn" onclick="playTTS(this)">
                          <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -384,6 +398,10 @@
             </div>
 
         </div>
+        
+        <div class="bottom-stats-bar" id="bottom-stats-text">
+            今天在 0 秒内学习了 0 张卡片 (平均每张卡片 0 秒)
+        </div>
     </div>
 
     <script>
@@ -392,6 +410,7 @@
         // ============================================
         let globalAudio = null;
         let isDirty = false; // 脏数据标记：true 表示有未同步的进度
+        let currentCardStartTime = 0; // 记录当前卡片开始显示的时间
 
         const DEFAULT_TTS_LIST = [
             { url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
@@ -416,18 +435,52 @@
         function getDailyStats() {
             const todayStr = new Date().toLocaleDateString();
             let data = JSON.parse(localStorage.getItem(DAILY_STATS_KEY) || 'null');
-            if (!data || data.date !== todayStr) {
-                data = { date: todayStr, buttons: {1:0, 2:0, 3:0, 4:0}, hourly: new Array(24).fill(0) };
+            // 如果日期不同，或者数据结构旧（缺少 count/time），则重置
+            if (!data || data.date !== todayStr || typeof data.count === 'undefined') {
+                data = { 
+                    date: todayStr, 
+                    buttons: {1:0, 2:0, 3:0, 4:0}, 
+                    hourly: new Array(24).fill(0),
+                    count: 0, // 今天复习的总张数
+                    time: 0   // 今天复习的总秒数
+                };
             }
             return data;
         }
 
-        function updateDailyStats(rating) {
+        function updateDailyStats(rating, durationSec) {
             let data = getDailyStats();
             data.buttons[rating]++;
             data.hourly[new Date().getHours()]++;
+            
+            data.count = (data.count || 0) + 1;
+            // Cap duration per card to 60s to avoid AFK skewing stats
+            const safeDuration = Math.min(Math.max(0, durationSec), 60); 
+            data.time = (data.time || 0) + safeDuration;
+
             localStorage.setItem(DAILY_STATS_KEY, JSON.stringify(data));
             return data;
+        }
+
+        function updateBottomStatsUI() {
+            const stats = getDailyStats();
+            const count = stats.count || 0;
+            const time = stats.time || 0;
+            
+            // Format total time string (seconds or minutes)
+            let timeStr = "";
+            if (time < 60) {
+                timeStr = `${Math.round(time)} 秒`;
+            } else {
+                timeStr = `${(time / 60).toFixed(1)} 分钟`;
+            }
+
+            // Calculate average (avoid divide by zero)
+            const avg = count > 0 ? (time / count).toFixed(1) : 0;
+
+            const text = `今天在 ${timeStr}内学习了 ${count} 张卡片 (平均每张卡片 ${avg} 秒)`;
+            const el = document.getElementById('bottom-stats-text');
+            if(el) el.innerText = text;
         }
 
         let sessionStats = getDailyStats();
@@ -482,14 +535,14 @@
                 const result = this.calculate(this.getCardState(id), rating);
                 result.card.reviews = (result.card.reviews || 0) + 1;
                 if(rating === 1) result.card.laps = (result.card.laps || 0) + 1;
-                
+
                 this.db[id] = result.card; 
                 this.save();
-                
+
                 // Mark as Dirty for Auto-Sync
                 isDirty = true;
                 
-                sessionStats = updateDailyStats(rating);
+                // Note: daily stats update now happens in handleRate to capture time accurately
                 return result;
             }
 
@@ -637,7 +690,7 @@
                 const data = await res.json();
                 const content = decodeURIComponent(escape(atob(data.content))); 
                 const count = scheduler.loadExternalData(JSON.parse(content));
-                
+
                 // 重置脏数据状态，因为刚下载完
                 isDirty = false;
 
@@ -679,7 +732,7 @@
                 });
 
                 if(!putRes.ok) throw new Error('Upload failed');
-                
+
                 // 上传成功，重置脏数据状态
                 isDirty = false;
 
@@ -697,6 +750,7 @@
         // ============================================
         async function startApp() {
             applyViewSettings();
+            updateBottomStatsUI(); // Initialize stats UI
             let sha = 'master';
             try {
                 const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master?t=${Date.now()}`);
@@ -776,7 +830,7 @@
 
         async function loadCardsForDate(year, month) {
             CURRENT_VIEW_YEAR = year; CURRENT_VIEW_MONTH = month;
-            
+
             // Show Loading
             document.getElementById('state-message').classList.remove('hidden-el');
             document.getElementById('static-card').classList.add('hidden-el');
@@ -843,6 +897,9 @@
                 return;
             }
 
+            // Start Timer for this card
+            currentCardStartTime = Date.now();
+
             // Prepare Data
             const item = cardQueue[0];
             const times = scheduler.previewNextDue(item.id);
@@ -850,13 +907,13 @@
 
             // DOM Updates (No innerHTML rebuild)
             msgEl.classList.add('hidden-el');
-            
+
             // 1. Reset State
             cardEl.style.opacity = '0';
             cardEl.style.transform = 'translateY(10px)';
             const meaningEl = document.getElementById('card-meaning');
             meaningEl.classList.remove('revealed'); 
-            
+
             // 2. Update Content
             document.getElementById('card-word').textContent = item.text;
             document.getElementById('card-source').href = sourceUrl;
@@ -898,8 +955,16 @@
         function handleRate(rating) {
             stopCurrentAudio(); 
             const item = cardQueue[0];
-            scheduler.answerCard(item.id, rating);
             
+            // Calculate time spent on this card
+            const durationSec = (Date.now() - currentCardStartTime) / 1000;
+            
+            // Update stats
+            sessionStats = updateDailyStats(rating, durationSec);
+            updateBottomStatsUI();
+
+            scheduler.answerCard(item.id, rating);
+
             // Animation Out
             const cardEl = document.getElementById('static-card');
             cardEl.style.transform = 'translateY(-20px)'; 
@@ -1015,7 +1080,7 @@
         }
 
         // ============================================
-        // Settings UI Logic (修正版 - 找回测试功能)
+        // Settings UI Logic
         // ============================================
         function renderTTSConfigList() {
             const container = document.getElementById('tts-config-list');
@@ -1037,31 +1102,27 @@
             });
         }
 
-        // 漏掉的测试函数
         function testSingleTTS(index, btn) {
             stopCurrentAudio(); 
             const config = getTTSConfigFromUI(index); 
             if (!config.url) return;
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳';
-            // 使用标准测试语
             const url = constructTTSUrl(config, "Connection successful");
             const audio = new Audio(url);
             globalAudio = audio;
-            
-            // 成功回调
+
             audio.onended = () => { 
                 btn.innerHTML = '✅'; 
                 setTimeout(() => btn.innerHTML = originalText, 2000); 
                 globalAudio = null; 
             };
-            // 失败回调
             audio.onerror = () => { 
                 btn.innerHTML = '❌'; 
                 setTimeout(() => btn.innerHTML = originalText, 2000); 
                 globalAudio = null; 
             };
-            
+
             audio.play().catch(() => { 
                 btn.innerHTML = '❌'; 
                 setTimeout(() => btn.innerHTML = originalText, 2000); 
@@ -1142,22 +1203,22 @@
             document.getElementById('sum-retention').innerText = totalSess > 0 ? Math.round(((sessionStats.buttons[3]+sessionStats.buttons[4])/totalSess)*100) + '%' : '--';
 
             const commonOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
-            
+
             // Forecast
             const fLabs = Array.from({length: 30}, (_, i) => i + 1);
             createOrUpdateChart('chartForecast', 'bar', { labels: fLabs, datasets: [{ data: fLabs.map(d => forecast[d]||0), backgroundColor: '#bdc3c7' }] }, { ...commonOpts, scales: { x: { display:true }, y: { beginAtZero: true } } });
-            
+
             // Counts
             createOrUpdateChart('chartCounts', 'doughnut', { labels: ['New', 'Learn', 'Young', 'Mature'], datasets: [{ data: [counts.new, counts.learn, counts.young, counts.mature], backgroundColor: ['#42a5f5', '#ff7043', '#ffa726', '#66bb6a'], borderWidth: 0 }] }, { ...commonOpts, plugins: { legend: { display: true, position: 'right' } } });
-            
+
             // Intervals
             const iLabs = Object.keys(intervals).map(Number).sort((a,b)=>a-b).slice(0, 30);
             createOrUpdateChart('chartIntervals', 'bar', { labels: iLabs, datasets: [{ data: iLabs.map(d => intervals[d]), backgroundColor: '#26a69a' }] }, commonOpts);
-            
+
             // Buttons
             const bData = [sessionStats.buttons[1], sessionStats.buttons[2], sessionStats.buttons[3], sessionStats.buttons[4]];
             createOrUpdateChart('chartButtons', 'pie', { labels: ['Again', 'Hard', 'Good', 'Easy'], datasets: [{ data: bData.some(x=>x>0)?bData:[1], backgroundColor: bData.some(x=>x>0)?['#ff5252', '#ffab40', '#69f0ae', '#40c4ff']:['#e0e0e0'], borderWidth: 0 }] }, { ...commonOpts, plugins: { legend: { display: true, position: 'bottom' } } });
-            
+
             // Hourly
             createOrUpdateChart('chartHourly', 'line', { labels: sessionStats.hourly.map((_, i) => i), datasets: [{ data: sessionStats.hourly, borderColor: '#7e57c2', backgroundColor: 'rgba(126, 87, 194, 0.2)', fill: true, tension: 0.4 }] }, { ...commonOpts, scales: { y: { beginAtZero: true } } });
         }
