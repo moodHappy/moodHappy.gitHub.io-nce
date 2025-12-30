@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 阅读 & 创作助手 (GitHub版)</title>
+    <title>AI 阅读 & 创作助手 (多源版)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
@@ -162,6 +162,18 @@
             border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 1em; background: #fff;
         }
         .save-btn { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; }
+        
+        /* 多源管理样式 */
+        .provider-list { list-style: none; margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .provider-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
+        .provider-item:last-child { border-bottom: none; }
+        .provider-info { display: flex; flex-direction: column; gap: 2px; }
+        .provider-name { font-weight: 600; color: var(--text-secondary); font-size: 0.95em; }
+        .provider-detail { font-size: 0.8em; color: #888; }
+        .provider-actions { display: flex; gap: 8px; }
+        .btn-sm { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; }
+        .btn-danger { background: #ffebee; color: #c62828; }
+        .new-provider-box { background: #f8f4f0; padding: 15px; border-radius: 8px; border: 1px dashed var(--primary-color); margin-bottom: 15px; }
 
         /* 范围滑块样式 */
         .range-slider-container { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
@@ -186,7 +198,6 @@
         /* --- 风格管理 --- */
         #customStyleList { list-style: none; max-height: 200px; overflow-y: auto; margin-top: 10px; border: 1px solid #eee; border-radius: 8px; }
         #customStyleList li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .delete-style-btn { background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 
         /* --- 设置分组 --- */
         .settings-section-title { font-size: 0.9em; font-weight: 700; color: var(--primary-color); margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
@@ -334,22 +345,28 @@
                     </div>
                 </div>
 
-                <div class="settings-section-title">🤖 API & 同步</div>
+                <div class="settings-section-title">🤖 AI 模型源配置 (多源支持)</div>
                 <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GROQ API Key</label>
-                    <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">当前使用模型 (Active Provider)</label>
+                    <select id="activeProviderSelect" class="settings-select" onchange="switchActiveProvider(this.value)"></select>
                 </div>
+                
+                <div class="provider-list" id="providerListDisplay"></div>
+                
+                <div class="new-provider-box">
+                    <label style="display:block;margin-bottom:8px;font-size:0.85em;color:#8b7355;font-weight:600;">添加新 AI 源 (兼容 OpenAI 格式)</label>
+                    <input type="text" id="newProviderName" class="settings-input" style="margin-bottom:8px;font-size:0.9em;" placeholder="备注名 (如: DeepSeek, Moonshot)">
+                    <input type="text" id="newProviderHost" class="settings-input" style="margin-bottom:8px;font-size:0.9em;" placeholder="API Host (如: https://api.deepseek.com/v1)">
+                    <input type="password" id="newProviderKey" class="settings-input" style="margin-bottom:8px;font-size:0.9em;" placeholder="API Key (sk-...)">
+                    <input type="text" id="newProviderModel" class="settings-input" style="margin-bottom:10px;font-size:0.9em;" placeholder="模型ID (如: deepseek-chat)">
+                    <button onclick="addNewProvider()" class="btn-outline" style="width:100%;padding:8px;font-size:0.9em;">+ 添加配置</button>
+                </div>
+
+                <div class="settings-section-title">☁️ 同步设置</div>
                 <div class="settings-group">
                     <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token (PAT)</label>
                     <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
                     <small style="color:#999; display:block; margin-top:-10px; margin-bottom:10px;">用于生成小说同步及云端推送功能</small>
-                </div>
-                <div class="settings-group">
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">模型</label>
-                    <select id="modelSelect" class="settings-select">
-                        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick (17b)</option>
-                        <option value="llama-3.3-70b-versatile">Llama 3.3 Versatile (70b)</option>
-                    </select>
                 </div>
                 <div class="settings-group">
                     <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">系统提示词 (分析用)</label>
@@ -366,19 +383,17 @@
 
     <script>
         // --- 核心配置 ---
-        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
 
-        // --- GitHub 读取配置 (保持不变) ---
+        // --- GitHub 读取配置 ---
         const GH_CONFIG = {
             owner: 'moodHappy',
             repo: 'HelloWorld',
             path: 'Notes/B1.md'
         };
-        const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
 
-        // --- GitHub 推送配置 (新增) ---
+        // --- GitHub 推送配置 ---
         const PUSH_CONFIG = {
             owner: 'moodHappy',
             repo: 'moodHappy.gitHub.io-nce',
@@ -421,6 +436,8 @@
         let currentAudio = null;
         let isReading = false;
         let ttsQueue = []; 
+        let aiProviders = [];
+        let activeProviderIndex = 0;
 
         // --- 生成配置 ---
         const THEME_LIBRARY = { '日常生活':[],'悬疑推理':[],'科幻奇幻':[],'历史现实':[],'哲理寓言':[],'爱情情感':[],'心理情绪':[],'幽默讽刺':[],'奇遇冒险':[] };
@@ -449,7 +466,7 @@
             container.innerHTML = '加载中...';
 
             const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
-            const fetchUrl = `${rawUrl}?t=${Date.now()}`; // 避开缓存
+            const fetchUrl = `${rawUrl}?t=${Date.now()}`; 
 
             fetch(fetchUrl)
                 .then(r => {
@@ -465,7 +482,7 @@
                 });
         }
 
-        // --- TTS 功能逻辑 ---
+        // --- TTS 功能逻辑 (保持不变) ---
         function loadTTSConfig() {
             const savedLang = localStorage.getItem('tts_lang') || 'en';
             const savedVoice = localStorage.getItem('tts_voice'); 
@@ -591,18 +608,139 @@
             }
         }
 
-        // --- 通用 AI 调用 ---
-        async function callGroqAPI(messages, temp = 0.7) {
-            const key = localStorage.getItem('groq_api_key');
-            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
-            if (!key) throw new Error("请先在设置中配置 Groq API Key");
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model, messages, temperature: temp })
+        // --- AI 多源配置管理 ---
+        function loadAIConfig() {
+            // 从 LocalStorage 加载配置，如果没有则使用默认 Groq 配置
+            const stored = localStorage.getItem('ai_providers');
+            if (stored) {
+                aiProviders = JSON.parse(stored);
+            } else {
+                aiProviders = [{
+                    name: 'Groq (默认)',
+                    host: 'https://api.groq.com/openai/v1',
+                    key: '',
+                    model: 'meta-llama/llama-4-maverick-17b-128e-instruct'
+                }];
+                // 尝试迁移旧的 key
+                const oldKey = localStorage.getItem('groq_api_key');
+                if (oldKey) aiProviders[0].key = oldKey;
+            }
+            
+            const savedIndex = localStorage.getItem('active_provider_index');
+            activeProviderIndex = (savedIndex !== null && aiProviders[savedIndex]) ? parseInt(savedIndex) : 0;
+            
+            renderProviderUI();
+        }
+
+        function renderProviderUI() {
+            const listEl = document.getElementById('providerListDisplay');
+            const selectEl = document.getElementById('activeProviderSelect');
+            
+            listEl.innerHTML = '';
+            selectEl.innerHTML = '';
+
+            aiProviders.forEach((p, index) => {
+                // 渲染下拉菜单
+                let opt = document.createElement('option');
+                opt.value = index;
+                opt.text = p.name;
+                if(index === activeProviderIndex) opt.selected = true;
+                selectEl.add(opt);
+
+                // 渲染列表
+                let item = document.createElement('div');
+                item.className = 'provider-item';
+                item.innerHTML = `
+                    <div class="provider-info">
+                        <span class="provider-name">${p.name}</span>
+                        <span class="provider-detail">${p.model} | ${p.host}</span>
+                    </div>
+                    <div class="provider-actions">
+                        <button class="btn-sm btn-danger" onclick="deleteProvider(${index})">删除</button>
+                    </div>
+                `;
+                listEl.appendChild(item);
             });
+        }
+
+        function switchActiveProvider(index) {
+            activeProviderIndex = parseInt(index);
+            localStorage.setItem('active_provider_index', activeProviderIndex);
+        }
+
+        function addNewProvider() {
+            const name = document.getElementById('newProviderName').value.trim();
+            const host = document.getElementById('newProviderHost').value.trim();
+            const key = document.getElementById('newProviderKey').value.trim();
+            const model = document.getElementById('newProviderModel').value.trim();
+
+            if (!name || !host || !key || !model) {
+                alert("请填写完整的 AI 配置信息");
+                return;
+            }
+
+            aiProviders.push({ name, host, key, model });
+            saveProviders();
+            
+            // 清空输入
+            document.getElementById('newProviderName').value = '';
+            document.getElementById('newProviderHost').value = '';
+            document.getElementById('newProviderKey').value = '';
+            document.getElementById('newProviderModel').value = '';
+
+            // 自动选中新添加的
+            activeProviderIndex = aiProviders.length - 1;
+            renderProviderUI();
+        }
+
+        function deleteProvider(index) {
+            if (confirm("确定要删除这个配置吗？")) {
+                aiProviders.splice(index, 1);
+                if (aiProviders.length === 0) {
+                     // 至少保留一个空的或默认
+                     aiProviders.push({name: 'New Provider', host:'', key:'', model:''});
+                }
+                if (activeProviderIndex >= aiProviders.length) activeProviderIndex = 0;
+                saveProviders();
+                renderProviderUI();
+            }
+        }
+
+        function saveProviders() {
+            localStorage.setItem('ai_providers', JSON.stringify(aiProviders));
+            localStorage.setItem('active_provider_index', activeProviderIndex);
+        }
+
+        // --- 通用 AI 调用 (重构后) ---
+        async function callGenericAI(messages, temp = 0.7) {
+            const provider = aiProviders[activeProviderIndex];
+            if (!provider || !provider.key) throw new Error("请先在设置中配置有效的 AI 模型和 API Key");
+            
+            // 处理 Host URL，确保包含 /chat/completions，兼容 OpenAI 格式
+            let endpoint = provider.host;
+            if (!endpoint.endsWith('/v1/chat/completions') && !endpoint.endsWith('/chat/completions')) {
+                // 简单的智能补全，如果结尾没有 /，加 /
+                if (!endpoint.endsWith('/')) endpoint += '/';
+                // 如果结尾没有 v1 且不是特定非 v1 接口，通常补全 chat/completions
+                endpoint += 'chat/completions';
+            }
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${provider.key}`, 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    model: provider.model, 
+                    messages: messages, 
+                    temperature: temp,
+                    stream: false
+                })
+            });
+
             const data = await res.json();
-            if(!res.ok) throw new Error(data.error?.message || "请求失败");
+            if(!res.ok) throw new Error(data.error?.message || `请求失败: ${res.status}`);
             return data.choices[0]?.message?.content || "";
         }
 
@@ -618,7 +756,6 @@
             return data.sha;
         }
 
-        // 用于生成微小说的同步
         async function uploadToGitHub(content, token) {
             const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
             const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
@@ -629,7 +766,7 @@
             return true;
         }
 
-        // --- 核心修改: 推送当前内容到 moodHappy.gitHub.io-nce ---
+        // --- 推送当前内容到 moodHappy.gitHub.io-nce ---
         async function pushCurrentContent() {
             const btn = document.getElementById('pushBtn');
             const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
@@ -640,13 +777,11 @@
                 return;
             }
 
-            // 视觉反馈
             const originalIcon = btn.innerHTML;
             btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div>';
             btn.disabled = true;
 
             try {
-                // 1. 获取内容和标题
                 const contentDiv = document.getElementById('dynamic-content');
                 if (!contentDiv) throw new Error("找不到内容区域");
 
@@ -655,7 +790,6 @@
                 if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "...";
                 if (firstSentence.length === 0) firstSentence = `Saved Article`;
 
-                // 2. 生成详细时间戳 (YYYY/MM/DD HH:mm:ss) 用于 Front Matter
                 const now = new Date();
                 const pad = (n) => n.toString().padStart(2, '0');
                 const yyyy = now.getFullYear();
@@ -663,11 +797,9 @@
                 const dd = pad(now.getDate());
                 const timeStr = `${yyyy}/${mm}/${dd} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
-                // 3. 准备 HTML 内容
                 const clone = contentDiv.cloneNode(true);
                 clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
 
-                // ⚠️ layout: false 移除默认头部，CSS 加大字号行高
                 const fileContent = `---
 title: "${firstSentence.replace(/"/g, '\\"')}"
 date: "${timeStr}"
@@ -702,18 +834,13 @@ layout: false
 </body>
 </html>`;
 
-                // 4. 生成文件名
                 let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
                 if (safeFilename.length > 30) safeFilename = safeFilename.substring(0, 30); 
-
-                // 【核心修改】使用 13 位时间戳后缀，适配导航页正则
                 const timestampSuffix = Date.now(); 
                 const filename = `${safeFilename}_${timestampSuffix}.html`;
-
                 const fullPath = `${PUSH_CONFIG.path}/${filename}`;
                 const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
 
-                // 5. 推送
                 const body = {
                     message: `Push: ${filename}`,
                     content: utf8_to_b64(fileContent),
@@ -746,7 +873,7 @@ layout: false
             }
         }
 
-        // --- 分析功能 ---
+        // --- 分析功能 (已更新为使用 callGenericAI) ---
         async function handleAIAnalyzeClick(target) {
             const btn = target.closest('.ai-analyze-btn');
             if (!btn) return;
@@ -762,7 +889,9 @@ layout: false
             box.innerHTML = '<div class="ai-loading"><div class="spinner"></div><p>分析中...</p></div>';
             openModal('aiResultModal');
 
-            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
+            // 获取当前Provider信息用于缓存Key
+            const currentProvider = aiProviders[activeProviderIndex] || {};
+            const model = currentProvider.model || 'unknown';
             const prompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             const cacheKey = generateCacheKey(sentence, prompt, model);
             const cached = getFromCache(cacheKey);
@@ -770,7 +899,7 @@ layout: false
             if (cached) { box.innerHTML = `<div class="ai-result-content">${marked.parse(cached)}</div>`; return; }
 
             try {
-                const content = await callGroqAPI([{role: "system", content: prompt}, {role: "user", content: `Analyze: "${sentence}"`}]);
+                const content = await callGenericAI([{role: "system", content: prompt}, {role: "user", content: `Analyze: "${sentence}"`}]);
                 saveToCache(cacheKey, content);
                 box.innerHTML = `<div class="ai-result-content">${marked.parse(content)}</div>`;
             } catch (e) { box.innerHTML = `<p style="color:#a0522d;padding:20px;">错误: ${e.message}</p>`; }
@@ -849,7 +978,7 @@ layout: false
             document.getElementById('genStatus').innerText = "正在生成题目...";
             document.getElementById('randomTopicsList').innerHTML = '';
             try {
-                const text = await callGroqAPI([{role:"user", content: `Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Separate with newlines. Just the titles.`}]);
+                const text = await callGenericAI([{role:"user", content: `Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Separate with newlines. Just the titles.`}]);
                 text.split('\n').filter(t=>t.trim()).forEach(t => {
                     let li = document.createElement('li'); li.innerText = t.replace(/^\d+\.\s*/, '').replace(/["《》]/g, ''); li.onclick = () => startGeneration(li.innerText); document.getElementById('randomTopicsList').appendChild(li);
                 });
@@ -857,16 +986,30 @@ layout: false
             } catch(err) { document.getElementById('genStatus').innerText = "生成失败: " + err.message; }
         }
         async function confirmGenerate(e) { e.preventDefault(); const topic = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value; if(!topic) return document.getElementById('genStatus').innerText = "请输入主题"; startGeneration(topic); }
+        
+        // --- 生成逻辑更新：强制分段 ---
         async function startGeneration(topic) {
             const ghToken = localStorage.getItem('gh_token');
             const statusDiv = document.getElementById('genStatus');
             if (!ghToken) return statusDiv.innerText = "错误：请先在设置中配置 GitHub Token";
             const diff = document.getElementById('difficultySelect').value;
             const style = document.getElementById('styleSelect').value;
+            
             statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
-            const prompt = `Role: Professional English Storyteller.\nTask: Write a short story based on theme: "${topic}".\nConstraints:\n1. LANGUAGE: STRICTLY ENGLISH ONLY.\n2. Level: CEFR ${diff}.\n3. Style: ${style}.\n4. Length: ~150 words.\n5. Output: ONLY story text. No titles.`;
+            
+            // 更新 Prompt：强制分段 (Break into paragraphs)
+            const prompt = `Role: Professional English Storyteller.
+Task: Write a short story based on theme: "${topic}".
+Constraints:
+1. LANGUAGE: STRICTLY ENGLISH ONLY.
+2. Level: CEFR ${diff}.
+3. Style: ${style}.
+4. Length: ~200 words.
+5. FORMATTING: Separate the story into 3-4 distinct paragraphs. Use double newlines (\\n\\n) between paragraphs.
+6. Output: ONLY the story text. Do not include the title.`;
+
             try {
-                const story = await callGroqAPI([{role:"user", content: prompt}]);
+                const story = await callGenericAI([{role:"user", content: prompt}]);
                 statusDiv.innerText = "创作完成，正在同步...";
                 await uploadToGitHub(story, ghToken);
                 localStorage.removeItem(LAST_CLICKED_KEY);
@@ -893,30 +1036,37 @@ layout: false
             });
         });
 
-        // 绑定推送按钮事件
         document.getElementById('pushBtn').onclick = pushCurrentContent;
 
         document.getElementById('readAloudButton').onclick = () => { if(isReading) { stopTTS(); } else { const c = document.getElementById('dynamic-content').cloneNode(true); c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove()); startTTS(c.innerText); } };
         document.getElementById('ttsSpeedRange').oninput = function() { document.getElementById('ttsSpeedDisplay').innerText = this.value; };
-        document.getElementById('settingsBtn').onclick = () => { loadTTSConfig(); openModal('settingsModal'); };
+        
+        document.getElementById('settingsBtn').onclick = () => { 
+            loadTTSConfig(); 
+            loadAIConfig(); // 加载多源 AI 配置
+            openModal('settingsModal'); 
+        };
+        
         document.getElementById('saveSettingsBtn').onclick = () => {
-            localStorage.setItem('groq_api_key', document.getElementById('apiKeyInput').value);
             localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
-            localStorage.setItem('groq_model', document.getElementById('modelSelect').value);
             localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
             localStorage.setItem('tts_lang', document.getElementById('ttsLangSelect').value);
             localStorage.setItem('tts_voice', document.getElementById('ttsVoiceSelect').value);
             localStorage.setItem('tts_speed', document.getElementById('ttsSpeedRange').value);
+            
+            // AI配置已在添加/删除时实时保存，但确保Active Index保存
+            saveProviders();
+            
             closeModal('settingsModal'); alert('设置已保存');
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('apiKeyInput').value = localStorage.getItem('groq_api_key') || '';
             document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
-            document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-            loadTTSConfig(); updateCacheDisplay();
-            loadContent(); // 初始加载
+            loadTTSConfig();
+            loadAIConfig(); // 初始加载 AI 配置
+            updateCacheDisplay();
+            loadContent(); 
             document.querySelectorAll('.modal-overlay').forEach(o => o.onclick = e => { if(e.target===o) closeModal(o.id) });
         });
     </script>
