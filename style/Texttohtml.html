@@ -192,8 +192,6 @@
         .settings-section-title { font-size: 0.9em; font-weight: 700; color: var(--primary-color); margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .settings-section-title:first-child { margin-top: 0; }
 
-        .ai-provider-group { margin-bottom: 20px; padding: 15px; background: rgba(139,115,85,0.05); border-radius: 8px; border: 1px solid var(--border-light); }
-
         @media (max-width: 600px) {
             .navbar { padding: 0 16px; height: 56px; }
             .nav-brand { font-size: 1em; }
@@ -315,10 +313,6 @@
                 </div>
             </div>
             <div class="modal-scroll-body">
-                <div class="settings-section-title">🤖 AI 提供商配置（可添加多个，任选其一）</div>
-                <div id="aiProvidersContainer"></div>
-                <button class="save-btn" onclick="addAIProvider()" style="width:auto; margin-top:10px;">+ 添加新提供商</button>
-
                 <div class="settings-section-title">🔊 语音朗读 (TTS)</div>
                 <div class="settings-group">
                     <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">语言 (Language)</label>
@@ -340,15 +334,27 @@
                     </div>
                 </div>
 
-                <div class="settings-section-title">🔑 GitHub 同步</div>
+                <div class="settings-section-title">🤖 API & 同步</div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GROQ API Key</label>
+                    <input type="password" id="apiKeyInput" class="settings-input" placeholder="gsk_...">
+                </div>
                 <div class="settings-group">
                     <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token (PAT)</label>
                     <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
                     <small style="color:#999; display:block; margin-top:-10px; margin-bottom:10px;">用于生成小说同步及云端推送功能</small>
                 </div>
-
-                <div class="settings-section-title">📝 系统提示词 (分析用)</div>
-                <textarea id="systemPromptInput" class="settings-textarea" rows="4"></textarea>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">模型</label>
+                    <select id="modelSelect" class="settings-select">
+                        <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick (17b)</option>
+                        <option value="llama-3.3-70b-versatile">Llama 3.3 Versatile (70b)</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">系统提示词 (分析用)</label>
+                    <textarea id="systemPromptInput" class="settings-textarea" rows="4"></textarea>
+                </div>
 
                 <button id="saveSettingsBtn" class="save-btn">保存设置</button>
                 <div style="margin-top:20px; font-size:0.85em; color:#999; text-align:center;">
@@ -360,15 +366,19 @@
 
     <script>
         // --- 核心配置 ---
+        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
         const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
         const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
 
-        // --- GitHub 配置 ---
+        // --- GitHub 读取配置 (保持不变) ---
         const GH_CONFIG = {
             owner: 'moodHappy',
             repo: 'HelloWorld',
             path: 'Notes/B1.md'
         };
+        const GH_API_BASE = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+
+        // --- GitHub 推送配置 (新增) ---
         const PUSH_CONFIG = {
             owner: 'moodHappy',
             repo: 'moodHappy.gitHub.io-nce',
@@ -395,8 +405,16 @@
         };
 
         const TTS_DOMAINS = [
-            { url: 'https://read-aloud-bay.vercel.app/api/synthesis', paramType: 'percent', needFormat: true },
-            { url: 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/api/aiyue', paramType: 'number', needFormat: false }
+            { 
+                url: 'https://read-aloud-bay.vercel.app/api/synthesis', 
+                paramType: 'percent', 
+                needFormat: true 
+            },
+            { 
+                url: 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/api/aiyue', 
+                paramType: 'number', 
+                needFormat: false
+            }
         ];
 
         // --- 状态变量 ---
@@ -425,115 +443,13 @@
         }
         function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
 
-        // --- AI 提供商管理 ---
-        const DEFAULT_PROVIDERS = [
-            { name: "Groq", baseUrl: "https://api.groq.com/openai/v1", apiKey: "", model: "llama-3.3-70b-versatile", enabled: true },
-            { name: "OpenAI", baseUrl: "https://api.openai.com/v1", apiKey: "", model: "gpt-4o-mini", enabled: false },
-            { name: "硅基流动 (国内中转)", baseUrl: "https://cloud.siliconflow.cn/v1", apiKey: "", model: "Qwen/Qwen2-72B-Instruct", enabled: false },
-            { name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", apiKey: "", model: "deepseek-chat", enabled: false }
-        ];
-
-        function loadAIProviders() {
-            const saved = localStorage.getItem('ai_providers');
-            return saved ? JSON.parse(saved) : DEFAULT_PROVIDERS;
-        }
-
-        function saveAIProviders(providers) {
-            localStorage.setItem('ai_providers', JSON.stringify(providers));
-        }
-
-        function getActiveProvider() {
-            const providers = loadAIProviders();
-            const active = providers.find(p => p.enabled);
-            if (!active || !active.apiKey) throw new Error("请在设置中配置并启用一个AI提供商的API Key");
-            return active;
-        }
-
-        function renderAIProviders() {
-            const container = document.getElementById('aiProvidersContainer');
-            container.innerHTML = '';
-            const providers = loadAIProviders();
-            providers.forEach((p, idx) => {
-                const div = document.createElement('div');
-                div.className = 'ai-provider-group';
-                div.innerHTML = `
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">提供商名称</label>
-                    <input type="text" class="settings-input" value="\( {p.name}" data-idx=" \){idx}" data-field="name">
-
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">API Base URL</label>
-                    <input type="text" class="settings-input" value="\( {p.baseUrl}" data-idx=" \){idx}" data-field="baseUrl">
-
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">API Key</label>
-                    <input type="password" class="settings-input" value="\( {p.apiKey}" data-idx=" \){idx}" data-field="apiKey">
-
-                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">默认模型</label>
-                    <input type="text" class="settings-input" value="\( {p.model}" data-idx=" \){idx}" data-field="model">
-
-                    <div style="display:flex;align-items:center;margin-top:10px;">
-                        <input type="checkbox" \( {p.enabled ? 'checked' : ''} data-idx=" \){idx}" data-field="enabled" style="margin-right:8px;">
-                        <label>启用此提供商（仅一个生效）</label>
-                        <button class="delete-style-btn" onclick="removeAIProvider(${idx})" style="margin-left:auto;">删除</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-
-            container.querySelectorAll('input').forEach(input => {
-                input.onchange = (e) => {
-                    const idx = e.target.dataset.idx;
-                    const field = e.target.dataset.field;
-                    providers[idx][field] = field === 'enabled' ? e.target.checked : e.target.value;
-                    if (field === 'enabled') {
-                        providers.forEach((pr, i) => { if (i != idx) pr.enabled = false; });
-                    }
-                    saveAIProviders(providers);
-                    renderAIProviders();
-                };
-            });
-        }
-
-        function addAIProvider() {
-            const providers = loadAIProviders();
-            providers.push({ name: "新提供商", baseUrl: "https://api.example.com/v1", apiKey: "", model: "gpt-4o", enabled: false });
-            saveAIProviders(providers);
-            renderAIProviders();
-        }
-
-        function removeAIProvider(idx) {
-            const providers = loadAIProviders();
-            providers.splice(idx, 1);
-            saveAIProviders(providers);
-            renderAIProviders();
-        }
-
-        // --- 通用 AI 调用 ---
-        async function callAPI(messages, temp = 0.7) {
-            const provider = getActiveProvider();
-            const url = `\( {provider.baseUrl.replace(/\/ \)/, '')}/chat/completions`;
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 
-                    'Authorization': `Bearer ${provider.apiKey}`, 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({ 
-                    model: provider.model, 
-                    messages, 
-                    temperature: temp 
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || "请求失败");
-            return data.choices[0]?.message?.content || "";
-        }
-
         // --- 初始内容加载 ---
         function loadContent() {
             const container = document.getElementById('dynamic-content');
             container.innerHTML = '加载中...';
 
-            const rawUrl = `https://raw.githubusercontent.com/\( {GH_CONFIG.owner}/ \){GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
-            const fetchUrl = `\( {rawUrl}?t= \){Date.now()}`;
+            const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
+            const fetchUrl = `${rawUrl}?t=${Date.now()}`; // 避开缓存
 
             fetch(fetchUrl)
                 .then(r => {
@@ -549,7 +465,7 @@
                 });
         }
 
-        // --- TTS 功能逻辑 (不变) ---
+        // --- TTS 功能逻辑 ---
         function loadTTSConfig() {
             const savedLang = localStorage.getItem('tts_lang') || 'en';
             const savedVoice = localStorage.getItem('tts_voice'); 
@@ -628,7 +544,7 @@
                     params.append('voiceName', voiceName);
 
                     if (domain.paramType === 'percent') {
-                        const rateStr = parseInt(speedVal) >= 0 ? `+\( {speedVal}%` : ` \){speedVal}%`;
+                        const rateStr = parseInt(speedVal) >= 0 ? `+${speedVal}%` : `${speedVal}%`;
                         params.append('rate', rateStr);
                     } else {
                         params.append('speed', speedVal);
@@ -639,7 +555,7 @@
                         params.append('outputFormat', 'audio-24khz-48kbitrate-mono-mp3');
                     }
 
-                    const audioUrl = `\( {domain.url}? \){params.toString()}`;
+                    const audioUrl = `${domain.url}?${params.toString()}`;
                     await new Promise((resolve, reject) => {
                         const a = new Audio(audioUrl);
                         a.oncanplaythrough = () => {
@@ -675,11 +591,26 @@
             }
         }
 
-        // --- GitHub 操作 ---
+        // --- 通用 AI 调用 ---
+        async function callGroqAPI(messages, temp = 0.7) {
+            const key = localStorage.getItem('groq_api_key');
+            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
+            if (!key) throw new Error("请先在设置中配置 Groq API Key");
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, messages, temperature: temp })
+            });
+            const data = await res.json();
+            if(!res.ok) throw new Error(data.error?.message || "请求失败");
+            return data.choices[0]?.message?.content || "";
+        }
+
+        // --- GitHub API 基础操作 ---
         function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
 
         async function getGitHubSHA(token, owner, repo, path) {
-            const url = `https://api.github.com/repos/\( {owner}/ \){repo}/contents/${path}`;
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
             if (res.status === 404) return null;
             if (!res.ok) throw new Error(`GitHub 读取失败: ${res.status}`);
@@ -687,8 +618,9 @@
             return data.sha;
         }
 
+        // 用于生成微小说的同步
         async function uploadToGitHub(content, token) {
-            const apiUrl = `https://api.github.com/repos/\( {GH_CONFIG.owner}/ \){GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+            const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
             const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
             const body = { message: "Update via AI Reader", content: utf8_to_b64(content), committer: { name: "AI Reader", email: "bot@ai-reader.com" } };
             if (sha) body.sha = sha;
@@ -697,9 +629,10 @@
             return true;
         }
 
+        // --- 核心修改: 推送当前内容到 moodHappy.gitHub.io-nce ---
         async function pushCurrentContent() {
             const btn = document.getElementById('pushBtn');
-            const token = localStorage.getItem('gh_token');
+            const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
 
             if (!token) {
                 alert("请先在设置中配置 GitHub Token 才能使用推送功能");
@@ -707,27 +640,34 @@
                 return;
             }
 
+            // 视觉反馈
             const originalIcon = btn.innerHTML;
             btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div>';
             btn.disabled = true;
 
             try {
+                // 1. 获取内容和标题
                 const contentDiv = document.getElementById('dynamic-content');
+                if (!contentDiv) throw new Error("找不到内容区域");
+
                 let rawText = contentDiv.innerText.trim();
                 let firstSentence = rawText.split(/[。.!?！？]/)[0].trim();
                 if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "...";
                 if (firstSentence.length === 0) firstSentence = `Saved Article`;
 
+                // 2. 生成详细时间戳 (YYYY/MM/DD HH:mm:ss) 用于 Front Matter
                 const now = new Date();
                 const pad = (n) => n.toString().padStart(2, '0');
                 const yyyy = now.getFullYear();
                 const mm = pad(now.getMonth() + 1);
                 const dd = pad(now.getDate());
-                const timeStr = `\( {yyyy}/ \){mm}/${dd} \( {pad(now.getHours())}: \){pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                const timeStr = `${yyyy}/${mm}/${dd} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
+                // 3. 准备 HTML 内容
                 const clone = contentDiv.cloneNode(true);
                 clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
 
+                // ⚠️ layout: false 移除默认头部，CSS 加大字号行高
                 const fileContent = `---
 title: "${firstSentence.replace(/"/g, '\\"')}"
 date: "${timeStr}"
@@ -737,7 +677,7 @@ layout: false
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale:1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>${firstSentence}</title>
     <style>
         body {
@@ -762,15 +702,18 @@ layout: false
 </body>
 </html>`;
 
-                let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[-\u001F]/g, '');
+                // 4. 生成文件名
+                let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
                 if (safeFilename.length > 30) safeFilename = safeFilename.substring(0, 30); 
 
+                // 【核心修改】使用 13 位时间戳后缀，适配导航页正则
                 const timestampSuffix = Date.now(); 
-                const filename = `\( {safeFilename}_ \){timestampSuffix}.html`;
+                const filename = `${safeFilename}_${timestampSuffix}.html`;
 
-                const fullPath = `\( {PUSH_CONFIG.path}/ \){filename}`;
-                const apiUrl = `https://api.github.com/repos/\( {PUSH_CONFIG.owner}/ \){PUSH_CONFIG.repo}/contents/${fullPath}`;
+                const fullPath = `${PUSH_CONFIG.path}/${filename}`;
+                const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
 
+                // 5. 推送
                 const body = {
                     message: `Push: ${filename}`,
                     content: utf8_to_b64(fileContent),
@@ -819,15 +762,15 @@ layout: false
             box.innerHTML = '<div class="ai-loading"><div class="spinner"></div><p>分析中...</p></div>';
             openModal('aiResultModal');
 
-            const provider = getActiveProvider();
+            const model = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             const prompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
-            const cacheKey = generateCacheKey(sentence, prompt, provider.model);
+            const cacheKey = generateCacheKey(sentence, prompt, model);
             const cached = getFromCache(cacheKey);
 
             if (cached) { box.innerHTML = `<div class="ai-result-content">${marked.parse(cached)}</div>`; return; }
 
             try {
-                const content = await callAPI([{role: "system", content: prompt}, {role: "user", content: `Analyze: "${sentence}"`}]);
+                const content = await callGroqAPI([{role: "system", content: prompt}, {role: "user", content: `Analyze: "${sentence}"`}]);
                 saveToCache(cacheKey, content);
                 box.innerHTML = `<div class="ai-result-content">${marked.parse(content)}</div>`;
             } catch (e) { box.innerHTML = `<p style="color:#a0522d;padding:20px;">错误: ${e.message}</p>`; }
@@ -836,13 +779,12 @@ layout: false
         function extractSentenceBefore(node) {
             let t = "", c = node.previousSibling;
             while(c) {
-                if(c.nodeType===3) { t = c.nodeValue + t; }
+                if(c.nodeType===3) { t = c.nodeValue + t; if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { t=t.substring(t.lastIndexOf('.')+1); break; } }
                 else if(c.classList?.contains('ai-analyze-btn')) break;
                 else t = c.innerText + t;
                 c = c.previousSibling;
             }
-            const match = t.match(/[^.!?]*[.!?]/);
-            return match ? match[0].trim() : t.trim();
+            return t.trim();
         }
 
         // --- 注入逻辑 ---
@@ -853,20 +795,18 @@ layout: false
             const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
             const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
             nodes.forEach(n => {
-                if (n.nodeValue.trim() && /[.!?]/.test(n.nodeValue)) {
+                if (n.nodeValue.includes('.')) {
                     const f = document.createDocumentFragment();
-                    const parts = n.nodeValue.split(/([.!?])/);
-                    for (let i = 0; i < parts.length; i += 2) {
-                        f.appendChild(document.createTextNode(parts[i] || ''));
-                        if (parts[i+1]) {
-                            f.appendChild(document.createTextNode(parts[i+1]));
+                    n.nodeValue.split(/(\.)/).forEach(p => {
+                        f.appendChild(document.createTextNode(p));
+                        if(p==='.') {
                             const b = document.createElement('span');
                             b.className = 'ai-analyze-btn';
                             b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
                             b.onclick = (e) => handleAIAnalyzeClick(e.target);
                             f.appendChild(b);
                         }
-                    }
+                    });
                     n.parentNode.replaceChild(f, n);
                 }
             });
@@ -874,62 +814,7 @@ layout: false
             if (idx !== null) { const btns = div.querySelectorAll('.ai-analyze-btn'); if(btns[idx]) btns[idx].classList.add('last-clicked'); }
         }
 
-        // --- 生成小说 (分段生成) ---
-        async function generateRandomTopics(e) {
-            e.preventDefault();
-            const theme = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value;
-            if(!theme) { document.getElementById('genStatus').innerText = "请先选择分类或输入主题"; return; }
-            document.getElementById('genStatus').innerText = "正在生成题目...";
-            document.getElementById('randomTopicsList').innerHTML = '';
-            try {
-                const text = await callAPI([{role:"user", content: `Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Separate with newlines. Just the titles.`}]);
-                text.split('\n').filter(t=>t.trim()).forEach(t => {
-                    let li = document.createElement('li'); li.innerText = t.replace(/^\d+\.\s*/, '').replace(/["《》]/g, ''); li.onclick = () => startGeneration(li.innerText); document.getElementById('randomTopicsList').appendChild(li);
-                });
-                document.getElementById('genStatus').innerText = "点击题目开始生成";
-            } catch(err) { document.getElementById('genStatus').innerText = "生成失败: " + err.message; }
-        }
-
-        async function confirmGenerate(e) { e.preventDefault(); const topic = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value; if(!topic) return document.getElementById('genStatus').innerText = "请输入主题"; startGeneration(topic); }
-
-        async function startGeneration(topic) {
-            const ghToken = localStorage.getItem('gh_token');
-            const statusDiv = document.getElementById('genStatus');
-            if (!ghToken) return statusDiv.innerText = "错误：请先在设置中配置 GitHub Token";
-            const diff = document.getElementById('difficultySelect').value;
-            const style = document.getElementById('styleSelect').value;
-            statusDiv.innerText = `正在创作: \( {topic} ( \){diff})...`;
-
-            let fullStory = "";
-            const paragraphs = 8; // 约150-200词，分为8段左右
-
-            try {
-                for (let i = 1; i <= paragraphs; i++) {
-                    statusDiv.innerText = `正在生成第 \( {i}/ \){paragraphs} 段...`;
-                    const prompt = `You are a professional English short story writer.
-Continue the story based on theme: "${topic}" at CEFR level ${diff} in ${style} style.
-This is paragraph ${i} of about 8.
-Previous story so far:
-"""${fullStory}"""
-
-Write ONLY the next paragraph (20-30 words, natural English). No numbering, no quotes, no extra text.`;
-                    const messages = i === 1 
-                        ? [{role: "user", content: `Write the first paragraph of a short English story (~25 words) on theme "${topic}" at CEFR ${diff} level in ${style} style. ONLY the paragraph text.`}]
-                        : [{role: "user", content: prompt}];
-                    const paragraph = await callAPI(messages, 0.8);
-                    fullStory += paragraph.trim() + "\n\n";
-                }
-
-                statusDiv.innerText = "创作完成，正在同步...";
-                await uploadToGitHub(fullStory.trim(), ghToken);
-                localStorage.removeItem(LAST_CLICKED_KEY);
-                statusDiv.innerText = "同步成功！";
-                closeModal('generateModal');
-                loadContent(); 
-            } catch(err) { statusDiv.innerText = "失败: " + err.message; }
-        }
-
-        // --- 其他辅助 ---
+        // --- 辅助功能 ---
         function populateSelectors() {
             const catSel = document.getElementById('themeCategorySelect');
             const diffSel = document.getElementById('difficultySelect');
@@ -952,15 +837,51 @@ Write ONLY the next paragraph (20-30 words, natural English). No numbering, no q
         function closeStyleManagementModal() { document.getElementById('styleManagementModal').classList.remove('active'); document.getElementById('generateModal').classList.add('active'); populateStyleSelector(); }
         function populateCustomStyleList() {
             const list = document.getElementById('customStyleList'); list.innerHTML = '';
-            (JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []).forEach(s => list.innerHTML += `<li><span>\( {s}</span><button class="delete-style-btn" onclick="deleteStyle(' \){s}')">删除</button></li>`);
+            (JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []).forEach(s => list.innerHTML += `<li><span>${s}</span><button class="delete-style-btn" onclick="deleteStyle('${s}')">删除</button></li>`);
         }
         window.addCustomStyle = () => { const val = document.getElementById('addStyleInput').value.trim(); const styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []; if(val && !styles.includes(val) && !BUILT_IN_STYLES.includes(val)) { styles.push(val); localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles)); document.getElementById('addStyleInput').value=''; populateCustomStyleList(); } };
         window.deleteStyle = (val) => { let styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []; localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles.filter(s => s !== val))); populateCustomStyleList(); };
 
+        async function generateRandomTopics(e) {
+            e.preventDefault();
+            const theme = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value;
+            if(!theme) { document.getElementById('genStatus').innerText = "请先选择分类或输入主题"; return; }
+            document.getElementById('genStatus').innerText = "正在生成题目...";
+            document.getElementById('randomTopicsList').innerHTML = '';
+            try {
+                const text = await callGroqAPI([{role:"user", content: `Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Separate with newlines. Just the titles.`}]);
+                text.split('\n').filter(t=>t.trim()).forEach(t => {
+                    let li = document.createElement('li'); li.innerText = t.replace(/^\d+\.\s*/, '').replace(/["《》]/g, ''); li.onclick = () => startGeneration(li.innerText); document.getElementById('randomTopicsList').appendChild(li);
+                });
+                document.getElementById('genStatus').innerText = "点击题目开始生成";
+            } catch(err) { document.getElementById('genStatus').innerText = "生成失败: " + err.message; }
+        }
+        async function confirmGenerate(e) { e.preventDefault(); const topic = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value; if(!topic) return document.getElementById('genStatus').innerText = "请输入主题"; startGeneration(topic); }
+        async function startGeneration(topic) {
+            const ghToken = localStorage.getItem('gh_token');
+            const statusDiv = document.getElementById('genStatus');
+            if (!ghToken) return statusDiv.innerText = "错误：请先在设置中配置 GitHub Token";
+            const diff = document.getElementById('difficultySelect').value;
+            const style = document.getElementById('styleSelect').value;
+            statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
+            const prompt = `Role: Professional English Storyteller.\nTask: Write a short story based on theme: "${topic}".\nConstraints:\n1. LANGUAGE: STRICTLY ENGLISH ONLY.\n2. Level: CEFR ${diff}.\n3. Style: ${style}.\n4. Length: ~150 words.\n5. Output: ONLY story text. No titles.`;
+            try {
+                const story = await callGroqAPI([{role:"user", content: prompt}]);
+                statusDiv.innerText = "创作完成，正在同步...";
+                await uploadToGitHub(story, ghToken);
+                localStorage.removeItem(LAST_CLICKED_KEY);
+                statusDiv.innerText = "同步成功！";
+                closeModal('generateModal');
+                // 创作完成后，刷新内容
+                loadContent(); 
+            } catch(err) { statusDiv.innerText = "失败: " + err.message; }
+        }
+
         // --- 初始化 ---
-        window.openModal = id => { if(id === 'generateModal') populateSelectors(); if(id === 'settingsModal') renderAIProviders(); document.getElementById(id).classList.add('active'); };
+        window.openModal = id => { if(id === 'generateModal') populateSelectors(); document.getElementById(id).classList.add('active'); };
         window.closeModal = id => document.getElementById(id).classList.remove('active');
 
+        // 双击关闭模态框
         document.querySelectorAll('.modal-card').forEach(card => {
             card.addEventListener('dblclick', function(e) {
                 if(window.getSelection().toString().length > 0) return;
@@ -972,13 +893,16 @@ Write ONLY the next paragraph (20-30 words, natural English). No numbering, no q
             });
         });
 
+        // 绑定推送按钮事件
         document.getElementById('pushBtn').onclick = pushCurrentContent;
 
         document.getElementById('readAloudButton').onclick = () => { if(isReading) { stopTTS(); } else { const c = document.getElementById('dynamic-content').cloneNode(true); c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove()); startTTS(c.innerText); } };
         document.getElementById('ttsSpeedRange').oninput = function() { document.getElementById('ttsSpeedDisplay').innerText = this.value; };
         document.getElementById('settingsBtn').onclick = () => { loadTTSConfig(); openModal('settingsModal'); };
         document.getElementById('saveSettingsBtn').onclick = () => {
+            localStorage.setItem('groq_api_key', document.getElementById('apiKeyInput').value);
             localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
+            localStorage.setItem('groq_model', document.getElementById('modelSelect').value);
             localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
             localStorage.setItem('tts_lang', document.getElementById('ttsLangSelect').value);
             localStorage.setItem('tts_voice', document.getElementById('ttsVoiceSelect').value);
@@ -987,10 +911,12 @@ Write ONLY the next paragraph (20-30 words, natural English). No numbering, no q
         };
 
         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('apiKeyInput').value = localStorage.getItem('groq_api_key') || '';
             document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
+            document.getElementById('modelSelect').value = localStorage.getItem('groq_model') || 'meta-llama/llama-4-maverick-17b-128e-instruct';
             document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
             loadTTSConfig(); updateCacheDisplay();
-            loadContent();
+            loadContent(); // 初始加载
             document.querySelectorAll('.modal-overlay').forEach(o => o.onclick = e => { if(e.target===o) closeModal(o.id) });
         });
     </script>
