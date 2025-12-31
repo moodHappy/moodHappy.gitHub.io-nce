@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片隐私抹除 & 压缩</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { margin-bottom: 10px; color: #2c3e50; }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            display: block;
+        }
+        .btn:active { background-color: #0056b3; }
+        .btn.secondary { background-color: #6c757d; margin-top: 10px;}
+        
+        /* 文件输入美化 */
+        #file-input { display: none; }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            border-radius: 8px;
+            background: #fafafa;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .upload-area.highlight { border-color: #007bff; background: #e9f5ff; }
+
+        /* 预览区域 */
+        #preview-container { margin-top: 20px; display: none; }
+        img#preview { max-width: 100%; border-radius: 8px; border: 1px solid #ddd; }
+        .info { font-size: 13px; color: #666; margin-top: 8px; text-align: left; }
+        .badge { background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .warn { color: #dc3545; font-weight: bold; }
+        
+        /* 压缩滑块 */
+        .control-group { margin-top: 15px; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: 500;}
+        input[type=range] { width: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🛡️ 图片净化器</h2>
+    <p style="font-size:14px; color:#666; margin-bottom:20px;">
+        去除 GPS 位置信息 + 智能压缩<br>
+        <span style="color:#28a745">✔ 本地处理，不上传服务器</span>
+    </p>
+
+    <div class="upload-area" id="drop-area" onclick="document.getElementById('file-input').click()">
+        <p style="margin:0; font-size:24px;">📷</p>
+        <p style="margin:5px 0 0 0;">点击选择或拍照</p>
+        <input type="file" id="file-input" accept="image/*">
+    </div>
+
+    <div class="control-group">
+        <label>压缩质量: <span id="quality-val">80</span>%</label>
+        <input type="range" id="quality" min="10" max="100" value="80">
+    </div>
+
+    <div id="preview-container">
+        <div class="info">
+            原始: <span id="org-size"></span> <span class="warn">⚠ 含隐私信息</span>
+        </div>
+        <img id="preview" alt="预览">
+        <div class="info">
+            处理后: <span id="new-size"></span> <span class="badge">已净化</span>
+        </div>
+        
+        <a id="download-link" class="btn">长按保存图片</a>
+        <button class="btn secondary" onclick="location.reload()">处理下一张</button>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-input');
+    const qualityInput = document.getElementById('quality');
+    const qualityVal = document.getElementById('quality-val');
+    const dropArea = document.getElementById('drop-area');
+    const previewContainer = document.getElementById('preview-container');
+    const previewImg = document.getElementById('preview');
+    const downloadLink = document.getElementById('download-link');
+    
+    let currentFile = null;
+
+    // 滑块数值显示
+    qualityInput.addEventListener('input', (e) => {
+        qualityVal.innerText = e.target.value;
+        if(currentFile) processImage(currentFile); // 实时调整
+    });
+
+    // 文件选择处理
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            currentFile = this.files[0];
+            processImage(currentFile);
+        }
+    });
+
+    function formatSize(bytes) {
+        if(bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function processImage(file) {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(event) {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = function() {
+                // 使用 Canvas 重绘（这是清除 Exif 的核心原理）
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 保持原图尺寸
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // 绘制图片
+                ctx.drawImage(img, 0, 0);
+                
+                // 导出为 JPEG，调整质量，且此时已丢失 Exif 元数据
+                const quality = parseInt(qualityInput.value) / 100;
+                const newDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                // 更新界面
+                previewImg.src = newDataUrl;
+                previewContainer.style.display = 'block';
+                dropArea.style.display = 'none'; // 隐藏上传框
+                
+                // 计算新大小（估算）
+                const head = 'data:image/jpeg;base64,';
+                const size = Math.round((newDataUrl.length - head.length) * 3 / 4);
+                
+                document.getElementById('org-size').innerText = formatSize(file.size);
+                document.getElementById('new-size').innerText = formatSize(size);
+                
+                // 设置下载链接
+                downloadLink.href = newDataUrl;
+                downloadLink.download = 'cleaned_' + file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+            }
+        }
+    }
+</script>
+</body>
+</html>
