@@ -3,45 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MP3 转 MP4 在线转换器 (纯前端)</title>
+    <title>MP3 转 MP4 在线转换器 (移动端修复版)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
-        body { background-color: #f8f9fa; padding-top: 50px; }
-        .container { max-width: 600px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        #log { font-family: monospace; font-size: 0.9em; height: 150px; overflow-y: scroll; background: #222; color: #0f0; padding: 10px; border-radius: 5px; margin-top: 20px; display: none; }
+        body { background-color: #f8f9fa; padding: 20px; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #log { font-family: monospace; font-size: 0.8em; height: 120px; overflow-y: scroll; background: #222; color: #0f0; padding: 10px; border-radius: 5px; margin-top: 20px; display: none; }
         video { width: 100%; margin-top: 20px; border-radius: 5px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 class="text-center mb-4">🎵 MP3 转 MP4 转换器</h2>
-    <p class="text-muted text-center">在浏览器本地运行，文件不会上传到服务器。</p>
+    <h3 class="text-center mb-4">🎵 MP3 转 MP4</h3>
     
     <div class="mb-3">
-        <label for="imageUpload" class="form-label">1. 上传背景图片 (JPG/PNG)</label>
+        <label for="imageUpload" class="form-label">1. 选择图片 (背景)</label>
         <input class="form-control" type="file" id="imageUpload" accept="image/*">
     </div>
 
     <div class="mb-3">
-        <label for="audioUpload" class="form-label">2. 上传音频文件 (MP3)</label>
-        <input class="form-control" type="file" id="audioUpload" accept="audio/mp3">
+        <label for="audioUpload" class="form-label">2. 选择音频 (MP3)</label>
+        <input class="form-control" type="file" id="audioUpload" accept=".mp3,audio/*">
     </div>
 
-    <button id="convertBtn" class="btn btn-primary w-100" disabled>开始转换</button>
+    <button id="convertBtn" class="btn btn-primary w-100 p-3" disabled>开始转换</button>
 
     <div id="status" class="mt-3 text-center text-primary fw-bold"></div>
     <div id="log"></div>
 
-    <video id="outputVideo" controls></video>
-    <a id="downloadLink" class="btn btn-success w-100 mt-3" style="display:none">下载 MP4 视频</a>
+    <video id="outputVideo" controls playsinline></video>
+    <a id="downloadLink" class="btn btn-success w-100 mt-3 p-3" style="display:none">保存视频</a>
 </div>
 
 <script>
     const { createFFmpeg, fetchFile } = FFmpeg;
-    
-    // 初始化 ffmpeg 实例，开启日志
     const ffmpeg = createFFmpeg({ log: true });
 
     const imageInput = document.getElementById('imageUpload');
@@ -52,23 +49,25 @@
     const videoPlayer = document.getElementById('outputVideo');
     const downloadLink = document.getElementById('downloadLink');
 
-    // 检查是否选择了两个文件
     function checkInputs() {
         convertBtn.disabled = !(imageInput.files[0] && audioInput.files[0]);
     }
     imageInput.addEventListener('change', checkInputs);
     audioInput.addEventListener('change', checkInputs);
 
-    // 加载 FFmpeg
     const loadFFmpeg = async () => {
-        statusText.innerText = "正在加载核心组件 (首次加载可能较慢)...";
-        if (!ffmpeg.isLoaded()) {
-            await ffmpeg.load();
+        statusText.innerText = "正在准备核心组件...";
+        try {
+            if (!ffmpeg.isLoaded()) {
+                await ffmpeg.load();
+            }
+            statusText.innerText = "";
+        } catch (e) {
+            statusText.innerText = "⚠️ 您的浏览器可能不支持 WebAssembly 或需要 HTTPS 环境。";
+            console.error(e);
         }
-        statusText.innerText = "";
     };
 
-    // 页面加载时预加载
     loadFFmpeg();
 
     convertBtn.addEventListener('click', async () => {
@@ -77,55 +76,41 @@
 
         if (!imageFile || !audioFile) return;
 
-        // UI 更新
         convertBtn.disabled = true;
+        convertBtn.innerText = "正在处理中...";
         logArea.style.display = 'block';
         videoPlayer.style.display = 'none';
         downloadLink.style.display = 'none';
-        statusText.innerText = "正在转换中，请勿关闭页面...";
-        logArea.innerHTML = ''; // 清空日志
+        statusText.innerText = "正在合成视频 (手机端可能会比较慢，请耐心等待)...";
+        logArea.innerHTML = '';
 
-        // 将 FFmpeg 日志输出到页面
         ffmpeg.setLogger(({ type, message }) => {
             logArea.innerHTML += `<div>[${type}] ${message}</div>`;
             logArea.scrollTop = logArea.scrollHeight;
         });
 
         try {
-            // 1. 将文件写入 FFmpeg 虚拟内存
-            // 对文件名进行重命名以避免特殊字符导致错误
             const imgName = 'image.png';
             const audioName = 'audio.mp3';
 
             ffmpeg.FS('writeFile', imgName, await fetchFile(imageFile));
             ffmpeg.FS('writeFile', audioName, await fetchFile(audioFile));
 
-            // 2. 运行 FFmpeg 命令
-            // -loop 1: 图片无限循环
-            // -i: 输入文件
-            // -c:v libx264: 视频编码 H.264
-            // -tune stillimage: 针对静止图像优化
-            // -c:a aac: 音频编码 AAC
-            // -b:a 192k: 音频比特率
-            // -pix_fmt yuv420p: 确保兼容性
-            // -shortest: 输出长度以最短的输入（音频）为准
+            // 针对移动端优化参数，降低 CPU 占用
             await ffmpeg.run(
                 '-loop', '1',
                 '-i', imgName,
                 '-i', audioName,
                 '-c:v', 'libx264',
+                '-preset', 'ultrafast', // 使用极速模式，牺牲一点压缩率换取速度
                 '-tune', 'stillimage',
-                '-c:a', 'aac',
-                '-b:a', '192k',
+                '-c:a', 'copy', // 音频直接复制，不重新编码，大大加快速度！
                 '-pix_fmt', 'yuv420p',
                 '-shortest',
                 'output.mp4'
             );
 
-            // 3. 读取结果
             const data = ffmpeg.FS('readFile', 'output.mp4');
-
-            // 4. 创建 Blob URL 供下载和预览
             const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
             const videoUrl = URL.createObjectURL(videoBlob);
 
@@ -133,15 +118,17 @@
             videoPlayer.style.display = 'block';
             
             downloadLink.href = videoUrl;
-            downloadLink.download = `${audioFile.name.split('.')[0]}.mp4`;
+            downloadLink.download = `video_${Date.now()}.mp4`; // 随机文件名避免重名
             downloadLink.style.display = 'block';
-            downloadLink.innerText = `下载 ${audioFile.name.split('.')[0]}.mp4`;
+            downloadLink.innerText = "点击保存视频";
 
-            statusText.innerText = "✅ 转换完成！";
+            statusText.innerText = "✅ 成功！";
+            convertBtn.innerText = "开始转换";
 
         } catch (error) {
             console.error(error);
-            statusText.innerText = "❌ 转换出错，请查看控制台日志。";
+            statusText.innerText = "❌ 失败：手机浏览器内存不足或安全限制。";
+            alert("转换失败。注意：此功能对手机性能要求较高，且必须在 HTTPS 或 localhost 环境下运行。");
         } finally {
             convertBtn.disabled = false;
         }
