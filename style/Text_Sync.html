@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>GitHub 同步助手 (双排按钮版)</title>
+  <title>GitHub 同步助手 (段落标题版)</title>
 
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    /* CSS Variables */
+    /* CSS 变量定义 */
     :root {
       --bg-color: #f9f9f9;
       --text-color: #222;
@@ -22,20 +21,18 @@
       --button-primary-bg: #4CAF50;
       --button-secondary-bg: #2196F3;
       --button-danger-bg: #f44336;
-      --button-generate-bg: #800080;
       --button-read-bg: #e6b800;
       --button-push-bg: #FF9800;
       --modal-bg: rgba(0,0,0,0.5);
       --modal-content-bg: #fff;
       --input-border-color: #aaa;
       --settings-icon-color: #333;
-
       --primary-font: 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
       --font-size: 17px;
       --line-height: 1.6;
     }
 
-    /* Dark Theme */
+    /* 暗色主题 */
     body.theme-dark {
       --bg-color: #121212;
       --text-color: #e0e0e0;
@@ -49,7 +46,7 @@
       --settings-icon-color: #ccc;
     }
 
-    /* Sepia Theme */
+    /* 米色主题 */
     body.theme-sepia {
       --bg-color: #f4f0e8;
       --text-color: #5b4636;
@@ -84,204 +81,48 @@
       transition: background-color 0.3s, color 0.3s, border-color 0.3s;
     }
 
-    textarea {
-      min-height: 150px;
-      resize: vertical;
-      overflow: hidden;
-      background-color: var(--textarea-bg-color);
-      border-color: var(--textarea-border-color);
-    }
+    textarea { min-height: 150px; resize: vertical; background-color: var(--textarea-bg-color); border-color: var(--textarea-border-color); }
 
-    /* Button Container Styles - Modified for Rows */
-    .button-row {
-        display: flex;
-        flex-wrap: nowrap; /* 禁止换行，强制一行显示 */
-        gap: 10px;
-        margin-bottom: 10px;
-        width: 100%;
-    }
+    .button-row { display: flex; flex-wrap: nowrap; gap: 10px; margin-bottom: 10px; width: 100%; }
 
     button {
-      padding: 10px 0; /* 减少左右内边距，适应小屏 */
-      font-size: 16px;
-      border-radius: 6px;
-      border: none;
-      color: white;
-      cursor: pointer;
-      background-color: var(--button-primary-bg);
-      min-height: 44px;
-      flex: 1; /* 每个按钮平分宽度 */
-      transition: background-color 0.3s;
-      white-space: nowrap;
+      padding: 10px 0; font-size: 16px; border-radius: 6px; border: none; color: white;
+      cursor: pointer; background-color: var(--button-primary-bg); min-height: 44px;
+      flex: 1; transition: background-color 0.3s; white-space: nowrap;
     }
 
-    button:disabled {
-        background-color: #999;
-        cursor: not-allowed;
-    }
-
+    button:disabled { background-color: #999; cursor: not-allowed; }
     button.copy { background-color: var(--button-secondary-bg); }
     button.delete { background-color: var(--button-danger-bg); }
-    button.generate { background-color: var(--button-generate-bg); }
     button.read { background-color: var(--button-read-bg); }
     button.push { background-color: var(--button-push-bg); }
 
-    #status {
-      margin-top: 10px;
-      color: var(--status-color);
-      font-size: 14px;
-    }
+    #status { margin-top: 10px; color: var(--status-color); font-size: 14px; }
 
-    #settings-icon {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 24px;
-      cursor: pointer;
-      color: var(--settings-icon-color);
-    }
+    #settings-icon { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--settings-icon-color); }
 
-    /* Modal Styles */
     .modal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: var(--modal-bg);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 999;
-      backdrop-filter: blur(2px);
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--modal-bg); display: none; justify-content: center; align-items: center;
+      z-index: 999; backdrop-filter: blur(2px);
     }
 
     .modal-content {
-      background: var(--modal-content-bg);
-      color: var(--text-color);
-      padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 85vh; 
-      overflow-y: auto; 
+      background: var(--modal-content-bg); color: var(--text-color); padding: 20px;
+      border-radius: 12px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      transition: transform 0.3s ease-out;
     }
 
-    #aiResultModal .modal-content {
-        padding: 0; 
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; 
-    }
-
-    .modal-sticky-header {
-        background: var(--modal-content-bg);
-        border-bottom: 1px solid var(--textarea-border-color);
-        flex-shrink: 0; 
-        z-index: 10;
-        padding-bottom: 15px;
-    }
-
-    .header-title-area {
-        padding: 20px 20px 10px 20px;
-        display:flex; 
-        justify-content:space-between; 
-        align-items:center;
-    }
-
-    .ai-original-sentence-container { padding: 0 20px; }
-    .ai-original-sentence {
-        background: #f1f3f4; 
-        color: #202124;
-        padding: 16px; 
-        border-radius: 12px;
-        font-size: 17px;
-        line-height: 1.6;
-        max-height: 150px; 
-        overflow-y: auto;
-        display: block; 
-    }
-    body.theme-dark .ai-original-sentence { background: #303134; color: #e8eaed; }
-    .ai-original-text { display: inline; word-break: break-word; }
-
-    .ai-read-sentence-btn {
-        display: inline-flex; width: 34px !important; height: 34px !important;
-        min-width: 34px !important; min-height: 34px !important;
-        border-radius: 50%; background-color: #d7e3f4; border: none;
-        align-items: center; justify-content: center; cursor: pointer;
-        transition: background-color 0.2s; vertical-align: middle;
-        margin-left: 8px; position: relative; top: -3px; padding: 0; flex-shrink: 0;
-    }
-    .ai-read-sentence-btn svg { width: 20px; height: 20px; display: block; pointer-events: none; }
-    body.theme-dark .ai-read-sentence-btn { background-color: rgba(138, 180, 248, 0.2); }
-    .ai-read-sentence-btn:hover { background-color: #c2d7fa; }
-    body.theme-dark .ai-read-sentence-btn:hover { background-color: rgba(138, 180, 248, 0.35); }
-
-    .modal-scroll-body { padding: 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
-    .modal-content h3 { margin-top: 0; }
-    .modal-content input, .modal-content select, .modal-content textarea {
-      width: 100%; padding: 10px; margin-top: 10px; font-size: 16px;
-      border-radius: 5px; border: 1px solid var(--input-border-color);
-      background-color: var(--textarea-bg-color); color: var(--text-color); box-sizing: border-box;
-    }
-    .modal-content select[multiple] { height: 100px; }
     .modal-content label { display: block; margin-top: 15px; font-size: 14px; color: var(--status-color); }
+    .modal-content input, .modal-content select { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid var(--input-border-color); background: var(--textarea-bg-color); color: var(--text-color); }
     .modal-buttons { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--textarea-border-color); }
 
-    article.immersive-content { line-height: var(--line-height); font-size: var(--font-size); }
     article.immersive-content p { margin-bottom: 1em; white-space: pre-wrap; }
-    .ai-inputs { display: none; }
-
-    #storyThemeModal .modal-buttons-container { display: flex; gap: 10px; margin-top: 10px; }
-    #storyThemeModal .modal-buttons-container button { flex: 1; }
-    #storyThemeModal .modal-buttons-container button.confirm-btn { background-color: var(--button-primary-bg); }
-    #storyThemeModal .modal-buttons-container button.generate-topics-btn { background-color: #800080; }
-    #storyThemeModal .modal-buttons-container button:nth-child(3) { background-color: #6c757d; }
-
-    #randomTopicsList { margin-top: 20px; padding: 0; list-style: none; }
-    #randomTopicsList li {
-        padding: 10px; border: 1px solid var(--textarea-border-color);
-        border-radius: 5px; margin-bottom: 8px; cursor: pointer;
-        transition: background-color 0.2s, border-color 0.2s;
-    }
-    #randomTopicsList li:hover { background-color: var(--textarea-border-color); }
-
-    .select-container { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-    .select-container select { flex: 1 1 30%; }
-
-    #customStyleList { padding: 0; list-style: none; max-height: 150px; overflow-y: auto; border: 1px solid var(--textarea-border-color); border-radius: 5px; margin-top: 10px; }
-    #customStyleList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--textarea-border-color); }
-    #customStyleList li:last-child { border-bottom: none; }
-    #customStyleList .delete-style-btn { background: var(--button-danger-bg); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
-    .style-input-container { display: flex; gap: 10px; margin-top: 10px; }
-    .style-input-container input { flex: 1; }
-    .style-input-container button { flex: none; width: 100px; margin-top: 0; }
-
-    .ai-analyze-btn {
-        display: inline-flex; align-items: center; justify-content: center;
-        background-color: rgba(139, 115, 85, 0.15); border: 1px solid rgba(139, 115, 85, 0.3);
-        border-radius: 50%; width: 20px; height: 20px; margin: 0 4px; cursor: pointer;
-        color: #8b7355; position: relative; top: -1px; transition: all 0.2s; font-size: 0;
-    }
-    body.theme-dark .ai-analyze-btn { background-color: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); color: #e0e0e0; }
-    .ai-analyze-btn:hover { background-color: #8b7355; color: white; transform: scale(1.1); }
-    body.theme-dark .ai-analyze-btn:hover { background-color: #aaa; color: #121212; }
-    .ai-analyze-btn.last-clicked {
-        background-color: #d32f2f !important; color: white !important; border-color: #d32f2f !important;
-        box-shadow: 0 0 6px rgba(211, 47, 47, 0.5); transform: scale(1.15); z-index: 10;
-    }
-    .ai-analyze-btn svg { width: 12px; height: 12px; fill: currentColor; }
-
-    .ai-result-content { font-size: 15px; line-height: 1.7; }
-    .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { margin-top: 1em; margin-bottom: 0.5em; font-size: 1.1em; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
-    .ai-result-content strong { color: var(--button-primary-bg); background: rgba(0,0,0,0.05); padding: 0 4px; border-radius: 3px; }
-    .ai-loading { text-align: center; padding: 20px; color: var(--status-color); }
 
     @media (max-width: 600px) {
-        /* 移动端调整 */
         .modal { align-items: flex-end; }
-        .modal-content { width: 100%; max-width: 100%; margin: 0; border-radius: 20px 20px 0 0; max-height: 90vh; }
-        .button-row { gap: 8px; } /* 小屏下间距稍小 */
+        .modal-content { width: 100%; max-width: 100%; margin: 0; border-radius: 20px 20px 0 0; }
+        .button-row { gap: 8px; }
     }
   </style>
 </head>
@@ -297,11 +138,11 @@
 
   <div class="button-row">
     <button class="copy" onclick="copyContent()">复制</button>
-    <button class="generate" onclick="openThemeModal()">生成</button>
     <button class="read" onclick="readContent()">朗读</button>
+    <button onclick="editMode()" style="background-color:#607d8b;">编辑模式</button>
   </div>
 
-  <textarea id="inputContent" placeholder="请输入英文文本（支持多段，每段用空行分隔）..."></textarea>
+  <textarea id="inputContent" placeholder="请输入内容（首段将自动作为推送标题）..."></textarea>
   <article id="renderedContent" class="immersive-content" style="display:none;"></article>
 
   <div id="status">⏳ 正在初始化...</div>
@@ -310,174 +151,50 @@
     <div class="modal-content">
       <h3>🔐 请输入你的 GitHub Token：</h3>
       <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
-      <button style="margin-top:10px;" onclick="saveToken()">保存 Token</button>
-    </div>
-  </div>
-
-  <div id="storyThemeModal" class="modal">
-    <div class="modal-content">
-      <h3>📚 请选择或输入创作主题：</h3>
-      <div class="select-container">
-        <select id="themeCategorySelect"></select>
-        <select id="difficultySelect"></select>
-        <select id="styleSelect" multiple></select>
-      </div>
-      <input type="text" id="themeInput" placeholder="或手动输入..." />
-      <div class="modal-buttons-container">
-          <button class="generate-topics-btn" onclick="generateRandomTopics(event)">生成题目</button>
-          <button class="confirm-btn" onclick="confirmGenerate(event)">确定</button>
-          <button onclick="closeThemeModal()">取消</button>
-      </div>
-      <p style="margin-top: 20px;">💡 点击下面列表中的题目来生成微小说：</p>
-      <ul id="randomTopicsList"></ul>
+      <button style="margin-top:10px; width:100%;" onclick="saveToken()">保存 Token</button>
     </div>
   </div>
 
   <div id="settingsModal" class="modal">
     <div class="modal-content">
       <h3>⚙️ 个性化设置</h3>
-
-      <label for="theme-select">界面主题</label>
+      <label>界面主题</label>
       <select id="theme-select">
         <option value="">默认 (亮色)</option>
         <option value="theme-dark">护眼 (暗色)</option>
         <option value="theme-sepia">纸张 (米色)</option>
       </select>
-
-      <label for="font-family-select">阅读字体</label>
-      <select id="font-family-select">
-        <option value="'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">无衬线体 (默认)</option>
-        <option value="'Georgia', 'Noto Serif SC', 'Songti SC', serif">衬线体</option>
-        <option value="'Courier New', 'SFMono-Regular', 'Consolas', monospace">等宽字体</option>
-      </select>
-
-      <label for="font-size-select">内容字号</label>
+      <label>内容字号</label>
       <select id="font-size-select">
           <option value="15px">小</option>
-          <option value="17px">中 (默认)</option>
+          <option value="17px">中</option>
           <option value="19px">大</option>
           <option value="21px">特大</option>
       </select>
-
-      <label for="line-height-select">段落行高</label>
-      <select id="line-height-select">
-          <option value="1.4">紧凑</option>
-          <option value="1.6">适中 (默认)</option>
-          <option value="1.8">宽松</option>
-      </select>
-
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
-
-      <label for="ai-provider-select">AI 模型服务商</label>
-      <select id="ai-provider-select">
-        <option value="kimi">Kimi</option>
-        <option value="zhipu">智谱 (Zhipu)</option>
-        <option value="custom">自定义</option>
-      </select>
-
-      <div id="ai-kimi-inputs" class="ai-inputs">
-        <label for="ai-kimi-api-key">Kimi API Key</label>
-        <input type="password" id="ai-kimi-api-key" placeholder="sk-xxx" />
-        <label for="ai-kimi-model-name">Kimi 模型名称</label>
-        <input type="text" id="ai-kimi-model-name" placeholder="moonshot-v1-8k" />
-      </div>
-
-      <div id="ai-zhipu-inputs" class="ai-inputs">
-        <label for="ai-zhipu-api-key">智谱 API Key</label>
-        <input type="password" id="ai-zhipu-api-key" placeholder="sk-xxx" />
-        <label for="ai-zhipu-model-name">智谱 模型名称</label>
-        <input type="text" id="ai-zhipu-model-name" placeholder="glm-4" />
-      </div>
-
-      <div id="ai-custom-inputs" class="ai-inputs">
-        <label for="ai-api-url">自定义 API URL</label>
-        <input type="text" id="ai-api-url" placeholder="例如：https://api.example.com/v1/chat/completions" />
-        <label for="ai-custom-api-key">自定义 API Key</label>
-        <input type="password" id="ai-custom-api-key" placeholder="sk-xxx" />
-        <label for="ai-custom-model-name">自定义 模型名称</label>
-        <input type="text" id="ai-custom-model-name" placeholder="例如：gpt-3.5-turbo" />
-      </div>
-
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
-
-      <h4>AI 分析设置</h4>
-      <label for="analysis-prompt-input">分析指令 (System Prompt)</label>
-      <textarea id="analysis-prompt-input" rows="5" placeholder="自定义分析指令..."></textarea>
-
-      <hr style="border: 0; border-top: 1px solid var(--textarea-border-color); margin: 20px 0;">
-
-      <h4>朗读设置</h4>
-      <label for="tts-urls">TTS API URLs (多个用逗号分隔)</label>
-      <input type="text" id="tts-urls" placeholder="例如: https://your-tts-api.com/api/aiyue" />
-
-      <label for="tts-voice-name">TTS 语音名称</label>
-      <input type="text" id="tts-voice-name" placeholder="例如: en-US-EricNeural" />
-
+      <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+      <label>TTS API URL</label>
+      <input type="text" id="tts-urls" placeholder="https://..." />
+      <label>TTS 语音名称</label>
+      <input type="text" id="tts-voice-name" placeholder="en-US-EricNeural" />
       <div class="modal-buttons">
-          <button class="delete" onclick="resetToken()">重设 GitHub Token</button>
-          <button onclick="saveAndApplySettings()">保存并关闭</button>
+          <button class="delete" onclick="resetToken()">重置 Token</button>
+          <button onclick="saveAndApplySettings()">完成</button>
       </div>
     </div>
-  </div>
-
-  <div id="styleManagementModal" class="modal">
-    <div class="modal-content">
-      <h3>🎨 管理创作风格</h3>
-      <div class="style-input-container">
-        <input type="text" id="addStyleInput" placeholder="输入新风格名称..." />
-        <button onclick="addCustomStyle()">添加</button>
-      </div>
-      <ul id="customStyleList"></ul>
-      <button style="margin-top: 20px;" onclick="closeStyleManagementModal()">完成</button>
-    </div>
-  </div>
-
-  <div id="aiResultModal" class="modal">
-      <div class="modal-content">
-          <div class="modal-sticky-header">
-              <div class="header-title-area">
-                  <h3 style="margin:0;">🧠 AI 深度分析</h3>
-              </div>
-              <div class="ai-original-sentence-container">
-                  <div class="ai-original-sentence" id="aiOriginalSentence"></div>
-              </div>
-          </div>
-          <div id="aiResultContent" class="modal-scroll-body ai-result-content"></div>
-      </div>
   </div>
 
   <script>
     const GITHUB_USERNAME = "moodHappy";
     const GITHUB_REPO = "HelloWorld";
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
-    const SETTINGS_KEY = "github_sync_assistant_settings";
-    const CUSTOM_STYLES_KEY = "github_sync_assistant_custom_styles";
+    const SETTINGS_KEY = "github_sync_pure_v2";
 
-    // --- 推送配置 (新增) ---
+    // 推送配置
     const PUSH_CONFIG = {
         owner: 'moodHappy',
         repo: 'moodHappy.gitHub.io-nce',
-        path: 'Notes/danmu/Prose' // 存储路径
+        path: 'Notes/danmu/Prose'
     };
-
-    const DEFAULT_KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions";
-    const DEFAULT_KIMI_MODEL = "moonshot-v1-8k";
-
-    const DEFAULT_ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-    const DEFAULT_ZHIPU_MODEL = "glm-4";
-
-    // Default TTS settings
-    const DEFAULT_TTS_URLS = 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/';
-    const DEFAULT_TTS_VOICE = 'en-US-EricNeural';
-
-    // Analysis Settings
-    const DEFAULT_ANALYSIS_PROMPT = `你是一位精通中英文的语言专家。请分析我提供的句子：
-1. 判断难度等级 (A1-C2)。
-2. 提供准确、优美的中文翻译。
-3. 句中关键短语及例句、例句翻译。
-请使用 Markdown 格式输出。`;
-    const CACHE_PREFIX = 'ai_reader_cache_v1_';
-    const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
 
     let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
@@ -487,1114 +204,182 @@
     const statusDiv = document.getElementById("status");
     const tokenModal = document.getElementById("tokenModal");
     const settingsModal = document.getElementById("settingsModal");
-    const storyThemeModal = document.getElementById("storyThemeModal");
-    const themeInput = document.getElementById("themeInput");
-    const randomTopicsList = document.getElementById("randomTopicsList");
-    const generateTopicsBtn = document.querySelector('.generate-topics-btn');
-    const rootElement = document.documentElement;
 
-    // AI Settings Elements
-    const aiProviderSelect = document.getElementById('ai-provider-select');
-    const aiKimiInputsDiv = document.getElementById('ai-kimi-inputs');
-    const aiZhipuInputsDiv = document.getElementById('ai-zhipu-inputs');
-    const aiCustomInputsDiv = document.getElementById('ai-custom-inputs');
-    const aiKimiApiKeyInput = document.getElementById('ai-kimi-api-key');
-    const aiKimiModelNameInput = document.getElementById('ai-kimi-model-name');
-    const aiZhipuApiKeyInput = document.getElementById('ai-zhipu-api-key');
-    const aiZhipuModelNameInput = document.getElementById('ai-zhipu-model-name');
-    const aiApiUrlInput = document.getElementById('ai-api-url');
-    const aiCustomApiKeyInput = document.getElementById('ai-custom-api-key');
-    const aiCustomModelNameInput = document.getElementById('ai-custom-model-name');
-
-    // Analysis Elements
-    const analysisPromptInput = document.getElementById('analysis-prompt-input');
-    const aiResultModal = document.getElementById('aiResultModal');
-
-    // TTS Settings Elements
-    const ttsUrlsInput = document.getElementById('tts-urls');
-    const ttsVoiceNameInput = document.getElementById('tts-voice-name');
-
-    // Theme & Difficulty Elements
-    const themeCategorySelect = document.getElementById('themeCategorySelect');
-    const difficultySelect = document.getElementById('difficultySelect');
-    const styleSelect = document.getElementById('styleSelect');
-
-    // Style Management Elements
-    const styleManagementModal = document.getElementById('styleManagementModal');
-    const addStyleInput = document.getElementById('addStyleInput');
-    const customStyleList = document.getElementById('customStyleList');
-
-
-    // --- THEME & STYLE LIBRARY ---
-    const THEME_LIBRARY = {
-        '日常生活类': [], 
-        '悬疑与推理类': [],
-        '科幻与奇幻类': [],
-        '历史与现实主义类': [],
-        '哲理与寓言类': [],
-        '爱情与情感类': [],
-        '心理与情绪类': [],
-        '幽默与讽刺类': [],
-        '奇遇与冒险类': [],
-    };
-
-    const DIFFICULTY_LEVELS = [
-        'A1 (入门)', 
-        'A2 (初级)', 
-        'B1 (中级)', 
-        'B2 (中高级)', 
-        'C1 (高级)', 
-        'C2 (精通)'
-    ];
-
-    const BUILT_IN_STYLES = [
-        '口语风格',
-        '简洁风格',
-        '叙事风格',
-        '书面风格',
-        '新闻风格',
-        '幽默风格',
-        '讽刺风格', 
-        '黑镜风格',
-        '文学风格',
-        '哲理风格',
-        '商业风格',
-        '学术风格'
-    ];
-
-    // --- Settings Management ---
     const defaultSettings = {
-        theme: '',
-        fontFamily: "'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-        fontSize: '17px',
-        lineHeight: '1.6',
-        aiProvider: 'kimi',
-        aiKimiApiKey: '',
-        aiKimiModelName: DEFAULT_KIMI_MODEL,
-        aiZhipuApiKey: '',
-        aiZhipuModelName: DEFAULT_ZHIPU_MODEL,
-        aiApiUrl: '',
-        aiCustomApiKey: '',
-        aiCustomModelName: '',
-        analysisPrompt: DEFAULT_ANALYSIS_PROMPT,
-        ttsUrls: DEFAULT_TTS_URLS,
-        ttsVoiceName: DEFAULT_TTS_VOICE,
+        theme: '', fontSize: '17px', 
+        ttsUrls: 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/',
+        ttsVoiceName: 'en-US-EricNeural'
     };
 
-    function applySettings(settings) {
-        document.body.className = settings.theme || '';
-        rootElement.style.setProperty('--primary-font', settings.fontFamily);
-        rootElement.style.setProperty('--font-size', settings.fontSize);
-        rootElement.style.setProperty('--line-height', settings.lineHeight);
-
-        aiProviderSelect.value = settings.aiProvider;
-        updateAIInputsVisibility(settings.aiProvider);
+    function applySettings(s) {
+        document.body.className = s.theme || '';
+        document.documentElement.style.setProperty('--font-size', s.fontSize);
     }
 
     function loadSettings() {
-        const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-        const currentSettings = { ...defaultSettings, ...savedSettings };
-        applySettings(currentSettings);
-
-        // Load AI values into inputs
-        aiKimiApiKeyInput.value = currentSettings.aiKimiApiKey;
-        aiKimiModelNameInput.value = currentSettings.aiKimiModelName;
-        aiZhipuApiKeyInput.value = currentSettings.aiZhipuApiKey;
-        aiZhipuModelNameInput.value = currentSettings.aiZhipuModelName;
-        aiApiUrlInput.value = currentSettings.aiApiUrl;
-        aiCustomApiKeyInput.value = currentSettings.aiCustomApiKey;
-        aiCustomModelNameInput.value = currentSettings.aiCustomModelName;
-
-        // Load Analysis Prompt
-        analysisPromptInput.value = currentSettings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
-
-        // Load TTS values into inputs
-        ttsUrlsInput.value = currentSettings.ttsUrls;
-        ttsVoiceNameInput.value = currentSettings.ttsVoiceName;
+        const s = { ...defaultSettings, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
+        applySettings(s);
+        document.getElementById('tts-urls').value = s.ttsUrls;
+        document.getElementById('tts-voice-name').value = s.ttsVoiceName;
+        document.getElementById('font-size-select').value = s.fontSize;
+        document.getElementById('theme-select').value = s.theme;
     }
 
-    function updateAIInputsVisibility(provider) {
-        aiKimiInputsDiv.style.display = provider === 'kimi' ? 'block' : 'none';
-        aiZhipuInputsDiv.style.display = provider === 'zhipu' ? 'block' : 'none';
-        aiCustomInputsDiv.style.display = provider === 'custom' ? 'block' : 'none';
-    }
+    function openSettingsModal() { settingsModal.style.display = "flex"; }
 
-    aiProviderSelect.addEventListener('change', (event) => {
-        updateAIInputsVisibility(event.target.value);
-    });
-
-    function openSettingsModal() {
-        const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-        document.getElementById('theme-select').value = savedSettings.theme;
-        document.getElementById('font-family-select').value = savedSettings.fontFamily;
-        document.getElementById('font-size-select').value = savedSettings.fontSize;
-        document.getElementById('line-height-select').value = savedSettings.lineHeight;
-
-        // Load AI settings into modal
-        aiProviderSelect.value = savedSettings.aiProvider;
-        aiKimiApiKeyInput.value = savedSettings.aiKimiApiKey;
-        aiKimiModelNameInput.value = savedSettings.aiKimiModelName;
-        aiZhipuApiKeyInput.value = savedSettings.aiZhipuApiKey;
-        aiZhipuModelNameInput.value = savedSettings.aiZhipuModelName;
-        aiApiUrlInput.value = savedSettings.aiApiUrl;
-        aiCustomApiKeyInput.value = savedSettings.aiCustomApiKey;
-        aiCustomModelNameInput.value = savedSettings.aiCustomModelName;
-
-        analysisPromptInput.value = savedSettings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
-
-        // Load TTS settings into modal
-        ttsUrlsInput.value = savedSettings.ttsUrls;
-        ttsVoiceNameInput.value = savedSettings.ttsVoiceName;
-
-        updateAIInputsVisibility(savedSettings.aiProvider);
-
-        settingsModal.style.display = "flex";
-    }
-
-    function closeSettingsModal() {
+    function saveAndApplySettings() {
+        const s = {
+            theme: document.getElementById('theme-select').value,
+            fontSize: document.getElementById('font-size-select').value,
+            ttsUrls: document.getElementById('tts-urls').value,
+            ttsVoiceName: document.getElementById('tts-voice-name').value
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        applySettings(s);
         settingsModal.style.display = "none";
     }
 
-    function saveAndApplySettings() {
-        const newSettings = {
-            theme: document.getElementById('theme-select').value,
-            fontFamily: document.getElementById('font-family-select').value,
-            fontSize: document.getElementById('font-size-select').value,
-            lineHeight: document.getElementById('line-height-select').value,
-            aiProvider: aiProviderSelect.value,
-            aiKimiApiKey: aiKimiApiKeyInput.value,
-            aiKimiModelName: aiKimiModelNameInput.value,
-            aiZhipuApiKey: aiZhipuApiKeyInput.value,
-            aiZhipuModelName: aiZhipuModelNameInput.value,
-            aiApiUrl: aiApiUrlInput.value,
-            aiCustomApiKey: aiCustomApiKeyInput.value,
-            aiCustomModelName: aiCustomModelNameInput.value,
-            analysisPrompt: analysisPromptInput.value,
-            ttsUrls: ttsUrlsInput.value,
-            ttsVoiceName: ttsVoiceNameInput.value,
-        };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-        applySettings(newSettings);
-        closeSettingsModal();
-        statusDiv.textContent = "⚙️ 设置已保存。";
-        // 清除缓存以应用可能的Prompt更改
-        if(confirm("设置已更新。是否清空之前的分析结果缓存？")) {
-             Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k));
-        }
-    }
-
-    // --- GitHub Token Management ---
-    function ensureToken() {
-      if (!GITHUB_TOKEN) {
-        tokenModal.style.display = "flex";
-      }
-    }
-
     function saveToken() {
-      const token = document.getElementById("tokenInput").value.trim();
-      if (!token.startsWith("ghp_") && !token.startsWith("github_pat_")) {
-        alert("请输入有效的 GitHub Token！");
-        return;
-      }
-      localStorage.setItem("github_token", token);
-      GITHUB_TOKEN = token;
-      tokenModal.style.display = "none";
-      statusDiv.textContent = "⏳ 正在加载 GitHub 内容...";
-      loadContent();
+        const t = document.getElementById("tokenInput").value.trim();
+        if (t) { localStorage.setItem("github_token", t); GITHUB_TOKEN = t; tokenModal.style.display = "none"; loadContent(); }
     }
 
-    function resetToken() {
-      if (confirm("确定要清除已保存的 GitHub Token 并重新输入吗？")) {
-        localStorage.removeItem("github_token");
-        GITHUB_TOKEN = null;
-        closeSettingsModal();
-        ensureToken();
-      }
-    }
+    function resetToken() { localStorage.removeItem("github_token"); location.reload(); }
 
-    // --- Core GitHub API Functions ---
-    function getHeaders() {
-      return {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json"
-      };
-    }
-
+    function getHeaders() { return { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" }; }
     function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
 
-    async function getCurrentFileShaAndContent() {
-      try {
+    async function fetchFile() {
         const res = await fetch(apiUrl, { headers: getHeaders() });
-        if (res.status === 404) {
-             statusDiv.textContent = "ℹ️ 目标文件不存在，提交时将自动创建。";
-             return { sha: null, content: "" };
-        }
-        if (!res.ok) throw new Error(`GitHub 状态码 ${res.status}`);
+        if (res.status === 404) return { sha: null, content: "" };
         const data = await res.json();
-        const decoded = decodeURIComponent(escape(atob(data.content)));
-        return { sha: data.sha, content: decoded };
-      } catch (err) {
-        console.warn("读取失败：", err.message);
-        statusDiv.textContent = `❌ 读取失败: ${err.message}. 请检查 Token 或网络。`;
-        return { sha: null, content: "" };
-      }
+        return { sha: data.sha, content: decodeURIComponent(escape(atob(data.content))) };
     }
 
     async function submitContent() {
-      const content = textarea.value.trim();
-      if (!content) return alert("请输入内容再提交！");
-      statusDiv.textContent = "🔄 正在提交到 GitHub...";
-
-      const { sha } = await getCurrentFileShaAndContent();
-      const encodedContent = btoa(unescape(encodeURIComponent(content)));
-
-      const res = await fetch(apiUrl, {
-        method: "PUT",
-        headers: { ...getHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: `Update ${WORD_FILE_PATH_GITHUB}`,
-          content: encodedContent,
-          committer: { name: "GitHub Sync Assistant", email: "bot@example.com" },
-          ...(sha ? { sha } : {})
-        })
-      });
-
-      if (res.ok) {
-        renderMode(content);
-        statusDiv.textContent = "✅ 提交成功，段落已渲染。";
-      } else {
-        statusDiv.textContent = "❌ 提交失败：" + (await res.json()).message;
-      }
+        const val = textarea.value.trim();
+        if (!val) return;
+        statusDiv.textContent = "🔄 正在同步...";
+        const { sha } = await fetchFile();
+        const res = await fetch(apiUrl, {
+            method: "PUT",
+            headers: { ...getHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Sync", content: utf8_to_b64(val), ...(sha ? { sha } : {}) })
+        });
+        if (res.ok) { renderMode(val); statusDiv.textContent = "✅ 同步成功"; }
     }
 
     async function deleteContent() {
-      if (!confirm("确定要清空 GitHub 上的文件内容吗？此操作不可逆。")) return;
-
-      statusDiv.textContent = "🗑️ 正在清空 GitHub 文件...";
-      const { sha } = await getCurrentFileShaAndContent();
-      if (!sha) {
-        textarea.value = "";
-        editMode();
-        statusDiv.textContent = "✅ 文件本就为空或不存在。";
-        return;
-      }
-
-      const res = await fetch(apiUrl, {
-        method: "PUT",
-        headers: { ...getHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: `Empty ${WORD_FILE_PATH_GITHUB}`,
-          content: btoa(""),
-          sha,
-          committer: { name: "GitHub Sync Assistant", email: "bot@example.com" }
-        })
-      });
-
-      if (res.ok) {
-        textarea.value = "";
-        editMode();
-        statusDiv.textContent = "✅ GitHub 内容已清空。";
-      } else {
-        statusDiv.textContent = "❌ 删除失败：" + (await res.json()).message;
-      }
+        if (!confirm("确定清空云端吗？")) return;
+        const { sha } = await fetchFile();
+        if (!sha) return;
+        await fetch(apiUrl, {
+            method: "PUT", headers: { ...getHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Empty", content: btoa(""), sha })
+        });
+        textarea.value = ""; editMode(); statusDiv.textContent = "🗑️ 已清空";
     }
 
-    // --- Push Functionality (新增) ---
+    // --- [修复版] 推送功能：使用第一段作为标题 ---
     async function pushCurrentContent() {
-        if (!GITHUB_TOKEN) {
-            alert("请先设置 GitHub Token");
-            return;
-        }
-
-        // 1. 获取内容 (优先获取可视区域内容)
-        let innerHtmlContent = "";
-        let plainTextContent = "";
-
-        if (renderedDiv.style.display !== 'none') {
-            // 阅读模式：克隆节点以移除分析按钮，保持HTML结构
-            const clone = renderedDiv.cloneNode(true);
-            clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
-            innerHtmlContent = clone.innerHTML;
-            plainTextContent = clone.innerText.trim();
-        } else {
-            // 编辑模式：将换行转换为简单的段落标签
-            const rawText = textarea.value.trim();
-            if (!rawText) {
-                alert("内容为空，无法推送");
-                return;
-            }
-            plainTextContent = rawText;
-            innerHtmlContent = rawText.split(/\n{2,}/).map(p => `<p>${p}</p>`).join('\n');
-        }
-
-        if (!plainTextContent) {
-            alert("内容为空");
-            return;
-        }
+        const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value.trim();
+        if (!text) return alert("内容为空");
 
         const btn = document.querySelector('button.push');
-        const originalText = btn.textContent;
         btn.textContent = "⏳ 推送中...";
         btn.disabled = true;
 
         try {
-            // 2. 提取标题
-            let firstSentence = plainTextContent.split(/[。.!?！？\n]/)[0].trim();
-            if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "...";
-            if (firstSentence.length === 0) firstSentence = `Saved Article`;
-
-            // 3. 生成详细时间戳
+            // 提取第一段内容（按双换行切分）
+            const paragraphs = text.split(/\n{2,}/);
+            const rawTitle = paragraphs[0].trim().replace(/\n/g, ' '); 
+            
+            // 用于展示的完整标题
+            const displayTitle = rawTitle;
+            // 用于文件名的安全标题（截断并过滤特殊字符）
+            let safeFilename = rawTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+            
             const now = new Date();
-            const pad = (n) => n.toString().padStart(2, '0');
-            const yyyy = now.getFullYear();
-            const mm = pad(now.getMonth() + 1);
-            const dd = pad(now.getDate());
-            const timeStr = `${yyyy}/${mm}/${dd} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            const timeStr = now.toLocaleString();
+            const bodyHtml = paragraphs.map(p => `<p>${p}</p>`).join('\n');
 
-            // 4. 准备完整 HTML 内容 (Template)
             const fileContent = `---
-title: "${firstSentence.replace(/"/g, '\\"')}"
+title: "${displayTitle.replace(/"/g, "'")}"
 date: "${timeStr}"
-layout: false
 ---
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>${firstSentence}</title>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${displayTitle}</title>
     <style>
-        body {
-            font-family: 'Noto Serif SC', 'Times New Roman', serif;
-            max-width: 800px; margin: 0 auto; padding: 40px 20px;
-            line-height: 2.2; font-size: 22px; color: #333;
-            background: #fcfbf9; word-wrap: break-word;
-        }
-        h1 { font-size: 1.5em; margin-bottom: 20px; color: #5a4a3f; line-height: 1.4; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
-        .article-meta { 
-            font-size: 0.8em; color: #999; margin-bottom: 30px; 
-            display: flex; align-items: center; gap: 6px;
-        }
-        img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
-        @media (max-width: 600px) { body { padding: 20px; font-size: 20px; line-height: 2.0; } }
+        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
+        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
+        p { margin-bottom: 1.5em; }
     </style>
 </head>
 <body>
-    <h1>${firstSentence}</h1>
-    <div class="article-meta">📅 ${timeStr}</div>
-    ${innerHtmlContent}
+    <h1>${displayTitle}</h1>
+    <div class="meta">发布时间：${timeStr}</div>
+    <div class="content">${bodyHtml}</div>
 </body>
 </html>`;
 
-            // 5. 生成文件名
-            let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
-            if (safeFilename.length > 30) safeFilename = safeFilename.substring(0, 30); 
-            const timestampSuffix = Date.now(); 
-            const filename = `${safeFilename}_${timestampSuffix}.html`;
+            const filename = `${safeFilename}_${Date.now()}.html`;
+            const pushUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${PUSH_CONFIG.path}/${filename}`;
 
-            const fullPath = `${PUSH_CONFIG.path}/${filename}`;
-            const targetUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
-
-            // 6. 推送请求
-            const body = {
-                message: `Push: ${filename}`,
-                content: utf8_to_b64(fileContent),
-                committer: { name: "AI Reader", email: "bot@reader.app" }
-            };
-
-            const res = await fetch(targetUrl, {
+            const res = await fetch(pushUrl, {
                 method: 'PUT',
-                headers: { 
-                    'Authorization': `Bearer ${GITHUB_TOKEN}`, 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify(body)
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `Push Prose: ${safeFilename}`, content: utf8_to_b64(fileContent) })
             });
 
-            if(!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || "GitHub API 错误");
-            }
-
-            alert(`推送成功！\n\n标题: ${firstSentence}\n文件: ${filename}`);
-
+            if(res.ok) alert(`🎉 推送成功！\n标题：${displayTitle}`);
+            else throw new Error("GitHub 返回错误");
         } catch (e) {
-            alert(`推送失败: ${e.message}`);
-            console.error(e);
+            alert("❌ 推送失败: " + e.message);
         } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
+            btn.textContent = "推送"; btn.disabled = false;
         }
-    }
-
-    // --- AI Generation Functions & API ---
-    function getAIConfig() {
-      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-      let aiApiUrl, aiApiKey, aiModelName;
-
-      switch (savedSettings.aiProvider) {
-        case 'kimi':
-            aiApiUrl = DEFAULT_KIMI_API_URL;
-            aiApiKey = savedSettings.aiKimiApiKey;
-            aiModelName = savedSettings.aiKimiModelName || DEFAULT_KIMI_MODEL;
-            break;
-        case 'zhipu':
-            aiApiUrl = DEFAULT_ZHIPU_API_URL;
-            aiApiKey = savedSettings.aiZhipuApiKey;
-            aiModelName = savedSettings.aiZhipuModelName || DEFAULT_ZHIPU_MODEL;
-            break;
-        case 'custom':
-            aiApiUrl = savedSettings.aiApiUrl;
-            aiApiKey = savedSettings.aiCustomApiKey;
-            aiModelName = savedSettings.aiCustomModelName;
-            break;
-      }
-      return { aiApiUrl, aiApiKey, aiModelName };
-    }
-
-    async function callAI(prompt, systemPrompt = "You are a helpful assistant.") {
-      const { aiApiUrl, aiApiKey, aiModelName } = getAIConfig();
-      if (!aiApiKey) {
-          throw new Error("❌ 请在设置中输入 AI 的 API Key！");
-      }
-      if (!aiApiUrl || !aiModelName) {
-          throw new Error("❌ 请在设置中补全自定义 AI 的所有信息！");
-      }
-
-      const response = await fetch(aiApiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${aiApiKey}`
-        },
-        body: JSON.stringify({
-          model: aiModelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.7
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API 请求失败，状态码: ${response.status} - ${await response.text()}`);
-      }
-
-      const data = await response.json();
-      return data.choices[0].message.content.trim();
-    }
-
-    function openThemeModal() {
-      storyThemeModal.style.display = "flex";
-      themeInput.value = "";
-      randomTopicsList.innerHTML = "";
-      populateThemeSelectors();
-      populateStyleSelector();
-    }
-
-    function closeThemeModal() {
-        storyThemeModal.style.display = "none";
-    }
-
-    // --- Populate Theme Selectors ---
-    function populateThemeSelectors() {
-        themeCategorySelect.innerHTML = '';
-        difficultySelect.innerHTML = '';
-
-        const defaultCategoryOption = document.createElement('option');
-        defaultCategoryOption.textContent = '选择分类';
-        defaultCategoryOption.value = '';
-        defaultCategoryOption.disabled = true;
-        defaultCategoryOption.selected = true;
-        themeCategorySelect.appendChild(defaultCategoryOption);
-
-        for (const category in THEME_LIBRARY) {
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category;
-            themeCategorySelect.appendChild(option);
-        }
-
-        DIFFICULTY_LEVELS.forEach(level => {
-            const option = document.createElement('option');
-            option.value = level.split(' ')[0]; 
-            option.textContent = level;
-            if (level.startsWith('B1')) { 
-                option.selected = true;
-            }
-            difficultySelect.appendChild(option);
-        });
-
-        themeCategorySelect.onchange = (event) => {
-            themeInput.value = '';
-        };
-    }
-
-    // --- Style Management Functions ---
-    function getCustomStyles() {
-      try {
-        return JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
-      } catch (e) {
-        console.error("Failed to parse custom styles from localStorage:", e);
-        return [];
-      }
-    }
-
-    function saveCustomStyles(styles) {
-      localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
-    }
-
-    function addCustomStyle() {
-      const newStyle = addStyleInput.value.trim();
-      if (newStyle === "") return;
-
-      const customStyles = getCustomStyles();
-      if (!customStyles.includes(newStyle) && !BUILT_IN_STYLES.includes(newStyle)) {
-        customStyles.push(newStyle);
-        saveCustomStyles(customStyles);
-        addStyleInput.value = "";
-        populateCustomStyleList();
-        statusDiv.textContent = "✅ 新风格已添加！";
-      } else {
-        statusDiv.textContent = "🤔 风格已存在，无需重复添加。";
-      }
-    }
-
-    function deleteCustomStyle(styleToDelete) {
-      const customStyles = getCustomStyles();
-      const newStyles = customStyles.filter(style => style !== styleToDelete);
-      saveCustomStyles(newStyles);
-      populateCustomStyleList();
-      statusDiv.textContent = "🗑️ 风格已删除。";
-    }
-
-    function populateCustomStyleList() {
-      const customStyles = getCustomStyles();
-      customStyleList.innerHTML = "";
-      if (customStyles.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = "尚无自定义风格";
-        li.style.color = 'var(--status-color)';
-        customStyleList.appendChild(li);
-        return;
-      }
-      customStyles.forEach(style => {
-        const li = document.createElement('li');
-        li.textContent = style;
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '删除';
-        deleteBtn.className = 'delete-style-btn';
-        deleteBtn.onclick = () => deleteCustomStyle(style);
-        li.appendChild(deleteBtn);
-        customStyleList.appendChild(li);
-      });
-    }
-
-    function openStyleManagementModal() {
-        populateCustomStyleList();
-        styleManagementModal.style.display = "flex";
-        storyThemeModal.style.display = "none";
-    }
-
-    function closeStyleManagementModal() {
-        styleManagementModal.style.display = "none";
-        populateStyleSelector();
-    }
-
-    function populateStyleSelector() {
-        styleSelect.innerHTML = '';
-        const allStyles = [...BUILT_IN_STYLES, ...getCustomStyles()];
-
-        const manageOption = document.createElement('option');
-        manageOption.textContent = '管理风格...';
-        manageOption.value = 'manage';
-        styleSelect.appendChild(manageOption);
-
-        allStyles.forEach(style => {
-            const option = document.createElement('option');
-            option.value = style;
-            option.textContent = style;
-            styleSelect.appendChild(option);
-        });
-
-        styleSelect.onchange = (event) => {
-            const selectedOption = event.target.selectedOptions[0];
-            if (selectedOption && selectedOption.value === 'manage') {
-                event.preventDefault();
-                event.stopPropagation();
-                openStyleManagementModal();
-                selectedOption.selected = false;
-            }
-        };
-    }
-
-    // --- Generate Random Topics ---
-    async function generateRandomTopics(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-
-        const theme = themeInput.value.trim() || themeCategorySelect.value;
-        if (theme === "" || theme === '选择分类') {
-            statusDiv.textContent = "🤔 请选择一个分类或手动输入，然后点击'生成题目'。";
-            return;
-        }
-
-        generateTopicsBtn.textContent = "生成中...";
-        generateTopicsBtn.disabled = true;
-        randomTopicsList.innerHTML = "";
-        statusDiv.textContent = `✨ 正在根据“${theme}”生成微小说题目...`;
-
-        try {
-            const prompt = `Based on the theme "${theme}", generate a list of 10 creative and unique short story titles in simplified Chinese. Separate each title with a newline character.`;
-            const topicsText = await callAI(prompt);
-            const topics = topicsText.split('\n').filter(t => t.trim() !== '');
-
-            topics.forEach(topic => {
-                const li = document.createElement('li');
-                li.textContent = topic.replace(/^\d+\.\s*/, ''); 
-                li.onclick = () => {
-                    startGeneration(li.textContent);
-                };
-                randomTopicsList.appendChild(li);
-            });
-            statusDiv.textContent = "✅ 题目列表生成成功！点击一个题目来生成微小说。";
-        } catch (error) {
-            statusDiv.textContent = `❌ 生成题目失败: ${error.message}`;
-            console.error("生成题目失败:", error);
-        } finally {
-            generateTopicsBtn.textContent = "生成题目";
-            generateTopicsBtn.disabled = false;
-        }
-    }
-
-    function confirmGenerate(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-
-        let topic = themeInput.value.trim();
-        if (topic === "") {
-            const selectedCategory = themeCategorySelect.value;
-            if (selectedCategory && selectedCategory !== '选择分类') {
-                topic = selectedCategory;
-            }
-        }
-
-        if (topic === "") {
-            statusDiv.textContent = "🤔 请在输入框中输入一个题目，或者选择一个分类。";
-            return;
-        }
-
-        startGeneration(topic);
-    }
-
-    async function startGeneration(topic) {
-      const difficulty = difficultySelect.value || 'B1';
-      const selectedStyles = Array.from(styleSelect.selectedOptions)
-                                 .map(option => option.value)
-                                 .filter(value => value !== 'manage');
-      const stylePrompt = selectedStyles.length > 0
-          ? ` in a ${selectedStyles.join(' and ')} style.`
-          : '.';
-
-      const prompt = `Write a short story in English, about 150 words, separated into 2-3 paragraphs, **CEFR Level ${difficulty}**, based on the Chinese title or theme: "${topic}"${stylePrompt}`;
-
-      statusDiv.textContent = `✍️ 正在根据“${topic}”创作英文微小说 (Level ${difficulty})...`;
-      editMode();
-      closeThemeModal();
-
-      try {
-          const storyContent = await callAI(prompt);
-          textarea.value = storyContent;
-          statusDiv.textContent = "✅ 微小说创作成功！正在自动提交到 GitHub...";
-          await submitContent();
-      } catch (error) {
-          statusDiv.textContent = `❌ 创作失败: ${error.message}`;
-          console.error("创作失败:", error);
-      }
-    }
-
-    // --- UI & Content Handling ---
-    function copyContent() {
-      const content = renderedDiv.style.display !== "none" ? renderedDiv.innerText : textarea.value;
-      if (!content) {
-        statusDiv.textContent = "🤷‍♀️ 内容为空，无需复制。";
-        return;
-      }
-      navigator.clipboard.writeText(content);
-      statusDiv.textContent = "📋 内容已复制到剪贴板。";
     }
 
     function renderMode(text) {
-      renderedDiv.innerHTML = "";
-      const paragraphs = text.split(/\n{2,}/);
-      for (const para of paragraphs) {
-        if (para.trim()) {
-          const p = document.createElement("p");
-          p.textContent = para.trim();
-          renderedDiv.appendChild(p);
-        }
-      }
-      renderedDiv.style.display = "block";
-      textarea.style.display = "none";
-      // 渲染后注入 AI 按钮
-      injectAIButtons();
+        renderedDiv.innerHTML = text.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join("");
+        renderedDiv.style.display = "block"; textarea.style.display = "none";
     }
 
-    function editMode() {
-      textarea.style.display = "block";
-      renderedDiv.style.display = "none";
-    }
+    function editMode() { textarea.style.display = "block"; renderedDiv.style.display = "none"; }
 
     async function loadContent() {
-      statusDiv.textContent = "⏳ 正在加载 GitHub 内容...";
-      const { content } = await getCurrentFileShaAndContent();
-      if (content.trim()) {
-        textarea.value = content;
-        renderMode(content);
-        statusDiv.textContent = "✅ GitHub 内容已加载并渲染。";
-      } else {
-        textarea.value = "";
-        editMode();
-        statusDiv.textContent = "✅ GitHub 内容为空，请编辑。";
-      }
+        statusDiv.textContent = "⏳ 加载中...";
+        const { content } = await fetchFile();
+        if (content) { textarea.value = content; renderMode(content); statusDiv.textContent = "✅ 已加载云端内容"; }
+        else { editMode(); statusDiv.textContent = "ℹ️ 云端暂无内容"; }
     }
 
-    // --- AI Sentence Analysis Logic (复用模块) ---
-    function generateCacheKey(text, prompt) {
-        let str = text + "|" + prompt;
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i) | 0;
-        return CACHE_PREFIX + Math.abs(hash);
-    }
-
-    function getFromCache(key) {
-        const item = JSON.parse(localStorage.getItem(key));
-        return (!item || Date.now() - item.timestamp > 86400000) ? null : item.content;
-    }
-
-    function saveToCache(key, content) {
-        try { localStorage.setItem(key, JSON.stringify({ content, timestamp: Date.now() })); } 
-        catch(e) { /* Ignore quota limits */ }
-    }
-
-    function injectAIButtons() {
-        // 1. 清理旧按钮 (虽然 renderMode 会清空 innerHTML，但保留此逻辑更健壮)
-        renderedDiv.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
-
-        // 2. 遍历文本节点
-        const w = document.createTreeWalker(renderedDiv, NodeFilter.SHOW_TEXT);
-        const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
-
-        nodes.forEach(n => {
-            if (n.nodeValue.includes('.')) {
-                const f = document.createDocumentFragment();
-                // 3. 按句号分割并插入按钮
-                n.nodeValue.split(/(\.)/).forEach(p => {
-                    f.appendChild(document.createTextNode(p));
-                    if(p === '.') {
-                        const b = document.createElement('span');
-                        b.className = 'ai-analyze-btn';
-                        b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
-                        b.onclick = (e) => handleAIAnalyzeClick(e.target);
-                        f.appendChild(b);
-                    }
-                });
-                n.parentNode.replaceChild(f, n);
-            }
+    function copyContent() {
+        const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value;
+        navigator.clipboard.writeText(text).then(() => {
+            const old = statusDiv.textContent;
+            statusDiv.textContent = "📋 已复制到剪贴板";
+            setTimeout(() => statusDiv.textContent = old, 2000);
         });
-
-        // 恢复高亮状态
-        const lastClickedIndex = localStorage.getItem(LAST_CLICKED_KEY);
-        if (lastClickedIndex !== null) {
-            const allBtns = renderedDiv.querySelectorAll('.ai-analyze-btn');
-            const idx = parseInt(lastClickedIndex);
-            if (allBtns[idx]) {
-                allBtns[idx].classList.add('last-clicked');
-            }
-        }
-    }
-
-    function extractSentenceBefore(node) {
-        let t = "", c = node.previousSibling;
-        while(c) {
-            if(c.nodeType === 3) { // Text node
-                t = c.nodeValue + t; 
-                if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { 
-                    t = t.substring(t.lastIndexOf('.')+1); 
-                    break; 
-                } 
-            }
-            else if(c.classList?.contains('ai-analyze-btn')) break;
-            else t = c.innerText + t;
-            c = c.previousSibling;
-        }
-        return t.trim();
-    }
-
-    async function handleAIAnalyzeClick(target) {
-        const btn = target.closest('.ai-analyze-btn');
-        if (!btn) return;
-
-        // UI Feedback
-        const allBtns = document.querySelectorAll('.ai-analyze-btn');
-        allBtns.forEach(b => b.classList.remove('last-clicked'));
-        btn.classList.add('last-clicked');
-
-        const btnIndex = Array.from(allBtns).indexOf(btn);
-        if (btnIndex !== -1) localStorage.setItem(LAST_CLICKED_KEY, btnIndex);
-
-        const sentence = extractSentenceBefore(btn);
-        if (!sentence || sentence.length < 2) return;
-
-        // Modal Setup
-        const resultBox = document.getElementById('aiResultContent');
-        const sentenceBox = document.getElementById('aiOriginalSentence');
-
-        // --- 修复后的 DOM 结构逻辑 (Inline Flow + 强制图标) ---
-        sentenceBox.innerHTML = ''; 
-
-        // 1. Text Node 
-        const textNode = document.createElement('span');
-        textNode.className = "ai-original-text";
-        textNode.textContent = sentence;
-        sentenceBox.appendChild(textNode);
-
-        // 2. Button (图标颜色锁死 #1a73e8, 尺寸锁死 20px)
-        const readBtn = document.createElement('button');
-        readBtn.className = 'ai-read-sentence-btn';
-        readBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 0 24 24" width="20px" style="fill:#1a73e8"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
-        readBtn.title = "朗读原句";
-        readBtn.onclick = (e) => {
-            e.stopPropagation();
-            playSummaryTTS(sentence);
-        };
-        sentenceBox.appendChild(readBtn);
-        // ------------------------
-
-        resultBox.innerHTML = '<div class="ai-loading"><p>🧠 正在分析句子结构与含义...</p></div>';
-        aiResultModal.style.display = 'flex';
-
-        // Check Cache
-        const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-        const sysPrompt = savedSettings.analysisPrompt || DEFAULT_ANALYSIS_PROMPT;
-        const cacheKey = generateCacheKey(sentence, sysPrompt);
-        const cached = getFromCache(cacheKey);
-
-        if (cached) {
-            resultBox.innerHTML = marked.parse(cached);
-            return;
-        }
-
-        // Call AI
-        try {
-            const content = await callAI(`Analyze this sentence:\n"${sentence}"`, sysPrompt);
-            saveToCache(cacheKey, content);
-            resultBox.innerHTML = marked.parse(content);
-        } catch (e) {
-            resultBox.innerHTML = `<p style="color:var(--button-danger-bg);">错误: ${e.message}</p>`;
-        }
-    }
-
-    function closeAiResultModal() {
-        aiResultModal.style.display = 'none';
-    }
-
-    // Double click to close AI Modal
-    document.querySelector('#aiResultModal .modal-content').addEventListener('dblclick', (e) => {
-        if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName) || window.getSelection().toString().length > 0) return;
-        closeAiResultModal();
-    });
-
-    // --- Text-to-Speech Functionality ---
-    let currentAudio = null;
-    let isReading = false;
-    let isPaused = false;
-    let currentTextToSpeak = '';
-    let currentPosition = 0;
-    const currentSpeed = -20; 
-
-    function playSummaryTTS(textToSpeak, fromCurrentPosition = false) {
-      if (!textToSpeak || textToSpeak.trim() === '') {
-          return;
-      }
-
-      const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
-      const ttsUrls = savedSettings.ttsUrls.split(',').map(url => url.trim()).filter(url => url !== '');
-      const ttsVoiceName = savedSettings.ttsVoiceName;
-
-      if (ttsUrls.length === 0 || !ttsVoiceName) {
-        statusDiv.textContent = "❌ 请在设置中配置 TTS API URL 和语音名称。";
-        return;
-      }
-
-      if (currentAudio && !currentAudio.paused) {
-          currentAudio.pause();
-      }
-
-      currentTextToSpeak = textToSpeak;
-      const finaltextToSpeak = textToSpeak.trim();
-
-      const queryString = new URLSearchParams({
-          text: finaltextToSpeak,
-          voiceName: ttsVoiceName,
-          speed: currentSpeed,
-      }).toString();
-
-      function tryPlay(urls) {
-        if (urls.length === 0) {
-            statusDiv.textContent = "❌ 所有 TTS 服务都无法连接。";
-            isReading = false;
-            isPaused = false;
-            updateButtonState();
-            return;
-        }
-
-        const url = urls.shift();
-        const ttsUrl = `${url.endsWith('/') ? url : url + '/'}api/aiyue?${queryString}`;
-
-        currentAudio = new Audio(ttsUrl);
-
-        if (fromCurrentPosition && currentPosition > 0) {
-            currentAudio.currentTime = currentPosition;
-        } else {
-            currentPosition = 0;
-        }
-
-        currentAudio.play()
-            .then(() => {
-                isReading = true;
-                isPaused = false;
-                updateButtonState();
-                statusDiv.textContent = '🔊 正在朗读...';
-
-                currentAudio.addEventListener('ended', function() {
-                    isReading = false;
-                    isPaused = false;
-                    currentPosition = 0;
-                    updateButtonState();
-                    statusDiv.textContent = '✅ 朗读已完成。';
-                }, { once: true });
-
-                currentAudio.addEventListener('error', function() {
-                    isReading = false;
-                    isPaused = false;
-                    currentPosition = 0;
-                    updateButtonState();
-                    tryPlay(urls); // Try next
-                }, { once: true });
-
-                currentAudio.addEventListener('timeupdate', function() {
-                    if (!currentAudio.paused) {
-                        currentPosition = currentAudio.currentTime;
-                    }
-                });
-            })
-            .catch(e => {
-                tryPlay(urls);
-            });
-      }
-
-      tryPlay([...ttsUrls]);
-    }
-
-    function pauseTTS() {
-        if (currentAudio && !currentAudio.paused) {
-            currentPosition = currentAudio.currentTime;
-            currentAudio.pause();
-            isPaused = true;
-            isReading = false;
-            updateButtonState();
-            statusDiv.textContent = '⏸️ 朗读已暂停。';
-        }
-    }
-
-    function resumeTTS() {
-        if (currentAudio && isPaused) {
-            currentAudio.play()
-                .then(() => {
-                    isReading = true;
-                    isPaused = false;
-                    updateButtonState();
-                    statusDiv.textContent = '🔊 正在朗读...';
-                })
-                .catch(e => {
-                    currentPosition = 0;
-                    playSummaryTTS(currentTextToSpeak);
-                });
-        } else if (!currentAudio || currentAudio.ended) {
-            readContent();
-        }
-    }
-
-    function updateButtonState() {
-        const readAloudButton = document.querySelector('.read');
-        if (isReading) {
-            readAloudButton.textContent = '暂停';
-        } else if (isPaused) {
-            readAloudButton.textContent = '继续';
-        } else {
-            readAloudButton.textContent = '朗读';
-        }
     }
 
     function readContent() {
-        // [修改] 为了朗读纯净文本，需要克隆节点并移除分析按钮
-        const clone = renderedDiv.cloneNode(true);
-        clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
-        const textToRead = clone.innerText.trim();
-
-        if (!textToRead) {
-            statusDiv.textContent = "🤷‍♀️ 没有内容可以朗读。";
-            return;
-        }
-
-        if (isReading) {
-            pauseTTS();
-        } else if (isPaused) {
-            resumeTTS();
-        } else {
-            currentPosition = 0;
-            playSummaryTTS(textToRead);
-        }
+        const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value;
+        if (!text) return;
+        const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+        const api = `${s.ttsUrls.replace(/\/$/, '')}/api/aiyue?text=${encodeURIComponent(text)}&voiceName=${s.ttsVoiceName}&speed=-20`;
+        statusDiv.textContent = "🔊 正在朗读...";
+        new Audio(api).play().catch(() => alert("TTS 播放失败，请检查设置。"));
     }
 
-    // --- Enhanced Mobile Support ---
-    themeInput.addEventListener('keypress', function(event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        confirmGenerate(event);
-      }
-    });
-
-    addStyleInput.addEventListener('keypress', function(event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            addCustomStyle();
-        }
-    });
-
-    window.addEventListener('click', function(event) {
-      if (event.target === storyThemeModal) closeThemeModal();
-      if (event.target === settingsModal) closeSettingsModal();
-      if (event.target === styleManagementModal) closeStyleManagementModal();
-      if (event.target === aiResultModal) closeAiResultModal();
-    });
-
-    // --- Initial Load ---
     window.onload = () => {
-      loadSettings();
-      ensureToken();
-      if (GITHUB_TOKEN) {
-        loadContent();
-      } else {
-        statusDiv.textContent = "👋 欢迎使用！请输入 GitHub Token 以开始。";
-      }
+        loadSettings();
+        if (!GITHUB_TOKEN) tokenModal.style.display = "flex";
+        else loadContent();
     };
   </script>
 </body>
