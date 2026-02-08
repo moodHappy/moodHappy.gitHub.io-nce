@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>danmu</title>
+    <title>danmu - 批量管理版</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
@@ -17,11 +17,8 @@
             --text-main: #1f2328;
             --text-muted: #656d76;
             --folder-color: #54aeff;
-            --pinned-bg: #e6f6ff;
-            --pinned-border: #b6e3ff;
             --danger-bg: #ffebe9;
             --danger-text: #cf222e;
-            --danger-border: #d1242f;
         }
 
         body {
@@ -30,6 +27,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 20px;
+            padding-bottom: 80px; /* 为底部操作栏留空间 */
         }
 
         .container {
@@ -40,6 +38,7 @@
             border-radius: 6px;
             padding: 20px;
             box-shadow: 0 3px 6px rgba(140, 149, 159, 0.03);
+            position: relative;
         }
 
         /* 头部与导航 */
@@ -54,13 +53,17 @@
 
         h1 { margin: 0; font-size: 18px; }
 
-        .settings-btn {
+        .header-actions { display: flex; gap: 10px; }
+
+        .icon-btn {
             background: none; border: 1px solid var(--border);
             border-radius: 6px; cursor: pointer;
             padding: 5px 10px; font-size: 13px; color: var(--text-muted);
             display: flex; align-items: center; gap: 5px;
+            transition: all 0.2s;
         }
-        .settings-btn:hover { background-color: #f3f4f6; color: var(--text-main); }
+        .icon-btn:hover { background-color: #f3f4f6; color: var(--text-main); }
+        .icon-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); }
 
         /* 面包屑导航 */
         .breadcrumb {
@@ -80,12 +83,11 @@
 
         /* 置顶区域样式 */
         .pinned-section {
-            background: var(--pinned-bg);
-            border: 1px solid var(--pinned-border);
+            background: #e6f6ff;
+            border: 1px solid #b6e3ff;
             border-radius: 6px;
             padding: 15px;
             margin-bottom: 20px;
-            animation: fadeIn 0.5s ease;
         }
         .pinned-label {
             font-size: 12px; font-weight: bold; color: #0969da; text-transform: uppercase; margin-bottom: 8px; display: block;
@@ -96,10 +98,9 @@
         .pinned-title { font-size: 16px; font-weight: 700; color: #1f2328; }
         .pinned-meta { font-size: 12px; color: #57606a; margin-top: 4px; }
         .pinned-icon { font-size: 20px; margin-right: 10px; }
-        .pinned-arrow { color: #0969da; font-weight: bold; }
         .pinned-card:hover .pinned-title { text-decoration: underline; color: #0969da; }
 
-        /* 普通列表样式 */
+        /* 列表样式 */
         ul { list-style: none; padding: 0; margin: 0; }
         li { border-bottom: 1px solid #eaecef; }
         li:last-child { border-bottom: none; }
@@ -108,9 +109,12 @@
             display: flex; justify-content: space-between; align-items: center;
             padding: 12px 10px; text-decoration: none; color: var(--text-main);
             transition: background 0.2s; cursor: pointer; border-radius: 4px;
+            user-select: none; /* 防止双击选中文本 */
         }
         .list-item:hover { background-color: #f6f8fa; }
-        
+        /* 选中态 */
+        .list-item.selected { background-color: #e6f6ff; }
+
         .item-left-group {
             display: flex; align-items: center; flex-grow: 1; min-width: 0;
         }
@@ -118,71 +122,87 @@
         .item-icon { margin-right: 10px; font-size: 18px; flex-shrink: 0; }
         .folder-icon { color: var(--folder-color); }
         .file-icon { color: var(--text-muted); }
-        
+
         .item-info { min-width: 0; }
         .item-name { font-weight: 600; font-size: 15px; display: block; }
-        .item-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-        /* 删除按钮样式 */
+        /* 复选框样式 */
+        .select-checkbox {
+            margin-right: 15px;
+            width: 20px; height: 20px;
+            cursor: pointer;
+            display: none; /* 默认隐藏 */
+        }
+        .selection-mode .select-checkbox { display: block; }
+        
+        /* 隐藏普通模式下的删除按钮，批量模式下统一操作 */
         .delete-btn {
             background-color: var(--danger-bg);
             color: var(--danger-text);
             border: 1px solid rgba(209, 36, 47, 0.3);
             border-radius: 4px;
-            padding: 6px 10px;
-            font-size: 14px;
+            padding: 4px 8px;
+            font-size: 12px;
             cursor: pointer;
-            margin-right: 12px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
+            margin-right: 10px;
         }
-        .delete-btn:hover {
-            background-color: var(--danger-text);
-            color: white;
-            border-color: var(--danger-text);
+        .selection-mode .delete-btn { display: none; }
+
+        /* 底部操作栏 */
+        .action-bar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #24292f; color: white;
+            padding: 12px 20px; border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            display: flex; align-items: center; gap: 15px;
+            z-index: 100;
+            opacity: 0; pointer-events: none; transition: all 0.3s;
+            width: 90%; max-width: 400px; justify-content: space-between;
         }
+        .action-bar.visible { opacity: 1; pointer-events: auto; bottom: 30px; }
+        .action-count { font-weight: bold; font-size: 14px; }
+        .action-btn {
+            background: var(--primary); border: none; color: white;
+            padding: 8px 16px; border-radius: 20px; font-size: 14px; cursor: pointer;
+        }
+        .action-btn:disabled { background: #666; cursor: not-allowed; }
 
         .loading, .error { text-align: center; padding: 30px; color: var(--text-muted); }
         .error { color: #cf222e; background: #ffebe9; border-radius: 6px; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* 设置弹窗 */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 99; justify-content: center; align-items: center; }
-        .modal { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        /* 弹窗通用 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 8px; width: 85%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
         .form-group input[type="text"], 
         .form-group input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; }
-        .form-group .hint { font-size: 12px; color: #666; margin-top: 4px; }
-        
-        /* 开关样式 */
-        .toggle-group {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #f8f8f8; padding: 10px; border-radius: 4px; border: 1px solid #eee;
-        }
-        .toggle-group label { margin: 0; cursor: pointer; color: var(--danger-text); }
-        .toggle-group input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
-
         .btn { padding: 8px 16px; cursor: pointer; border: none; border-radius: 4px; font-size: 14px; }
         .btn-secondary { background: #f3f4f6; color: #24292f; margin-right: 10px; }
         .btn-primary { background: var(--primary); color: white; }
+        
+        /* 进度条 */
+        .progress-log { font-size: 12px; color: #666; max-height: 100px; overflow-y: auto; margin-top: 10px; background: #f8f8f8; padding: 5px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="main-container">
     <header>
         <h1>📚 英语学习笔记</h1>
-        <button class="settings-btn" onclick="openSettings()"><span>⚙️ 设置</span></button>
+        <div class="header-actions">
+            <button id="batch-btn" class="icon-btn" onclick="toggleBatchMode()">
+                <span>✅ 选择</span>
+            </button>
+            <button class="icon-btn" onclick="openSettings()">
+                <span>⚙️ 设置</span>
+            </button>
+        </div>
     </header>
 
     <div id="breadcrumb" class="breadcrumb"></div>
-
     <div id="latest-container"></div>
 
     <div id="file-list">
@@ -190,19 +210,21 @@
     </div>
 </div>
 
+<div id="action-bar" class="action-bar">
+    <span class="action-count">已选 0 项</span>
+    <button id="move-btn" class="action-btn" onclick="openMoveModal()">移动文件 📂</button>
+</div>
+
 <div id="settings-modal" class="modal-overlay">
     <div class="modal">
         <h3>🔧 配置</h3>
-        
-        <div class="form-group toggle-group">
-            <label for="cfg-del-enable">🔴 开启删除模式 (Delete Mode)</label>
-            <input type="checkbox" id="cfg-del-enable">
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+             <label>🔴 单文件删除模式</label>
+             <input type="checkbox" id="cfg-del-enable" style="width:auto;">
         </div>
-
         <div class="form-group">
             <label>GitHub Token (PAT) <span style="color:red">*</span></label>
             <input type="password" id="cfg-token" placeholder="github_pat_...">
-            <div class="hint">🔒 Token 必须具备 repo 权限才能删除文件。</div>
         </div>
         <div class="form-group">
             <label>GitHub 用户名</label>
@@ -223,21 +245,44 @@
     </div>
 </div>
 
+<div id="move-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>📂 移动到...</h3>
+        <div class="form-group">
+            <label>目标文件夹路径</label>
+            <input type="text" id="move-target-path" placeholder="例如: Notes/2026">
+            <div style="font-size:12px; color:#666; margin-top:5px;">
+                提示: 输入文件夹路径。如果文件夹不存在，会自动创建。
+            </div>
+        </div>
+        <div id="move-log" class="progress-log" style="display:none;"></div>
+        <div style="text-align: right; margin-top: 20px;">
+            <button id="btn-cancel-move" class="btn btn-secondary" onclick="closeMoveModal()">取消</button>
+            <button id="btn-confirm-move" class="btn btn-primary" onclick="execMove()">确认移动</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // --- 默认配置 ---
+    // --- 配置与状态 ---
     const DEFAULTS = {
         user: 'moodHappy',
         repo: 'moodHappy.gitHub.io-nce',
         rootPath: 'Notes/danmu',
         token: '',
-        enableDelete: false // 默认为关闭
+        enableDelete: false
     };
 
-    let currentPath = ''; 
     let config = {};
+    let currentPath = '';
+    let currentDirs = []; // 当前目录下的文件夹列表
+    let currentFiles = []; // 当前目录下的文件列表
+    
+    // 批量模式状态
+    let isBatchMode = false;
+    let selectedFiles = new Set(); // 存储被选中的文件对象 {path, sha, name}
 
     function getConfig() {
-        // 更新存储键名为 v5，以防旧数据冲突
         const stored = localStorage.getItem('gh_nav_config_v5'); 
         return stored ? { ...DEFAULTS, ...JSON.parse(stored) } : DEFAULTS;
     }
@@ -248,44 +293,45 @@
         await loadPath(currentPath);
     }
 
-    // 通用 Fetch 函数，带 Token
+    // --- GitHub API 核心 ---
     async function ghFetch(url, options = {}) {
         const headers = options.headers || {};
         if (config.token && config.token.trim() !== '') {
             headers['Authorization'] = `token ${config.token}`;
+            headers['Accept'] = 'application/vnd.github.v3+json';
         }
-        
+
         const fetchOpts = { ...options, headers: headers };
-        
         const response = await fetch(url, fetchOpts);
-        
-        // 特殊处理 204 No Content (删除成功)
-        if (response.status === 204) return true;
+
+        if (response.status === 204) return true; // 删除成功
 
         if (!response.ok) {
-            let errMsg = `HTTP Error: ${response.status}`;
+            let errMsg = `HTTP ${response.status}`;
             try {
                 const errJson = await response.json();
                 if (errJson.message) errMsg += ` - ${errJson.message}`;
             } catch(e) {}
-
-            if (response.status === 403) throw new Error("API 访问受限 (403)，请检查 Token 权限或频率限制。");
-            if (response.status === 404) throw new Error("资源未找到 (404)。");
+            if (response.status === 403) throw new Error("API 限制或无权限 (403)");
+            if (response.status === 404) throw new Error("未找到资源 (404)");
             throw new Error(errMsg);
         }
         return await response.json();
     }
 
+    // --- 列表加载逻辑 ---
     async function loadPath(path) {
+        // 切换路径时退出批量模式
+        if (isBatchMode) toggleBatchMode();
+
         currentPath = path;
         renderBreadcrumb(path);
 
         const listContainer = document.getElementById('file-list');
         const latestContainer = document.getElementById('latest-container');
-
-        // 清空置顶区域（仅在根目录计算后显示）
-        latestContainer.innerHTML = ''; 
-        listContainer.innerHTML = '<div class="loading">正在获取列表...</div>';
+        
+        listContainer.innerHTML = '<div class="loading">正在加载...</div>';
+        if(latestContainer) latestContainer.innerHTML = '';
 
         const apiUrl = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`;
 
@@ -293,43 +339,30 @@
             const data = await ghFetch(apiUrl);
 
             if (!Array.isArray(data)) {
+                // 如果是文件直接跳转
                 window.location.href = data.html_url || data.download_url;
                 return;
             }
 
-            // 分离文件夹和文件
+            // 处理数据
             let dirs = [];
             let files = [];
             processItems(data, dirs, files);
 
             // 排序
-            dirs.sort((a, b) => b.name.localeCompare(a.name)); // 年份倒序
-            files.sort((a, b) => b.timestamp - a.timestamp);   // 文件倒序
+            dirs.sort((a, b) => b.name.localeCompare(a.name));
+            files.sort((a, b) => b.timestamp - a.timestamp);
+            
+            // 缓存到全局变量，供批量操作使用
+            currentDirs = dirs;
+            currentFiles = files;
 
-            // --- 核心逻辑：如果在根目录，尝试查找最新年份文件夹里的最新文件 ---
+            // 如果是根目录，查找最新文件
             if (path === config.rootPath) {
-                // 找到看起来像年份的文件夹 (4位数字)
-                const yearDirs = dirs.filter(d => /^\d{4}$/.test(d.name));
-
-                if (yearDirs.length > 0) {
-                    const latestYearDir = yearDirs[0];
-                    latestContainer.innerHTML = '<div style="text-align:center; color:#999; font-size:12px; margin-bottom:10px;">正在检查最新笔记...</div>';
-
-                    // 异步获取最新年份文件夹的内容
-                    fetchLatestInDir(latestYearDir).then(latestFile => {
-                        if (latestFile) {
-                            renderLatestCard(latestFile, latestYearDir.name);
-                        } else {
-                            latestContainer.innerHTML = ''; // 没找到则清空
-                        }
-                    }).catch(e => {
-                        console.error("Fetch latest failed", e);
-                        latestContainer.innerHTML = '';
-                    });
-                }
+                checkLatestFile(dirs);
             }
 
-            renderList(dirs, files);
+            renderList();
 
         } catch (error) {
             console.error(error);
@@ -337,17 +370,13 @@
         }
     }
 
-    // 辅助函数：处理 API 返回的数据，提取时间戳
     function processItems(items, dirsArr, filesArr) {
         items.forEach(item => {
             if (item.name.toLowerCase() === 'index.html') return;
-
-            // GitHub API 返回的 item 包含 sha 字段，这对删除很重要
             if (item.type === 'dir') {
                 dirsArr.push(item);
             } else if (item.name.endsWith('.html') || item.name.endsWith('.json')) { 
-                // 允许 HTML 和 JSON (如果文件夹里有 JSON 也会被列出)
-                const match = item.name.match(/_(\d{13})\./); // 稍微放宽正则以匹配后缀前的时间戳
+                const match = item.name.match(/_(\d{13})\./);
                 const timestamp = match ? parseInt(match[1]) : 0;
                 filesArr.push({
                     ...item,
@@ -358,66 +387,292 @@
         });
     }
 
-    // 辅助函数：去指定文件夹找最新文件
+    // --- 渲染列表 (支持批量模式) ---
+    function renderList() {
+        const listContainer = document.getElementById('file-list');
+        const containerClass = isBatchMode ? 'selection-mode' : '';
+        
+        if (currentDirs.length === 0 && currentFiles.length === 0) {
+            listContainer.innerHTML = '<div class="loading">此文件夹为空</div>';
+            return;
+        }
+
+        let html = `<ul class="${containerClass}">`;
+
+        // 文件夹
+        currentDirs.forEach(dir => {
+            // 文件夹在批量模式下变灰或不可选，为了简单起见，批量模式下点击文件夹无效或仅用于进入
+            // 这里逻辑：批量模式下，点击文件夹依然进入，不支持移动文件夹
+            html += `
+                <li onclick="${isBatchMode ? '' : `loadPath('${dir.path}')`}">
+                    <div class="list-item" style="${isBatchMode ? 'opacity:0.5' : ''}">
+                        <div class="item-left-group">
+                            <span class="item-icon folder-icon">📁</span>
+                            <div class="item-info">
+                                <span class="item-name">${dir.name}</span>
+                            </div>
+                        </div>
+                        ${!isBatchMode ? '<span style="color:#ccc">›</span>' : ''}
+                    </div>
+                </li>
+            `;
+        });
+
+        // 文件
+        currentFiles.forEach(file => {
+            let displayName = file.name.replace(/\.(html|json)$/, '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
+            let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
+            
+            // 检查是否被选中
+            const isSelected = isFileSelected(file.sha);
+            const selectedClass = isSelected ? 'selected' : '';
+            const checkedAttr = isSelected ? 'checked' : '';
+
+            // 批量模式点击触发 toggleSelect，普通模式点击跳转
+            const clickAction = isBatchMode 
+                ? `toggleFileSelect('${file.sha}', '${file.path}', '${file.name}')` 
+                : `window.open('${fileUrl}', '_blank')`;
+
+            // 阻止冒泡的删除按钮
+            let deleteBtnHtml = '';
+            if (config.enableDelete && !isBatchMode) {
+                deleteBtnHtml = `<button class="delete-btn" onclick="deleteSingleFile(event, '${file.path}', '${file.sha}')">🗑️</button>`;
+            }
+
+            html += `
+                <li>
+                    <div class="list-item ${selectedClass}" onclick="${clickAction}">
+                        <div class="item-left-group">
+                            <input type="checkbox" class="select-checkbox" ${checkedAttr} disabled> 
+                            ${deleteBtnHtml}
+                            <span class="item-icon file-icon">📄</span>
+                            <div class="item-info">
+                                <span class="item-name">${displayName}</span>
+                                ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            `;
+        });
+
+        html += '</ul>';
+        listContainer.innerHTML = html;
+    }
+
+    // --- 批量选择逻辑 ---
+    function toggleBatchMode() {
+        isBatchMode = !isBatchMode;
+        const btn = document.getElementById('batch-btn');
+        const actionBar = document.getElementById('action-bar');
+        
+        if (isBatchMode) {
+            btn.classList.add('active');
+            btn.innerHTML = '<span>❌ 取消</span>';
+            actionBar.classList.add('visible');
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '<span>✅ 选择</span>';
+            actionBar.classList.remove('visible');
+            selectedFiles.clear(); // 退出清空
+            updateActionBar();
+        }
+        renderList(); // 重新渲染列表以显示/隐藏 checkbox
+    }
+
+    function isFileSelected(sha) {
+        for (let item of selectedFiles) {
+            if (item.sha === sha) return true;
+        }
+        return false;
+    }
+
+    function toggleFileSelect(sha, path, name) {
+        // 查找是否已存在
+        let found = null;
+        for (let item of selectedFiles) {
+            if (item.sha === sha) {
+                found = item;
+                break;
+            }
+        }
+
+        if (found) {
+            selectedFiles.delete(found);
+        } else {
+            selectedFiles.add({ sha, path, name });
+        }
+        
+        updateActionBar();
+        renderList(); // 重新渲染高亮
+    }
+
+    function updateActionBar() {
+        const count = selectedFiles.size;
+        document.querySelector('.action-count').innerText = `已选 ${count} 项`;
+        document.getElementById('move-btn').disabled = count === 0;
+    }
+
+    // --- 移动文件逻辑 (核心功能) ---
+    function openMoveModal() {
+        if (!config.token) {
+            alert("❌ 错误：请先在设置中配置 GitHub Token 才能移动文件！");
+            openSettings();
+            return;
+        }
+        // 预填当前路径的上级或当前
+        document.getElementById('move-target-path').value = currentPath;
+        document.getElementById('move-log').style.display = 'none';
+        document.getElementById('move-log').innerHTML = '';
+        document.getElementById('move-modal').style.display = 'flex';
+        
+        // 恢复按钮状态
+        document.getElementById('btn-confirm-move').disabled = false;
+        document.getElementById('btn-confirm-move').innerText = "确认移动";
+    }
+
+    function closeMoveModal() {
+        document.getElementById('move-modal').style.display = 'none';
+    }
+
+    async function execMove() {
+        const targetDir = document.getElementById('move-target-path').value.trim().replace(/\/+$/, '');
+        const logDiv = document.getElementById('move-log');
+        const confirmBtn = document.getElementById('btn-confirm-move');
+        
+        if (!targetDir) {
+            alert("请输入目标文件夹路径");
+            return;
+        }
+
+        if (targetDir === currentPath) {
+            alert("目标文件夹不能与当前文件夹相同");
+            return;
+        }
+
+        if (!confirm(`确定将 ${selectedFiles.size} 个文件移动到 "${targetDir}" 吗？`)) return;
+
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "移动中...";
+        logDiv.style.display = 'block';
+        logDiv.innerHTML = '<div>🚀 开始处理...</div>';
+
+        // 转换为数组方便处理
+        const filesToMove = Array.from(selectedFiles);
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const file of filesToMove) {
+            const fileName = file.name;
+            const sourcePath = file.path;
+            const newPath = `${targetDir}/${fileName}`;
+
+            logDiv.innerHTML += `<div>⏳ 正在移动: ${fileName}...</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+
+            try {
+                // 1. 获取原文件内容
+                const getUrl = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${sourcePath}`;
+                const fileData = await ghFetch(getUrl);
+                const content = fileData.content; // Base64 encoded content
+                
+                // 2. 在新位置创建文件 (PUT)
+                const putUrl = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${newPath}`;
+                await ghFetch(putUrl, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        message: `Move ${fileName} to ${targetDir}`,
+                        content: content
+                    })
+                });
+
+                // 3. 删除旧文件 (DELETE)
+                const delUrl = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${sourcePath}`;
+                await ghFetch(delUrl, {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        message: `Delete original ${fileName} after move`,
+                        sha: file.sha
+                    })
+                });
+
+                logDiv.innerHTML += `<div style="color:green">✅ 成功: ${fileName}</div>`;
+                successCount++;
+
+            } catch (e) {
+                console.error(e);
+                logDiv.innerHTML += `<div style="color:red">❌ 失败: ${fileName} - ${e.message}</div>`;
+                failCount++;
+            }
+        }
+
+        logDiv.innerHTML += `<div style="font-weight:bold; margin-top:5px;">🏁 完成! 成功: ${successCount}, 失败: ${failCount}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+
+        if (successCount > 0) {
+            setTimeout(() => {
+                closeMoveModal();
+                toggleBatchMode(); // 退出选择模式
+                loadPath(currentPath); // 刷新列表
+            }, 2000);
+        } else {
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = "重试";
+        }
+    }
+
+    // --- 单文件删除逻辑 ---
+    async function deleteSingleFile(event, path, sha) {
+        event.stopPropagation(); // 阻止点击行
+        if (!config.token) {
+            alert("请先配置 Token");
+            openSettings();
+            return;
+        }
+        if (!confirm(`确定删除 ${path} 吗？`)) return;
+
+        const btn = event.target;
+        btn.innerText = "⏳";
+        
+        try {
+            const url = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`;
+            await ghFetch(url, {
+                method: 'DELETE',
+                body: JSON.stringify({ message: "Delete via Web", sha: sha })
+            });
+            alert("删除成功");
+            loadPath(currentPath);
+        } catch (e) {
+            alert("删除失败: " + e.message);
+            btn.innerText = "🗑️";
+        }
+    }
+
+    // --- 辅助功能 ---
+    function checkLatestFile(dirs) {
+        const yearDirs = dirs.filter(d => /^\d{4}$/.test(d.name));
+        if (yearDirs.length > 0) {
+            const latestDir = yearDirs[0];
+            fetchLatestInDir(latestDir).then(file => {
+                if (file) renderLatestCard(file, latestDir.name);
+            });
+        }
+    }
+
     async function fetchLatestInDir(dirItem) {
         const url = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${dirItem.path}`;
         const data = await ghFetch(url);
         if (!Array.isArray(data)) return null;
-
-        let subFiles = [];
-        let subDirs = []; 
-        processItems(data, subDirs, subFiles);
-
-        // 按时间倒序
-        subFiles.sort((a, b) => b.timestamp - a.timestamp);
-
-        return subFiles.length > 0 ? subFiles[0] : null;
-    }
-
-    // --- 删除文件逻辑 ---
-    async function deleteFile(event, path, sha) {
-        event.preventDefault();     // 阻止链接跳转
-        event.stopPropagation();    // 阻止冒泡
-
-        if (!config.token) {
-            alert("❌ 错误：请先在设置中配置 GitHub Token！");
-            openSettings();
-            return;
-        }
-
-        const confirmMsg = `⚠️ 警告 \n\n确定要永久删除云端文件吗？\n文件路径: ${path}\n\n此操作不可恢复！`;
-        if (!confirm(confirmMsg)) return;
-
-        const deleteBtn = event.target.closest('button');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = "⏳";
-        deleteBtn.disabled = true;
-
-        const url = `https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`;
-        const body = {
-            message: `Delete ${path} via Web Client`,
-            sha: sha
-        };
-
-        try {
-            await ghFetch(url, {
-                method: 'DELETE',
-                body: JSON.stringify(body)
-            });
-            alert("✅ 删除成功！");
-            loadPath(currentPath); // 刷新当前列表
-        } catch (e) {
-            alert("❌ 删除失败：\n" + e.message);
-            deleteBtn.innerHTML = originalText;
-            deleteBtn.disabled = false;
-        }
+        let files = [];
+        processItems(data, [], files);
+        files.sort((a, b) => b.timestamp - a.timestamp);
+        return files.length > 0 ? files[0] : null;
     }
 
     function renderLatestCard(file, year) {
         const container = document.getElementById('latest-container');
         let displayName = file.name.replace(/\.(html|json)$/, '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
         let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
-
         container.innerHTML = `
             <div class="pinned-section">
                 <span class="pinned-label">🆕 最新笔记 (${year})</span>
@@ -429,110 +684,42 @@
                             <div class="pinned-meta">📅 ${file.dateStr}</div>
                         </div>
                     </div>
-                    <div class="pinned-arrow">立即阅读 &rarr;</div>
+                    <span style="color:#0969da">&rarr;</span>
                 </a>
             </div>
         `;
     }
 
-    function renderList(dirs, files) {
-        const listContainer = document.getElementById('file-list');
-        if (dirs.length === 0 && files.length === 0) {
-            listContainer.innerHTML = '<div class="loading">此文件夹为空</div>';
-            return;
-        }
-
-        let html = '<ul>';
-
-        // 文件夹 (不显示删除按钮)
-        dirs.forEach(dir => {
-            html += `
-                <li onclick="loadPath('${dir.path}')">
-                    <div class="list-item">
-                        <div class="item-left-group">
-                            <span class="item-icon folder-icon">📁</span>
-                            <div class="item-info">
-                                <span class="item-name">${dir.name}</span>
-                            </div>
-                        </div>
-                        <span style="color:#ccc">›</span>
-                    </div>
-                </li>
-            `;
-        });
-
-        // 文件 (根据配置显示删除按钮)
-        files.forEach(file => {
-            let displayName = file.name.replace(/\.(html|json)$/, '').replace(/_\d{13}$/, '').replace(/_/g, ' ');
-            let fileUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
-
-            // 生成删除按钮 HTML
-            let deleteBtnHtml = '';
-            if (config.enableDelete) {
-                // 将 path 和 sha 传递给删除函数
-                deleteBtnHtml = `
-                    <button class="delete-btn" onclick="deleteFile(event, '${file.path}', '${file.sha}')" title="删除文件">
-                        🗑️
-                    </button>
-                `;
-            }
-
-            html += `
-                <li>
-                    <a href="${fileUrl}" target="_blank" class="list-item">
-                        <div class="item-left-group">
-                            ${deleteBtnHtml}
-                            <span class="item-icon file-icon">📄</span>
-                            <div class="item-info">
-                                <span class="item-name">${displayName}</span>
-                                ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
-                            </div>
-                        </div>
-                    </a>
-                </li>
-            `;
-        });
-
-        html += '</ul>';
-        listContainer.innerHTML = html;
-    }
-
     function renderBreadcrumb(path) {
         const container = document.getElementById('breadcrumb');
         let html = `<span class="breadcrumb-item" onclick="loadPath('${config.rootPath}')">🏠 首页</span>`;
-
         if (path !== config.rootPath && path.startsWith(config.rootPath)) {
-            const relativePath = path.substring(config.rootPath.length);
-            const parts = relativePath.split('/').filter(p => p);
-            let buildPath = config.rootPath;
-
+            const relative = path.substring(config.rootPath.length);
+            const parts = relative.split('/').filter(p => p);
+            let build = config.rootPath;
             parts.forEach((part, index) => {
-                buildPath += '/' + part;
+                build += '/' + part;
                 html += `<span class="breadcrumb-separator">/</span>`;
                 if (index === parts.length - 1) {
                     html += `<span class="breadcrumb-current">${part}</span>`;
                 } else {
-                    html += `<span class="breadcrumb-item" onclick="loadPath('${buildPath}')">${part}</span>`;
+                    html += `<span class="breadcrumb-item" onclick="loadPath('${build}')">${part}</span>`;
                 }
             });
         }
         container.innerHTML = html;
     }
 
-    // --- 设置逻辑 ---
-    function openSettings() {
+    // --- 设置界面控制 ---
+    function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; loadSettingsToUI(); }
+    function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
+    function loadSettingsToUI() {
         document.getElementById('cfg-user').value = config.user;
         document.getElementById('cfg-repo').value = config.repo;
         document.getElementById('cfg-root').value = config.rootPath;
         document.getElementById('cfg-token').value = config.token || '';
-        document.getElementById('cfg-del-enable').checked = config.enableDelete || false;
-        document.getElementById('settings-modal').style.display = 'flex';
+        document.getElementById('cfg-del-enable').checked = config.enableDelete;
     }
-
-    function closeSettings() {
-        document.getElementById('settings-modal').style.display = 'none';
-    }
-
     function saveSettings() {
         const newConfig = {
             user: document.getElementById('cfg-user').value.trim(),
@@ -541,16 +728,19 @@
             token: document.getElementById('cfg-token').value.trim(),
             enableDelete: document.getElementById('cfg-del-enable').checked
         };
-        // 升级存储版本号到 v5
         localStorage.setItem('gh_nav_config_v5', JSON.stringify(newConfig));
         closeSettings();
         location.reload();
     }
 
-    document.getElementById('settings-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeSettings();
-    });
+    // 弹窗关闭监听
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = "none";
+        }
+    }
 
+    // 启动
     init();
 </script>
 
