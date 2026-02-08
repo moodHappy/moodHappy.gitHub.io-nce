@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>danmu - 学习笔记</title>
+    <title>danmu - 全能管理版</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
     
     <style>
         :root {
             --primary: #0969da;
+            --danger: #cf222e;
             --bg: #f6f8fa;
             --card-bg: #ffffff;
             --border: #d0d7de;
@@ -115,24 +116,29 @@
         .action-bar {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(150px);
             background: #24292f; color: white;
-            padding: 12px 24px; border-radius: 50px;
+            padding: 12px 20px; border-radius: 50px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             display: flex; align-items: center; justify-content: space-between;
-            z-index: 1000; width: 85%; max-width: 400px;
+            z-index: 1000; width: 90%; max-width: 420px;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .action-bar.visible { transform: translateX(-50%) translateY(0); }
-        .action-count { font-weight: bold; font-size: 15px; }
+        .action-count { font-weight: bold; font-size: 14px; white-space: nowrap; margin-right: 10px; }
+        
+        .action-btn-group { display: flex; gap: 8px; }
         .action-btn {
-            background: var(--primary); border: none; color: white;
-            padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 600;
+            border: none; color: white;
+            padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
-        .action-btn:disabled { background: #57606a; opacity: 0.7; }
+        .btn-move { background: var(--primary); }
+        .btn-del { background: var(--danger); }
+        .action-btn:disabled { background: #57606a; opacity: 0.6; cursor: not-allowed; }
 
         /* 弹窗 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-        
+        .modal h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
         .form-group { margin-bottom: 18px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
         .form-group input { width: 100%; padding: 10px; border: 1px solid #d0d7de; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
@@ -143,7 +149,8 @@
         .btn-primary { background: var(--primary); color: white; }
         
         .loading { padding: 40px; text-align: center; color: #666; }
-        .progress-log { font-size: 12px; color: #666; max-height: 120px; overflow-y: auto; background: #f8f8f8; padding: 8px; border-radius: 4px; border: 1px solid #eee; margin-top: 10px; }
+        .progress-log { font-size: 12px; color: #666; max-height: 150px; overflow-y: auto; background: #f8f8f8; padding: 10px; border-radius: 4px; border: 1px solid #eee; margin-top: 10px; }
+        .log-item { margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -171,7 +178,10 @@
 
 <div id="action-bar" class="action-bar">
     <span class="action-count">已选 0 项</span>
-    <button id="move-btn" class="action-btn" onclick="openMoveModal()" disabled>移动</button>
+    <div class="action-btn-group">
+        <button id="del-btn" class="action-btn btn-del" onclick="execDelete()" disabled>删除</button>
+        <button id="move-btn" class="action-btn btn-move" onclick="openMoveModal()" disabled>移动</button>
+    </div>
 </div>
 
 <div id="move-modal" class="modal-overlay">
@@ -183,8 +193,18 @@
         </div>
         <div id="move-log" class="progress-log" style="display:none;"></div>
         <div class="btn-group">
-            <button class="btn btn-secondary" onclick="closeMoveModal()">取消</button>
+            <button id="btn-cancel-move" class="btn btn-secondary" onclick="closeMoveModal()">取消</button>
             <button id="btn-confirm-move" class="btn btn-primary" onclick="execMove()">确认移动</button>
+        </div>
+    </div>
+</div>
+
+<div id="delete-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>🗑️ 删除进度</h3>
+        <div id="delete-log" class="progress-log"></div>
+        <div class="btn-group">
+            <button id="btn-done-del" class="btn btn-primary" onclick="closeDeleteModal()" style="display:none; width:100%">完成</button>
         </div>
     </div>
 </div>
@@ -235,28 +255,15 @@
         return stored ? { ...DEFAULTS, ...JSON.parse(stored) } : DEFAULTS;
     }
 
-    // --- 初始化：支持 URL 参数 ---
     async function init() {
         config = getConfig();
-        
-        // 1. 检查 URL 中是否有 ?path=... 参数
         const urlParams = new URLSearchParams(window.location.search);
-        const pathParam = urlParams.get('path');
-
-        // 2. 如果有参数就用参数，没有则用根目录
-        // 初始加载不需要 pushState，所以传 false
-        const startPath = pathParam || config.rootPath;
+        const startPath = urlParams.get('path') || config.rootPath;
         await loadPath(startPath, false);
 
-        // 3. 监听浏览器前进/后退事件 (PopState)
         window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.path) {
-                // 如果历史记录里有 path，就加载它
-                loadPath(event.state.path, false);
-            } else {
-                // 否则回退到根目录 (或者初始页面)
-                loadPath(config.rootPath, false);
-            }
+            if (event.state && event.state.path) loadPath(event.state.path, false);
+            else loadPath(config.rootPath, false);
         });
     }
 
@@ -270,19 +277,12 @@
         return await response.json();
     }
 
-    // --- 核心加载函数 (增加 history 处理) ---
-    // addToHistory: true 代表是用户点击跳转，需要更新 URL
-    // addToHistory: false 代表是浏览器后退或初始化，不需要再次更新 URL
     async function loadPath(path, addToHistory = true) {
         if (isBatchMode) toggleBatchMode(); 
-        
         currentPath = path;
 
-        // --- 更新地址栏逻辑 ---
         if (addToHistory) {
-            // 构建新 URL，例如 ?path=Notes/danmu/2026
             const newUrl = `${window.location.pathname}?path=${encodeURIComponent(path)}`;
-            // 推入历史记录
             history.pushState({ path: path }, '', newUrl);
         }
 
@@ -321,7 +321,6 @@
             currentDirs = dirs;
             currentFiles = files;
 
-            // 根目录显示最新
             if (path === config.rootPath && dirs.length > 0) {
                  const yearDir = dirs.find(d => /^\d{4}$/.test(d.name));
                  if(yearDir) fetchLatestInDir(yearDir);
@@ -334,7 +333,6 @@
         }
     }
 
-    // --- 渲染列表 ---
     function renderList() {
         const listEl = document.getElementById('file-list');
         const ul = document.createElement('ul');
@@ -345,11 +343,9 @@
             return;
         }
 
-        // 文件夹
         currentDirs.forEach(dir => {
             const li = document.createElement('li');
             const opacity = isBatchMode ? '0.6' : '1';
-            // 点击文件夹：loadPath 默认第二个参数是 true，会更新 URL
             li.innerHTML = `
                 <div class="list-item" style="opacity:${opacity}" onclick="loadPath('${dir.path}')">
                     <div class="item-content">
@@ -361,7 +357,6 @@
             ul.appendChild(li);
         });
 
-        // 文件
         currentFiles.forEach(file => {
             const li = document.createElement('li');
             const isSelected = selectedFilesMap.has(file.sha);
@@ -369,7 +364,6 @@
             let itemClass = "list-item";
             if (isSelected && isBatchMode) itemClass += " selected";
 
-            // 修复：找回了 📅 图标
             li.innerHTML = `
                 <div class="${itemClass}" onclick="handleItemClick('${file.sha}')">
                     <input type="checkbox" class="select-checkbox" ${isSelected ? 'checked' : ''}>
@@ -401,7 +395,6 @@
         }
     }
 
-    // --- 批量选择逻辑 ---
     function toggleBatchMode() {
         isBatchMode = !isBatchMode;
         const btn = document.getElementById('batch-btn');
@@ -434,8 +427,14 @@
     function updateActionBar() {
         const count = selectedFilesMap.size;
         document.querySelector('.action-count').innerText = `已选 ${count} 项`;
-        document.getElementById('move-btn').disabled = count === 0;
-        document.getElementById('move-btn').innerHTML = count > 0 ? `移动 (${count})` : '移动';
+        
+        // 更新移动按钮
+        const mvBtn = document.getElementById('move-btn');
+        mvBtn.disabled = count === 0;
+        
+        // 更新删除按钮
+        const delBtn = document.getElementById('del-btn');
+        delBtn.disabled = count === 0;
     }
 
     // --- 移动逻辑 ---
@@ -446,6 +445,7 @@
         document.getElementById('move-modal').style.display = 'flex';
         document.getElementById('btn-confirm-move').disabled = false;
         document.getElementById('btn-confirm-move').innerText = "确认移动";
+        document.getElementById('btn-cancel-move').style.display = 'inline-block';
     }
 
     function closeMoveModal() { document.getElementById('move-modal').style.display = 'none'; }
@@ -459,45 +459,92 @@
         
         btn.disabled = true;
         btn.innerText = "处理中...";
+        document.getElementById('btn-cancel-move').style.display = 'none'; // 隐藏取消防止中断
         logDiv.style.display = 'block';
         logDiv.innerHTML = '';
 
         const files = Array.from(selectedFilesMap.values());
-        let success = 0;
+        let successCount = 0;
 
         for (const file of files) {
-            logDiv.innerHTML += `<div>⏳ 移动: ${file.name}...</div>`;
+            logDiv.innerHTML += `<div class="log-item">⏳ ${file.name}</div>`;
             try {
-                // 1. 读
                 const data = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`);
-                // 2. 写
                 await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${targetDir}/${file.name}`, {
                     method: 'PUT',
                     body: JSON.stringify({ message: `Move ${file.name}`, content: data.content })
                 });
-                // 3. 删
                 await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`, {
                     method: 'DELETE',
                     body: JSON.stringify({ message: `Del original`, sha: file.sha })
                 });
-                success++;
-                logDiv.innerHTML += `<div style="color:green">✅ 完成</div>`;
+                successCount++;
+                logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ 移动成功: ${file.name}</span>`;
             } catch (e) {
-                logDiv.innerHTML += `<div style="color:red">❌ 失败: ${e.message}</div>`;
+                logDiv.lastElementChild.innerHTML = `<span style="color:red">❌ 失败: ${e.message}</span>`;
             }
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        if (success > 0) {
+        if (successCount > 0) {
             setTimeout(() => {
                 closeMoveModal();
                 toggleBatchMode();
                 loadPath(currentPath);
-            }, 1500);
+            }, 1000);
         } else {
             btn.disabled = false;
             btn.innerText = "重试";
+            document.getElementById('btn-cancel-move').style.display = 'inline-block';
         }
+    }
+
+    // --- 删除逻辑 ---
+    async function execDelete() {
+        if (!config.token) { alert("请先设置 Token"); openSettings(); return; }
+        const count = selectedFilesMap.size;
+        
+        if (!confirm(`⚠️ 警告：确定要永久删除选中的 ${count} 个文件吗？\n此操作不可恢复！`)) return;
+
+        // 打开删除进度弹窗
+        const modal = document.getElementById('delete-modal');
+        const logDiv = document.getElementById('delete-log');
+        const doneBtn = document.getElementById('btn-done-del');
+        
+        modal.style.display = 'flex';
+        logDiv.innerHTML = '';
+        doneBtn.style.display = 'none'; // 还没完成先隐藏
+
+        const files = Array.from(selectedFilesMap.values());
+        let successCount = 0;
+
+        for (const file of files) {
+            logDiv.innerHTML += `<div class="log-item">⏳ 删除中: ${file.name}...</div>`;
+            try {
+                await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ message: `Batch Delete`, sha: file.sha })
+                });
+                successCount++;
+                logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ 已删除: ${file.name}</span>`;
+            } catch (e) {
+                logDiv.lastElementChild.innerHTML = `<span style="color:red">❌ 删除失败: ${e.message}</span>`;
+            }
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        logDiv.innerHTML += `<div style="margin-top:10px; font-weight:bold">🏁 操作结束。成功: ${successCount}, 失败: ${files.length - successCount}</div>`;
+        doneBtn.style.display = 'block'; // 显示完成按钮
+        
+        // 如果有成功的，刷新列表
+        if (successCount > 0) {
+            toggleBatchMode(); // 退出选择模式
+            loadPath(currentPath);
+        }
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').style.display = 'none';
     }
 
     // --- 辅助逻辑 ---
@@ -536,7 +583,6 @@
         c.innerHTML = html;
     }
 
-    // 设置逻辑
     function openSettings() { 
         document.getElementById('settings-modal').style.display = 'flex'; 
         document.getElementById('cfg-user').value = config.user;
@@ -556,7 +602,6 @@
         location.reload();
     }
     
-    // 弹窗关闭
     window.onclick = (e) => { if(e.target.classList.contains('modal-overlay')) e.target.style.display='none'; };
 
     init();
