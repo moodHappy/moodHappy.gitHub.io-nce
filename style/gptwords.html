@@ -2,339 +2,424 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>双语小说智能排版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="format-detection" content="telephone=no">
+
+    <title>英语词汇笔记</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3389/3389081.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3389/3389081.png">
+
     <style>
+        /* --- 1. 全局变量与重置 --- */
         :root {
-            --primary: #007AFF;
-            --success: #34C759;
-            --bg: #F2F2F7;
-            --card: #FFFFFF;
-            --text: #1C1C1E;
-            --border: #E5E5EA;
+            --primary: #222f3e;
+            --accent: #2e86de; /* 科技蓝 */
+            --bg-body: #f7f9fc;
+            --bg-card: #ffffff;
+            --text-main: #2d3436;
+            --text-sub: #8395a7;
+            --shadow: 0 4px 12px rgba(0,0,0,0.06);
+            --header-h: 60px;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
         }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px 15px;
+            height: 100vh;
+            overflow: hidden; /* 禁止 body 滚动，交给内部容器 */
             display: flex;
             flex-direction: column;
+        }
+
+        /* --- 2. 顶部导航栏 (Glassmorphism) --- */
+        .app-header {
+            padding-top: var(--safe-top); /* 避让刘海 */
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            z-index: 100;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.3s;
+        }
+
+        .header-content {
+            height: var(--header-h);
+            display: flex;
             align-items: center;
-            min-height: 100vh;
+            padding: 0 16px;
+            gap: 12px;
         }
 
-        .main-container {
-            width: 100%;
-            max-width: 650px;
+        /* 搜索框设计 */
+        .search-wrapper {
+            flex: 1;
+            position: relative;
             display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        h1 {
-            font-size: 1.2rem;
-            text-align: center;
-            margin: 0;
-            color: #333;
-            font-weight: 700;
-        }
-
-        .card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #666;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
         }
 
-        textarea {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            color: #b2bec3;
             font-size: 16px;
-            font-family: inherit;
-            resize: vertical;
-            background-color: #FAFAFA;
-            box-sizing: border-box;
-            outline: none;
-            line-height: 1.6;
         }
 
-        textarea:focus {
-            border-color: var(--primary);
-            background-color: #fff;
-        }
-
-        .input-area { height: 150px; }
-        .result-area { height: 300px; }
-
-        .action-bar {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 10px;
-        }
-
-        button {
+        input#searchInput {
+            width: 100%;
+            height: 40px;
+            padding: 0 36px; /* 留出图标位置 */
             border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            color: white;
+            border-radius: 20px;
+            background: #dfe6e9; /* 浅灰底色 */
+            font-size: 16px;
+            color: var(--primary);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        input#searchInput:focus {
+            background: #fff;
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 0;
+            width: 36px;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            transition: opacity 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            color: #999;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
         }
 
-        button:active { opacity: 0.8; transform: scale(0.98); }
-        .btn-primary { background-color: var(--primary); }
-        .btn-success { background-color: var(--success); }
-        .btn-secondary { background-color: #8E8E93; font-size: 0.9rem; padding: 8px 12px;}
-
-        #resultsContainer { display: flex; flex-direction: column; gap: 20px; }
-
-        .chapter-header {
-            font-size: 0.85rem;
-            color: #888;
-            margin-bottom: -5px;
-            margin-left: 5px;
-            font-weight: bold;
-            text-transform: uppercase;
+        /* --- 3. 主内容区 --- */
+        .main-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px 16px calc(20px + var(--safe-bottom));
         }
 
-        #toast {
-            visibility: hidden;
-            min-width: 120px;
-            background-color: rgba(0,0,0,0.8);
-            color: #fff;
+        /* 空状态 (默认显示) */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60%;
+            color: var(--text-sub);
             text-align: center;
-            border-radius: 50px;
-            padding: 12px 24px;
-            position: fixed;
-            z-index: 100;
-            left: 50%;
-            bottom: 40px;
-            transform: translateX(-50%);
-            font-size: 0.9rem;
-            backdrop-filter: blur(5px);
-            opacity: 0;
-            transition: opacity 0.3s, bottom 0.3s;
         }
-        #toast.show { visibility: visible; opacity: 1; bottom: 60px; }
 
-        .empty-state { text-align: center; color: #999; padding: 20px; border: 2px dashed #ddd; border-radius: 12px; }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .app-name { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+
+        /* 新增：副标题样式 */
+        .app-subtitle { font-size: 14px; color: var(--text-sub); font-weight: 400; letter-spacing: 0.5px; }
+
+        /* 列表项 */
+        .result-list { display: none; } /* 初始隐藏 */
+
+        .word-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.1s;
+        }
+
+        .word-card:active { transform: scale(0.98); background: #fafafa; }
+
+        .card-main { flex: 1; min-width: 0; margin-right: 12px; }
+        .card-word { font-size: 17px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+        .card-preview { font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-arrow { color: #dcdde1; font-size: 20px; }
+
+        /* --- 4. 详情页 (全屏滑入) --- */
+        #detailView {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-card);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            transform: translate3d(100%, 0, 0); /* 开启 GPU 加速 */
+            transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1); /* iOS 风格曲线 */
+        }
+
+        #detailView.active { transform: translate3d(0, 0, 0); }
+
+        .detail-nav {
+            padding-top: var(--safe-top);
+            height: calc(50px + var(--safe-top));
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #f1f1f1;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            padding-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .back-btn {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            padding: 10px;
+        }
+
+        .detail-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 20px calc(40px + var(--safe-bottom));
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Markdown 内容美化 */
+        .md-content { font-size: 16px; line-height: 1.7; color: #333; }
+        .md-content h1 { font-size: 28px; margin: 0 0 24px; color: var(--primary); letter-spacing: -0.5px; }
+        .md-content h3 { 
+            font-size: 16px; color: var(--accent); margin: 32px 0 12px; 
+            text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+        }
+        .md-content p { margin-bottom: 16px; text-align: justify; }
+        .md-content ul { padding-left: 20px; margin-bottom: 16px; color: #555; }
+        .md-content li { margin-bottom: 8px; }
+        .md-content strong { color: #000; font-weight: 700; background: linear-gradient(180deg, transparent 65%, rgba(46, 134, 222, 0.2) 65%); }
+        .md-content hr { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
+
     </style>
 </head>
 <body>
 
-<div class="main-container">
-    <h1>📚 双语小说排版修复版</h1>
-
-    <div class="card">
-        <label>
-            输入原始内容
-            <button class="btn-secondary" onclick="clearInput()" style="background:none; color:#ff3b30; box-shadow:none; padding:0;">清空</button>
-        </label>
-        <textarea id="inputText" class="input-area" placeholder="粘贴示例：Chapter 1... 第一章..."></textarea>
-
-        <div class="action-bar">
-            <button class="btn-primary" onclick="processText()">
-                <span>⚡ 智能分章</span>
-            </button>
-            <button class="btn-secondary" style="background-color:#5856D6" onclick="copyAll()">
-                <span>📑 复制全部</span>
-            </button>
+    <div class="app-header">
+        <div class="header-content">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search dictionary..." autocomplete="off">
+                <div class="clear-btn" id="clearBtn">✕</div>
+            </div>
         </div>
     </div>
 
-    <div id="resultsContainer">
-        <div class="empty-state">等待转换...</div>
-    </div>
-</div>
+    <div class="main-scroll-area">
+        <div id="emptyState" class="empty-state">
+            <div style="font-size: 60px; margin-bottom: 20px;">📘</div>
+            <div class="app-name">Dictionary App</div>
+            <div class="app-subtitle">English Vocabulary Notes</div>
+        </div>
 
-<div id="toast">已复制</div>
+        <div id="resultList" class="result-list">
+        </div>
+    </div>
+
+    <div id="detailView">
+        <div class="detail-nav">
+            <button class="back-btn" onclick="goBack()">
+                <span style="font-size: 22px; margin-right: 4px; margin-top:-2px;">‹</span> Back
+            </button>
+        </div>
+        <div class="detail-body">
+            <div id="detailContent" class="md-content"></div>
+        </div>
+    </div>
 
 <script>
-    document.getElementById('inputText').focus();
+    // 配置
+    const CONFIG = {
+        url: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/gptwords.json',
+        cacheKey: 'app_data_v1'
+    };
 
-    function processText() {
-        const input = document.getElementById('inputText').value;
-        const container = document.getElementById('resultsContainer');
-        container.innerHTML = '';
+    // 状态管理
+    let store = {
+        data: [],
+        filtered: []
+    };
 
-        if (!input.trim()) {
-            showToast("请输入内容");
+    // DOM 元素
+    const UI = {
+        input: document.getElementById('searchInput'),
+        clearBtn: document.getElementById('clearBtn'),
+        emptyState: document.getElementById('emptyState'),
+        resultList: document.getElementById('resultList'),
+        detailView: document.getElementById('detailView'),
+        detailContent: document.getElementById('detailContent')
+    };
+
+    // --- 1. 初始化与数据加载 ---
+    window.addEventListener('DOMContentLoaded', initApp);
+
+    async function initApp() {
+        // 策略：先读缓存(秒开)，再后台静默请求网络(更新)
+        const cached = localStorage.getItem(CONFIG.cacheKey);
+
+        if (cached) {
+            try {
+                store.data = JSON.parse(cached);
+                // 缓存加载完毕，但不显示任何提示
+            } catch(e) { console.error('Cache error', e); }
+        }
+
+        // 网络请求 (静默执行，不更新UI状态文本)
+        try {
+            const res = await fetch(CONFIG.url);
+            if (!res.ok) throw new Error("Net Err");
+            const text = await res.text();
+
+            // 混合解析：JSON Array 或 NDJSON
+            let newData = [];
+            try {
+                newData = JSON.parse(text);
+            } catch (e) {
+                newData = text.split('\n')
+                    .filter(line => line.trim())
+                    .map(line => { try { return JSON.parse(line); } catch(err) { return null; } })
+                    .filter(item => item);
+            }
+            if (!Array.isArray(newData)) newData = [newData];
+
+            // 只有数据变动时才更新缓存
+            if (JSON.stringify(newData) !== cached) {
+                store.data = newData;
+                localStorage.setItem(CONFIG.cacheKey, JSON.stringify(newData));
+                console.log('Data silently updated via network');
+            }
+        } catch (err) {
+            // 静默失败，仅在控制台记录
+            console.log('Background sync failed or offline');
+        }
+
+        // 处理物理返回键 (History API)
+        window.addEventListener('popstate', (event) => {
+            if (UI.detailView.classList.contains('active')) {
+                closeDetailView();
+            }
+        });
+    }
+
+    // --- 2. 搜索逻辑 ---
+    UI.input.addEventListener('input', (e) => {
+        const val = e.target.value.trim().toLowerCase();
+        UI.clearBtn.style.display = val ? 'flex' : 'none';
+
+        if (!val) {
+            UI.emptyState.style.display = 'flex';
+            UI.resultList.style.display = 'none';
             return;
         }
 
-        // --- 核心修复逻辑开始 ---
+        // 搜索算法：匹配 word 或 content
+        store.filtered = store.data.filter(item => 
+            (item.word && item.word.toLowerCase().includes(val)) ||
+            (item.content && item.content.toLowerCase().includes(val))
+        );
 
-        // 1. 按行拆分
-        const lines = input.split(/\r?\n/);
-        const sections = [];
+        renderList(store.filtered);
+    });
 
-        // 2. 正则定义
-        // 英文标题：Chapter 开头
-        const engHeaderRegex = /^\s*Chapter\s+\d+/i;
-        // 中文标题：第xx章 开头
-        const cnHeaderRegex = /^\s*第\s*[0-9零一二三四五六七八九十百千]+\s*章/;
+    UI.clearBtn.addEventListener('click', () => {
+        UI.input.value = '';
+        UI.input.focus();
+        UI.clearBtn.style.display = 'none';
+        UI.emptyState.style.display = 'flex';
+        UI.resultList.style.display = 'none';
+    });
 
-        let currentSection = { lines: [] };
+    // --- 3. 渲染列表 ---
+    function renderList(list) {
+        UI.emptyState.style.display = 'none';
+        UI.resultList.style.display = 'block';
 
-        // 状态标记
-        let lastHeaderType = 'none'; // 'eng' 或 'cn'
-        let linesSinceHeader = 999;
-
-        lines.forEach((line) => {
-            const isEngHeader = engHeaderRegex.test(line);
-            const isCnHeader = cnHeaderRegex.test(line);
-            let startNew = false;
-
-            if (isEngHeader) {
-                // 遇到英文 Chapter，无条件新开一章
-                startNew = true;
-                lastHeaderType = 'eng';
-                linesSinceHeader = 0;
-            } else if (isCnHeader) {
-                // 遇到中文标题，判断是否需要合并
-                // 如果上一个标题是英文，且距离很近（比如5行内），说明是双语标题，不分章！
-                if (lastHeaderType === 'eng' && linesSinceHeader < 5) {
-                    startNew = false; // 合并！
-                    lastHeaderType = 'cn'; // 更新状态，防止连续中文标题
-                } else {
-                    startNew = true; // 否则正常分章
-                    lastHeaderType = 'cn';
-                }
-                linesSinceHeader = 0;
-            } else {
-                // 普通文本
-                linesSinceHeader++;
-            }
-
-            // 执行分章或追加
-            if (startNew) {
-                if (currentSection.lines.length > 0) {
-                    sections.push(currentSection);
-                }
-                currentSection = { lines: [line] };
-            } else {
-                currentSection.lines.push(line);
-            }
-        });
-
-        // 放入最后一章
-        if (currentSection.lines.length > 0) {
-            sections.push(currentSection);
-        }
-
-        // --- 核心修复逻辑结束 ---
-
-        if (sections.length === 0) {
-            container.innerHTML = '<div class="empty-state">未识别到内容</div>';
+        if (list.length === 0) {
+            UI.resultList.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">No results found</div>`;
             return;
         }
 
-        // 3. 渲染结果
-        sections.forEach((section, index) => {
-            // 组装文本并排版（加空行）
-            const rawText = section.lines.join('\n');
-            const formattedText = formatContent(rawText);
+        UI.resultList.innerHTML = list.map((item, index) => {
+            // 生成纯文本预览 (去除 Markdown 符号)
+            const rawContent = item.content || '';
+            const preview = rawContent.replace(/[#*`\[\]()-]/g, ' ').slice(0, 40) + '...';
 
-            // 获取标题用于显示 (优先取第一行，太长就截断)
-            let title = section.lines[0].trim();
-            if(title.length > 40) title = "Section " + (index + 1);
-
-            createCard(formattedText, index + 1, title);
-        });
-
-        showToast(`成功合并为 ${sections.length} 个章节`);
+            return `
+                <div class="word-card" onclick="openDetail(${index})">
+                    <div class="card-main">
+                        <div class="card-word">${item.word}</div>
+                        <div class="card-preview">${preview}</div>
+                    </div>
+                    <div class="card-arrow">›</div>
+                </div>
+            `;
+        }).join('');
     }
 
-    // 排版功能：去重空行 -> 加双空行
-    function formatContent(text) {
-        // 先把所有换行符变成单个 \n
-        let clean = text.replace(/\r\n/g, "\n").replace(/\n+/g, "\n");
-        // 再把单个 \n 变成 \n\n
-        return clean.replace(/\n/g, "\n\n").trim();
+    // --- 4. 详情页交互 (核心: History API 支持) ---
+    function openDetail(index) {
+        const item = store.filtered[index];
+        if (!item) return;
+
+        // 渲染 Markdown
+        const html = item.content ? marked.parse(item.content) : '<p>No content</p>';
+
+        // 组装详情页 HTML (加入大标题)
+        UI.detailContent.innerHTML = `<h1>${item.word}</h1>${html}`;
+
+        // 显示页面
+        UI.detailView.classList.add('active');
+
+        // 收起键盘
+        UI.input.blur();
+
+        // 添加历史记录 (让物理返回键生效)
+        history.pushState({ page: 'detail' }, null, '');
     }
 
-    function createCard(content, index, title) {
-        const container = document.getElementById('resultsContainer');
-        const div = document.createElement('div');
-        div.className = 'card';
-        // 自动调整高度逻辑
-        div.innerHTML = `
-            <div class="chapter-header">Section ${index}</div>
-            <label>${title}</label>
-            <textarea class="result-area" id="res-${index}" readonly>${content}</textarea>
-            <button class="btn-success" onclick="copySingle('res-${index}')">复制此章节</button>
-        `;
-        container.appendChild(div);
+    function closeDetailView() {
+        UI.detailView.classList.remove('active');
     }
 
-    function copySingle(id) {
-        const el = document.getElementById(id);
-        copyToClipboard(el.value);
-    }
-
-    function copyAll() {
-        const areas = document.querySelectorAll('.result-area');
-        if (areas.length === 0) return;
-        let all = "";
-        areas.forEach(a => all += a.value + "\n\n-------------------\n\n");
-        copyToClipboard(all);
-    }
-
-    function copyToClipboard(text) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => showToast("复制成功！"))
-            .catch(() => fallbackCopy(text));
+    // 页面上的"Back"按钮点击
+    function goBack() {
+        // 如果有历史记录，则通过 history.back() 触发 popstate
+        // 这样可以保持逻辑统一
+        if (history.state && history.state.page === 'detail') {
+            history.back();
         } else {
-            fallbackCopy(text);
+            closeDetailView(); // 兜底直接关闭
         }
     }
 
-    function fallbackCopy(text) {
-        const t = document.createElement('textarea');
-        t.value = text;
-        document.body.appendChild(t);
-        t.select();
-        document.execCommand('copy');
-        document.body.removeChild(t);
-        showToast("复制成功！");
-    }
-
-    function clearInput() {
-        document.getElementById('inputText').value = '';
-        document.getElementById('inputText').focus();
-    }
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.className = 'show';
-        setTimeout(() => t.className = '', 2000);
-    }
 </script>
-
 </body>
 </html>
