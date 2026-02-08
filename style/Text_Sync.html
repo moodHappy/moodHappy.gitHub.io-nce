@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>GitHub 同步助手 (段落标题版)</title>
+  <title>GitHub 同步助手 (自定义文件夹版)</title>
 
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/sync_text.png">
@@ -96,6 +96,7 @@
     button.delete { background-color: var(--button-danger-bg); }
     button.read { background-color: var(--button-read-bg); }
     button.push { background-color: var(--button-push-bg); }
+    button.secondary { background-color: #777; }
 
     #status { margin-top: 10px; color: var(--status-color); font-size: 14px; }
 
@@ -113,9 +114,13 @@
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
 
+    .modal-content h3 { margin-top: 0; }
     .modal-content label { display: block; margin-top: 15px; font-size: 14px; color: var(--status-color); }
-    .modal-content input, .modal-content select { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid var(--input-border-color); background: var(--textarea-bg-color); color: var(--text-color); }
+    .modal-content input, .modal-content select { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid var(--input-border-color); background: var(--textarea-bg-color); color: var(--text-color); box-sizing: border-box; }
     .modal-buttons { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--textarea-border-color); }
+    
+    .checkbox-row { display: flex; align-items: center; margin-top: 10px; }
+    .checkbox-row input { width: auto; margin-right: 8px; margin-top: 0; }
 
     article.immersive-content p { margin-bottom: 1em; white-space: pre-wrap; }
 
@@ -132,7 +137,7 @@
 
   <div class="button-row">
     <button onclick="submitContent()">提交</button>
-    <button class="push" onclick="pushCurrentContent()">推送</button>
+    <button class="push" onclick="openPushModal()">推送</button>
     <button class="delete" onclick="deleteContent()">删除</button>
   </div>
 
@@ -149,7 +154,7 @@
 
   <div id="tokenModal" class="modal">
     <div class="modal-content">
-      <h3>🔐 请输入你的 GitHub Token：</h3>
+      <h3>🔐 请输入 GitHub Token：</h3>
       <input type="password" id="tokenInput" placeholder="ghp_xxx 或 github_pat_xxx" />
       <button style="margin-top:10px; width:100%;" onclick="saveToken()">保存 Token</button>
     </div>
@@ -183,18 +188,42 @@
     </div>
   </div>
 
+  <div id="pushModal" class="modal">
+    <div class="modal-content">
+      <h3>📂 选择推送位置</h3>
+      <label>选择历史文件夹</label>
+      <select id="folderSelect" onchange="document.getElementById('newFolderInput').value = ''">
+          </select>
+      
+      <label>或输入新文件夹路径 (例: Notes/Daily)</label>
+      <input type="text" id="newFolderInput" placeholder="输入路径..." />
+
+      <div class="checkbox-row">
+          <input type="checkbox" id="setDefaultFolder" checked>
+          <label for="setDefaultFolder" style="display:inline; margin:0;">设为默认路径</label>
+      </div>
+
+      <div class="modal-buttons">
+          <button class="secondary" onclick="document.getElementById('pushModal').style.display='none'">取消</button>
+          <button class="push" onclick="confirmPush()">确认推送</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const GITHUB_USERNAME = "moodHappy";
     const GITHUB_REPO = "HelloWorld";
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
     const SETTINGS_KEY = "github_sync_pure_v2";
+    
+    // 默认推送配置（所有者和仓库固定，路径变为动态）
+    const PUSH_OWNER = 'moodHappy';
+    const PUSH_REPO = 'moodHappy.gitHub.io-nce';
+    const DEFAULT_PATH = 'Notes/danmu/Prose';
 
-    // 推送配置
-    const PUSH_CONFIG = {
-        owner: 'moodHappy',
-        repo: 'moodHappy.gitHub.io-nce',
-        path: 'Notes/danmu/Prose'
-    };
+    // 文件夹历史记录 Key
+    const FOLDER_HISTORY_KEY = "github_push_folders";
+    const DEFAULT_FOLDER_KEY = "github_push_default_folder";
 
     let GITHUB_TOKEN = localStorage.getItem("github_token") || null;
     const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${WORD_FILE_PATH_GITHUB}`;
@@ -204,6 +233,7 @@
     const statusDiv = document.getElementById("status");
     const tokenModal = document.getElementById("tokenModal");
     const settingsModal = document.getElementById("settingsModal");
+    const pushModal = document.getElementById("pushModal");
 
     const defaultSettings = {
         theme: '', fontSize: '17px', 
@@ -211,6 +241,7 @@
         ttsVoiceName: 'en-US-EricNeural'
     };
 
+    // --- 设置相关逻辑 ---
     function applySettings(s) {
         document.body.className = s.theme || '';
         document.documentElement.style.setProperty('--font-size', s.fontSize);
@@ -239,6 +270,7 @@
         settingsModal.style.display = "none";
     }
 
+    // --- 认证相关逻辑 ---
     function saveToken() {
         const t = document.getElementById("tokenInput").value.trim();
         if (t) { localStorage.setItem("github_token", t); GITHUB_TOKEN = t; tokenModal.style.display = "none"; loadContent(); }
@@ -249,6 +281,7 @@
     function getHeaders() { return { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" }; }
     function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
 
+    // --- 同步（提交/读取/删除）逻辑 ---
     async function fetchFile() {
         const res = await fetch(apiUrl, { headers: getHeaders() });
         if (res.status === 404) return { sha: null, content: "" };
@@ -280,25 +313,75 @@
         textarea.value = ""; editMode(); statusDiv.textContent = "🗑️ 已清空";
     }
 
-    // --- [修复版] 推送功能：使用第一段作为标题 ---
-    async function pushCurrentContent() {
+    // --- 推送逻辑 (新版: 文件夹选择) ---
+    
+    function openPushModal() {
         const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value.trim();
-        if (!text) return alert("内容为空");
+        if (!text) return alert("内容为空，无法推送");
 
-        const btn = document.querySelector('button.push');
+        // 加载历史文件夹
+        let folders = JSON.parse(localStorage.getItem(FOLDER_HISTORY_KEY)) || [DEFAULT_PATH];
+        const defaultFolder = localStorage.getItem(DEFAULT_FOLDER_KEY) || DEFAULT_PATH;
+
+        // 确保默认文件夹在列表中
+        if (!folders.includes(defaultFolder)) folders.push(defaultFolder);
+        
+        const select = document.getElementById('folderSelect');
+        select.innerHTML = '';
+        folders.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.text = f;
+            if (f === defaultFolder) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        document.getElementById('newFolderInput').value = '';
+        pushModal.style.display = "flex";
+    }
+
+    async function confirmPush() {
+        // 获取目标路径
+        const select = document.getElementById('folderSelect');
+        const input = document.getElementById('newFolderInput');
+        let targetPath = input.value.trim() || select.value;
+        
+        // 去除路径两端的斜杠
+        targetPath = targetPath.replace(/^\/+|\/+$/g, '');
+
+        if (!targetPath) return alert("请选择或输入一个文件夹路径");
+
+        // 保存历史和默认设置
+        let folders = JSON.parse(localStorage.getItem(FOLDER_HISTORY_KEY)) || [DEFAULT_PATH];
+        if (!folders.includes(targetPath)) {
+            folders.push(targetPath);
+            localStorage.setItem(FOLDER_HISTORY_KEY, JSON.stringify(folders));
+        }
+
+        if (document.getElementById('setDefaultFolder').checked) {
+            localStorage.setItem(DEFAULT_FOLDER_KEY, targetPath);
+        }
+
+        // 关闭弹窗并执行推送
+        pushModal.style.display = "none";
+        await executePush(targetPath);
+    }
+
+    async function executePush(targetPath) {
+        const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value.trim();
+        const btn = document.querySelector('button.push'); // 注意：这里的按钮是主界面的按钮，文字变更仅做提示
+        const oldText = btn.textContent;
         btn.textContent = "⏳ 推送中...";
         btn.disabled = true;
 
         try {
-            // 提取第一段内容（按双换行切分）
+            // 提取第一段内容作为标题
             const paragraphs = text.split(/\n{2,}/);
             const rawTitle = paragraphs[0].trim().replace(/\n/g, ' '); 
-            
-            // 用于展示的完整标题
             const displayTitle = rawTitle;
-            // 用于文件名的安全标题（截断并过滤特殊字符）
+            // 简单过滤文件名非法字符
             let safeFilename = rawTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
-            
+
             const now = new Date();
             const timeStr = now.toLocaleString();
             const bodyHtml = paragraphs.map(p => `<p>${p}</p>`).join('\n');
@@ -327,16 +410,21 @@ date: "${timeStr}"
 </html>`;
 
             const filename = `${safeFilename}_${Date.now()}.html`;
-            const pushUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${PUSH_CONFIG.path}/${filename}`;
+            // 构建新的推送 URL
+            const pushUrl = `https://api.github.com/repos/${PUSH_OWNER}/${PUSH_REPO}/contents/${targetPath}/${filename}`;
 
             const res = await fetch(pushUrl, {
                 method: 'PUT',
                 headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Push Prose: ${safeFilename}`, content: utf8_to_b64(fileContent) })
+                body: JSON.stringify({ message: `Push to ${targetPath}: ${safeFilename}`, content: utf8_to_b64(fileContent) })
             });
 
-            if(res.ok) alert(`🎉 推送成功！\n标题：${displayTitle}`);
-            else throw new Error("GitHub 返回错误");
+            if(res.ok) {
+                alert(`🎉 推送成功！\n📂 路径：${targetPath}\n📄 标题：${displayTitle}`);
+            } else {
+                const errData = await res.json();
+                throw new Error(errData.message || "GitHub API 错误");
+            }
         } catch (e) {
             alert("❌ 推送失败: " + e.message);
         } finally {
@@ -344,6 +432,7 @@ date: "${timeStr}"
         }
     }
 
+    // --- 界面模式与辅助功能 ---
     function renderMode(text) {
         renderedDiv.innerHTML = text.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join("");
         renderedDiv.style.display = "block"; textarea.style.display = "none";
