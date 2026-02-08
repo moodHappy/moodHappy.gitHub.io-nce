@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>danmu - 全能管理版</title>
+    <title>danmu - 学习笔记管理</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/danmu.png">
     
@@ -25,7 +25,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 15px;
-            padding-bottom: 100px;
+            padding-bottom: 110px; /* 增加底部留白 */
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -125,16 +125,17 @@
         .action-bar.visible { transform: translateX(-50%) translateY(0); }
         .action-count { font-weight: bold; font-size: 14px; white-space: nowrap; margin-right: 10px; }
         
-        .action-btn-group { display: flex; gap: 8px; }
+        .action-btn-group { display: flex; gap: 8px; flex-wrap: nowrap; }
         .action-btn {
             border: none; color: white;
-            padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+            padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
         }
         .btn-move { background: var(--primary); }
         .btn-del { background: var(--danger); }
+        .btn-edit { background: #2da44e; } /* 绿色编辑按钮 */
         .action-btn:disabled { background: #57606a; opacity: 0.6; cursor: not-allowed; }
 
-        /* 弹窗 */
+        /* 弹窗通用 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
         .modal h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -142,6 +143,7 @@
         .form-group { margin-bottom: 18px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
         .form-group input { width: 100%; padding: 10px; border: 1px solid #d0d7de; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .form-group .hint { font-size: 12px; color: #666; margin-top: 5px; }
         
         .btn-group { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
         .btn { padding: 10px 16px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -179,8 +181,29 @@
 <div id="action-bar" class="action-bar">
     <span class="action-count">已选 0 项</span>
     <div class="action-btn-group">
-        <button id="del-btn" class="action-btn btn-del" onclick="execDelete()" disabled>删除</button>
+        <button id="edit-btn" class="action-btn btn-edit" onclick="openEditModal()" disabled>✏️ 编辑</button>
         <button id="move-btn" class="action-btn btn-move" onclick="openMoveModal()" disabled>移动</button>
+        <button id="del-btn" class="action-btn btn-del" onclick="execDelete()" disabled>删除</button>
+    </div>
+</div>
+
+<div id="edit-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ 编辑文件信息</h3>
+        <div class="form-group">
+            <label>标题名称</label>
+            <input type="text" id="edit-name-input">
+        </div>
+        <div class="form-group">
+            <label>日期和时间</label>
+            <input type="datetime-local" id="edit-time-input">
+            <div class="hint">修改时间会改变排序 (倒序排列)。</div>
+        </div>
+        <div id="edit-log" class="progress-log" style="display:none;"></div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+            <button id="btn-save-edit" class="btn btn-primary" onclick="execEdit()">保存修改</button>
+        </div>
     </div>
 </div>
 
@@ -306,17 +329,18 @@
                 if(item.name === 'index.html') return;
                 if(item.type === 'dir') dirs.push(item);
                 else if(item.name.match(/\.(html|json)$/)) {
+                    // 解析文件名中的时间戳
                     const ts = (item.name.match(/_(\d{13})\./) || [])[1];
                     files.push({
                         ...item,
                         timestamp: ts ? parseInt(ts) : 0,
-                        dateStr: ts ? new Date(parseInt(ts)).toLocaleString('zh-CN', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : ''
+                        dateStr: ts ? new Date(parseInt(ts)).toLocaleString('zh-CN', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: false}) : ''
                     });
                 }
             });
 
             dirs.sort((a, b) => b.name.localeCompare(a.name));
-            files.sort((a, b) => b.timestamp - a.timestamp);
+            files.sort((a, b) => b.timestamp - a.timestamp); // 按时间倒序
             
             currentDirs = dirs;
             currentFiles = files;
@@ -364,13 +388,16 @@
             let itemClass = "list-item";
             if (isSelected && isBatchMode) itemClass += " selected";
 
+            // 格式化纯净的标题（去掉 _时间戳.html）
+            let cleanName = file.name.replace(/_\d{13}\.(html|json)/, '').replace(/_/g, ' ');
+
             li.innerHTML = `
                 <div class="${itemClass}" onclick="handleItemClick('${file.sha}')">
                     <input type="checkbox" class="select-checkbox" ${isSelected ? 'checked' : ''}>
                     <div class="item-content">
                         <span class="item-icon">📄</span>
                         <div class="item-info">
-                            <span class="item-name">${file.name.replace(/_\d{13}\.(html|json)/, '').replace(/_/g, ' ')}</span>
+                            <span class="item-name">${cleanName}</span>
                             ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
                         </div>
                     </div>
@@ -428,13 +455,120 @@
         const count = selectedFilesMap.size;
         document.querySelector('.action-count').innerText = `已选 ${count} 项`;
         
-        // 更新移动按钮
-        const mvBtn = document.getElementById('move-btn');
-        mvBtn.disabled = count === 0;
+        // 移动和删除：只要有选中就可以
+        document.getElementById('move-btn').disabled = count === 0;
+        document.getElementById('del-btn').disabled = count === 0;
+
+        // 编辑：必须严格选中 1 个文件
+        document.getElementById('edit-btn').disabled = count !== 1;
+    }
+
+    // --- 编辑/重命名逻辑 (核心新功能) ---
+    function openEditModal() {
+        if (selectedFilesMap.size !== 1) return;
         
-        // 更新删除按钮
-        const delBtn = document.getElementById('del-btn');
-        delBtn.disabled = count === 0;
+        const file = selectedFilesMap.values().next().value; // 获取选中的那个文件
+        
+        // 1. 提取当前名称（去掉时间戳后缀）
+        const match = file.name.match(/(.*)_(\d{13})\.(html|json)$/);
+        let currentTitle = file.name;
+        let currentTs = Date.now();
+        let ext = '.html';
+
+        if (match) {
+            currentTitle = match[1]; // 标题部分
+            currentTs = parseInt(match[2]); // 时间戳部分
+            ext = '.' + match[3];
+        }
+
+        // 2. 转换时间为 datetime-local 格式 (YYYY-MM-DDTHH:mm)
+        // 注意：datetime-local 需要本地时间，这里做一个简单的偏移处理
+        const dateObj = new Date(currentTs);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+        // 3. 填充 Input
+        document.getElementById('edit-name-input').value = currentTitle;
+        document.getElementById('edit-time-input').value = dateStr;
+        document.getElementById('edit-name-input').dataset.ext = ext; // 暂存后缀
+
+        document.getElementById('edit-log').style.display = 'none';
+        document.getElementById('edit-modal').style.display = 'flex';
+        document.getElementById('btn-save-edit').disabled = false;
+        document.getElementById('btn-save-edit').innerText = "保存修改";
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    async function execEdit() {
+        if (!config.token) { alert("请先设置 Token"); openSettings(); return; }
+        
+        const file = selectedFilesMap.values().next().value;
+        const newTitle = document.getElementById('edit-name-input').value.trim();
+        const newTimeStr = document.getElementById('edit-time-input').value;
+        const ext = document.getElementById('edit-name-input').dataset.ext || '.html';
+        const logDiv = document.getElementById('edit-log');
+        const btn = document.getElementById('btn-save-edit');
+
+        if (!newTitle || !newTimeStr) { alert("名称和时间不能为空"); return; }
+
+        // 1. 生成新文件名
+        const newDate = new Date(newTimeStr);
+        const newTs = newDate.getTime();
+        const newFilename = `${newTitle}_${newTs}${ext}`;
+
+        // 如果名字和时间都没变，直接关闭
+        if (newFilename === file.name) { closeEditModal(); return; }
+
+        btn.disabled = true;
+        btn.innerText = "保存中...";
+        logDiv.style.display = 'block';
+        logDiv.innerHTML = `<div class="log-item">⏳ 正在重命名为...<br>${newTitle}</div>`;
+
+        try {
+            // 步骤 A: 获取原文件内容
+            const data = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`);
+            
+            // 步骤 B: 创建新文件 (PUT)
+            // 注意：path 要保持在当前目录
+            const newPath = currentPath + '/' + newFilename;
+            
+            await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${newPath}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    message: `Rename to ${newFilename}`,
+                    content: data.content // 保持原有内容
+                })
+            });
+
+            // 步骤 C: 删除旧文件 (DELETE)
+            await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`, {
+                method: 'DELETE',
+                body: JSON.stringify({
+                    message: `Delete old file after rename`,
+                    sha: file.sha
+                })
+            });
+
+            logDiv.innerHTML += `<div style="color:green">✅ 修改成功！</div>`;
+            
+            setTimeout(() => {
+                closeEditModal();
+                toggleBatchMode(); // 退出选择模式
+                loadPath(currentPath); // 刷新列表
+            }, 1000);
+
+        } catch (e) {
+            logDiv.innerHTML += `<div style="color:red">❌ 失败: ${e.message}</div>`;
+            btn.disabled = false;
+            btn.innerText = "重试";
+        }
     }
 
     // --- 移动逻辑 ---
@@ -445,7 +579,6 @@
         document.getElementById('move-modal').style.display = 'flex';
         document.getElementById('btn-confirm-move').disabled = false;
         document.getElementById('btn-confirm-move').innerText = "确认移动";
-        document.getElementById('btn-cancel-move').style.display = 'inline-block';
     }
 
     function closeMoveModal() { document.getElementById('move-modal').style.display = 'none'; }
@@ -459,7 +592,6 @@
         
         btn.disabled = true;
         btn.innerText = "处理中...";
-        document.getElementById('btn-cancel-move').style.display = 'none'; // 隐藏取消防止中断
         logDiv.style.display = 'block';
         logDiv.innerHTML = '';
 
@@ -479,7 +611,7 @@
                     body: JSON.stringify({ message: `Del original`, sha: file.sha })
                 });
                 successCount++;
-                logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ 移动成功: ${file.name}</span>`;
+                logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ 成功</span>`;
             } catch (e) {
                 logDiv.lastElementChild.innerHTML = `<span style="color:red">❌ 失败: ${e.message}</span>`;
             }
@@ -495,7 +627,6 @@
         } else {
             btn.disabled = false;
             btn.innerText = "重试";
-            document.getElementById('btn-cancel-move').style.display = 'inline-block';
         }
     }
 
@@ -506,14 +637,13 @@
         
         if (!confirm(`⚠️ 警告：确定要永久删除选中的 ${count} 个文件吗？\n此操作不可恢复！`)) return;
 
-        // 打开删除进度弹窗
         const modal = document.getElementById('delete-modal');
         const logDiv = document.getElementById('delete-log');
         const doneBtn = document.getElementById('btn-done-del');
         
         modal.style.display = 'flex';
         logDiv.innerHTML = '';
-        doneBtn.style.display = 'none'; // 还没完成先隐藏
+        doneBtn.style.display = 'none';
 
         const files = Array.from(selectedFilesMap.values());
         let successCount = 0;
@@ -526,26 +656,23 @@
                     body: JSON.stringify({ message: `Batch Delete`, sha: file.sha })
                 });
                 successCount++;
-                logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ 已删除: ${file.name}</span>`;
+                logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ 已删除</span>`;
             } catch (e) {
-                logDiv.lastElementChild.innerHTML = `<span style="color:red">❌ 删除失败: ${e.message}</span>`;
+                logDiv.lastElementChild.innerHTML = `<span style="color:red">❌ 失败: ${e.message}</span>`;
             }
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        logDiv.innerHTML += `<div style="margin-top:10px; font-weight:bold">🏁 操作结束。成功: ${successCount}, 失败: ${files.length - successCount}</div>`;
-        doneBtn.style.display = 'block'; // 显示完成按钮
+        logDiv.innerHTML += `<div style="margin-top:10px; font-weight:bold">🏁 完成</div>`;
+        doneBtn.style.display = 'block'; 
         
-        // 如果有成功的，刷新列表
         if (successCount > 0) {
-            toggleBatchMode(); // 退出选择模式
+            toggleBatchMode();
             loadPath(currentPath);
         }
     }
 
-    function closeDeleteModal() {
-        document.getElementById('delete-modal').style.display = 'none';
-    }
+    function closeDeleteModal() { document.getElementById('delete-modal').style.display = 'none'; }
 
     // --- 辅助逻辑 ---
     async function fetchLatestInDir(dirItem) {
