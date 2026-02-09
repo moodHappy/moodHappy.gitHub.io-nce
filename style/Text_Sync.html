@@ -118,7 +118,7 @@
     .modal-content label { display: block; margin-top: 15px; font-size: 14px; color: var(--status-color); }
     .modal-content input, .modal-content select { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid var(--input-border-color); background: var(--textarea-bg-color); color: var(--text-color); box-sizing: border-box; }
     .modal-buttons { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--textarea-border-color); }
-    
+
     .checkbox-row { display: flex; align-items: center; margin-top: 10px; }
     .checkbox-row input { width: auto; margin-right: 8px; margin-top: 0; }
 
@@ -192,10 +192,15 @@
     <div class="modal-content">
       <h3>📂 选择推送位置</h3>
       <label>选择历史文件夹</label>
-      <select id="folderSelect" onchange="document.getElementById('newFolderInput').value = ''">
+      <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="folderSelect" onchange="document.getElementById('newFolderInput').value = ''" style="flex: 1;">
           </select>
-      
-      <label>或输入新文件夹路径 (例: Notes/Daily)</label>
+          <button class="delete" onclick="deleteFolderHistory()" 
+                  style="flex: 0 0 40px; min-height: 38px; padding: 0; line-height: 1; margin-top: 5px; background-color: #f44336;" 
+                  title="删除选中的历史路径">✕</button>
+      </div>
+
+      <label style="margin-top: 15px;">或输入新文件夹路径 (例: Notes/Daily)</label>
       <input type="text" id="newFolderInput" placeholder="输入路径..." />
 
       <div class="checkbox-row">
@@ -215,13 +220,12 @@
     const GITHUB_REPO = "HelloWorld";
     const WORD_FILE_PATH_GITHUB = "Notes/transfer.txt";
     const SETTINGS_KEY = "github_sync_pure_v2";
-    
-    // 默认推送配置（所有者和仓库固定，路径变为动态）
+
+    // 默认推送配置
     const PUSH_OWNER = 'moodHappy';
     const PUSH_REPO = 'moodHappy.gitHub.io-nce';
     const DEFAULT_PATH = 'Notes/danmu/Prose';
 
-    // 文件夹历史记录 Key
     const FOLDER_HISTORY_KEY = "github_push_folders";
     const DEFAULT_FOLDER_KEY = "github_push_default_folder";
 
@@ -313,8 +317,8 @@
         textarea.value = ""; editMode(); statusDiv.textContent = "🗑️ 已清空";
     }
 
-    // --- 推送逻辑 (新版: 文件夹选择) ---
-    
+    // --- 推送逻辑 ---
+
     function openPushModal() {
         const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value.trim();
         if (!text) return alert("内容为空，无法推送");
@@ -323,9 +327,8 @@
         let folders = JSON.parse(localStorage.getItem(FOLDER_HISTORY_KEY)) || [DEFAULT_PATH];
         const defaultFolder = localStorage.getItem(DEFAULT_FOLDER_KEY) || DEFAULT_PATH;
 
-        // 确保默认文件夹在列表中
         if (!folders.includes(defaultFolder)) folders.push(defaultFolder);
-        
+
         const select = document.getElementById('folderSelect');
         select.innerHTML = '';
         folders.forEach(f => {
@@ -340,18 +343,39 @@
         pushModal.style.display = "flex";
     }
 
+    // 新增：删除历史文件夹逻辑
+    function deleteFolderHistory() {
+        const select = document.getElementById('folderSelect');
+        const folderToDelete = select.value;
+        if (!folderToDelete) return;
+
+        if (folderToDelete === DEFAULT_PATH) {
+            alert("初始默认路径建议保留，不可删除。");
+            return;
+        }
+
+        if (confirm(`确定要从历史记录中移除 "${folderToDelete}" 吗？`)) {
+            let folders = JSON.parse(localStorage.getItem(FOLDER_HISTORY_KEY)) || [DEFAULT_PATH];
+            folders = folders.filter(f => f !== folderToDelete);
+            localStorage.setItem(FOLDER_HISTORY_KEY, JSON.stringify(folders));
+
+            if (localStorage.getItem(DEFAULT_FOLDER_KEY) === folderToDelete) {
+                localStorage.removeItem(DEFAULT_FOLDER_KEY);
+            }
+            // 刷新列表
+            openPushModal();
+            statusDiv.textContent = "🗑️ 文件夹记录已删除";
+        }
+    }
+
     async function confirmPush() {
-        // 获取目标路径
         const select = document.getElementById('folderSelect');
         const input = document.getElementById('newFolderInput');
         let targetPath = input.value.trim() || select.value;
-        
-        // 去除路径两端的斜杠
-        targetPath = targetPath.replace(/^\/+|\/+$/g, '');
 
+        targetPath = targetPath.replace(/^\/+|\/+$/g, '');
         if (!targetPath) return alert("请选择或输入一个文件夹路径");
 
-        // 保存历史和默认设置
         let folders = JSON.parse(localStorage.getItem(FOLDER_HISTORY_KEY)) || [DEFAULT_PATH];
         if (!folders.includes(targetPath)) {
             folders.push(targetPath);
@@ -362,24 +386,21 @@
             localStorage.setItem(DEFAULT_FOLDER_KEY, targetPath);
         }
 
-        // 关闭弹窗并执行推送
         pushModal.style.display = "none";
         await executePush(targetPath);
     }
 
     async function executePush(targetPath) {
         const text = renderedDiv.style.display !== 'none' ? renderedDiv.innerText : textarea.value.trim();
-        const btn = document.querySelector('button.push'); // 注意：这里的按钮是主界面的按钮，文字变更仅做提示
+        const btn = document.querySelector('button.push');
         const oldText = btn.textContent;
         btn.textContent = "⏳ 推送中...";
         btn.disabled = true;
 
         try {
-            // 提取第一段内容作为标题
             const paragraphs = text.split(/\n{2,}/);
             const rawTitle = paragraphs[0].trim().replace(/\n/g, ' '); 
             const displayTitle = rawTitle;
-            // 简单过滤文件名非法字符
             let safeFilename = rawTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
 
             const now = new Date();
@@ -410,7 +431,6 @@ date: "${timeStr}"
 </html>`;
 
             const filename = `${safeFilename}_${Date.now()}.html`;
-            // 构建新的推送 URL
             const pushUrl = `https://api.github.com/repos/${PUSH_OWNER}/${PUSH_REPO}/contents/${targetPath}/${filename}`;
 
             const res = await fetch(pushUrl, {
