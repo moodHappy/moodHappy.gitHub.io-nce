@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>双语排版 & GitHub 推送助手 Pro Max</title>
+    <title>双语排版 & GitHub 推送助手 (智能合并版)</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/novel-tool.png">
 
@@ -13,8 +13,6 @@
             --success: #34C759;
             --push-btn: #FF9500;
             --pushed-btn: #8E8E93;
-            --batch-btn: #5856D6;
-            --delete-btn: #ff3b30;
             --bg: #F2F2F7;
             --card: #FFFFFF;
             --text: #1C1C1E;
@@ -23,13 +21,14 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg); color: var(--text);
-            margin: 0; padding: 20px 15px;
+            background-color: var(--bg); color: var(--text); margin: 0; padding: 20px 15px;
             display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
 
         .main-container { width: 100%; max-width: 650px; display: flex; flex-direction: column; gap: 20px; }
+
         #settings-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; z-index: 10; }
+
         h1 { font-size: 1.2rem; text-align: center; margin: 0; color: #333; font-weight: 700; }
 
         .card {
@@ -45,28 +44,32 @@
             box-sizing: border-box; outline: none; line-height: 1.6;
         }
 
+        input[type="text"] {
+            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 0.9rem; box-sizing: border-box;
+        }
+
         .input-area { height: 150px; }
         .result-area { height: 250px; }
 
         .action-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .chapter-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .chapter-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         button {
             border: none; padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
             cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;
-            gap: 4px; transition: all 0.2s;
+            gap: 5px; transition: all 0.2s;
         }
+
         button:active { transform: scale(0.97); opacity: 0.8; }
-        button:disabled { background-color: #ccc !important; cursor: not-allowed; }
-        
         .btn-primary { background-color: var(--primary); }
         .btn-success { background-color: var(--success); }
         .btn-push { background-color: var(--push-btn); }
-        .btn-batch { background-color: var(--batch-btn); }
-        .btn-delete { background-color: var(--delete-btn); }
         .btn-secondary { background-color: #8E8E93; }
+        .btn-all-push { background-color: #5856D6; }
 
         #resultsContainer { display: flex; flex-direction: column; gap: 20px; }
+
         .chapter-header { font-size: 0.85rem; color: #888; font-weight: bold; }
 
         .modal {
@@ -75,55 +78,61 @@
             z-index: 1000; backdrop-filter: blur(4px);
         }
         .modal-content {
-            background: white; padding: 24px; border-radius: 24px;
+            background: white; padding: 20px; border-radius: 24px;
             width: 90%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        
-        .setting-group { margin-bottom: 15px; }
-        .setting-group label { margin-bottom: 5px; color: #333; }
-        .setting-tip { font-size: 0.75rem; color: #999; margin-top: 4px; line-height: 1.4; }
+
+        #progressOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000; flex-direction: column;
+            justify-content: center; align-items: center; color: white;
+        }
+        .progress-box { width: 80%; max-width: 300px; background: #333; border-radius: 20px; height: 10px; margin: 15px 0; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: var(--success); transition: width 0.3s; }
 
         .path-list-container {
             border: 1px solid #eee; border-radius: 12px; margin-bottom: 15px;
-            max-height: 150px; overflow-y: auto; background: #fafafa;
+            max-height: 180px; overflow-y: auto; background: #fafafa;
         }
         .path-item {
             display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;
-            font-size: 0.9rem; cursor: pointer;
+            font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
         }
         .path-item.selected { background: #eef6ff; color: var(--primary); font-weight: bold; }
-        .path-item .del-btn { margin-left: auto; color: #ff3b30; padding: 5px; }
-        .progress-container { width: 100%; background: #eee; border-radius: 10px; height: 10px; margin: 15px 0; overflow: hidden; }
-        .progress-bar { height: 100%; background: var(--success); width: 0%; transition: width 0.3s; }
-
-        input[type="text"], input[type="password"] {
-            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px;
-        }
+        .path-item .del-btn { margin-left: auto; color: #ff3b30; padding: 5px; font-size: 1.2rem; }
 
         #toast {
             visibility: hidden; min-width: 150px; background-color: rgba(0,0,0,0.85);
             color: #fff; text-align: center; border-radius: 50px; padding: 12px 24px;
-            position: fixed; z-index: 1001; left: 50%; bottom: 40px; transform: translateX(-50%);
+            position: fixed; z-index: 1001; left: 50%; bottom: 40px;
+            transform: translateX(-50%); font-size: 0.9rem; transition: all 0.3s;
         }
-        #toast.show { visibility: visible; }
+        #toast.show { visibility: visible; bottom: 60px; }
+
         .empty-state { text-align: center; color: #999; padding: 20px; border: 2px dashed #ddd; border-radius: 12px; }
     </style>
 </head>
 <body>
 
-<div id="settings-icon" title="设置" onclick="openSettings()">⚙️</div>
+<div id="settings-icon" title="设置 Token" onclick="openTokenSettings()">🔐</div>
 
 <div class="main-container">
     <h1>📚 双语排版 & GitHub 推送助手</h1>
 
     <div class="card">
-        <label>输入原始内容 <button onclick="clearInput()" style="background:none; color:#ff3b30; border:none; cursor:pointer; font-weight:normal; padding:0;">清空</button></label>
-        <textarea id="inputText" class="input-area" placeholder="在此粘贴内容..."></textarea>
+        <label>裁剪关键词 (在此词之后的内容将被删除)</label>
+        <input type="text" id="trimKeyword" placeholder="例如: 下一步故事走向" value="下一步故事走向">
+        
+        <label style="margin-top: 10px;">
+            输入原始内容
+            <button class="btn-secondary" onclick="clearInput()" style="background:none; color:#ff3b30; box-shadow:none;">清空</button>
+        </label>
+        <textarea id="inputText" class="input-area" placeholder="在此粘贴小说内容..."></textarea>
 
         <div class="action-bar">
             <button class="btn-primary" onclick="processText()">⚡ 智能分章</button>
-            <button class="btn-batch" onclick="startBatchPush()">🚀 全部推送</button>
             <button class="btn-secondary" onclick="copyAll()">📑 复制全部</button>
+            <button class="btn-all-push" onclick="triggerPushAll()">🚀 全部推送</button>
         </div>
     </div>
 
@@ -132,24 +141,20 @@
     </div>
 </div>
 
-<div id="settingsModal" class="modal">
+<div id="progressOverlay">
+    <h3 id="progressTitle">正在推送...</h3>
+    <div class="progress-box"><div id="progressBar" class="progress-bar"></div></div>
+    <p id="progressStatus">准备中 0/0</p>
+    <p style="font-size: 0.7rem; color: #aaa;">为了保证排序正确，每章间隔 3 秒</p>
+</div>
+
+<div id="tokenModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0">⚙️ 系统设置</h3>
-        
-        <div class="setting-group">
-            <label>GitHub Token</label>
-            <input type="password" id="ghToken" placeholder="ghp_xxxxxx">
-        </div>
-
-        <div class="setting-group">
-            <label>自动过滤关键词</label>
-            <input type="text" id="filterKeywords" placeholder="关键词1,关键词2...">
-            <div class="setting-tip">匹配到这些词时，会自动剔除该行及其后续内容。多个请用中文或英文逗号隔开。</div>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存配置</button>
-            <button class="btn-secondary" onclick="closeModal('settingsModal')">取消</button>
+        <h3>设置 GitHub Token</h3>
+        <input type="password" id="ghToken" placeholder="ghp_xxxxxx">
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn-primary" style="flex:1" onclick="saveToken()">保存 Token</button>
+            <button class="btn-secondary" onclick="closeModal('tokenModal')">取消</button>
         </div>
     </div>
 </div>
@@ -159,23 +164,14 @@
         <h3 id="pushModalTitle">📂 选择推送路径</h3>
         <div class="path-list-container" id="pathList"></div>
         <input type="text" id="newPathInput" placeholder="例如: Notes/Novels">
-        <div style="margin: 10px 0; font-size: 0.85rem;">
-            <input type="checkbox" id="setAsDefault" checked> <label for="setAsDefault" style="display:inline;">设为默认路径</label>
+        <div style="margin: 10px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setAsDefault" checked> 
+            <label for="setAsDefault" style="display:inline; margin:0; cursor:pointer;">设为默认路径</label>
         </div>
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="btn-push" id="confirmPushBtn" style="flex:2">确认推送</button>
             <button class="btn-secondary" style="flex:1" onclick="closeModal('pushModal')">取消</button>
         </div>
-    </div>
-</div>
-
-<div id="progressModal" class="modal">
-    <div class="modal-content">
-        <h3 id="progressTitle">正在批量推送...</h3>
-        <p id="progressStatus" style="font-size: 0.9rem; color: #666;">准备中...</p>
-        <div class="progress-container"><div id="progressBar" class="progress-bar"></div></div>
-        <p id="progressCountdown" style="font-size: 0.8rem; color: var(--push-btn); text-align: center; font-weight: bold;"></p>
-        <button class="btn-secondary" id="cancelBatchBtn" style="width:100%; margin-top:10px;">停止推送</button>
     </div>
 </div>
 
@@ -186,265 +182,116 @@
     const GITHUB_REPO = "moodHappy.gitHub.io-nce";
     const PATH_HISTORY_KEY = "gh_novel_path_list_v2";
     const DEFAULT_PATH_KEY = "gh_novel_default_path_v2";
-    const FILTER_KEYWORDS_KEY = "gh_filter_keywords_v1";
     const INITIAL_PATH = "Notes/Novels";
-    const DEFAULT_KEYWORDS = "下一步故事走向,Next Chapter Directions,你想选哪一个走向,走向 A,走向 B,走向 C,走向 D";
 
-    let sectionsData = [];
-    let currentPushIndex = -1;
-    let isBatching = false;
-    let stopBatch = false;
+    let currentPushIndex = -1; 
+    let chaptersCount = 0;
 
-    window.onload = () => { 
-        if (!localStorage.getItem('gh_token')) openSettings(); 
-        // 初始化默认关键词
-        if (!localStorage.getItem(FILTER_KEYWORDS_KEY)) {
-            localStorage.setItem(FILTER_KEYWORDS_KEY, DEFAULT_KEYWORDS);
-        }
-    };
+    window.onload = () => { if (!localStorage.getItem('gh_token')) openTokenSettings(); };
 
-    function openSettings() {
+    function openTokenSettings() {
         document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
-        document.getElementById('filterKeywords').value = localStorage.getItem(FILTER_KEYWORDS_KEY) || DEFAULT_KEYWORDS;
-        document.getElementById('settingsModal').style.display = 'flex';
+        document.getElementById('tokenModal').style.display = 'flex';
     }
 
-    function saveSettings() {
+    function saveToken() {
         const token = document.getElementById('ghToken').value.trim();
-        const keywords = document.getElementById('filterKeywords').value.trim();
-        if (token) localStorage.setItem('gh_token', token);
-        localStorage.setItem(FILTER_KEYWORDS_KEY, keywords || DEFAULT_KEYWORDS);
-        showToast("配置已保存");
-        closeModal('settingsModal');
+        if (token) { localStorage.setItem('gh_token', token); showToast("Token 已保存"); closeModal('tokenModal'); }
     }
 
-    // --- 核心逻辑更新：动态生成过滤正则 ---
     function processText() {
         const input = document.getElementById('inputText').value;
-        sectionsData = [];
+        const trimKey = document.getElementById('trimKeyword').value.trim();
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '';
         if (!input.trim()) { showToast("请输入内容"); return; }
 
-        // 获取并构建动态正则
-        const savedKeywords = localStorage.getItem(FILTER_KEYWORDS_KEY) || DEFAULT_KEYWORDS;
-        const keywordArray = savedKeywords.split(/[，,]/).map(k => k.trim()).filter(k => k);
-        const filterRegex = keywordArray.length > 0 ? new RegExp(keywordArray.join('|'), 'i') : null;
-
         const lines = input.split(/\r?\n/);
+        const sections = [];
         const engHeaderRegex = /^\s*Chapter\s+\d+/i;
         const cnHeaderRegex = /^\s*第\s*[0-9零一二三四五六七八九十百千]+\s*章/;
 
         let currentSection = { lines: [] };
-        let lastHeaderType = 'none';
-        let linesSinceHeader = 999;
-        let skipMode = false;
+        let hasStartedValidChapter = false;
+        let lastHeaderType = 'none'; // 'eng', 'cn', 'none'
 
         lines.forEach((line) => {
             const isEngHeader = engHeaderRegex.test(line);
             const isCnHeader = cnHeaderRegex.test(line);
-            const isFilterTrigger = filterRegex && filterRegex.test(line);
 
-            // 1. 遇到新章节，重置跳过模式
-            if (isEngHeader || isCnHeader) {
-                skipMode = false;
-                let startNew = false;
-                if (isEngHeader) { startNew = true; lastHeaderType = 'eng'; linesSinceHeader = 0; } 
-                else if (isCnHeader) {
-                    if (lastHeaderType === 'eng' && linesSinceHeader < 5) startNew = false;
-                    else startNew = true;
-                    lastHeaderType = 'cn'; linesSinceHeader = 0;
-                }
-
-                if (startNew && currentSection.lines.length > 0) {
-                    sectionsData.push(currentSection);
-                    currentSection = { lines: [line] };
+            if (isEngHeader) {
+                // 遇到英文标题，强制开启新章节
+                if (currentSection.lines.length > 0) sections.push(currentSection);
+                currentSection = { lines: [line] };
+                hasStartedValidChapter = true;
+                lastHeaderType = 'eng';
+            } else if (isCnHeader) {
+                // 如果前一行刚刚是英文标题，则认为这是翻译，不切断
+                if (lastHeaderType === 'eng') {
+                    currentSection.lines.push(line);
+                    lastHeaderType = 'cn';
                 } else {
-                    currentSection.lines.push(line);
+                    // 否则，开启新章节
+                    if (currentSection.lines.length > 0) sections.push(currentSection);
+                    currentSection = { lines: [line] };
+                    hasStartedValidChapter = true;
+                    lastHeaderType = 'cn';
                 }
-                return;
-            }
-
-            // 2. 检测到过滤词
-            if (isFilterTrigger) skipMode = true;
-
-            // 3. 执行跳过或添加
-            if (!skipMode) {
-                linesSinceHeader++;
-                if (line.trim() || currentSection.lines.length > 0) {
+            } else {
+                if (hasStartedValidChapter) {
                     currentSection.lines.push(line);
+                    if (line.trim() !== "") lastHeaderType = 'none'; // 遇到正文后重置标题状态
                 }
             }
         });
+        
+        if (hasStartedValidChapter && currentSection.lines.length > 0) {
+            sections.push(currentSection);
+        }
 
-        if (currentSection.lines.length > 0) sectionsData.push(currentSection);
-
-        // 数据清洗
-        sectionsData = sectionsData.map((section, index) => {
-            const formatted = section.lines.join('\n').replace(/\n+/g, "\n").replace(/\n/g, "\n\n").trim();
+        chaptersCount = sections.length;
+        sections.forEach((section, index) => {
+            let rawContent = section.lines.join('\n');
+            if (trimKey && rawContent.includes(trimKey)) {
+                rawContent = rawContent.split(trimKey)[0];
+            }
+            const formattedText = rawContent.replace(/\r\n/g, "\n").replace(/\n+/g, "\n").replace(/\n/g, "\n\n").trim();
             let title = section.lines[0].trim();
-            if(title.length > 50 || !title) title = "Section " + (index + 1);
-            return { title, formatted, pushed: false };
-        }).filter(s => s.formatted.length > 5);
-
-        renderResults();
+            if(title.length > 40) title = "Section " + (index + 1);
+            createCard(formattedText, index + 1, title);
+        });
+        showToast(`已识别并合并双语标题，共 ${sections.length} 章`);
     }
 
-    function renderResults() {
-        const container = document.getElementById('resultsContainer');
-        container.innerHTML = '';
-        if (sectionsData.length === 0) {
-            container.innerHTML = '<div class="empty-state">等待转换...</div>';
-            return;
-        }
-        sectionsData.forEach((section, index) => createCard(section, index));
-        showToast(`识别到 ${sectionsData.length} 个章节`);
-    }
-
-    function deleteSection(index) {
-        if (confirm(`删除此章节？`)) {
-            sectionsData.splice(index, 1);
-            renderResults();
-        }
-    }
-
-    function createCard(section, index) {
+    function createCard(content, index, title) {
         const container = document.getElementById('resultsContainer');
         const div = document.createElement('div');
         div.className = 'card';
-        const pushedAttr = section.pushed ? 'style="background-color:var(--pushed-btn)"' : '';
-        const pushedText = section.pushed ? '✅ 已推送' : '📤 推送';
-        
         div.innerHTML = `
-            <div class="chapter-header">SECTION ${index + 1}</div>
-            <label>${section.title}</label>
-            <textarea class="result-area" id="res-${index}" readonly>${section.formatted}</textarea>
+            <div class="chapter-header">SECTION ${index}</div>
+            <label>${title}</label>
+            <textarea class="result-area" id="res-${index}" readonly>${content}</textarea>
             <div class="chapter-actions">
                 <button class="btn-success" onclick="copySingle('res-${index}')">📋 复制</button>
-                <button class="btn-push" id="push-btn-${index}" onclick="openPushDialog(${index})" ${pushedAttr}>${pushedText}</button>
-                <button class="btn-delete" onclick="deleteSection(${index})">🗑️ 删除</button>
+                <button class="btn-push" id="push-btn-${index}" onclick="openPushDialog(${index})">📤 推送</button>
             </div>
         `;
         container.appendChild(div);
     }
 
-    // --- 推送/API 部分 ---
+    function triggerPushAll() {
+        if (chaptersCount === 0) { showToast("请先生成章节"); return; }
+        openPushDialog(-1);
+    }
+
     function openPushDialog(index) {
-        if (!localStorage.getItem('gh_token')) { openSettings(); return; }
+        if (!localStorage.getItem('gh_token')) { showToast("请先设置 Token"); openTokenSettings(); return; }
         currentPushIndex = index;
-        isBatching = false;
         renderPathList();
         document.getElementById('pushModal').style.display = 'flex';
-        document.getElementById('confirmPushBtn').onclick = () => executeSinglePush();
+        document.getElementById('confirmPushBtn').onclick = () => confirmPushAction();
     }
 
-    function startBatchPush() {
-        if (sectionsData.length === 0) return;
-        if (!localStorage.getItem('gh_token')) { openSettings(); return; }
-        isBatching = true;
-        renderPathList();
-        document.getElementById('pushModal').style.display = 'flex';
-        document.getElementById('confirmPushBtn').onclick = () => executeBatchPush();
-    }
-
-    async function executeSinglePush() {
-        const path = document.getElementById('newPathInput').value.trim();
-        savePathSettings(path);
-        const btn = document.getElementById('confirmPushBtn');
-        btn.disabled = true;
-        const success = await uploadToGithub(currentPushIndex, path);
-        btn.disabled = false;
-        if (success) {
-            sectionsData[currentPushIndex].pushed = true;
-            renderResults();
-            closeModal('pushModal');
-            showToast("成功");
-        }
-    }
-
-    async function executeBatchPush() {
-        const path = document.getElementById('newPathInput').value.trim();
-        savePathSettings(path);
-        closeModal('pushModal');
-        document.getElementById('progressModal').style.display = 'flex';
-        stopBatch = false;
-        const cancelBtn = document.getElementById('cancelBatchBtn');
-        cancelBtn.innerText = "停止推送";
-
-        for (let i = 0; i < sectionsData.length; i++) {
-            if (stopBatch) break;
-            if (sectionsData[i].pushed) continue;
-
-            document.getElementById('progressBar').style.width = Math.round(((i + 1) / sectionsData.length) * 100) + "%";
-            document.getElementById('progressStatus').innerText = `正在处理 (${i+1}/${sectionsData.length})`;
-
-            const success = await uploadToGithub(i, path);
-            if (success) {
-                sectionsData[i].pushed = true;
-                renderResults();
-            }
-
-            if (i < sectionsData.length - 1 && !stopBatch) {
-                for (let s = 5; s > 0; s--) {
-                    if (stopBatch) break;
-                    document.getElementById('progressCountdown').innerText = `排序冷却: ${s}s`;
-                    await new Promise(r => setTimeout(r, 1000));
-                }
-            }
-        }
-        document.getElementById('progressStatus').innerText = "推送结束";
-        document.getElementById('progressCountdown').innerText = "";
-        cancelBtn.innerText = "关闭";
-        cancelBtn.onclick = () => closeModal('progressModal');
-    }
-
-    async function uploadToGithub(index, targetPath) {
-        const section = sectionsData[index];
-        const timeStr = new Date().toLocaleString();
-        const safeTitle = section.title.replace(/[\\/:*?"<>|#\s\n\r]/g, '_').substring(0, 30);
-        const fileName = `${String(index + 1).padStart(3, '0')}_${safeTitle}_${Date.now().toString().slice(-4)}.html`;
-
-        const htmlContent = `---
-title: "${section.title.replace(/"/g, "'")}"
-date: "${timeStr}"
----
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${section.title}</title>
-    <style>
-        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
-        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
-        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
-        p { margin-bottom: 1.5em; text-align: justify; }
-    </style>
-</head>
-<body>
-    <h1>${section.title}</h1>
-    <div class="meta">发布时间：${timeStr}</div>
-    <div class="content">
-${section.formatted.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
-    </div>
-</body>
-</html>`;
-
-        try {
-            const cleanPath = targetPath.replace(/^\/+|\/+$/g, '');
-            const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${cleanPath}/${fileName}`;
-            const res = await fetch(url, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('gh_token')}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Push: ${section.title}`, content: btoa(unescape(encodeURIComponent(htmlContent))) })
-            });
-            return res.ok;
-        } catch (e) { return false; }
-    }
-
-    function savePathSettings(path) {
-        if (!path) return;
-        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        if (!paths.includes(path)) { paths.push(path); localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); }
-        if (document.getElementById('setAsDefault').checked) localStorage.setItem(DEFAULT_PATH_KEY, path);
-    }
     function renderPathList() {
         const list = document.getElementById('pathList');
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
@@ -456,27 +303,121 @@ ${section.formatted.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
             div.innerHTML = `<span onclick="selectPath('${p}')" style="flex:1">${p}</span><span class="del-btn" onclick="deletePath('${p}', event)">✕</span>`;
             list.appendChild(div);
         });
-        document.getElementById('newPathInput').value = defaultPath;
+        if(!document.getElementById('newPathInput').value) document.getElementById('newPathInput').value = defaultPath;
     }
+
     function selectPath(p) { document.getElementById('newPathInput').value = p; renderPathList(); }
+
     function deletePath(p, event) {
         event.stopPropagation();
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        if (paths.length <= 1) return;
-        if (confirm(`删除记录: ${p}?`)) {
+        if (paths.length <= 1) { showToast("至少保留一个路径"); return; }
+        if (confirm(`删除路径记录: ${p}?`)) {
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
+            if (localStorage.getItem(DEFAULT_PATH_KEY) === p) localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
             renderPathList();
         }
     }
+
+    async function uploadToGithub(index, path) {
+        const content = document.getElementById(`res-${index}`).value;
+        const lines = content.split('\n').filter(l => l.trim() !== "");
+        const firstLine = lines[0] || "Untitled";
+        const safeTitle = firstLine.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+        const timeStr = new Date().toLocaleString();
+        const fileName = `${safeTitle}_${Date.now()}.html`;
+
+        const htmlContent = `---
+title: "${firstLine.replace(/"/g, "'")}"
+date: "${timeStr}"
+---
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${firstLine}</title>
+    <style>
+        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
+        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
+        p { margin-bottom: 1.5em; }
+    </style>
+</head>
+<body>
+    <h1>${firstLine}</h1>
+    <div class="meta">发布时间：${timeStr}</div>
+    <div class="content">
+${content.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
+    </div>
+</body>
+</html>`;
+
+        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}/${fileName}`;
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('gh_token')}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: `Push: ${safeTitle}`, content: btoa(unescape(encodeURIComponent(htmlContent))) })
+        });
+
+        if (!res.ok) { const err = await res.json(); throw new Error(err.message || "请求失败"); }
+        
+        const targetBtn = document.getElementById(`push-btn-${index}`);
+        if (targetBtn) {
+            targetBtn.innerText = "✅ 已推送";
+            targetBtn.style.backgroundColor = "var(--pushed-btn)";
+        }
+        return true;
+    }
+
+    async function confirmPushAction() {
+        const targetPath = document.getElementById('newPathInput').value.trim().replace(/^\/+|\/+$/g, '');
+        if (!targetPath) { alert("路径不能为空"); return; }
+        
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        if (!paths.includes(targetPath)) { paths.push(targetPath); localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); }
+        if (document.getElementById('setAsDefault').checked) localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
+
+        closeModal('pushModal');
+
+        if (currentPushIndex !== -1) {
+            const btn = document.getElementById(`push-btn-${currentPushIndex}`);
+            btn.innerText = "⏳...";
+            try {
+                await uploadToGithub(currentPushIndex, targetPath);
+                showToast("🎉 推送成功！");
+            } catch (e) { alert("推送失败: " + e.message); btn.innerText = "📤 推送"; }
+        } else {
+            const overlay = document.getElementById('progressOverlay');
+            const bar = document.getElementById('progressBar');
+            const status = document.getElementById('progressStatus');
+            overlay.style.display = 'flex';
+            let successCount = 0;
+            for (let i = 1; i <= chaptersCount; i++) {
+                status.innerText = `正在推送第 ${i} / ${chaptersCount} 章...`;
+                bar.style.width = `${(i / chaptersCount) * 100}%`;
+                try {
+                    await uploadToGithub(i, targetPath);
+                    successCount++;
+                } catch (e) { console.error(`第 ${i} 章失败:`, e); }
+                if (i < chaptersCount) {
+                    status.innerText = `等待 3 秒... (${i}/${chaptersCount})`;
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            }
+            overlay.style.display = 'none';
+            alert(`全部推送完成！成功: ${successCount}，总计: ${chaptersCount}`);
+        }
+    }
+
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function clearInput() { document.getElementById('inputText').value = ''; document.getElementById('inputText').focus(); }
     function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.className = 'show'; setTimeout(() => t.className = '', 2000); }
-    function copySingle(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(() => showToast("已复制")); }
+    function copySingle(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(() => showToast("已复制该章节")); }
     function copyAll() {
-        if (sectionsData.length === 0) return;
-        let all = sectionsData.map(s => s.formatted).join("\n\n---\n\n");
-        navigator.clipboard.writeText(all).then(() => showToast("已复制全部"));
+        let all = "";
+        document.querySelectorAll('.result-area').forEach(a => all += a.value + "\n\n-------------------\n\n");
+        navigator.clipboard.writeText(all).then(() => showToast("已复制全部内容"));
     }
 </script>
 </body>
