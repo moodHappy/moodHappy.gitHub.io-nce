@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>双语小说智能排版</title>
+    <title>双语小说排版助手 (GitHub 版)</title>
 
-      <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/novel-tool.png">
-  
-<style>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/novel-tool.png">
+
+    <style>
         :root {
             --primary: #007AFF;
             --success: #34C759;
+            --push-btn: #FF9500;
             --bg: #F2F2F7;
             --card: #FFFFFF;
             --text: #1C1C1E;
@@ -37,13 +38,16 @@
             gap: 20px;
         }
 
-        h1 {
-            font-size: 1.2rem;
-            text-align: center;
-            margin: 0;
-            color: #333;
-            font-weight: 700;
+        #settings-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
         }
+
+        h1 { font-size: 1.2rem; text-align: center; margin: 0; color: #333; font-weight: 700; }
 
         .card {
             background: var(--card);
@@ -55,117 +59,94 @@
             gap: 10px;
         }
 
-        label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #666;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        label { font-size: 0.9rem; font-weight: 600; color: #666; display: flex; justify-content: space-between; align-items: center; }
 
         textarea {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 16px;
-            font-family: inherit;
-            resize: vertical;
-            background-color: #FAFAFA;
-            box-sizing: border-box;
-            outline: none;
-            line-height: 1.6;
-        }
-
-        textarea:focus {
-            border-color: var(--primary);
-            background-color: #fff;
+            width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+            font-size: 16px; font-family: inherit; resize: vertical; background-color: #FAFAFA;
+            box-sizing: border-box; outline: none; line-height: 1.6;
         }
 
         .input-area { height: 150px; }
-        .result-area { height: 300px; }
+        .result-area { height: 250px; }
 
-        .action-bar {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 10px;
-        }
+        .action-bar { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+        .chapter-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         button {
-            border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            transition: opacity 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            border: none; padding: 12px; border-radius: 10px; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;
+            gap: 5px; transition: all 0.2s;
         }
 
-        button:active { opacity: 0.8; transform: scale(0.98); }
+        button:active { transform: scale(0.97); opacity: 0.8; }
         .btn-primary { background-color: var(--primary); }
         .btn-success { background-color: var(--success); }
-        .btn-secondary { background-color: #8E8E93; font-size: 0.9rem; padding: 8px 12px;}
+        .btn-push { background-color: var(--push-btn); }
+        .btn-secondary { background-color: #8E8E93; font-size: 0.85rem; padding: 8px 12px;}
 
         #resultsContainer { display: flex; flex-direction: column; gap: 20px; }
 
-        .chapter-header {
-            font-size: 0.85rem;
-            color: #888;
-            margin-bottom: -5px;
-            margin-left: 5px;
-            font-weight: bold;
-            text-transform: uppercase;
+        .chapter-header { font-size: 0.85rem; color: #888; font-weight: bold; }
+
+        /* 弹窗 */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+            z-index: 1000; backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 20px;
+            width: 90%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-content h3 { margin: 0 0 15px 0; font-size: 1.1rem; }
+        
+        .path-list-container {
+            border: 1px solid #eee; border-radius: 10px; margin-bottom: 15px;
+            max-height: 150px; overflow-y: auto;
+        }
+        .path-item {
+            display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #f5f5f5;
+            font-size: 0.9rem; cursor: pointer;
+        }
+        .path-item:last-child { border-bottom: none; }
+        .path-item:hover { background: #f9f9f9; }
+        .path-item.selected { background: #eef6ff; color: var(--primary); font-weight: bold; }
+        .path-item .del-btn { margin-left: auto; color: #ff3b30; padding: 5px; font-size: 1.1rem; }
+
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 12px; margin: 8px 0;
+            border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box;
         }
 
         #toast {
-            visibility: hidden;
-            min-width: 120px;
-            background-color: rgba(0,0,0,0.8);
-            color: #fff;
-            text-align: center;
-            border-radius: 50px;
-            padding: 12px 24px;
-            position: fixed;
-            z-index: 100;
-            left: 50%;
-            bottom: 40px;
-            transform: translateX(-50%);
-            font-size: 0.9rem;
-            backdrop-filter: blur(5px);
-            opacity: 0;
-            transition: opacity 0.3s, bottom 0.3s;
+            visibility: hidden; min-width: 150px; background-color: rgba(0,0,0,0.85);
+            color: #fff; text-align: center; border-radius: 50px; padding: 12px 24px;
+            position: fixed; z-index: 1001; left: 50%; bottom: 40px;
+            transform: translateX(-50%); font-size: 0.9rem; transition: all 0.3s;
         }
-        #toast.show { visibility: visible; opacity: 1; bottom: 60px; }
-        
+        #toast.show { visibility: visible; bottom: 60px; }
+
         .empty-state { text-align: center; color: #999; padding: 20px; border: 2px dashed #ddd; border-radius: 12px; }
     </style>
 </head>
 <body>
 
+<div id="settings-icon" onclick="openTokenSettings()">🔐</div>
+
 <div class="main-container">
-    <h1>📚 双语小说排版修复版</h1>
+    <h1>📚 双语排版 & 推送助手</h1>
 
     <div class="card">
         <label>
             输入原始内容
-            <button class="btn-secondary" onclick="clearInput()" style="background:none; color:#ff3b30; box-shadow:none; padding:0;">清空</button>
+            <button class="btn-secondary" onclick="clearInput()" style="background:none; color:#ff3b30; box-shadow:none;">清空</button>
         </label>
-        <textarea id="inputText" class="input-area" placeholder="粘贴示例：Chapter 1... 第一章..."></textarea>
-        
+        <textarea id="inputText" class="input-area" placeholder="在此粘贴小说内容..."></textarea>
+
         <div class="action-bar">
-            <button class="btn-primary" onclick="processText()">
-                <span>⚡ 智能分章</span>
-            </button>
-            <button class="btn-secondary" style="background-color:#5856D6" onclick="copyAll()">
-                <span>📑 复制全部</span>
-            </button>
+            <button class="btn-primary" onclick="processText()">⚡ 智能分章</button>
+            <button class="btn-secondary" style="background-color:#5856D6" onclick="copyAll()">📑 复制全部</button>
         </div>
     </div>
 
@@ -174,37 +155,85 @@
     </div>
 </div>
 
-<div id="toast">已复制</div>
+<div id="tokenModal" class="modal">
+    <div class="modal-content">
+        <h3>设置 GitHub Token</h3>
+        <p style="font-size: 0.8rem; color: #666;">用于推送至 moodHappy/HelloWorld</p>
+        <input type="password" id="ghToken" placeholder="ghp_xxxxxx">
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn-primary" style="flex:1" onclick="saveToken()">保存 Token</button>
+            <button class="btn-secondary" onclick="closeModal('tokenModal')">取消</button>
+        </div>
+    </div>
+</div>
+
+<div id="pushModal" class="modal">
+    <div class="modal-content">
+        <h3>📂 选择推送路径</h3>
+        
+        <div class="path-list-container" id="pathList">
+            </div>
+
+        <label style="margin-top: 10px;">输入新路径 (例: Notes/Daily)</label>
+        <input type="text" id="newPathInput" placeholder="New/Folder/Path">
+        
+        <div style="margin: 10px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="setAsDefault" checked> <label for="setAsDefault" style="display:inline; margin:0;">设为默认路径</label>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn-push" id="confirmPushBtn" style="flex:2">确认推送</button>
+            <button class="btn-secondary" style="flex:1" onclick="closeModal('pushModal')">取消</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast">操作成功</div>
 
 <script>
-    document.getElementById('inputText').focus();
+    // --- 硬编码配置 ---
+    const GITHUB_USER = "moodHappy";
+    const GITHUB_REPO = "HelloWorld";
+    const PATH_HISTORY_KEY = "gh_path_history";
+    const DEFAULT_PATH_KEY = "gh_default_path";
+    const DEFAULT_INIT_PATH = "Notes/Novels";
 
+    let currentPushIndex = -1; // 记录当前操作的是第几个章节
+
+    // --- 初始化加载 ---
+    window.onload = () => {
+        const savedToken = localStorage.getItem('gh_token');
+        if (!savedToken) openTokenSettings();
+    };
+
+    function openTokenSettings() {
+        document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
+        document.getElementById('tokenModal').style.display = 'flex';
+    }
+
+    function saveToken() {
+        const token = document.getElementById('ghToken').value.trim();
+        if (token) {
+            localStorage.setItem('gh_token', token);
+            showToast("Token 已保存");
+            closeModal('tokenModal');
+        }
+    }
+
+    // --- 排版核心逻辑 ---
     function processText() {
         const input = document.getElementById('inputText').value;
         const container = document.getElementById('resultsContainer');
         container.innerHTML = '';
+        if (!input.trim()) { showToast("请输入内容"); return; }
 
-        if (!input.trim()) {
-            showToast("请输入内容");
-            return;
-        }
-
-        // --- 核心修复逻辑开始 ---
-        
-        // 1. 按行拆分
         const lines = input.split(/\r?\n/);
         const sections = [];
-        
-        // 2. 正则定义
-        // 英文标题：Chapter 开头
         const engHeaderRegex = /^\s*Chapter\s+\d+/i;
-        // 中文标题：第xx章 开头
         const cnHeaderRegex = /^\s*第\s*[0-9零一二三四五六七八九十百千]+\s*章/;
 
         let currentSection = { lines: [] };
-        
-        // 状态标记
-        let lastHeaderType = 'none'; // 'eng' 或 'cn'
+        let lastHeaderType = 'none';
         let linesSinceHeader = 999;
 
         lines.forEach((line) => {
@@ -212,130 +241,189 @@
             const isCnHeader = cnHeaderRegex.test(line);
             let startNew = false;
 
-            if (isEngHeader) {
-                // 遇到英文 Chapter，无条件新开一章
-                startNew = true;
-                lastHeaderType = 'eng';
+            if (isEngHeader) { startNew = true; lastHeaderType = 'eng'; linesSinceHeader = 0; } 
+            else if (isCnHeader) {
+                if (lastHeaderType === 'eng' && linesSinceHeader < 5) { startNew = false; lastHeaderType = 'cn'; } 
+                else { startNew = true; lastHeaderType = 'cn'; }
                 linesSinceHeader = 0;
-            } else if (isCnHeader) {
-                // 遇到中文标题，判断是否需要合并
-                // 如果上一个标题是英文，且距离很近（比如5行内），说明是双语标题，不分章！
-                if (lastHeaderType === 'eng' && linesSinceHeader < 5) {
-                    startNew = false; // 合并！
-                    lastHeaderType = 'cn'; // 更新状态，防止连续中文标题
-                } else {
-                    startNew = true; // 否则正常分章
-                    lastHeaderType = 'cn';
-                }
-                linesSinceHeader = 0;
-            } else {
-                // 普通文本
-                linesSinceHeader++;
-            }
+            } else { linesSinceHeader++; }
 
-            // 执行分章或追加
-            if (startNew) {
-                if (currentSection.lines.length > 0) {
-                    sections.push(currentSection);
-                }
+            if (startNew && currentSection.lines.length > 0) {
+                sections.push(currentSection);
                 currentSection = { lines: [line] };
-            } else {
-                currentSection.lines.push(line);
-            }
+            } else { currentSection.lines.push(line); }
         });
 
-        // 放入最后一章
-        if (currentSection.lines.length > 0) {
-            sections.push(currentSection);
-        }
+        if (currentSection.lines.length > 0) sections.push(currentSection);
 
-        // --- 核心修复逻辑结束 ---
-
-        if (sections.length === 0) {
-            container.innerHTML = '<div class="empty-state">未识别到内容</div>';
-            return;
-        }
-
-        // 3. 渲染结果
         sections.forEach((section, index) => {
-            // 组装文本并排版（加空行）
-            const rawText = section.lines.join('\n');
-            const formattedText = formatContent(rawText);
-            
-            // 获取标题用于显示 (优先取第一行，太长就截断)
+            const formattedText = formatContent(section.lines.join('\n'));
             let title = section.lines[0].trim();
             if(title.length > 40) title = "Section " + (index + 1);
-
             createCard(formattedText, index + 1, title);
         });
-
-        showToast(`成功合并为 ${sections.length} 个章节`);
+        showToast(`识别到 ${sections.length} 个章节`);
     }
 
-    // 排版功能：去重空行 -> 加双空行
     function formatContent(text) {
-        // 先把所有换行符变成单个 \n
-        let clean = text.replace(/\r\n/g, "\n").replace(/\n+/g, "\n");
-        // 再把单个 \n 变成 \n\n
-        return clean.replace(/\n/g, "\n\n").trim();
+        return text.replace(/\r\n/g, "\n").replace(/\n+/g, "\n").replace(/\n/g, "\n\n").trim();
     }
 
     function createCard(content, index, title) {
         const container = document.getElementById('resultsContainer');
         const div = document.createElement('div');
         div.className = 'card';
-        // 自动调整高度逻辑
         div.innerHTML = `
-            <div class="chapter-header">Section ${index}</div>
+            <div class="chapter-header">SECTION ${index}</div>
             <label>${title}</label>
             <textarea class="result-area" id="res-${index}" readonly>${content}</textarea>
-            <button class="btn-success" onclick="copySingle('res-${index}')">复制此章节</button>
+            <div class="chapter-actions">
+                <button class="btn-success" onclick="copySingle('res-${index}')">📋 复制</button>
+                <button class="btn-push" onclick="openPushDialog(${index})">📤 推送</button>
+            </div>
         `;
         container.appendChild(div);
     }
 
-    function copySingle(id) {
-        const el = document.getElementById(id);
-        copyToClipboard(el.value);
+    // --- 多路径管理逻辑 ---
+    function openPushDialog(index) {
+        const token = localStorage.getItem('gh_token');
+        if (!token) { showToast("请先设置 Token"); openTokenSettings(); return; }
+        
+        currentPushIndex = index;
+        renderPathList();
+        document.getElementById('pushModal').style.display = 'flex';
+        
+        document.getElementById('confirmPushBtn').onclick = () => confirmPushAction();
     }
 
-    function copyAll() {
-        const areas = document.querySelectorAll('.result-area');
-        if (areas.length === 0) return;
-        let all = "";
-        areas.forEach(a => all += a.value + "\n\n-------------------\n\n");
-        copyToClipboard(all);
-    }
+    function renderPathList() {
+        const list = document.getElementById('pathList');
+        const paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [DEFAULT_INIT_PATH];
+        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
 
-    function copyToClipboard(text) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => showToast("复制成功！"))
-            .catch(() => fallbackCopy(text));
-        } else {
-            fallbackCopy(text);
+        list.innerHTML = '';
+        paths.forEach(p => {
+            const div = document.createElement('div');
+            div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
+            div.innerHTML = `
+                <span onclick="selectPath('${p}')" style="flex:1">${p} ${p === defaultPath ? ' (默认)' : ''}</span>
+                <span class="del-btn" onclick="deletePath('${p}')">✕</span>
+            `;
+            list.appendChild(div);
+        });
+        
+        // 如果没有选中路径，默认填入第一个或选中的默认值
+        if(!document.getElementById('newPathInput').value) {
+            document.getElementById('newPathInput').value = defaultPath;
         }
     }
 
-    function fallbackCopy(text) {
-        const t = document.createElement('textarea');
-        t.value = text;
-        document.body.appendChild(t);
-        t.select();
-        document.execCommand('copy');
-        document.body.removeChild(t);
-        showToast("复制成功！");
+    function selectPath(p) {
+        document.getElementById('newPathInput').value = p;
+        const items = document.querySelectorAll('.path-item');
+        items.forEach(item => {
+            item.classList.toggle('selected', item.innerText.includes(p));
+        });
     }
 
-    function clearInput() {
-        document.getElementById('inputText').value = '';
-        document.getElementById('inputText').focus();
+    function deletePath(p) {
+        if (confirm(`确定删除路径 "${p}" 吗？`)) {
+            let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [DEFAULT_INIT_PATH];
+            paths = paths.filter(item => item !== p);
+            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
+            if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
+                localStorage.removeItem(DEFAULT_PATH_KEY);
+            }
+            renderPathList();
+        }
     }
 
+    // --- 执行推送 ---
+    async function confirmPushAction() {
+        const targetPath = document.getElementById('newPathInput').value.trim().replace(/^\/+|\/+$/g, '');
+        if (!targetPath) { alert("请输入有效路径"); return; }
+
+        // 保存路径历史
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [DEFAULT_INIT_PATH];
+        if (!paths.includes(targetPath)) {
+            paths.push(targetPath);
+            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
+        }
+
+        // 处理默认路径
+        if (document.getElementById('setAsDefault').checked) {
+            localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
+        }
+
+        const btn = document.getElementById('confirmPushBtn');
+        const content = document.getElementById(`res-${currentPushIndex}`).value;
+        const firstLine = content.split('\n')[0].trim();
+        const safeTitle = firstLine.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+        
+        btn.innerText = "⏳ 推送中...";
+        btn.disabled = true;
+
+        const timeStr = new Date().toLocaleString();
+        const fileName = `${safeTitle}_${Date.now()}.html`;
+        
+        const htmlContent = `---
+title: "${firstLine.replace(/"/g, "'")}"
+date: "${timeStr}"
+---
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${firstLine}</title>
+<style>body{font-family:sans-serif;max-width:700px;margin:0 auto;padding:30px 20px;line-height:1.8;color:#333;background:#fdfaf3;} p{margin-bottom:1.5em;}</style></head>
+<body><h2>${firstLine}</h2><div style="color:#999;font-size:13px;margin-bottom:20px;">推送时间: ${timeStr}</div>
+${content.split('\n\n').map(p => `<p>${p}</p>`).join('')}</body></html>`;
+
+        try {
+            const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${fileName}`;
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('gh_token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `Upload Novel: ${safeTitle}`,
+                    content: btoa(unescape(encodeURIComponent(htmlContent)))
+                })
+            });
+
+            if (res.ok) {
+                showToast("🎉 推送成功！");
+                closeModal('pushModal');
+            } else {
+                const err = await res.json();
+                throw new Error(err.message || "请求失败");
+            }
+        } catch (e) {
+            alert("推送失败: " + e.message);
+        } finally {
+            btn.innerText = "确认推送";
+            btn.disabled = false;
+        }
+    }
+
+    // --- 辅助功能 ---
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function clearInput() { document.getElementById('inputText').value = ''; document.getElementById('inputText').focus(); }
     function showToast(msg) {
         const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.className = 'show';
+        t.innerText = msg; t.className = 'show';
         setTimeout(() => t.className = '', 2000);
+    }
+    function copySingle(id) {
+        const text = document.getElementById(id).value;
+        navigator.clipboard.writeText(text).then(() => showToast("已复制该章节"));
+    }
+    function copyAll() {
+        const areas = document.querySelectorAll('.result-area');
+        let all = "";
+        areas.forEach(a => all += a.value + "\n\n-------------------\n\n");
+        navigator.clipboard.writeText(all).then(() => showToast("已复制全部内容"));
     }
 </script>
 
