@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>双语小说排版助手 (GitHub 版)</title>
+    <title>双语排版 & GitHub 推送助手</title>
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/novel-tool.png">
 
@@ -12,6 +12,7 @@
             --primary: #007AFF;
             --success: #34C759;
             --push-btn: #FF9500;
+            --pushed-btn: #8E8E93; /* 已推送状态的颜色 */
             --bg: #F2F2F7;
             --card: #FFFFFF;
             --text: #1C1C1E;
@@ -89,34 +90,30 @@
 
         .chapter-header { font-size: 0.85rem; color: #888; font-weight: bold; }
 
-        /* 弹窗 */
         .modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
             z-index: 1000; backdrop-filter: blur(4px);
         }
         .modal-content {
-            background: white; padding: 20px; border-radius: 20px;
-            width: 90%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            background: white; padding: 20px; border-radius: 24px;
+            width: 90%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        .modal-content h3 { margin: 0 0 15px 0; font-size: 1.1rem; }
         
         .path-list-container {
-            border: 1px solid #eee; border-radius: 10px; margin-bottom: 15px;
-            max-height: 150px; overflow-y: auto;
+            border: 1px solid #eee; border-radius: 12px; margin-bottom: 15px;
+            max-height: 180px; overflow-y: auto; background: #fafafa;
         }
         .path-item {
-            display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #f5f5f5;
-            font-size: 0.9rem; cursor: pointer;
+            display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
         }
-        .path-item:last-child { border-bottom: none; }
-        .path-item:hover { background: #f9f9f9; }
         .path-item.selected { background: #eef6ff; color: var(--primary); font-weight: bold; }
-        .path-item .del-btn { margin-left: auto; color: #ff3b30; padding: 5px; font-size: 1.1rem; }
+        .path-item .del-btn { margin-left: auto; color: #ff3b30; padding: 5px; font-size: 1.2rem; }
 
         input[type="text"], input[type="password"] {
             width: 100%; padding: 12px; margin: 8px 0;
-            border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box;
+            border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px;
         }
 
         #toast {
@@ -132,10 +129,10 @@
 </head>
 <body>
 
-<div id="settings-icon" onclick="openTokenSettings()">🔐</div>
+<div id="settings-icon" title="设置 Token" onclick="openTokenSettings()">🔐</div>
 
 <div class="main-container">
-    <h1>📚 双语排版 & 推送助手</h1>
+    <h1>📚 双语排版 & GitHub 推送助手</h1>
 
     <div class="card">
         <label>
@@ -158,7 +155,7 @@
 <div id="tokenModal" class="modal">
     <div class="modal-content">
         <h3>设置 GitHub Token</h3>
-        <p style="font-size: 0.8rem; color: #666;">用于推送至 moodHappy/HelloWorld</p>
+        <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">推送至：moodHappy.gitHub.io-nce</p>
         <input type="password" id="ghToken" placeholder="ghp_xxxxxx">
         <div style="display:flex; gap:10px; margin-top:10px;">
             <button class="btn-primary" style="flex:1" onclick="saveToken()">保存 Token</button>
@@ -170,17 +167,13 @@
 <div id="pushModal" class="modal">
     <div class="modal-content">
         <h3>📂 选择推送路径</h3>
-        
-        <div class="path-list-container" id="pathList">
-            </div>
-
-        <label style="margin-top: 10px;">输入新路径 (例: Notes/Daily)</label>
-        <input type="text" id="newPathInput" placeholder="New/Folder/Path">
-        
-        <div style="margin: 10px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
-            <input type="checkbox" id="setAsDefault" checked> <label for="setAsDefault" style="display:inline; margin:0;">设为默认路径</label>
+        <div class="path-list-container" id="pathList"></div>
+        <label style="margin-top: 10px;">输入新路径或编辑选中路径</label>
+        <input type="text" id="newPathInput" placeholder="例如: Notes/Novels">
+        <div style="margin: 10px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setAsDefault" checked> 
+            <label for="setAsDefault" style="display:inline; margin:0; cursor:pointer;">设为默认路径</label>
         </div>
-
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="btn-push" id="confirmPushBtn" style="flex:2">确认推送</button>
             <button class="btn-secondary" style="flex:1" onclick="closeModal('pushModal')">取消</button>
@@ -191,20 +184,15 @@
 <div id="toast">操作成功</div>
 
 <script>
-    // --- 硬编码配置 ---
     const GITHUB_USER = "moodHappy";
-    const GITHUB_REPO = "HelloWorld";
-    const PATH_HISTORY_KEY = "gh_path_history";
-    const DEFAULT_PATH_KEY = "gh_default_path";
-    const DEFAULT_INIT_PATH = "Notes/Novels";
+    const GITHUB_REPO = "moodHappy.gitHub.io-nce";
+    const PATH_HISTORY_KEY = "gh_novel_path_list_v2";
+    const DEFAULT_PATH_KEY = "gh_novel_default_path_v2";
+    const INITIAL_PATH = "Notes/Novels";
 
-    let currentPushIndex = -1; // 记录当前操作的是第几个章节
+    let currentPushIndex = -1;
 
-    // --- 初始化加载 ---
-    window.onload = () => {
-        const savedToken = localStorage.getItem('gh_token');
-        if (!savedToken) openTokenSettings();
-    };
+    window.onload = () => { if (!localStorage.getItem('gh_token')) openTokenSettings(); };
 
     function openTokenSettings() {
         document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
@@ -213,14 +201,9 @@
 
     function saveToken() {
         const token = document.getElementById('ghToken').value.trim();
-        if (token) {
-            localStorage.setItem('gh_token', token);
-            showToast("Token 已保存");
-            closeModal('tokenModal');
-        }
+        if (token) { localStorage.setItem('gh_token', token); showToast("Token 已保存"); closeModal('tokenModal'); }
     }
 
-    // --- 排版核心逻辑 ---
     function processText() {
         const input = document.getElementById('inputText').value;
         const container = document.getElementById('resultsContainer');
@@ -240,7 +223,6 @@
             const isEngHeader = engHeaderRegex.test(line);
             const isCnHeader = cnHeaderRegex.test(line);
             let startNew = false;
-
             if (isEngHeader) { startNew = true; lastHeaderType = 'eng'; linesSinceHeader = 0; } 
             else if (isCnHeader) {
                 if (lastHeaderType === 'eng' && linesSinceHeader < 5) { startNew = false; lastHeaderType = 'cn'; } 
@@ -253,11 +235,10 @@
                 currentSection = { lines: [line] };
             } else { currentSection.lines.push(line); }
         });
-
         if (currentSection.lines.length > 0) sections.push(currentSection);
 
         sections.forEach((section, index) => {
-            const formattedText = formatContent(section.lines.join('\n'));
+            const formattedText = section.lines.join('\n').replace(/\r\n/g, "\n").replace(/\n+/g, "\n").replace(/\n/g, "\n\n").trim();
             let title = section.lines[0].trim();
             if(title.length > 40) title = "Section " + (index + 1);
             createCard(formattedText, index + 1, title);
@@ -265,96 +246,65 @@
         showToast(`识别到 ${sections.length} 个章节`);
     }
 
-    function formatContent(text) {
-        return text.replace(/\r\n/g, "\n").replace(/\n+/g, "\n").replace(/\n/g, "\n\n").trim();
-    }
-
     function createCard(content, index, title) {
         const container = document.getElementById('resultsContainer');
         const div = document.createElement('div');
         div.className = 'card';
+        // 注意：给推送按钮增加了 id="push-btn-${index}"
         div.innerHTML = `
             <div class="chapter-header">SECTION ${index}</div>
             <label>${title}</label>
             <textarea class="result-area" id="res-${index}" readonly>${content}</textarea>
             <div class="chapter-actions">
                 <button class="btn-success" onclick="copySingle('res-${index}')">📋 复制</button>
-                <button class="btn-push" onclick="openPushDialog(${index})">📤 推送</button>
+                <button class="btn-push" id="push-btn-${index}" onclick="openPushDialog(${index})">📤 推送</button>
             </div>
         `;
         container.appendChild(div);
     }
 
-    // --- 多路径管理逻辑 ---
     function openPushDialog(index) {
-        const token = localStorage.getItem('gh_token');
-        if (!token) { showToast("请先设置 Token"); openTokenSettings(); return; }
-        
+        if (!localStorage.getItem('gh_token')) { showToast("请先设置 Token"); openTokenSettings(); return; }
         currentPushIndex = index;
         renderPathList();
         document.getElementById('pushModal').style.display = 'flex';
-        
         document.getElementById('confirmPushBtn').onclick = () => confirmPushAction();
     }
 
     function renderPathList() {
         const list = document.getElementById('pathList');
-        const paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [DEFAULT_INIT_PATH];
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
         const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
-
         list.innerHTML = '';
         paths.forEach(p => {
             const div = document.createElement('div');
             div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
-            div.innerHTML = `
-                <span onclick="selectPath('${p}')" style="flex:1">${p} ${p === defaultPath ? ' (默认)' : ''}</span>
-                <span class="del-btn" onclick="deletePath('${p}')">✕</span>
-            `;
+            div.innerHTML = `<span onclick="selectPath('${p}')" style="flex:1">${p}</span><span class="del-btn" onclick="deletePath('${p}', event)">✕</span>`;
             list.appendChild(div);
         });
-        
-        // 如果没有选中路径，默认填入第一个或选中的默认值
-        if(!document.getElementById('newPathInput').value) {
-            document.getElementById('newPathInput').value = defaultPath;
-        }
+        if(!document.getElementById('newPathInput').value) document.getElementById('newPathInput').value = defaultPath;
     }
 
-    function selectPath(p) {
-        document.getElementById('newPathInput').value = p;
-        const items = document.querySelectorAll('.path-item');
-        items.forEach(item => {
-            item.classList.toggle('selected', item.innerText.includes(p));
-        });
-    }
+    function selectPath(p) { document.getElementById('newPathInput').value = p; renderPathList(); }
 
-    function deletePath(p) {
-        if (confirm(`确定删除路径 "${p}" 吗？`)) {
-            let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [DEFAULT_INIT_PATH];
+    function deletePath(p, event) {
+        event.stopPropagation();
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        if (paths.length <= 1) { showToast("至少保留一个路径"); return; }
+        if (confirm(`删除路径记录: ${p}?`)) {
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
-            if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
-                localStorage.removeItem(DEFAULT_PATH_KEY);
-            }
+            if (localStorage.getItem(DEFAULT_PATH_KEY) === p) localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
             renderPathList();
         }
     }
 
-    // --- 执行推送 ---
     async function confirmPushAction() {
         const targetPath = document.getElementById('newPathInput').value.trim().replace(/^\/+|\/+$/g, '');
-        if (!targetPath) { alert("请输入有效路径"); return; }
-
-        // 保存路径历史
-        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [DEFAULT_INIT_PATH];
-        if (!paths.includes(targetPath)) {
-            paths.push(targetPath);
-            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
-        }
-
-        // 处理默认路径
-        if (document.getElementById('setAsDefault').checked) {
-            localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
-        }
+        if (!targetPath) { alert("路径不能为空"); return; }
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        if (!paths.includes(targetPath)) { paths.push(targetPath); localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); }
+        if (document.getElementById('setAsDefault').checked) localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
 
         const btn = document.getElementById('confirmPushBtn');
         const content = document.getElementById(`res-${currentPushIndex}`).value;
@@ -373,59 +323,60 @@ date: "${timeStr}"
 ---
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${firstLine}</title>
-<style>body{font-family:sans-serif;max-width:700px;margin:0 auto;padding:30px 20px;line-height:1.8;color:#333;background:#fdfaf3;} p{margin-bottom:1.5em;}</style></head>
-<body><h2>${firstLine}</h2><div style="color:#999;font-size:13px;margin-bottom:20px;">推送时间: ${timeStr}</div>
-${content.split('\n\n').map(p => `<p>${p}</p>`).join('')}</body></html>`;
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${firstLine}</title>
+    <style>
+        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
+        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
+        p { margin-bottom: 1.5em; }
+    </style>
+</head>
+<body>
+    <h1>${firstLine}</h1>
+    <div class="meta">发布时间：${timeStr}</div>
+    <div class="content">
+${content.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
+    </div>
+</body>
+</html>`;
 
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${fileName}`;
             const res = await fetch(url, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('gh_token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: `Upload Novel: ${safeTitle}`,
-                    content: btoa(unescape(encodeURIComponent(htmlContent)))
-                })
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('gh_token')}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `Push: ${safeTitle}`, content: btoa(unescape(encodeURIComponent(htmlContent))) })
             });
-
+            
             if (res.ok) {
                 showToast("🎉 推送成功！");
                 closeModal('pushModal');
-            } else {
-                const err = await res.json();
-                throw new Error(err.message || "请求失败");
-            }
-        } catch (e) {
-            alert("推送失败: " + e.message);
-        } finally {
-            btn.innerText = "确认推送";
-            btn.disabled = false;
-        }
+
+                // --- 关键修改：更新卡片上的推送按钮状态 ---
+                const targetBtn = document.getElementById(`push-btn-${currentPushIndex}`);
+                if (targetBtn) {
+                    targetBtn.innerText = "✅ 已推送";
+                    targetBtn.style.backgroundColor = "var(--pushed-btn)";
+                    // 可选：禁用按钮防止重复推送
+                    // targetBtn.disabled = true; 
+                }
+            } 
+            else { const err = await res.json(); throw new Error(err.message || "请求失败"); }
+        } catch (e) { alert("推送失败: " + e.message); } 
+        finally { btn.innerText = "确认推送"; btn.disabled = false; }
     }
 
-    // --- 辅助功能 ---
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function clearInput() { document.getElementById('inputText').value = ''; document.getElementById('inputText').focus(); }
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg; t.className = 'show';
-        setTimeout(() => t.className = '', 2000);
-    }
-    function copySingle(id) {
-        const text = document.getElementById(id).value;
-        navigator.clipboard.writeText(text).then(() => showToast("已复制该章节"));
-    }
+    function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.className = 'show'; setTimeout(() => t.className = '', 2000); }
+    function copySingle(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(() => showToast("已复制该章节")); }
     function copyAll() {
-        const areas = document.querySelectorAll('.result-area');
         let all = "";
-        areas.forEach(a => all += a.value + "\n\n-------------------\n\n");
+        document.querySelectorAll('.result-area').forEach(a => all += a.value + "\n\n-------------------\n\n");
         navigator.clipboard.writeText(all).then(() => showToast("已复制全部内容"));
     }
 </script>
-
 </body>
 </html>
