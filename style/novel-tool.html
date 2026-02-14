@@ -121,8 +121,8 @@
 
     <div class="card">
         <label>裁剪关键词 (在此词之后的内容将被删除)</label>
-        <input type="text" id="trimKeyword" placeholder="例如: 下一步故事走向" value="下一步故事走向">
-        
+        <input type="text" id="trimKeyword" placeholder="例如: 下一步故事走向" value="下一步故事走向" oninput="saveKeyword()">
+
         <label style="margin-top: 10px;">
             输入原始内容
             <button class="btn-secondary" onclick="clearInput()" style="background:none; color:#ff3b30; box-shadow:none;">清空</button>
@@ -182,12 +182,27 @@
     const GITHUB_REPO = "moodHappy.gitHub.io-nce";
     const PATH_HISTORY_KEY = "gh_novel_path_list_v2";
     const DEFAULT_PATH_KEY = "gh_novel_default_path_v2";
+    const TRIM_KEYWORD_KEY = "gh_trim_keyword_v2"; // 裁剪词存储键名
     const INITIAL_PATH = "Notes/Novels";
 
     let currentPushIndex = -1; 
     let chaptersCount = 0;
 
-    window.onload = () => { if (!localStorage.getItem('gh_token')) openTokenSettings(); };
+    window.onload = () => { 
+        // 恢复保存的裁剪关键词
+        const savedKeyword = localStorage.getItem(TRIM_KEYWORD_KEY);
+        if (savedKeyword !== null) {
+            document.getElementById('trimKeyword').value = savedKeyword;
+        }
+
+        if (!localStorage.getItem('gh_token')) openTokenSettings(); 
+    };
+
+    // 保存裁剪关键词到本地
+    function saveKeyword() {
+        const keyword = document.getElementById('trimKeyword').value;
+        localStorage.setItem(TRIM_KEYWORD_KEY, keyword);
+    }
 
     function openTokenSettings() {
         document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
@@ -220,18 +235,15 @@
             const isCnHeader = cnHeaderRegex.test(line);
 
             if (isEngHeader) {
-                // 遇到英文标题，强制开启新章节
                 if (currentSection.lines.length > 0) sections.push(currentSection);
                 currentSection = { lines: [line] };
                 hasStartedValidChapter = true;
                 lastHeaderType = 'eng';
             } else if (isCnHeader) {
-                // 如果前一行刚刚是英文标题，则认为这是翻译，不切断
                 if (lastHeaderType === 'eng') {
                     currentSection.lines.push(line);
                     lastHeaderType = 'cn';
                 } else {
-                    // 否则，开启新章节
                     if (currentSection.lines.length > 0) sections.push(currentSection);
                     currentSection = { lines: [line] };
                     hasStartedValidChapter = true;
@@ -240,11 +252,11 @@
             } else {
                 if (hasStartedValidChapter) {
                     currentSection.lines.push(line);
-                    if (line.trim() !== "") lastHeaderType = 'none'; // 遇到正文后重置标题状态
+                    if (line.trim() !== "") lastHeaderType = 'none'; 
                 }
             }
         });
-        
+
         if (hasStartedValidChapter && currentSection.lines.length > 0) {
             sections.push(currentSection);
         }
@@ -361,7 +373,7 @@ ${content.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
         });
 
         if (!res.ok) { const err = await res.json(); throw new Error(err.message || "请求失败"); }
-        
+
         const targetBtn = document.getElementById(`push-btn-${index}`);
         if (targetBtn) {
             targetBtn.innerText = "✅ 已推送";
@@ -373,7 +385,7 @@ ${content.split('\n\n').map(p => `<p>${p}</p>`).join('\n')}
     async function confirmPushAction() {
         const targetPath = document.getElementById('newPathInput').value.trim().replace(/^\/+|\/+$/g, '');
         if (!targetPath) { alert("路径不能为空"); return; }
-        
+
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
         if (!paths.includes(targetPath)) { paths.push(targetPath); localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); }
         if (document.getElementById('setAsDefault').checked) localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
