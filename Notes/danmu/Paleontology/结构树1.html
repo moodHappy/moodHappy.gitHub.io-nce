@@ -15,7 +15,6 @@ body {
 .tree {
   font-size: 13px;
   line-height: 1.5;
-  /* 添加横向滚动保护，极端情况下允许局部滑动而不是缩小整个页面 */
   overflow-x: auto; 
   max-width: 100%;
 }
@@ -24,26 +23,52 @@ body {
   margin-left: 16px;
   padding-left: 10px;
   border-left: 1px solid rgba(128, 128, 128, 0.3);
+  transition: all 0.3s ease;
+}
+
+/* 折叠隐藏状态 */
+.collapsed {
+  display: none;
 }
 
 .node {
   margin: 6px 0;
-  /* 移除 nowrap，允许文本在屏幕边缘自然换行 */
   white-space: normal; 
   word-wrap: break-word;
 }
 
-.level-1 { font-weight: 800; color: #2c3e50; font-size: 15px; } /* 生命根基 */
-.level-2 { font-weight: 700; color: #2980b9; } /* 脊椎动物爆发 */
-.level-3 { font-weight: 700; color: #8e44ad; } /* 登陆者 */
-.level-4 { font-weight: 700; color: #d35400; } /* 羊膜三大阵营 */
+/* 可折叠节点的样式 */
+.folder {
+  cursor: pointer;
+  user-select: none;
+}
+.folder:active {
+  opacity: 0.6;
+}
+
+/* 修复后的加号图标样式 */
+.icon {
+  display: inline-block;
+  min-width: 28px; /* 给足空间 */
+  color: #3498db;
+  font-family: monospace;
+  font-weight: bold;
+  white-space: nowrap; /* 强制图标本身绝对不换行 */
+  text-align: center; /* 确保加号和减号对齐 */
+}
+
+/* 层级颜色定义 */
+.level-1 { font-weight: 800; color: #2c3e50; font-size: 15px; } 
+.level-2 { font-weight: 700; color: #2980b9; } 
+.level-3 { font-weight: 700; color: #8e44ad; } 
+.level-4 { font-weight: 700; color: #d35400; } 
 
 .current { 
   background: rgba(46, 204, 113, 0.2); 
   padding: 2px 5px; 
   border-radius: 3px;
   font-weight: bold;
-  display: inline-block; /* 确保背景色在换行时也能正常显示 */
+  display: inline-block;
 }
 
 .tag {
@@ -53,18 +78,10 @@ body {
   margin-left: 8px;
 }
 
-/* 针对手机屏幕（宽度小于600px）的专属优化 */
 @media (max-width: 600px) {
-  body {
-    padding: 10px;
-  }
-  .branch {
-    margin-left: 8px; /* 减小缩进距离，节省横向空间 */
-    padding-left: 8px;
-  }
-  .tree {
-    font-size: 12.5px; /* 稍微缩小基础字号 */
-  }
+  body { padding: 10px; }
+  .branch { margin-left: 8px; padding-left: 8px; }
+  .tree { font-size: 12.5px; }
 }
 </style>
 </head>
@@ -78,12 +95,49 @@ body {
     <div class="node">└─ 真核生物 <span class="tag">原生生物、真菌、植物、动物</span></div>
 
     <div class="branch">
-      <div class="node">└─ 动物界 (Metazoa)</div>
-      <div class="branch">
-        <div class="node">├─ 无脊椎动物 <span class="tag">三叶虫、昆虫、章鱼、水母</span></div>
-        <div class="node level-2">└─ 脊索动物 (Chordates)</div>
-
+      
+      <div class="node folder" onclick="toggleTree(this)" style="color:#27ae60; font-weight:bold;">
+        <span class="icon">[+]</span> ├─ 植物界 (Plantae)
+      </div>
+      <div class="branch collapsed">
+        <div class="node">├─ 绿藻类 <span class="tag">水生祖先</span></div>
+        <div class="node">├─ 苔藓植物 <span class="tag">登陆先锋 (无根须)</span></div>
+        <div class="node">└─ 维管植物 <span class="tag">演化出输水管与真根</span></div>
         <div class="branch">
+          <div class="node">├─ 蕨类植物 <span class="tag">石炭纪森林主体 (靠孢子繁殖)</span></div>
+          <div class="node">└─ 种子植物 <span class="tag">彻底摆脱水环境限制</span></div>
+          <div class="branch">
+            <div class="node">├─ 裸子植物 <span class="tag">松、柏、银杏 (种子裸露)</span></div>
+            <div class="node">└─ <span class="current">被子植物</span> <span class="tag">开花植物，现代绝对优势</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="node folder" onclick="toggleTree(this)">
+        <span class="icon">[+]</span> └─ 动物界 (Metazoa)
+      </div>
+      <div class="branch collapsed">
+        
+        <div class="node folder" onclick="toggleTree(this)" style="color:#16a085;">
+          <span class="icon">[+]</span> ├─ 无脊椎动物 (Invertebrates)
+        </div>
+        <div class="branch collapsed">
+          <div class="node">├─ 刺胞动物 <span class="tag">水母、珊瑚</span></div>
+          <div class="node">├─ 软体动物 <span class="tag">章鱼、蜗牛、鹦鹉螺</span></div>
+          <div class="node">└─ 节肢动物 <span class="tag">动物界数量之王</span></div>
+          <div class="branch">
+            <div class="node">├─ 螯肢类 <span class="tag">蜘蛛、蝎子、三叶虫(灭绝)</span></div>
+            <div class="node">└─ 昆虫纲 <span class="tag">蝴蝶、蚂蚁</span></div>
+            <div class="branch">
+               <div class="node">└─ <span class="current">巨脉蜻蜓</span> <span class="tag">石炭纪巨型昆虫(翼展70cm)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="node level-2 folder" onclick="toggleTree(this)">
+          <span class="icon">[+]</span> └─ 脊索动物 (Chordates)
+        </div>
+        <div class="branch collapsed">
           <div class="node">├─ 无颌鱼类 <span class="tag">七鳃鳗、盲鳗</span></div>
           <div class="node">└─ 有颌脊椎动物</div>
 
@@ -92,7 +146,7 @@ body {
             <div class="node">└─ 硬骨鱼类 <span class="tag">大多数现代鱼类</span></div>
 
             <div class="branch">
-              <div class="node">└─ 肉鳍鱼类 <span class="tag">具有肌肉质的鳍 (四足动物之祖)</span></div>
+              <div class="node">└─ 肉鳍鱼类 <span class="tag">四足动物之祖</span></div>
               <div class="branch">
                 <div class="node level-3">└─ 四足形类 (Tetrapods) —— 【开始登陆】</div>
 
@@ -140,9 +194,25 @@ body {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
   </div>
 </div>
+
+<script>
+function toggleTree(element) {
+  var branch = element.nextElementSibling;
+  var icon = element.querySelector('.icon');
+  
+  if (branch && branch.classList.contains('branch')) {
+    branch.classList.toggle('collapsed');
+    if (branch.classList.contains('collapsed')) {
+      if (icon) icon.innerHTML = '[+]';
+    } else {
+      if (icon) icon.innerHTML = '[-]';
+    }
+  }
+}
+</script>
 </body>
 </html>
