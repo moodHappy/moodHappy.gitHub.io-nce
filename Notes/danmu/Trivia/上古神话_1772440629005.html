@@ -1,22 +1,357 @@
----
-title: "上古神话"
-date: "2026/3/2 16:37:08"
----
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>上古神话</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <title>上古神话人物星图谱</title>
     <style>
-        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
-        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
-        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
-        p { margin-bottom: 1.5em; }
+        /* 玄天星汉 - 极简暗黑主题 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "STKaiti", "楷体", serif;
+            line-height: 1.6;
+            color: #cbd5e1; /* 银灰色 */
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #0f172a; /* 深邃夜空蓝 */
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%);
+            background-attachment: fixed;
+        }
+
+        h1 {
+            text-align: center;
+            color: #38bdf8; /* 苍青色 */
+            font-size: 26px;
+            margin-bottom: 25px;
+            letter-spacing: 5px;
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+            border-bottom: 1px solid #334155;
+            padding-bottom: 20px;
+            font-weight: 300;
+        }
+
+        /* 顶部控制台 */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 280px;
+            padding: 8px 15px;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            background: #1e293b;
+            font-family: inherit;
+            font-size: 14px;
+            color: #f8fafc;
+            outline: none;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .search-box:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .search-box::placeholder {
+            color: #64748b;
+            letter-spacing: 1px;
+        }
+
+        .toggle-btn {
+            background-color: transparent;
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            padding: 7px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background-color: #38bdf8;
+            color: #0f172a;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+
+        /* 大分类卡片 */
+        .main-category {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .main-category h2 {
+            border-bottom: 1px solid #334155;
+            padding-bottom: 12px;
+            color: #94a3b8;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 18px;
+            letter-spacing: 2px;
+            font-weight: 400;
+        }
+
+        /* 折叠面板样式 */
+        details {
+            margin-bottom: 12px;
+            background: #1e293b;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        summary {
+            padding: 12px 18px;
+            cursor: pointer;
+            font-size: 15px;
+            color: #e2e8f0;
+            background: #1e293b;
+            border-left: 3px solid #38bdf8;
+            list-style: none;
+            position: relative;
+            transition: background 0.2s ease;
+            user-select: none;
+        }
+
+        summary::-webkit-details-marker { display: none; }
+        summary:hover { background: #2dd4bf; color: #0f172a; border-left-color: #0f172a; }
+
+        summary::after {
+            content: "▼";
+            position: absolute;
+            right: 18px;
+            font-size: 10px;
+            color: #64748b;
+            transition: transform 0.3s ease;
+        }
+        summary:hover::after { color: #0f172a; }
+        details[open] summary::after { transform: rotate(180deg); }
+
+        /* 强迫症专属：不换行、极简网格 */
+        .details-content {
+            padding: 15px;
+            background-color: rgba(15, 23, 42, 0.6);
+        }
+
+        .grid-list {
+            display: grid;
+            /* 设定最小宽度75px，尽量塞入更多卡片 */
+            grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .grid-list li a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 4px;
+            background-color: transparent;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .grid-list li a:hover {
+            border-color: #38bdf8;
+            background-color: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+        }
+
+        .name {
+            font-size: 13px; /* 较小字体 */
+            font-weight: 500;
+            letter-spacing: 1px;
+            /* 核心防换行三剑客 */
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis; 
+            width: 100%;
+            text-align: center;
+        }
+
+        .count-tag {
+            font-size: 12px;
+            color: #64748b;
+            margin-left: 5px;
+        }
+        summary:hover .count-tag { color: #0f172a; }
+
     </style>
 </head>
 <body>
-    <h1>上古神话</h1>
-    <div class="meta">发布时间：2026/3/2 16:37:08</div>
-    <div class="content"><p>上古神话</p></div>
+
+    <h1>上古神话人物星图谱</h1>
+
+    <div class="controls">
+        <input type="text" id="searchInput" class="search-box" placeholder="寻觅上古神祇 (输入汉字)">
+        <button id="toggleBtn" class="toggle-btn">展开星图</button>
+    </div>
+
+    <div id="content"></div>
+
+    <script>
+        // 海量神话人物数据 (去拼音纯净版)
+        const data = [
+            {
+                category: "一、 创世与至高神明",
+                subCats: [
+                    { title: "创世始祖", items: ["盘古", "女娲", "伏羲", "昊天上帝", "东皇太一", "帝俊", "烛龙", "雷神", "华胥氏"] },
+                    { title: "五方上帝", items: ["太昊", "炎帝", "黄帝", "少昊", "颛顼"] },
+                    { title: "五方佐神", items: ["句芒", "祝融", "后土", "蓐收", "玄冥"] },
+                    { title: "日月星辰之主", items: ["羲和", "常羲", "望舒", "飞廉", "屏翳", "耀魄宝", "紫微大帝", "勾陈大帝"] }
+                ]
+            },
+            {
+                category: "二、 三皇五帝与人王世系",
+                subCats: [
+                    { title: "三皇五帝 (各版本合集)", items: ["燧人氏", "有巢氏", "神农氏", "轩辕氏", "帝喾", "尧", "舜", "禹", "太昊", "少昊", "柏皇氏", "中皇氏", "大庭氏", "栗陆氏", "骊连氏", "赫胥氏", "尊卢氏", "祝融氏", "混沌氏", "昊英氏", "朱襄氏", "葛天氏", "阴康氏", "无怀氏"] },
+                    { title: "炎帝世系", items: ["临魁", "帝承", "帝明", "帝直", "帝来", "帝哀", "榆罔", "炎居", "节并", "戏器", "祝融", "共工", "术器", "勾龙", "夸父", "蚩尤", "灵恝", "互人"] },
+                    { title: "黄帝世系", items: ["玄嚣", "昌意", "乾荒", "颛顼", "穷蝉", "敬康", "句望", "桥牛", "瞽叟", "鲧", "大禹", "启", "伯益", "契", "后稷", "弃", "台玺", "叔均"] },
+                    { title: "帝俊世系", items: ["帝鸿", "中容", "司幽", "白民", "黑齿", "三身", "季厘", "晏龙", "帝丹朱", "欢头", "苗民", "禺号", "淫梁", "番禺", "吉光", "叔均"] }
+                ]
+            },
+            {
+                category: "三、 远古战神与英雄",
+                subCats: [
+                    { title: "逐鹿与阪泉之战", items: ["蚩尤", "刑天", "应龙", "女魃", "力牧", "常先", "大鸿", "风后", "九天玄女", "风伯", "雨师", "神荼", "郁垒", "夸父", "断修", "太山稽"] },
+                    { title: "抗争与救世英雄", items: ["后羿", "大羿", "精卫", "鲧", "大禹", "共工", "防风氏", "相柳", "吴回", "重黎", "契", "仓颉", "伶伦", "大挠", "隶首", "容成"] }
+                ]
+            },
+            {
+                category: "四、 山川海泽之神 (《山海经》群神)",
+                subCats: [
+                    { title: "四海与水神", items: ["禺强", "天吴", "不廷胡余", "因乎", "折丹", "冰夷", "河伯", "冯夷", "泰逢", "计蒙", "涉漭", "骄虫", "夫辰", "延维", "无肠", "操蛇之神"] },
+                    { title: "昆仑与西王母系", items: ["西王母", "陆吾", "英招", "开明兽", "长乘", "大比赤阴", "三青鸟", "三足乌", "玉兔", "蟾蜍", "神烛宝光"] },
+                    { title: "四方山神异神", items: ["武罗", "二八神", "鼓", "钦䲹", "葆江", "相顾", "贰负", "危", "窫窳", "王亥", "竖亥", "夏启", "赤水女子献", "耕父", "神陆吾", "神泰逢", "神计蒙", "神涉漭", "神英招", "神武罗", "龙首神", "人面蛇身神"] }
+                ]
+            },
+            {
+                category: "五、 上古群巫与古国国君",
+                subCats: [
+                    { title: "灵山十巫", items: ["巫咸", "巫即", "巫盼", "巫彭", "巫姑", "巫真", "巫礼", "巫抵", "巫谢", "巫罗"] },
+                    { title: "其他大巫", items: ["巫祝", "巫恒", "巫阳", "巫履", "巫凡", "巫相", "神巫", "巫女"] },
+                    { title: "上古异国君王", items: ["少皞", "奢比尸", "天毒", "轩辕", "白民", "长股", "一臂", "奇肱", "三面", "丈夫", "女子国主", "巫咸国主", "轩辕国主", "羽民", "结匈", "交胫", "无启", "不死", "反舌", "三首", "周饶", "长臂"] }
+                ]
+            },
+            {
+                category: "六、 星宿与太一天神 (早期星神化身)",
+                subCats: [
+                    { title: "东方青龙星神", items: ["角木蛟", "亢金龙", "氐土貉", "房日兔", "心月狐", "尾火虎", "箕水豹"] },
+                    { title: "南方朱雀星神", items: ["井木犴", "鬼金羊", "柳土獐", "星日马", "张月鹿", "翼火蛇", "轸水蚓"] },
+                    { title: "西方白虎星神", items: ["奎木狼", "娄金狗", "胃土雉", "昴日鸡", "毕月乌", "觜火猴", "参水猿"] },
+                    { title: "北方玄武星神", items: ["斗木獬", "牛金牛", "女土蝠", "虚日鼠", "危月燕", "室火猪", "壁水貐"] }
+                ]
+            }
+        ];
+
+        const container = document.getElementById('content');
+
+        // 生成 HTML 结构
+        data.forEach(main => {
+            let html = `<div class="main-category"><h2>${main.category}</h2>`;
+            main.subCats.forEach(sub => {
+                html += `
+                <details>
+                    <summary>${sub.title} <span class="count-tag">(${sub.items.length})</span></summary>
+                    <div class="details-content">
+                        <ul class="grid-list">
+                `;
+                sub.items.forEach(name => {
+                    html += `
+                        <li class="item-li">
+                            <a href="https://www.google.com/search?q=上古神话+${name}" target="_blank" rel="noopener noreferrer" title="${name}">
+                                <div class="name">${name}</div>
+                            </a>
+                        </li>
+                    `;
+                });
+                html += `</ul></div></details>`;
+            });
+            html += `</div>`;
+            container.innerHTML += html;
+        });
+
+        // 展开/收起功能
+        const toggleBtn = document.getElementById('toggleBtn');
+        let isExpanded = false;
+
+        toggleBtn.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            const allDetails = document.querySelectorAll('details');
+            allDetails.forEach(details => {
+                if (details.style.display !== 'none') {
+                    if (isExpanded) {
+                        details.setAttribute('open', '');
+                    } else {
+                        details.removeAttribute('open');
+                    }
+                }
+            });
+            toggleBtn.textContent = isExpanded ? '收起星图' : '展开星图';
+        });
+
+        // 实时极简搜索
+        const searchInput = document.getElementById('searchInput');
+
+        searchInput.addEventListener('input', function(e) {
+            const term = e.target.value.trim();
+            const allMainCategories = document.querySelectorAll('.main-category');
+
+            allMainCategories.forEach(mainCat => {
+                let mainHasMatch = false;
+                const detailsElements = mainCat.querySelectorAll('details');
+
+                detailsElements.forEach(details => {
+                    let detailsHasMatch = false;
+                    const items = details.querySelectorAll('.item-li');
+
+                    items.forEach(li => {
+                        const text = li.textContent;
+                        if (text.includes(term)) {
+                            li.style.display = '';
+                            detailsHasMatch = true;
+                        } else {
+                            li.style.display = 'none';
+                        }
+                    });
+
+                    if (detailsHasMatch) {
+                        details.style.display = '';
+                        mainHasMatch = true;
+                        if (term !== '') {
+                            details.setAttribute('open', '');
+                        } else {
+                            if (!isExpanded) details.removeAttribute('open');
+                        }
+                    } else {
+                        details.style.display = 'none';
+                    }
+                });
+
+                mainCat.style.display = mainHasMatch ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>
