@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b1120">
-    <title>世界通史帝国图鉴·编年史折叠版</title>
+    <title>世界通史帝国图鉴·编年史终极版</title>
     <style>
         /* 星海航图·极致压排与护航排版 */
         body {
@@ -20,7 +20,7 @@
         }
 
         h1 {
-            text-align: center;
+            text-align: center; /* 整体左对齐 */
             color: #fbbf24;
             font-size: 24px; 
             margin-bottom: 5px;
@@ -30,7 +30,7 @@
         }
 
         .subtitle {
-            text-align: center;
+            text-align: left; /* 整体左对齐 */
             color: #64748b;
             font-size: 11px;
             margin-bottom: 25px;
@@ -47,7 +47,7 @@
 
         .controls {
             display: flex;
-            justify-content: center;
+            justify-content: center; /* 搜索框和按钮保留居中，保持工具栏稳定感 */
             align-items: center;
             gap: 15px;
             margin-bottom: 30px;
@@ -111,10 +111,10 @@
         }
 
         .main-category-summary {
-            padding: 15px 15px;
+            padding: 15px 20px; /* 增加左侧呼吸感 */
             cursor: pointer;
             list-style: none; /* 隐藏原生折叠三角 */
-            text-align: left;
+            text-align: left; /* 整体左对齐 */
             border-bottom: 1px dashed transparent;
             transition: background 0.3s ease;
         }
@@ -133,23 +133,45 @@
             padding-bottom: 12px;
         }
 
+        /* ———— 强迫症专属：悬挂缩进排版 ———— */
+        .summary-wrapper {
+            display: flex;
+            align-items: flex-start; /* 顶部对齐 */
+        }
+
+        .summary-prefix {
+            color: #93c5fd; 
+            font-size: 16px; 
+            letter-spacing: 2px;
+            font-weight: bold;
+            white-space: nowrap; /* 确保序号不折行 */
+            line-height: 1.5;
+        }
+
+        .summary-content {
+            display: flex;
+            flex-direction: column; /* 垂直排列标题和时间 */
+        }
+
         .main-title-text {
             color: #93c5fd; 
             font-size: 16px; 
             letter-spacing: 2px;
             font-weight: bold;
             margin: 0;
+            line-height: 1.5; /* 与序号高度保持一致 */
         }
 
         .main-title-time {
-            display: block; /* 强制换行 */
-            color: #475569; /* 颜色调灰暗一些，不抢主标题风头 */
+            display: block; 
+            color: #475569; 
             font-size: 11px;
-            margin-top: 6px;
+            margin-top: 4px; /* 拉开标题和时间的间距 */
             font-weight: normal;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             letter-spacing: 1px;
         }
+        /* ———————————————————————————————— */
 
         .main-category-content {
             padding: 15px 15px 5px 15px;
@@ -500,7 +522,7 @@
                 ]
             },
             {
-                category: "九、 现代纪元：世界大战、冷战与当代格局 (1914年 - 至今)",
+                category: "九、 现代纪元：世界大战、冷战与当代 (1914年 - 至今)",
                 subCats: [
                     {
                         title: "1. 俄罗斯与苏联体系 (1914年-至今)",
@@ -533,16 +555,37 @@
         const container = document.getElementById('content');
 
         data.forEach(main => {
-            // 利用 JS 动态分割主标题和年代，实现换行
-            const parts = main.category.split(' (');
+            // 1. 拆分“序号”和“后面内容”
+            let prefix = "";
+            let content = main.category;
+            const splitIndex = main.category.indexOf('、');
+            
+            if (splitIndex !== -1) {
+                // 连同顿号和后面的空格一起截取下来
+                let textStartIndex = splitIndex + 1;
+                while(main.category[textStartIndex] === ' ') {
+                    textStartIndex++;
+                }
+                prefix = main.category.substring(0, textStartIndex); 
+                content = main.category.substring(textStartIndex);   
+            }
+
+            // 2. 拆分“主标题”和“时间”
+            const parts = content.split(' (');
             const mainTitle = parts[0];
             const timeStr = parts.length > 1 ? '(' + parts[1] : '';
 
+            // 3. 组装 Flex 布局
             let html = `
             <details class="main-category">
                 <summary class="main-category-summary">
-                    <div class="main-title-text">${mainTitle}</div>
-                    ${timeStr ? `<span class="main-title-time">${timeStr}</span>` : ''}
+                    <div class="summary-wrapper">
+                        <div class="summary-prefix">${prefix}</div>
+                        <div class="summary-content">
+                            <div class="main-title-text">${mainTitle}</div>
+                            ${timeStr ? `<div class="main-title-time">${timeStr}</div>` : ''}
+                        </div>
+                    </div>
                 </summary>
                 <div class="main-category-content">
             `;
@@ -579,7 +622,6 @@
 
         toggleBtn.addEventListener('click', () => {
             isExpanded = !isExpanded;
-            // 获取所有的 details，包括外层的主分类和内层的子分类
             const allDetails = document.querySelectorAll('details');
             allDetails.forEach(details => {
                 if (details.style.display !== 'none') {
@@ -633,7 +675,7 @@
                 if (mainHasMatch) {
                     mainCat.style.display = '';
                     if (term !== '') {
-                        mainCat.setAttribute('open', ''); // 搜索时外层自动展开
+                        mainCat.setAttribute('open', ''); 
                     } else {
                         if (!isExpanded) mainCat.removeAttribute('open');
                     }
