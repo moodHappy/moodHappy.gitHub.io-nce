@@ -6,7 +6,7 @@
 <title>历史地图画布 - 骨灰级严谨版</title>
 <style>
   * { box-sizing: border-box; }
-  
+
   body, html {
     margin: 0; padding: 0; width: 100%; height: 100%;
     background-color: #e2e8f0; font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -33,9 +33,9 @@
     color: #0f172a; text-align: center; margin-bottom: 40px; line-height: 1.5; font-size: 1.4rem;
   }
 
-  /* ========== 树状图核心 CSS ========== */
+  /* ========== 树状图核心 CSS (直线无遮挡版) ========== */
   .tree-container { display: flex; flex-direction: column; align-items: center; }
-  .branch-group { display: flex; justify-content: center; position: relative; padding-top: 20px; transition: all 0.3s; }
+  .branch-group { display: flex; justify-content: center; position: relative; padding-top: 0; transition: all 0.3s; }
   .branch-col { display: flex; flex-direction: column; align-items: center; position: relative; padding: 0 12px; }
   .branch-col::before, .branch-col::after { content: ''; position: absolute; top: 0; width: 50%; border-top: 2px solid #94a3b8; }
   .branch-col::before { right: 50%; }
@@ -45,10 +45,10 @@
   .branch-col:only-child::before, .branch-col:only-child::after { display: none; }
   .branch-col:only-child { padding-top: 0; }
 
-  .branch-drop { width: 2px; height: 20px; background-color: #94a3b8; margin: -20px auto 0 auto; }
+  /* 垂直连线 */
+  .branch-drop { width: 2px; height: 20px; background-color: #94a3b8; margin: 0 auto; }
   .branch-col:only-child .branch-drop { display: none; }
-  .arrow-down { width: 2px; height: 25px; background-color: #94a3b8; position: relative; margin: 0 auto; }
-  .arrow-down::after { content: '▼'; position: absolute; bottom: -10px; left: -4.5px; color: #94a3b8; font-size: 12px; }
+  .line-down { width: 2px; height: 25px; background-color: #94a3b8; margin: 0 auto; }
   .split-down { width: 2px; height: 20px; background-color: #94a3b8; margin: 0 auto; }
 
   /* ========== 节点样式 ========== */
@@ -75,16 +75,41 @@
   .theme-root { border-color: #475569; background: #f8fafc; color: #1e293b; }
   .theme-rome { border-color: #e11d48; background: #fff1f2; color: #881337; }
   .theme-euro { border-color: #d97706; background: #fffbeb; color: #78350f; }
+  .theme-italy { border-color: #059669; background: #ecfdf5; color: #064e3b; } /* 意大利专属配色 */
   .theme-byz { border-color: #9333ea; background: #faf5ff; color: #581c87; }
   .theme-islam { border-color: #10b981; background: #ecfdf5; color: #064e3b; }
   .theme-egypt { border-color: #0ea5e9; background: #f0f9ff; color: #0c4a6e; }
   .theme-persia { border-color: #14b8a6; background: #f0fdfa; color: #134e4a; }
 
+  /* ========== 真正意义的大帝国角标 ========== */
+  .great-empire::after {
+    content: '★';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: white;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    border: 1px solid #fff;
+    z-index: 10;
+  }
+
   .float-tip {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.8); color: white; padding: 10px 20px;
-    border-radius: 30px; font-size: 12px; pointer-events: none; z-index: 999;
+    background: rgba(15, 23, 42, 0.85); color: white; padding: 12px 24px;
+    border-radius: 30px; font-size: 13px; pointer-events: none; z-index: 999;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    display: flex; gap: 12px; align-items: center;
+  }
+  .float-tip span.star-legend {
+    color: #fbbf24; font-weight: bold;
   }
 </style>
 </head>
@@ -93,96 +118,96 @@
 <div class="viewport" id="viewport">
   <div class="canvas">
     <div class="timeline-wrapper" id="timelineCore">
-      <h2>亚欧非主要王朝演变图<br><span style="font-size: 0.7em; font-weight: normal; color: #64748b;"></span></h2>
+      <h2>亚欧非主要王朝演变图<br><span style="font-size: 0.7em; font-weight: normal; color: #64748b;">(骨灰级严谨版)</span></h2>
 
       <div class="tree-container">
-        <div class="node theme-root">阿契美尼德王朝<span class="time">(550 BC–330 BC)</span></div>
-        <div class="arrow-down"></div>
-        
-        <div class="node theme-root toggle-node">亚历山大帝国<span class="time">(336 BC–323 BC)</span><span class="indicator">[-]</span></div>
-        
+        <div class="node theme-root great-empire">阿契美尼德王朝<span class="time">(550 BC–330 BC)</span></div>
+        <div class="line-down"></div>
+
+        <div class="node theme-root toggle-node great-empire">亚历山大帝国<span class="time">(336 BC–323 BC)</span><span class="indicator">[-]</span></div>
+
         <div class="children-wrapper">
           <div class="split-down"></div>
           <div class="branch-group">
-            
+
             <div class="branch-col">
               <div class="branch-drop"></div>
               <div class="node theme-euro">安提柯王朝 (马其顿)<span class="time">(306 BC–168 BC)</span></div>
-              <div class="arrow-down"></div>
+              <div class="line-down"></div>
               <div class="node theme-rome">罗马共和国<span class="time">(509 BC–27 BC)</span></div>
-              <div class="arrow-down"></div>
-              <div class="node theme-rome toggle-node">罗马帝国<span class="time">(27 BC–395 AD)</span><span class="indicator">[+]</span></div>
-              
+              <div class="line-down"></div>
+              <div class="node theme-rome toggle-node great-empire">罗马帝国<span class="time">(27 BC–395 AD)</span><span class="indicator">[+]</span></div>
+
               <div class="children-wrapper collapsed">
                 <div class="split-down"></div>
                 <div class="branch-group">
-                  
+
                   <div class="branch-col">
                     <div class="branch-drop"></div>
                     <div class="node theme-euro toggle-node">西罗马帝国<span class="time">(395 AD–476 AD)</span><span class="indicator">[+]</span></div>
-                    
+
                     <div class="children-wrapper collapsed">
                       <div class="split-down"></div>
                       <div class="branch-group">
-                        
+
                         <div class="branch-col">
                           <div class="branch-drop"></div>
-                          <div class="node theme-euro toggle-node">法兰克王国<span class="time">(481 AD–843 AD)</span><span class="indicator">[+]</span></div>
-                          
+                          <div class="node theme-euro toggle-node great-empire">法兰克王国<span class="time">(481 AD–843 AD)</span><span class="indicator">[+]</span></div>
+
                           <div class="children-wrapper collapsed">
                             <div class="split-down"></div>
                             <div class="branch-group">
-                              
+
                               <div class="branch-col">
                                 <div class="branch-drop"></div>
                                 <div class="node theme-euro">法兰西王国<span class="time">(987 AD–1792 AD)</span></div>
-                                <div class="arrow-down"></div>
+                                <div class="line-down"></div>
                                 <div class="node theme-euro">法兰西第一共和国<span class="time">(1792 AD–1804 AD)</span></div>
-                                <div class="arrow-down"></div>
-                                <div class="node theme-euro">法兰西第一帝国<span class="time">(1804 AD–1815 AD)</span></div>
-                                <div class="arrow-down"></div>
+                                <div class="line-down"></div>
+                                <div class="node theme-euro great-empire">法兰西第一帝国<span class="time">(1804 AD–1815 AD)</span></div>
+                                <div class="line-down"></div>
                                 <div class="node theme-euro">波旁与奥尔良复辟<span class="time">(1815 AD–1848 AD)</span></div>
-                                <div class="arrow-down"></div>
+                                <div class="line-down"></div>
                                 <div class="node theme-euro">法兰西第二共和国与帝国<span class="time">(1848 AD–1870 AD)</span></div>
-                                <div class="arrow-down"></div>
+                                <div class="line-down"></div>
                                 <div class="node theme-euro">法兰西第三共和国<span class="time">(1870 AD–1940 AD)</span></div>
-                                <div class="arrow-down"></div>
+                                <div class="line-down"></div>
                                 <div class="node theme-euro">法兰西第四共和国<span class="time">(1946 AD–1958 AD)</span></div>
-                                <div class="arrow-down"></div>
+                                <div class="line-down"></div>
                                 <div class="node theme-euro">法兰西第五共和国<span class="time">(1958 AD–至今)</span></div>
                               </div>
 
                               <div class="branch-col">
                                 <div class="branch-drop"></div>
-                                <div class="node theme-euro toggle-node">神圣罗马帝国<span class="time">(962 AD–1806 AD)</span><span class="indicator">[+]</span></div>
-                                
+                                <div class="node theme-euro toggle-node great-empire">神圣罗马帝国<span class="time">(962 AD–1806 AD)</span><span class="indicator">[+]</span></div>
+
                                 <div class="children-wrapper collapsed">
                                   <div class="split-down"></div>
                                   <div class="branch-group">
-                                    
+
                                     <div class="branch-col">
                                       <div class="branch-drop"></div>
                                       <div class="node theme-euro">奥地利帝国<span class="time">(1804 AD–1867 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">奥匈帝国<span class="time">(1867 AD–1918 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">奥地利第一共和国<span class="time">(1919 AD–1938 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">奥地利第二共和国<span class="time">(1945 AD–至今)</span></div>
                                     </div>
 
                                     <div class="branch-col">
                                       <div class="branch-drop"></div>
                                       <div class="node theme-euro">普鲁士王国<span class="time">(1701 AD–1918 AD)</span></div>
-                                      <div class="arrow-down"></div>
-                                      <div class="node theme-euro">德意志帝国<span class="time">(1871 AD–1918 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
+                                      <div class="node theme-euro great-empire">德意志帝国<span class="time">(1871 AD–1918 AD)</span></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">魏玛共和国<span class="time">(1918 AD–1933 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">纳粹德国<span class="time">(1933 AD–1945 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">分裂时代：联邦/民主德国<span class="time">(1949 AD–1990 AD)</span></div>
-                                      <div class="arrow-down"></div>
+                                      <div class="line-down"></div>
                                       <div class="node theme-euro">德意志联邦共和国 (统一)<span class="time">(1990 AD–至今)</span></div>
                                     </div>
                                   </div>
@@ -194,30 +219,30 @@
 
                         <div class="branch-col">
                           <div class="branch-drop"></div>
-                          <div class="node theme-euro">东哥特王国<span class="time">(493 AD–553 AD)</span></div>
-                          <div class="arrow-down"></div>
-                          <div class="node theme-euro">伦巴第王国<span class="time">(568 AD–774 AD)</span></div>
-                          <div class="arrow-down"></div>
-                          <div class="node theme-euro">意大利城邦分裂时期<span class="time">(8世纪–19世纪)</span></div>
-                          <div class="arrow-down"></div>
-                          <div class="node theme-euro">意大利王国<span class="time">(1861 AD–1946 AD)</span></div>
-                          <div class="arrow-down"></div>
-                          <div class="node theme-euro">意大利共和国<span class="time">(1946 AD–至今)</span></div>
+                          <div class="node theme-italy">东哥特王国<span class="time">(493 AD–553 AD)</span></div>
+                          <div class="line-down"></div>
+                          <div class="node theme-italy">伦巴第王国<span class="time">(568 AD–774 AD)</span></div>
+                          <div class="line-down"></div>
+                          <div class="node theme-italy">意大利城邦分裂时期<span class="time">(8世纪–19世纪)</span></div>
+                          <div class="line-down"></div>
+                          <div class="node theme-italy">意大利王国<span class="time">(1861 AD–1946 AD)</span></div>
+                          <div class="line-down"></div>
+                          <div class="node theme-italy">意大利共和国<span class="time">(1946 AD–至今)</span></div>
                         </div>
 
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="branch-col">
                     <div class="branch-drop"></div>
-                    <div class="node theme-byz">拜占庭帝国<span class="time">(395 AD–1453 AD)</span></div>
-                    <div class="arrow-down"></div>
-                    <div class="node theme-byz">奥斯曼帝国<span class="time">(1299 AD–1922 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="node theme-byz great-empire">拜占庭帝国<span class="time">(395 AD–1453 AD)</span></div>
+                    <div class="line-down"></div>
+                    <div class="node theme-byz great-empire">奥斯曼帝国<span class="time">(1299 AD–1922 AD)</span></div>
+                    <div class="line-down"></div>
                     <div class="node theme-byz">土耳其共和国<span class="time">(1923 AD–至今)</span></div>
                   </div>
-                  
+
                 </div>
               </div>
             </div>
@@ -225,75 +250,75 @@
             <div class="branch-col">
               <div class="branch-drop"></div>
               <div class="node theme-egypt">托勒密王朝 (埃及)<span class="time">(305 BC–30 BC)</span></div>
-              <div class="arrow-down"></div>
+              <div class="line-down"></div>
               <div class="node theme-rome">被并入罗马共和国<span class="time">(30 BC)</span></div>
             </div>
 
             <div class="branch-col">
               <div class="branch-drop"></div>
-              <div class="node theme-persia">塞琉古帝国<span class="time">(312 BC–63 BC)</span></div>
-              <div class="arrow-down"></div>
-              <div class="node theme-persia">帕提亚帝国<span class="time">(247 BC–224 AD)</span></div>
-              <div class="arrow-down"></div>
-              <div class="node theme-persia">萨珊王朝<span class="time">(224 AD–651 AD)</span></div>
-              <div class="arrow-down"></div>
-              <div class="node theme-islam">正统哈里发国<span class="time">(632 AD–661 AD)</span></div>
-              <div class="arrow-down"></div>
-              <div class="node theme-islam toggle-node">倭马亚王朝<span class="time">(661 AD–750 AD)</span><span class="indicator">[+]</span></div>
-              
+              <div class="node theme-persia great-empire">塞琉古帝国<span class="time">(312 BC–63 BC)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-persia great-empire">帕提亚帝国<span class="time">(247 BC–224 AD)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-persia great-empire">萨珊王朝<span class="time">(224 AD–651 AD)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-islam great-empire">正统哈里发国<span class="time">(632 AD–661 AD)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-islam toggle-node great-empire">倭马亚王朝<span class="time">(661 AD–750 AD)</span><span class="indicator">[+]</span></div>
+
               <div class="children-wrapper collapsed">
                 <div class="split-down"></div>
                 <div class="branch-group">
-                  
+
                   <div class="branch-col">
                     <div class="branch-drop"></div>
                     <div class="node theme-egypt">后倭马亚王朝<span class="time">(756 AD–1031 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">泰法诸国与穆拉比特王朝<span class="time">(1031 AD–1147 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">穆瓦希德王朝<span class="time">(1121 AD–1269 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">马林与萨阿德王朝<span class="time">(1244 AD–1659 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">阿拉维王朝<span class="time">(1631 AD–至今)</span></div>
                   </div>
 
                   <div class="branch-col">
                     <div class="branch-drop"></div>
                     <div class="node theme-egypt">法蒂玛王朝<span class="time">(909 AD–1171 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">阿尤布王朝<span class="time">(1171 AD–1250 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">马穆鲁克苏丹国<span class="time">(1250 AD–1517 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">奥斯曼埃及行省<span class="time">(1517 AD–1867 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">穆罕默德·阿里王朝<span class="time">(1805 AD–1953 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-egypt">阿拉伯埃及共和国<span class="time">(1953 AD–至今)</span></div>
                   </div>
-                  
+
                   <div class="branch-col">
                     <div class="branch-drop"></div>
-                    <div class="node theme-islam">阿拔斯王朝<span class="time">(750 AD–1258 AD)</span></div>
-                    <div class="arrow-down"></div>
-                    <div class="node theme-persia">塞尔柱帝国<span class="time">(1037 AD–1194 AD)</span></div>
-                    <div class="arrow-down"></div>
-                    <div class="node theme-persia">伊尔汗国<span class="time">(1256 AD–1335 AD)</span></div>
-                    <div class="arrow-down"></div>
-                    <div class="node theme-persia">帖木儿帝国<span class="time">(1370 AD–1507 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="node theme-islam great-empire">阿拔斯王朝<span class="time">(750 AD–1258 AD)</span></div>
+                    <div class="line-down"></div>
+                    <div class="node theme-persia great-empire">塞尔柱帝国<span class="time">(1037 AD–1194 AD)</span></div>
+                    <div class="line-down"></div>
+                    <div class="node theme-persia great-empire">伊尔汗国<span class="time">(1256 AD–1335 AD)</span></div>
+                    <div class="line-down"></div>
+                    <div class="node theme-persia great-empire">帖木儿帝国<span class="time">(1370 AD–1507 AD)</span></div>
+                    <div class="line-down"></div>
                     <div class="node theme-persia">萨非王朝<span class="time">(1501 AD–1736 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-persia">阿夫沙尔与桑德王朝<span class="time">(1736 AD–1794 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-persia">恺加王朝<span class="time">(1789 AD–1925 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-persia">巴列维王朝<span class="time">(1925 AD–1979 AD)</span></div>
-                    <div class="arrow-down"></div>
+                    <div class="line-down"></div>
                     <div class="node theme-persia">伊朗伊斯兰共和国<span class="time">(1979 AD–至今)</span></div>
                   </div>
-                  
+
                 </div>
               </div>
             </div>
@@ -305,12 +330,10 @@
     </div>
   </div>
 </div>
-
-
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const viewport = document.getElementById('viewport');
-    
+
     // 初始居中定位
     setTimeout(() => {
       viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
@@ -323,11 +346,11 @@
       node.addEventListener('click', function(e) {
         const wrapper = this.nextElementSibling;
         const indicator = this.querySelector('.indicator');
-        
+
         if (wrapper && wrapper.classList.contains('children-wrapper')) {
           wrapper.classList.toggle('collapsed');
           indicator.textContent = wrapper.classList.contains('collapsed') ? '[+]' : '[-]';
-          
+
           if (!wrapper.classList.contains('collapsed')) {
              setTimeout(() => {
                this.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
