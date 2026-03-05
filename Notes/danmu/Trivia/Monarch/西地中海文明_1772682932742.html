@@ -1,22 +1,156 @@
----
-title: "西地中海文明"
-date: "2026/3/5 11:55:32"
----
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>西地中海文明</title>
-    <style>
-        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
-        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
-        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
-        p { margin-bottom: 1.5em; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>西地中海大逃杀：罗马崛起前传</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background-color: #e2e8f0; font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    overflow: auto; /* 允许滚动 */
+  }
+
+  .canvas {
+    min-width: max-content; min-height: max-content;
+    padding: 60px 40px; display: flex; justify-content: center; align-items: flex-start;
+  }
+
+  .timeline-wrapper {
+    background: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  }
+
+  h2 {
+    color: #0f172a; text-align: center; margin-bottom: 40px; line-height: 1.5; font-size: 1.4rem;
+  }
+
+  /* ========== 树状图核心 CSS ========== */
+  .tree-container { display: flex; flex-direction: column; align-items: center; }
+  .branch-group { display: flex; justify-content: center; position: relative; padding-top: 0; transition: all 0.3s; }
+  .branch-col { display: flex; flex-direction: column; align-items: center; position: relative; padding: 0 15px; }
+  .branch-col::before, .branch-col::after { content: ''; position: absolute; top: 0; width: 50%; border-top: 2px solid #94a3b8; }
+  .branch-col::before { right: 50%; }
+  .branch-col::after { left: 50%; }
+  .branch-col:first-child::before { display: none; }
+  .branch-col:last-child::after { display: none; }
+  .branch-col:only-child::before, .branch-col:only-child::after { display: none; }
+  .branch-col:only-child { padding-top: 0; }
+
+  /* 垂直连线 */
+  .branch-drop { width: 2px; height: 20px; background-color: #94a3b8; margin: 0 auto; }
+  .branch-col:only-child .branch-drop { display: none; }
+  .line-down { width: 2px; height: 25px; background-color: #94a3b8; margin: 0 auto; }
+  .split-down { width: 2px; height: 20px; background-color: #94a3b8; margin: 0 auto; }
+
+  /* ========== 节点样式 ========== */
+  .node {
+    border-width: 2px; border-style: solid; border-radius: 8px;
+    padding: 12px 10px; font-weight: 600; text-align: center;
+    width: 210px;
+    position: relative; z-index: 2; transition: all 0.2s ease; font-size: 13px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .node span.time { font-size: 0.85em; font-weight: normal; display: block; margin-top: 6px; color: #475569; }
+  .node span.note { font-size: 0.8em; font-weight: normal; color: #ef4444; display: block; margin-top: 4px; }
+
+  .indicator { display: inline-block; background: rgba(0,0,0,0.08); border-radius: 4px; padding: 2px 6px; margin-top: 6px; font-size: 0.85em; font-family: monospace; font-weight: bold; }
+
+  /* 色彩主题 */
+  .theme-root { border-color: #475569; background: #f8fafc; color: #1e293b; }
+  .theme-carthage { border-color: #0ea5e9; background: #f0f9ff; color: #0c4a6e; } /* 迦太基海洋蓝 */
+  .theme-rome { border-color: #e11d48; background: #fff1f2; color: #881337; } /* 罗马血红 */
+  .theme-greek { border-color: #059669; background: #ecfdf5; color: #064e3b; } /* 希腊墨绿 */
+  .theme-barb { border-color: #d97706; background: #fffbeb; color: #78350f; } /* 土著琥珀色 */
+
+  /* 最终汇聚节点特效 */
+  .final-link {
+    border-color: #e11d48 !important;
+    background: #fff1f2 !important;
+    box-shadow: 0 0 15px rgba(225, 29, 72, 0.4) !important;
+    transform: scale(1.05);
+  }
+
+  .great-empire::after {
+    content: '⚔️';
+    position: absolute; top: -10px; right: -10px;
+    background: #1e293b; color: white; border-radius: 50%;
+    width: 24px; height: 24px; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25); border: 1px solid #fff; z-index: 10;
+  }
+</style>
 </head>
 <body>
-    <h1>西地中海文明</h1>
-    <div class="meta">发布时间：2026/3/5 11:55:32</div>
-    <div class="content"><p>西地中海文明</p></div>
+
+  <div class="canvas">
+    <div class="timeline-wrapper">
+      <h2>西地中海早期势力演变图<br><span style="font-size: 0.7em; font-weight: normal; color: #64748b;">从四强争霸到罗马地中海霸权 (前10世纪 - 前2世纪)</span></h2>
+
+      <div class="tree-container">
+        <div class="node theme-root">西地中海大航海与城邦时代<span class="time">(约 1000 BC 起)</span></div>
+
+        <div class="children-wrapper">
+          <div class="split-down"></div>
+          <div class="branch-group">
+
+            <div class="branch-col">
+              <div class="branch-drop"></div>
+              <div class="node theme-barb">北非努米底亚部落<span class="time">(游牧骑兵)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-barb">伊比利亚与高卢人<span class="time">(西班牙/法国)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-barb">成为迦太基与罗马的<br>雇佣兵或被征服者</div>
+              <div class="line-down"></div>
+              <div class="node theme-barb" style="opacity: 0.8;">被纳入罗马行省体系</div>
+            </div>
+
+            <div class="branch-col">
+              <div class="branch-drop"></div>
+              <div class="node theme-carthage">腓尼基城邦 (推罗/西顿)<span class="time">(黎凡特母国)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-carthage great-empire">迦太基建城 (北非)<span class="time">(814 BC)</span><span class="note">垄断西地中海贸易</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-carthage">迦太基商业帝国<span class="time">(前6世纪-前3世纪)</span><span class="note">控制西西里西部/西班牙</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-carthage great-empire">汉尼拔与第二次布匿战争<span class="time">(218 BC - 201 BC)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-carthage" style="opacity: 0.8;">第三次布匿战争被灭<br>迦太基城被夷为平地<span class="time">(146 BC)</span></div>
+            </div>
+
+            <div class="branch-col">
+              <div class="branch-drop"></div>
+              <div class="node theme-rome">意大利半岛土著<span class="time">(拉丁人/萨莫奈人等)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-rome">罗马王政时代<span class="time">(753 BC - 509 BC)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-rome">建立罗马共和国<span class="time">(509 BC)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-rome great-empire">统一意大利半岛<span class="time">(272 BC)</span><span class="note">吞并伊特鲁里亚与大希腊</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-rome great-empire final-link">
+                完全击败迦太基<br>独霸西地中海<span class="time">(146 BC)</span>
+                <span class="note" style="color:#881337; font-weight:bold;">(↓ 获得进军东方的绝对资本 ↓)</span>
+              </div>
+            </div>
+
+            <div class="branch-col">
+              <div class="branch-drop"></div>
+              <div class="node theme-greek">大希腊 (Magna Graecia)<span class="time">(南意大利/西西里东部)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-greek">叙拉古等繁荣城邦<span class="time">(阿基米德故乡)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-root" style="border-color:#555;">伊特鲁里亚文明<span class="time">(意大利北部强权)</span></div>
+              <div class="line-down"></div>
+              <div class="node theme-greek" style="opacity: 0.8;">全部被罗马共和国逐一击破与吞并</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
