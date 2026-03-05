@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>danmu - 兼容版</title>
+    <title>danmu - 兼容版 (支持拖拽排序)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Miyetsuko.png">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
         :root {
@@ -24,7 +25,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 15px;
-            padding-bottom: 120px; /* 留足底部空间给操作栏和脚本按钮 */
+            padding-bottom: 120px;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -39,14 +40,7 @@
         }
 
         /* Header */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            background: #fff;
-        }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid var(--border); background: #fff; }
         h1 { margin: 0; font-size: 18px; font-weight: 700; }
 
         .header-actions { display: flex; gap: 10px; }
@@ -54,124 +48,95 @@
             background: #f6f8fa; border: 1px solid var(--border);
             border-radius: 6px; padding: 6px 12px; 
             font-size: 14px; color: var(--text-main); cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none; display: flex; align-items: center;
+            transition: all 0.2s; text-decoration: none; display: flex; align-items: center;
         }
         .icon-btn:hover { background: #eaeef2; }
         .icon-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
         /* Breadcrumb */
         .breadcrumb {
-            background: #f3f4f6; padding: 12px 15px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px; overflow-x: auto; white-space: nowrap;
-            display: flex; align-items: center;
+            background: #f3f4f6; padding: 12px 15px; border-bottom: 1px solid var(--border);
+            font-size: 14px; overflow-x: auto; white-space: nowrap; display: flex; align-items: center;
         }
-        .breadcrumb-item { 
-            color: var(--primary); text-decoration: none; font-weight: 500; 
-            padding: 2px 4px; border-radius: 4px;
-        }
+        .breadcrumb-item { color: var(--primary); text-decoration: none; font-weight: 500; padding: 2px 4px; border-radius: 4px; }
         .breadcrumb-item:hover { background: rgba(9, 105, 218, 0.1); }
         .breadcrumb-separator { margin: 0 4px; color: #999; font-size: 12px; }
         .breadcrumb-current { color: var(--text-muted); font-weight: 600; padding: 0 4px; }
 
         /* List Area */
         ul { list-style: none; padding: 0; margin: 0; }
-        li { border-bottom: 1px solid #eaecef; }
+        li { border-bottom: 1px solid #eaecef; background: #fff;}
         li:last-child { border-bottom: none; }
 
         /* List Item */
         .list-item {
-            display: flex; 
-            align-items: center;
-            padding: 16px 15px; 
-            text-decoration: none; 
-            color: var(--text-main);
-            cursor: pointer;
-            position: relative;
-            background: #fff;
-            transition: background 0.15s;
-            -webkit-user-select: none; 
-            user-select: none;
+            display: flex; align-items: center; padding: 16px 15px; 
+            text-decoration: none; color: var(--text-main);
+            cursor: pointer; position: relative; background: #fff;
+            transition: background 0.15s; -webkit-user-select: none; user-select: none;
         }
         .list-item:hover { background-color: #f8f9fa; }
         .list-item:active { background-color: #f0f0f0; }
 
         .list-item.selected { background-color: var(--selected-bg); }
-        .list-item.selected::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-            width: 4px; background: var(--primary);
-        }
-
-        /* 标记样式 */
+        .list-item.selected::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary); }
         .list-item.marked { background-color: #fffdf2; }
-        .mark-btn {
-            margin-right: 10px;
-            font-size: 18px;
-            cursor: pointer;
-            filter: grayscale(1);
-            opacity: 0.2;
-            transition: all 0.2s;
-            z-index: 5;
+        
+        /* Drag & Drop Styles */
+        .drag-handle {
+            padding: 0 12px 0 0; font-size: 18px; color: #d0d7de;
+            cursor: grab; display: flex; align-items: center; justify-content: center;
         }
-        .marked .mark-btn {
-            filter: grayscale(0);
-            opacity: 1;
-        }
+        .drag-handle:active { cursor: grabbing; }
+        .selection-mode .drag-handle { display: none; /* 多选模式下隐藏拖动按钮 */ }
+        .sortable-ghost { opacity: 0.5; background: #e6f6ff !important; border: 1px dashed var(--primary); }
+
+        .mark-btn { margin-right: 10px; font-size: 18px; cursor: pointer; filter: grayscale(1); opacity: 0.2; transition: all 0.2s; z-index: 5; }
+        .marked .mark-btn { filter: grayscale(0); opacity: 1; }
 
         .item-content { flex: 1; min-width: 0; display: flex; align-items: center; }
         .item-icon { margin-right: 12px; font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
-
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-weight: 600; font-size: 15px; display: block; line-height: 1.4; word-break: break-all; color: var(--text-main); }
         .item-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
         /* Checkbox & Selection */
-        .select-checkbox {
-            margin-right: 15px; width: 20px; height: 20px;
-            flex-shrink: 0; display: none;
-            accent-color: var(--primary);
-            pointer-events: none; 
-        }
+        .select-checkbox { margin-right: 15px; width: 20px; height: 20px; flex-shrink: 0; display: none; accent-color: var(--primary); pointer-events: none; }
         .selection-mode .select-checkbox { display: block; }
-
         .arrow-icon { color: #d0d7de; font-size: 18px; margin-left: 10px; font-weight: bold; }
         .selection-mode .arrow-icon { display: none; }
 
-        /* Bottom Action Bar */
+        /* Action Bar */
         .action-bar {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(150px);
-            background: #24292f; color: white;
-            padding: 10px 16px; border-radius: 50px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: flex; align-items: center; justify-content: space-between;
-            z-index: 9999; 
-            width: 90%; max-width: 400px;
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: #24292f; color: white; padding: 10px 16px; border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: space-between;
+            z-index: 9999; width: 90%; max-width: 400px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .action-bar.visible { transform: translateX(-50%) translateY(0); }
         .action-count { font-weight: bold; font-size: 14px; white-space: nowrap; margin-right: 10px; }
-
         .action-btn-group { display: flex; gap: 8px; }
-        .action-btn {
-            border: none; color: white;
-            padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
-        }
+        .action-btn { border: none; color: white; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
         .btn-move { background: var(--primary); }
         .btn-del { background: var(--danger); }
         .btn-edit { background: #2da44e; }
         .action-btn:disabled { background: #57606a; opacity: 0.5; cursor: not-allowed; }
 
+        /* Toast Notification */
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            color: white; padding: 10px 20px; border-radius: 20px;
+            font-size: 14px; font-weight: bold; z-index: 10001;
+            display: none; transition: opacity 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
         /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); }
         .modal h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
         .form-group input { width: 100%; padding: 10px; border: 1px solid #d0d7de; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        .form-group .hint { font-size: 12px; color: #666; margin-top: 5px; }
-
         .btn-group { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn { padding: 10px 16px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
         .btn-secondary { background: #f3f4f6; color: #24292f; }
@@ -184,10 +149,8 @@
 
         /* Latest Card */
         .latest-card {
-            background: #f1f8ff; border: 1px solid #c8e1ff; 
-            padding: 12px 15px; border-radius: 8px; 
-            margin-bottom: 15px; text-decoration: none; 
-            display: flex; justify-content: space-between; align-items: center;
+            background: #f1f8ff; border: 1px solid #c8e1ff; padding: 12px 15px; border-radius: 8px; 
+            margin-bottom: 15px; text-decoration: none; display: flex; justify-content: space-between; align-items: center;
         }
         .latest-card:hover { background: #def; }
         .latest-badge { font-size: 11px; font-weight: bold; color: #0969da; text-transform: uppercase; margin-bottom: 2px; display: block; }
@@ -195,6 +158,8 @@
     </style>
 </head>
 <body>
+
+<div id="toast" class="toast">保存成功</div>
 
 <div class="container">
     <header>
@@ -234,7 +199,7 @@
             <input type="text" id="edit-name-input">
         </div>
         <div class="form-group">
-            <label>日期时间 (决定排序)</label>
+            <label>日期时间</label>
             <input type="datetime-local" id="edit-time-input">
         </div>
         <div id="edit-log" class="progress-log" style="display:none;"></div>
@@ -307,12 +272,16 @@
 
     let config = {};
     let currentPath = '';
-    let currentFiles = []; 
-    let currentDirs = [];
+    let currentItems = []; // 混合目录和文件，用于统一排序
+    let currentDirs = [];  // 用于特殊判断的备用
+    let currentFiles = []; // 用于特殊判断的备用
     let isBatchMode = false;
     let selectedFilesMap = new Map(); 
+    
+    // 排序相关状态
+    let sortableInstance = null;
+    let currentSortSha = null;
 
-    // 标记系统状态
     let markedPaths = new Set(JSON.parse(localStorage.getItem('gh_marked_files') || '[]'));
 
     function getConfig() {
@@ -320,17 +289,31 @@
         return stored ? { ...DEFAULTS, ...JSON.parse(stored) } : DEFAULTS;
     }
 
+    // --- 消息提示 UI ---
+    function showToast(msg, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        if (type === 'error') toast.style.background = 'rgba(207, 34, 46, 0.9)';
+        else if (type === 'success') toast.style.background = 'rgba(45, 164, 78, 0.9)';
+        else toast.style.background = 'rgba(36, 41, 47, 0.9)';
+        
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+
+        clearTimeout(toast.timeout);
+        toast.timeout = setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, 2000);
+    }
+
     // --- 核心初始化 ---
     async function init() {
         config = getConfig();
         const urlParams = new URLSearchParams(window.location.search);
-
-        // 优先读取 URL 中的 path 参数，实现子目录链接分享
         const startPath = urlParams.get('path') || config.rootPath;
-
         await loadPath(startPath, false);
 
-        // 处理浏览器后退按钮
         window.addEventListener('popstate', (event) => {
             if (event.state && event.state.path) loadPath(event.state.path, false);
             else loadPath(config.rootPath, false);
@@ -341,11 +324,9 @@
     async function ghFetch(url, options = {}) {
         const headers = options.headers || {};
         if (config.token) headers['Authorization'] = `token ${config.token}`;
-
-        // 防止缓存导致列表不更新
         const noCacheUrl = url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-
         const response = await fetch(noCacheUrl, { ...options, headers });
+        
         if (response.status === 204) return true;
         if (!response.ok) {
             const err = await response.json().catch(()=>({}));
@@ -356,10 +337,9 @@
 
     // --- 加载路径 ---
     async function loadPath(path, addToHistory = true) {
-        if (isBatchMode) toggleBatchMode(); // 切换目录时退出多选模式
+        if (isBatchMode) toggleBatchMode(); 
         currentPath = path;
 
-        // 更新 URL，方便用户分享子文件夹链接
         if (addToHistory) {
             const newUrl = `${window.location.pathname}?path=${encodeURIComponent(path)}`;
             history.pushState({ path: path }, '', newUrl);
@@ -376,37 +356,64 @@
             const data = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${path}`);
 
             if (!Array.isArray(data)) {
-                // 如果路径是个文件，直接跳转
                 window.location.href = `https://${config.user}.github.io/${config.repo}/${path}`;
                 return;
             }
 
-            let dirs = [], files = [];
-            data.forEach(item => {
-                if(item.name.toLowerCase() === 'index.html') return;
+            let items = [];
+            let sortOrder = [];
+            currentSortSha = null;
+
+            // 处理所有文件和读取排序配置文件
+            for (const item of data) {
+                if(item.name.toLowerCase() === 'index.html') continue;
+                
+                // 拦截特殊排序文件
+                if (item.name === '_sort_order.json') {
+                    currentSortSha = item.sha;
+                    try {
+                        const sortData = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${item.path}`);
+                        const decoded = decodeURIComponent(escape(atob(sortData.content)));
+                        sortOrder = JSON.parse(decoded);
+                    } catch(e) { console.warn("解析排序文件失败", e); }
+                    continue; // 排序文件本身不显示在列表中
+                }
 
                 if(item.type === 'dir') {
-                    dirs.push(item);
+                    items.push(item);
                 } else if(item.name.match(/\.(html|json)$/)) {
                     const ts = (item.name.match(/_(\d{13})\./) || [])[1];
-                    files.push({
+                    items.push({
                         ...item,
                         timestamp: ts ? parseInt(ts) : 0,
                         dateStr: ts ? new Date(parseInt(ts)).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12: false}) : ''
                     });
                 }
-            });
+            }
 
-            // 排序：文件夹按名称降序（年份），文件按时间倒序
-            dirs.sort((a, b) => b.name.localeCompare(a.name));
-            files.sort((a, b) => b.timestamp - a.timestamp);
+            // 1. 默认排序：文件夹在前，按名字倒序（年份）；文件在后，按时间倒序
+            let defaultDirs = items.filter(i => i.type === 'dir').sort((a,b) => b.name.localeCompare(a.name));
+            let defaultFiles = items.filter(i => i.type !== 'dir').sort((a,b) => b.timestamp - a.timestamp);
+            let combined = [...defaultDirs, ...defaultFiles];
 
-            currentDirs = dirs;
-            currentFiles = files;
+            // 2. 如果存在自定义排序，则覆盖
+            if (sortOrder && Array.isArray(sortOrder) && sortOrder.length > 0) {
+                combined.sort((a, b) => {
+                    const indexA = sortOrder.indexOf(a.name);
+                    const indexB = sortOrder.indexOf(b.name);
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1; // A在排序表中，优先
+                    if (indexB !== -1) return 1;  // B在排序表中，优先
+                    return 0; // 都不在排序表中，保持默认相对位置
+                });
+            }
 
-            // 根目录下检查最新笔记
-            if (path === config.rootPath && dirs.length > 0) {
-                 const yearDir = dirs.find(d => /^\d{4}$/.test(d.name));
+            currentItems = combined;
+            currentDirs = currentItems.filter(i => i.type === 'dir');
+            currentFiles = currentItems.filter(i => i.type !== 'dir');
+
+            if (path === config.rootPath && currentDirs.length > 0) {
+                 const yearDir = currentDirs.find(d => /^\d{4}$/.test(d.name));
                  if(yearDir) fetchLatestInDir(yearDir);
             }
 
@@ -417,106 +424,140 @@
         }
     }
 
+    // --- 保存拖拽排序到 GitHub ---
+    async function saveSortOrder() {
+        if (!config.token) {
+            showToast("请先在设置中配置 Token 才能保存排序", "error");
+            return;
+        }
+
+        const ul = document.querySelector('#file-list ul');
+        if (!ul) return;
+
+        // 获取 DOM 中当前顺序的文件名列表
+        const newOrder = Array.from(ul.children).map(li => li.dataset.filename).filter(Boolean);
+
+        showToast("正在同步排序状态...", "info");
+
+        try {
+            const sortFilePath = currentPath + '/_sort_order.json';
+            const contentRaw = JSON.stringify(newOrder, null, 2);
+            // 兼容中文 Base64 转换
+            const contentBase64 = btoa(unescape(encodeURIComponent(contentRaw)));
+
+            const body = {
+                message: "Update manual sort order via UI",
+                content: contentBase64
+            };
+            if (currentSortSha) {
+                body.sha = currentSortSha;
+            }
+
+            const res = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${sortFilePath}`, {
+                method: 'PUT',
+                body: JSON.stringify(body)
+            });
+
+            currentSortSha = res.content.sha; // 更新 SHA 以便下次能正确覆盖
+            showToast("✅ 排序已永久保存", "success");
+
+        } catch (e) {
+            showToast("保存排序失败: " + e.message, "error");
+            console.error(e);
+        }
+    }
+
     // --- 渲染列表 ---
     function renderList() {
         const listEl = document.getElementById('file-list');
         const ul = document.createElement('ul');
         if(isBatchMode) ul.classList.add('selection-mode');
 
-        if (currentDirs.length === 0 && currentFiles.length === 0) {
+        if (currentItems.length === 0) {
             listEl.innerHTML = '<div class="loading">此文件夹为空</div>';
             return;
         }
 
-        // 1. 渲染文件夹
-        currentDirs.forEach(dir => {
+        currentItems.forEach(item => {
             const li = document.createElement('li');
-            const opacity = isBatchMode ? '0.5' : '1';
-            const pointer = isBatchMode ? 'none' : 'auto';
+            li.dataset.filename = item.name; // 用于排序保存
 
-            // 构造带参数的 URL，支持右键复制链接
-            const href = `?path=${encodeURIComponent(dir.path)}`;
-
-            li.innerHTML = `
-                <a href="${href}" class="list-item" style="opacity:${opacity}; pointer-events:${pointer}" onclick="handleDirClick(event, '${dir.path}')">
-                    <div class="item-content">
-                        <span class="item-icon" style="color:#54aeff">📁</span>
-                        <div class="item-info"><span class="item-name">${dir.name}</span></div>
-                    </div>
-                    <span class="arrow-icon">›</span>
-                </a>`;
-            ul.appendChild(li);
-        });
-
-        // 2. 渲染文件
-        currentFiles.forEach(file => {
-            const li = document.createElement('li');
-            const isSelected = selectedFilesMap.has(file.sha);
-            const isMarked = markedPaths.has(file.path);
-
-            let itemClass = "list-item";
-            if (isSelected && isBatchMode) itemClass += " selected";
-            if (isMarked) itemClass += " marked";
-
-            // 格式化标题
-            let cleanName = file.name.replace(/_\d{13}\.(html|json)/, '').replace(/_/g, ' ');
-
-            // 构造真实的 GitHub Pages 链接
-            const realUrl = `https://${config.user}.github.io/${config.repo}/${file.path}`;
-
-            li.innerHTML = `
-                <a href="${realUrl}" target="_blank" class="${itemClass}" onclick="handleFileClick(event, '${file.sha}')">
-                    <input type="checkbox" class="select-checkbox" ${isSelected ? 'checked' : ''}>
-                    
-                    <span class="mark-btn" onclick="toggleMark(event, '${file.path}')">⭐</span>
-
-                    <div class="item-content">
-                        <span class="item-icon" style="color:#656d76">📄</span>
-                        <div class="item-info">
-                            <span class="item-name">${cleanName}</span>
-                            ${file.dateStr ? `<div class="item-meta">📅 ${file.dateStr}</div>` : ''}
+            if (item.type === 'dir') {
+                const href = `?path=${encodeURIComponent(item.path)}`;
+                li.innerHTML = `
+                    <a href="${href}" class="list-item" style="opacity:${isBatchMode?'0.5':'1'}" onclick="handleDirClick(event, '${item.path}')">
+                        <span class="drag-handle" title="拖动排序" onclick="event.preventDefault(); event.stopPropagation();">☰</span>
+                        <div class="item-content">
+                            <span class="item-icon" style="color:#54aeff">📁</span>
+                            <div class="item-info"><span class="item-name">${item.name}</span></div>
                         </div>
-                    </div>
-                    ${!isBatchMode ? '<span class="arrow-icon" style="color:#0969da">↗</span>' : ''}
-                </a>`;
+                        <span class="arrow-icon">›</span>
+                    </a>`;
+            } else {
+                const isSelected = selectedFilesMap.has(item.sha);
+                const isMarked = markedPaths.has(item.path);
+
+                let itemClass = "list-item";
+                if (isSelected && isBatchMode) itemClass += " selected";
+                if (isMarked) itemClass += " marked";
+
+                let cleanName = item.name.replace(/_\d{13}\.(html|json)/, '').replace(/_/g, ' ');
+                const realUrl = `https://${config.user}.github.io/${config.repo}/${item.path}`;
+
+                li.innerHTML = `
+                    <a href="${realUrl}" target="_blank" class="${itemClass}" onclick="handleFileClick(event, '${item.sha}')">
+                        <span class="drag-handle" title="拖动排序" onclick="event.preventDefault(); event.stopPropagation();">☰</span>
+                        <input type="checkbox" class="select-checkbox" ${isSelected ? 'checked' : ''}>
+                        <span class="mark-btn" onclick="toggleMark(event, '${item.path}')">⭐</span>
+                        <div class="item-content">
+                            <span class="item-icon" style="color:#656d76">📄</span>
+                            <div class="item-info">
+                                <span class="item-name">${cleanName}</span>
+                                ${item.dateStr ? `<div class="item-meta">📅 ${item.dateStr}</div>` : ''}
+                            </div>
+                        </div>
+                        ${!isBatchMode ? '<span class="arrow-icon" style="color:#0969da">↗</span>' : ''}
+                    </a>`;
+            }
             ul.appendChild(li);
         });
 
         listEl.innerHTML = '';
         listEl.appendChild(ul);
+
+        // 初始化 Sortable 拖拽库
+        if (sortableInstance) sortableInstance.destroy();
+        sortableInstance = new Sortable(ul, {
+            handle: '.drag-handle', // 只有按住 ☰ 才能拖拽
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function () {
+                saveSortOrder(); // 拖拽结束后自动触发保存
+            }
+        });
     }
 
     // --- 标记切换功能 ---
     function toggleMark(e, path) {
-        e.preventDefault();
-        e.stopPropagation(); // 阻止触发 handleFileClick
-        
-        if (markedPaths.has(path)) {
-            markedPaths.delete(path);
-        } else {
-            markedPaths.add(path);
-        }
-        
+        e.preventDefault(); e.stopPropagation();
+        if (markedPaths.has(path)) markedPaths.delete(path);
+        else markedPaths.add(path);
         localStorage.setItem('gh_marked_files', JSON.stringify(Array.from(markedPaths)));
         renderList();
     }
 
     // --- 事件处理 ---
-
-    // 点击文件夹：拦截默认跳转，使用 AJAX 加载 (SPA体验)
     function handleDirClick(e, path) {
-        e.preventDefault(); // 阻止浏览器直接跳转 ?path=...
+        e.preventDefault(); 
         loadPath(path);
     }
 
-    // 点击文件：如果是多选模式则拦截，否则允许浏览器默认打开新标签页
     function handleFileClick(e, sha) {
         if (isBatchMode) {
-            e.preventDefault(); // 多选模式下，禁止跳转
+            e.preventDefault(); 
             const file = currentFiles.find(f => f.sha === sha);
             if (file) toggleFileSelect(file);
         }
-        // 普通模式下，不拦截，<a> 标签会自动 target="_blank" 打开，确保脚本生效
     }
 
     // --- 批量模式逻辑 ---
@@ -526,27 +567,20 @@
         const actionBar = document.getElementById('action-bar');
 
         if (isBatchMode) {
-            btn.classList.add('active');
-            btn.innerHTML = '<span>❌ 取消</span>';
+            btn.classList.add('active'); btn.innerHTML = '<span>❌ 取消</span>';
             actionBar.classList.add('visible');
         } else {
-            btn.classList.remove('active');
-            btn.innerHTML = '<span>✅ 选择</span>';
+            btn.classList.remove('active'); btn.innerHTML = '<span>✅ 选择</span>';
             actionBar.classList.remove('visible');
-            selectedFilesMap.clear();
-            updateActionBar();
+            selectedFilesMap.clear(); updateActionBar();
         }
         renderList();
     }
 
     function toggleFileSelect(file) {
-        if (selectedFilesMap.has(file.sha)) {
-            selectedFilesMap.delete(file.sha);
-        } else {
-            selectedFilesMap.set(file.sha, file);
-        }
-        updateActionBar();
-        renderList(); 
+        if (selectedFilesMap.has(file.sha)) selectedFilesMap.delete(file.sha);
+        else selectedFilesMap.set(file.sha, file);
+        updateActionBar(); renderList(); 
     }
 
     function updateActionBar() {
@@ -564,17 +598,13 @@
 
         const match = file.name.match(/(.*)_(\d{13})\.(html|json)$/);
         let currentTitle = file.name;
-        let currentTs = Date.now();
-        let ext = '.html';
+        let currentTs = Date.now(); let ext = '.html';
 
         if (match) {
-            currentTitle = match[1];
-            currentTs = parseInt(match[2]);
-            ext = '.' + match[3];
+            currentTitle = match[1]; currentTs = parseInt(match[2]); ext = '.' + match[3];
         }
 
         const dateObj = new Date(currentTs);
-        // 构建 datetime-local 字符串 (考虑时区偏移)
         const pad = (n) => String(n).padStart(2,'0');
         const dateStr = `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
 
@@ -584,9 +614,8 @@
 
         document.getElementById('edit-log').style.display = 'none';
         document.getElementById('edit-modal').style.display = 'flex';
-        const btn = document.getElementById('btn-save-edit');
-        btn.disabled = false;
-        btn.innerText = "保存";
+        document.getElementById('btn-save-edit').disabled = false;
+        document.getElementById('btn-save-edit').innerText = "保存";
     }
 
     function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
@@ -608,51 +637,33 @@
 
         if (newFilename === file.name) { closeEditModal(); return; }
 
-        btn.disabled = true;
-        btn.innerText = "处理中...";
-        logDiv.style.display = 'block';
-        logDiv.innerHTML = `<div class="log-item">⏳ 读取原文件...</div>`;
+        btn.disabled = true; btn.innerText = "处理中...";
+        logDiv.style.display = 'block'; logDiv.innerHTML = `<div class="log-item">⏳ 读取原文件...</div>`;
 
         try {
-            // Get content
             const data = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`);
-
-            // Create new
             logDiv.innerHTML += `<div class="log-item">⏳ 创建: ${newFilename}</div>`;
             const newPath = currentPath + '/' + newFilename;
             await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${newPath}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    message: `Rename to ${newFilename}`,
-                    content: data.content
-                })
+                method: 'PUT', body: JSON.stringify({ message: `Rename to ${newFilename}`, content: data.content })
             });
 
-            // Delete old
             logDiv.innerHTML += `<div class="log-item">⏳ 删除旧文件...</div>`;
             await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`, {
-                method: 'DELETE',
-                body: JSON.stringify({ message: `Cleanup after rename`, sha: file.sha })
+                method: 'DELETE', body: JSON.stringify({ message: `Cleanup after rename`, sha: file.sha })
             });
 
-            // 维护标记系统：如果原文件被标记了，更新到新路径
             if (markedPaths.has(file.path)) {
-                markedPaths.delete(file.path);
-                markedPaths.add(newPath);
+                markedPaths.delete(file.path); markedPaths.add(newPath);
                 localStorage.setItem('gh_marked_files', JSON.stringify(Array.from(markedPaths)));
             }
 
             logDiv.innerHTML += `<div style="color:green;font-weight:bold">✅ 修改完成</div>`;
-            setTimeout(() => {
-                closeEditModal();
-                toggleBatchMode();
-                loadPath(currentPath);
-            }, 800);
+            setTimeout(() => { closeEditModal(); toggleBatchMode(); loadPath(currentPath); }, 800);
 
         } catch (e) {
             logDiv.innerHTML += `<div style="color:red">❌ 错误: ${e.message}</div>`;
-            btn.disabled = false;
-            btn.innerText = "重试";
+            btn.disabled = false; btn.innerText = "重试";
         }
     }
 
@@ -675,10 +686,8 @@
         if (!targetDir) { alert("目标路径不能为空"); return; }
         if (targetDir === currentPath) { alert("目标路径不能是当前路径"); return; }
 
-        btn.disabled = true;
-        btn.innerText = "移动中...";
-        logDiv.style.display = 'block';
-        logDiv.innerHTML = '';
+        btn.disabled = true; btn.innerText = "移动中...";
+        logDiv.style.display = 'block'; logDiv.innerHTML = '';
 
         const files = Array.from(selectedFilesMap.values());
         let success = 0;
@@ -688,23 +697,16 @@
             try {
                 const data = await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`);
                 const newPath = `${targetDir}/${file.name}`;
-
                 await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${newPath}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ message: `Move ${file.name}`, content: data.content })
+                    method: 'PUT', body: JSON.stringify({ message: `Move ${file.name}`, content: data.content })
                 });
-
                 await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ message: `Del original`, sha: file.sha })
+                    method: 'DELETE', body: JSON.stringify({ message: `Del original`, sha: file.sha })
                 });
 
-                // 维护标记系统
                 if (markedPaths.has(file.path)) {
-                    markedPaths.delete(file.path);
-                    markedPaths.add(newPath);
+                    markedPaths.delete(file.path); markedPaths.add(newPath);
                 }
-
                 success++;
                 logDiv.lastElementChild.innerHTML += ` <span style="color:green">✅</span>`;
             } catch (e) {
@@ -713,14 +715,9 @@
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        // 统一保存一次标记状态
         localStorage.setItem('gh_marked_files', JSON.stringify(Array.from(markedPaths)));
-
-        if (success > 0) {
-            setTimeout(() => { closeMoveModal(); toggleBatchMode(); loadPath(currentPath); }, 1000);
-        } else {
-            btn.disabled = false;
-        }
+        if (success > 0) setTimeout(() => { closeMoveModal(); toggleBatchMode(); loadPath(currentPath); }, 1000);
+        else btn.disabled = false;
     }
 
     // --- 功能：删除 ---
@@ -732,8 +729,7 @@
         document.getElementById('delete-modal').style.display = 'flex';
         const logDiv = document.getElementById('delete-log');
         const doneBtn = document.getElementById('btn-done-del');
-        logDiv.innerHTML = '';
-        doneBtn.style.display = 'none';
+        logDiv.innerHTML = ''; doneBtn.style.display = 'none';
 
         const files = Array.from(selectedFilesMap.values());
         let success = 0;
@@ -742,13 +738,9 @@
             logDiv.innerHTML += `<div class="log-item">⏳ 删除 ${file.name}...</div>`;
             try {
                 await ghFetch(`https://api.github.com/repos/${config.user}/${config.repo}/contents/${file.path}`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ message: `Batch Delete`, sha: file.sha })
+                    method: 'DELETE', body: JSON.stringify({ message: `Batch Delete`, sha: file.sha })
                 });
-                
-                // 维护标记系统
                 markedPaths.delete(file.path);
-
                 success++;
                 logDiv.lastElementChild.innerHTML = `<span style="color:green">✅ ${file.name} 已删除</span>`;
             } catch (e) {
@@ -759,10 +751,7 @@
 
         localStorage.setItem('gh_marked_files', JSON.stringify(Array.from(markedPaths)));
         doneBtn.style.display = 'block';
-        if (success > 0) {
-            toggleBatchMode();
-            loadPath(currentPath);
-        }
+        if (success > 0) { toggleBatchMode(); loadPath(currentPath); }
     }
     function closeDeleteModal() { document.getElementById('delete-modal').style.display = 'none'; }
 
@@ -797,12 +786,8 @@
             parts.forEach((p, i) => {
                 build += '/' + p;
                 html += `<span class="breadcrumb-separator">/</span>`;
-                // 最后一项不可点击，其他项可点击
-                if(i===parts.length-1) {
-                    html += `<span class="breadcrumb-current">${p}</span>`;
-                } else {
-                    html += `<a href="?path=${build}" class="breadcrumb-item" onclick="handleDirClick(event, '${build}')">${p}</a>`;
-                }
+                if(i===parts.length-1) html += `<span class="breadcrumb-current">${p}</span>`;
+                else html += `<a href="?path=${build}" class="breadcrumb-item" onclick="handleDirClick(event, '${build}')">${p}</a>`;
             });
         }
         c.innerHTML = html;
@@ -828,7 +813,6 @@
         location.reload();
     }
 
-    // 点击蒙层关闭
     window.onclick = (e) => { 
         if(e.target.classList.contains('modal-overlay')) e.target.style.display='none'; 
     };
