@@ -1,22 +1,471 @@
----
-title: "圣经故事"
-date: "2026/3/6 00:11:37"
----
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圣经故事</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f4ec">
+    <title>圣经人物与史诗图鉴</title>
     <style>
-        body { font-family: 'PingFang SC', serif; max-width: 750px; margin: 0 auto; padding: 40px 20px; line-height: 2.1; font-size: 20px; background: #fdfaf3; color: #333; }
-        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; font-size: 1.6em; color: #5a4a3f; }
-        .meta { color: #999; font-size: 14px; margin-bottom: 30px; }
-        p { margin-bottom: 1.5em; }
+        /* 基础古风排版 */
+        body {
+            font-family: "STKaiti", "KaiTi", "BiauKai", "楷体", "SimSun", "宋体", serif;
+            line-height: 1.6;
+            color: #2b2219; 
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f6f4ec; 
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" opacity="0.03"><text x="10" y="150" font-family="楷体" font-size="36" transform="rotate(-30)">圣经故事</text></svg>');
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a365d; 
+            font-size: 26px; 
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+            border-bottom: 2px solid #d5c4b3;
+            padding-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 260px;
+            padding: 8px 12px;
+            border: none;
+            border-bottom: 2px solid #c4ad98;
+            background: transparent;
+            font-family: inherit;
+            font-size: 16px;
+            color: #2b2219;
+            outline: none;
+            transition: border-color 0.3s;
+            text-align: center;
+        }
+
+        .search-box:focus {
+            border-bottom-color: #1a365d;
+        }
+
+        .search-box::placeholder {
+            color: #bfaea0;
+            font-size: 15px;
+            letter-spacing: 1px;
+        }
+
+        .toggle-btn {
+            background-color: transparent;
+            border: 1px solid #1a365d;
+            color: #1a365d;
+            padding: 7px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background-color: #1a365d;
+            color: #f6f4ec;
+            box-shadow: 0 2px 6px rgba(26, 54, 93, 0.2);
+        }
+
+        .main-category {
+            background: #fffdf7;
+            border: 1px solid #d5c4b3;
+            border-radius: 4px;
+            padding: 15px; 
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+            transition: opacity 0.3s;
+        }
+
+        .main-category h2 {
+            border-bottom: 1px dashed #c4ad98;
+            padding-bottom: 12px;
+            color: #1a365d;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 18px;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        details {
+            margin-bottom: 15px;
+            background: #fbf8f1;
+            border-radius: 4px;
+            border: 1px solid #e2d7c8;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            color: #3e3226;
+            background: #f1e9d8;
+            border-left: 4px solid #1a365d;
+            list-style: none;
+            position: relative;
+            transition: background 0.2s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary:hover {
+            background: #e6dac3;
+        }
+
+        summary::after {
+            content: "▼";
+            position: absolute;
+            right: 15px;
+            font-size: 12px;
+            color: #8c7a6b;
+            transition: transform 0.3s ease;
+        }
+
+        details[open] summary::after {
+            transform: rotate(180deg);
+        }
+
+        .details-content {
+            padding: 15px;
+            background-color: #fffdf7;
+        }
+
+        .grid-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px; 
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .grid-list li {
+            transition: opacity 0.3s ease;
+            min-width: 0; 
+        }
+
+        .grid-list li a {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 4px; 
+            background-color: transparent;
+            border: 1px solid #d5c4b3;
+            color: #2b2219;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .grid-list li a::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #1a365d;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .grid-list li a:hover {
+            border-color: #1a365d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(26, 54, 93, 0.2);
+        }
+
+        .grid-list li a:hover::before {
+            opacity: 1;
+        }
+
+        .grid-list li a:hover .name,
+        .grid-list li a:hover .subtitle {
+            color: #f6f4ec;
+        }
+
+        .grid-list li a:hover .name.famous {
+            color: #ffd700; 
+            text-shadow: 0px 0px 6px rgba(255, 215, 0, 0.6);
+        }
+
+        .subtitle {
+            font-size: 10px; 
+            color: #8c7a6b;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin-bottom: 4px;
+            transition: color 0.3s ease;
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis; 
+            width: 100%; 
+            text-align: center;
+            letter-spacing: -0.5px; 
+        }
+
+        .name {
+            font-size: 14px; 
+            font-weight: 600;
+            letter-spacing: 0px; 
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis; 
+            width: 100%;
+            text-align: center;
+        }
+
+        .name.famous {
+            color: #c58d20; 
+            text-shadow: 0px 1px 1px rgba(197, 141, 32, 0.2);
+        }
+
+        .count-tag {
+            font-size: 13px;
+            font-weight: normal;
+            color: #8c7a6b;
+        }
     </style>
 </head>
 <body>
-    <h1>圣经故事</h1>
-    <div class="meta">发布时间：2026/3/6 00:11:37</div>
-    <div class="content"><p>圣经故事</p></div>
+
+    <h1>《圣经》人物与史诗图鉴</h1>
+
+    <div class="controls">
+        <input type="text" id="searchInput" class="search-box" placeholder="寻觅先知与福音 (搜汉字)">
+        <button id="toggleBtn" class="toggle-btn">展开卷轴</button>
+    </div>
+
+    <div id="content"></div>
+
+    <script>
+        const famousEntities = [
+            "耶稣", "玛利亚", "摩西", "亚伯拉罕", "大卫", "保罗", "彼得", 
+            "挪亚", "亚当", "夏娃", "所罗门", "以赛亚", "施洗约翰", "约书亚", 
+            "雅各", "约翰", "加百列", "米迦勒", "撒但", "路加", "马太"
+        ];
+
+        const data = [
+            {
+                category: "一、 旧约：创世与先祖篇",
+                subCats: [
+                    {
+                        title: "1. 创世记 (太初与人类起源)",
+                        items: ["亚当|人类始祖", "夏娃|众生之母", "该隐|首个杀人者", "亚伯|义人牧羊者", "挪亚|方舟建造者", "闪|挪亚长子", "含|挪亚次子", "雅弗|挪亚三子", "以诺|与神同行者"]
+                    },
+                    {
+                        title: "2. 以色列族长 (应许与立约)",
+                        items: ["亚伯拉罕|信心之父", "撒拉|多国之母", "以撒|应许之子", "利百加|以撒之妻", "雅各|以色列十二支派之父", "拉结|雅各挚爱之妻", "利亚|雅各长妻", "以扫|雅各的孪生兄长"]
+                    },
+                    {
+                        title: "3. 埃及岁月 (梦境与流亡)",
+                        items: ["约瑟|解梦宰相", "波提乏|埃及法老内臣", "雅各的儿子们|十二支派先祖", "流便|雅各长子", "犹大|君王支派先祖", "利未|祭司支派先祖"]
+                    }
+                ]
+            },
+            {
+                category: "二、 旧约：摩西与士师篇",
+                subCats: [
+                    {
+                        title: "1. 出埃及与进迦南",
+                        items: ["摩西|颁布律法的领袖", "亚伦|首任大祭司", "米利暗|女先知", "约书亚|继任领袖/攻取迦南", "迦勒|信心的探子", "埃及法老|心硬的君王", "喇合|耶利哥城的妓女"]
+                    },
+                    {
+                        title: "2. 士师时代 (混乱与拯救)",
+                        items: ["俄陀聂|首位士师", "底波拉|女先知与士师", "基甸|三百勇士领袖", "耶弗他|起草率之誓的士师", "参孙|力大无穷的拿细耳人", "德丽拉|出卖参孙的女子", "路得|摩押女子/大卫先祖", "拿俄米|路得的婆婆"]
+                    },
+                    {
+                        title: "3. 祭司与先知开端",
+                        items: ["以利|老祭司", "哈拿|撒母耳之母", "撒母耳|最后一位士师/膏立君王"]
+                    }
+                ]
+            },
+            {
+                category: "三、 旧约：列王与先知篇",
+                subCats: [
+                    {
+                        title: "1. 联合王国君王",
+                        items: ["扫罗|以色列首位君王", "大卫|合神心意的王/诗篇作者", "所罗门|智慧之王/建造圣殿", "约拿单|大卫的挚友", "拔示巴|所罗门之母"]
+                    },
+                    {
+                        title: "2. 分裂王国与被掳",
+                        items: ["耶罗波安|北国以色列首王", "罗波安|南国犹大首王", "亚哈|北国恶王", "耶洗别|拜偶像的恶后", "希西家|南国复兴之王", "约西亚|发现律法书的善王", "尼布甲尼撒|巴比伦王"]
+                    },
+                    {
+                        title: "3. 伟大先知 (责备与预言)",
+                        items: ["以利亚|乘旋风升天的先知", "以利沙|得双倍灵恩的先知", "以赛亚|弥赛亚预言者", "耶利米|流泪的先知", "以西结|见异象的先知", "但以理|狮坑中蒙神保守的先知", "约拿|被大鱼吞灭的先知", "何西阿|娶淫妇的先知"]
+                    }
+                ]
+            },
+            {
+                category: "四、 新约：福音与门徒篇",
+                subCats: [
+                    {
+                        title: "1. 核心人物与神圣降生",
+                        items: ["耶稣|救世主/神的儿子", "玛利亚|耶稣之母", "约瑟|耶稣养父", "施洗约翰|主的开路先锋", "抹大拉的玛利亚|首见复活主的女徒", "撒该|悔改的税吏", "拉撒路|死里复活者"]
+                    },
+                    {
+                        title: "2. 十二使徒 (初代基石)",
+                        items: ["彼得|门徒之首/磐石", "安得烈|彼得之弟", "雅各|雷霆之子", "约翰|主所爱的门徒", "腓力|来自伯赛大的门徒", "巴多罗买|拿但业", "多马|多疑的门徒", "马太|税吏/福音书作者", "小雅各|亚勒腓的儿子", "达太|雅各的儿子犹大", "西门|奋锐党人", "加略人犹大|出卖耶稣的叛徒", "马提亚|补选的门徒"]
+                    },
+                    {
+                        title: "3. 初期教会领袖与同工",
+                        items: ["保罗|外邦人的使徒", "巴拿巴|劝慰子", "提摩太|保罗属灵儿子", "提多|外邦牧者", "司提反|首位殉道者", "腓利|传福音者", "亚居拉|保罗同工", "百基拉|亚居拉之妻", "路加|医生/使徒行传作者"]
+                    }
+                ]
+            },
+            {
+                category: "五、 圣物、天使与灵体篇",
+                subCats: [
+                    {
+                        title: "1. 天使与属灵存在",
+                        items: ["米迦勒|天使长/争战天使", "加百列|传好信息的天使长", "路西法|堕落天使/撒但", "基路伯|守卫伊甸园的天使", "撒拉弗|侍立神宝座前的天使"]
+                    },
+                    {
+                        title: "2. 神圣器物与象征",
+                        items: ["约柜|神同在的象征", "十诫法版|神赐的律法", "金灯台|圣所的光", "吗哪|旷野的属天粮食", "铜蛇|仰望得救的预表", "圣杯|最后晚餐的杯", "荆棘冠冕|受难的印记"]
+                    }
+                ]
+            },
+            {
+                category: "六、 著名事件与奇迹篇",
+                subCats: [
+                    {
+                        title: "1. 旧约大事件 (神迹与刑罚)",
+                        items: ["创世六日|上帝创造天地", "挪亚洪水|方舟得救与彩虹之约", "巴别塔变乱|人类口音分散", "逾越节|埃及十灾与出埃及", "红海分开|摩西带领以色列人过海", "耶利哥城倒塌|约书亚攻陷坚固城", "大卫战胜歌利亚|牧童击杀巨人"]
+                    },
+                    {
+                        title: "2. 耶稣的奇迹与事工",
+                        items: ["迦拿水变酒|头一件神迹", "五饼二鱼|喂饱五千人", "平静风浪|斥责狂风大浪", "赶鬼入猪群|格拉森的奇迹", "登山宝训|天国子民的宪章", "最后的晚餐|设立圣餐"]
+                    },
+                    {
+                        title: "3. 受难与初期教会的建立",
+                        items: ["十字架受难|耶稣代罪替死", "空坟墓与复活|战胜死亡", "五旬节圣灵降临|教会诞生/门徒说方言", "保罗大马士革奇遇|逼迫者转为使徒", "拔摩海岛异象|启示录的末世启示"]
+                    }
+                ]
+            }
+        ];
+
+        const container = document.getElementById('content');
+
+        data.forEach(main => {
+            let html = `<div class="main-category"><h2>${main.category}</h2>`;
+            main.subCats.forEach(sub => {
+                html += `
+                <details>
+                    <summary>${sub.title} <span class="count-tag">(${sub.items.length}个)</span></summary>
+                    <div class="details-content">
+                        <ul class="grid-list">
+                `;
+                sub.items.forEach(item => {
+                    const [name, subtitle] = item.split('|');
+                    const searchName = name; 
+
+                    const isFamous = famousEntities.includes(name);
+                    const nameClass = isFamous ? "name famous" : "name";
+
+                    // 修改为搜索圣经相关内容
+                    html += `
+                        <li class="item-li">
+                            <a href="https://www.google.com/search?tbm=isch&q=圣经+${searchName}" target="_blank" rel="noopener noreferrer" title="${subtitle} - ${name}">
+                                <div class="subtitle">${subtitle}</div>
+                                <div class="${nameClass}">${name}</div>
+                            </a>
+                        </li>
+                    `;
+                });
+                html += `</ul></div></details>`;
+            });
+            html += `</div>`;
+            container.innerHTML += html;
+        });
+
+        const toggleBtn = document.getElementById('toggleBtn');
+        let isExpanded = false;
+
+        toggleBtn.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            const allDetails = document.querySelectorAll('details');
+            allDetails.forEach(details => {
+                if (details.style.display !== 'none') {
+                    if (isExpanded) {
+                        details.setAttribute('open', '');
+                    } else {
+                        details.removeAttribute('open');
+                    }
+                }
+            });
+            toggleBtn.textContent = isExpanded ? '收起卷轴' : '展开卷轴';
+        });
+
+        const searchInput = document.getElementById('searchInput');
+
+        searchInput.addEventListener('input', function(e) {
+            const term = e.target.value.trim();
+            const allMainCategories = document.querySelectorAll('.main-category');
+
+            allMainCategories.forEach(mainCat => {
+                let mainHasMatch = false;
+                const detailsElements = mainCat.querySelectorAll('details');
+
+                detailsElements.forEach(details => {
+                    let detailsHasMatch = false;
+                    const items = details.querySelectorAll('.item-li');
+
+                    items.forEach(li => {
+                        const text = li.textContent;
+                        if (text.includes(term)) {
+                            li.style.display = '';
+                            detailsHasMatch = true;
+                        } else {
+                            li.style.display = 'none';
+                        }
+                    });
+
+                    if (detailsHasMatch) {
+                        details.style.display = '';
+                        mainHasMatch = true;
+                        if (term !== '') {
+                            details.setAttribute('open', '');
+                        } else {
+                            if (!isExpanded) details.removeAttribute('open');
+                        }
+                    } else {
+                        details.style.display = 'none';
+                    }
+                });
+
+                mainCat.style.display = mainHasMatch ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>
