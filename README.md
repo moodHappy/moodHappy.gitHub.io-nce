@@ -3,7 +3,7 @@
 # **NCE Notes**  
 ## **目录**
 
-[临时文章](https://github.com/moodHappy/HelloWorld/blob/master/Notes%2FB1.md)
+[临时文章](https://github.com/moodHappy/moodHappy.gitHub.io-nce/tree/main/Notes%2Fdanmu)
 
 [CW.md](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/Fiction%2FCW.md
 )
