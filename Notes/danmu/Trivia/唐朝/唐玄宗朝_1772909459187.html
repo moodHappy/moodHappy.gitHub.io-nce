@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐玄宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 居中主标题 */
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 560px;
+        }
+
+        /* 实线与虚线 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 1px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 1px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 人物卡片基础样式 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 64px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #2e7d32; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 修复后：事件区块样式 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 设置统一的左侧内边距，让里面的元素天然左对齐，并且位置在你画的红框处 */
+            padding-left: 68px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; /* 清除之前的外边距 */
+        }
+
+        /* 事件卡片 */
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 16px 30px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            display: inline-block;
+            margin-left: 0; /* 清除之前的外边距，确保和标题完美左对齐 */
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 弹窗 UI 样式 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            position: absolute;
+            top: 0;
+            bottom: 80px; 
+            width: 100%;
+            max-width: 680px; 
+            background-color: #fff;
+            border-radius: 0 0 16px 16px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 30px 30px 20px 30px; 
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            font-size: 54px; 
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            font-weight: 300;
+        }
+        .modal-close:hover { color: #333; }
+
+        .modal-title {
+            margin: 0 0 10px 0;
+            font-size: 40px; 
+            color: #111;
+            font-weight: bold;
+        }
+
+        .modal-subtitle {
+            font-size: 22px; 
+            color: #d81b60; 
+            font-weight: 500;
+            display: block;
+        }
+
+        .modal-content {
+            padding: 20px 30px 40px 30px;
+            flex: 1;
+            overflow-y: auto; 
+            font-size: 28px; 
+            color: #222; 
+            line-height: 1.8; 
+            text-align: justify;
+        }
+
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content::-webkit-scrollbar-thumb:hover { background: #909090; }
+
+        .modal-content p {
+            margin-top: 0;
+            margin-bottom: 24px; 
+        }
+        
+        .modal-content strong {
+            color: #c62828; 
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐玄宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 70px;"></div>
+        <div class="line" style="left: 100px; top: 150px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 150px; width: 1px; height: 110px;"></div> 
+        <div class="line" style="left: 220px; top: 150px; width: 1px; height: 110px;"></div> 
+
+        <div class="line" style="left: 320px; top: 150px; width: 40px; height: 1px;"></div>
+        <div class="line-v-dashed" style="left: 360px; top: 150px; height: 110px; border-color: #d81b60; border-width: 2px;"></div>
+
+        <div class="line" style="left: 320px; top: 80px; width: 220px; height: 1px;"></div>
+        <div class="line-h-dashed" style="left: 220px; top: 260px; width: 140px;"></div>
+        <div class="line" style="left: 360px; top: 260px; width: 180px; height: 1px;"></div>
+        <div class="line-v-dashed" style="left: 540px; top: 80px; height: 180px;"></div>
+
+        <div class="line-v-dashed" style="left: 360px; top: 260px; height: 100px;"></div>
+        <div class="line-h-dashed" style="left: 360px; top: 360px; width: 90px;"></div>
+        <div class="line-v-dashed" style="left: 450px; top: 360px; height: 120px;"></div>
+
+        <div class="line-v-dashed" style="left: 540px; top: 260px; height: 140px; border-color: #c62828; border-width: 2px;"></div>
+        <div class="line-h-dashed" style="left: 450px; top: 400px; width: 90px; border-color: #c62828; border-width: 2px;"></div>
+        <div class="line-v-dashed" style="left: 450px; top: 400px; height: 80px; border-color: #c62828; border-width: 2px;"></div>
+
+        <div class="label" style="left: 100px; top: 200px;">父子/残酷打压</div>
+        <div class="label" style="left: 220px; top: 200px;">父子/强夺其妻</div>
+        <div class="label" style="left: 360px; top: 200px; color: #d81b60;">公媳/万千宠爱</div>
+        <div class="label" style="left: 430px; top: 80px;">绝对信任/帝王黑手套</div>
+        <div class="label" style="left: 290px; top: 260px;">前任夫妻</div>
+        <div class="label" style="left: 450px; top: 260px;">堂兄妹/一人得道</div>
+        <div class="label" style="left: 540px; top: 170px;">继任相权/政敌</div>
+        <div class="label" style="left: 405px; top: 360px;">收为干儿</div>
+        <div class="label" style="left: 495px; top: 400px; color: #c62828; font-weight: bold;">水火不容/互相构陷</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('xuanzong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李隆基</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('lilinpu')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">李林甫</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 260px;" onclick="showInfo('suzong')">
+            <div class="c-dark">皇太子</div>
+            <div class="c-emperor">李亨</div>
+        </div>
+
+        <div class="person" style="left: 220px; top: 260px;" onclick="showInfo('limao')">
+            <div class="c-dark">寿王</div>
+            <div class="c-minister">李瑁</div>
+        </div>
+
+        <div class="person" style="left: 360px; top: 260px;" onclick="showInfo('yangguifei')">
+            <div class="c-dark">贵妃</div>
+            <div class="c-consort" style="font-size: 18px;">杨玉环</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 260px;" onclick="showInfo('yangguozhong')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">杨国忠</div>
+        </div>
+
+        <div class="person" style="left: 450px; top: 480px;" onclick="showInfo('anlushan')">
+            <div class="c-dark">三镇节度使</div>
+            <div class="c-rebel" style="font-size: 18px;">安禄山</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">关键历史事件</div>
+        
+        <div class="event-card" onclick="showInfo('maweipo')">
+            <div class="c-dark" style="margin-bottom: 6px; font-size: 14px;">天宝十五载 (756年)</div>
+            <div class="c-emperor" style="font-size: 20px;">马嵬坡兵变</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'xuanzong': { name: '李隆基 (唐玄宗)', subtitle: '半神半魔，大唐由盛转衰的缔造者', content: '<p>李隆基的一生，堪称中国帝王史上最极致的抛物线。早年的他果敢狠辣，联合太平公主诛杀韦后，随后又赐死太平公主，以铁血手腕彻底终结了自武则天以来的女性干政时代。他励精图治，开创了万邦来朝、四海升平的“开元盛世”，将大唐推向了中国古代社会的巅峰。</p><p>然而，权力的巅峰也是腐化的开始。晚年的李隆基产生了极度的政治倦怠，他将自己封闭在兴庆宫的繁华中，把国家机器的运转完全交给了李林甫这种“黑手套”。为了满足私欲，他甚至不顾伦理，强行从儿子寿王手中夺走杨玉环，上演了旷世的“长恨歌”。</p><p>天宝十四载的安史之乱，无情击碎了他的盛世幻梦。在逃亡蜀地的马嵬坡，面对哗变的禁军，这位昔日不可一世的帝王被迫赐死了一生挚爱杨贵妃。随后，太子李亨在灵武自行登基，将他尊（架空）为太上皇。李隆基在无尽的悔恨与孤独中，幽居长安太极宫，晚景极其凄凉。</p>' },
+            'lilinpu': { name: '李林甫', subtitle: '权倾朝野十九年的“政治绝缘体”构建者', content: '<p>李林甫是大唐历史上最令人胆寒的宰相，成语“口蜜腹剑”正是为他量身定制。他表面上对人永远和风细雨，背地里却能毫不留情地将政敌斩草除根。他最可怕的能力，是精准拿捏了晚年唐玄宗“既想享乐，又怕皇权旁落”的阴暗心理。</p><p>为了牢牢把持相位，李林甫在朝堂上构筑了密不透风的信息茧房。任何敢于直言进谏的官员都会被他以极其隐蔽的手段整死。他对待太子李亨更是残忍至极，多次兴起大狱，牵连数百人，逼得太子先后两次与正妻离婚以求自保，每天活在恐惧之中。</p><p>他留给大唐最致命的毒药是“番将守边”政策。为了防止汉族将领在边关立功后回朝抢夺宰相之位，李林甫向玄宗建议重用“没有根基、不识大字”的胡人将领。这直接为安禄山手握重兵、身兼三镇节度使大开方便之门。可以说，安史之乱的火药桶，全是李林甫一手填装的。</p>' },
+            'suzong': { name: '李亨 (唐肃宗)', subtitle: '在绝望中隐忍半生，最终灵武夺权的幸存者', content: '<p>作为大唐的皇太子，李亨的前半生是一场没有尽头的噩梦。他的三个哥哥（包括原太子）曾被父亲玄宗在一天之内全部赐死，这让李亨深刻体会到了皇权的冷酷。在位居储君的近三十年里，他不仅要提防多疑的父亲，还要面对权相李林甫长达十余年的疯狂构陷与绞杀。</p><p>在李林甫的打击下，李亨的亲信被杀戮殆尽，大舅哥被流放，他被迫与两任太子妃离婚。为了活命，他甚至常常在玄宗面前表现出未老先衰、惊恐万状的懦弱模样。但正是这种极度的隐忍，让他活到了安史之乱爆发的那一天。</p><p>马嵬坡兵变后，李亨迎来了一生中唯一也是最重要的一次豪赌。他拒绝与父亲一同逃亡偏远的蜀地，而是带着仅剩的几千人马毅然北上灵武。在那里，他不等玄宗同意便自行登基称帝，用既成事实夺取了大唐的最高指挥权，成为了平定安史之乱的法理核心。</p>' },
+            'limao': { name: '李瑁 (寿王)', subtitle: '大唐最无力的皇子与极致的政治牺牲品', content: '<p>李瑁本该是天之骄子。他的母亲武惠妃是唐玄宗早年最宠爱的妃子。武惠妃不仅倾尽全力为他谋夺太子之位，甚至不惜设计构陷，导致玄宗一日之内连杀三子。李瑁距离大唐帝国的皇太子之位，曾只有一步之遥。</p><p>但在武惠妃惊惧而死后，李瑁的命运急转直下。更悲惨的是，他那倾国倾城的王妃杨玉环，被陷入丧妃之痛的玄宗一眼看中。在皇权面前，作为儿子的李瑁毫无反抗之力。眼睁睁看着结发五年的妻子被度为女道士，随后又被风风光光地迎入后宫，成了自己的庶母。</p><p>经此大变，李瑁在朝堂上彻底沦为透明人。在皇家宴席上，他必须对着曾经的妻子、如今的杨贵妃叩拜行礼。这种长期的精神折磨让他学会了极度的沉默与恭顺，他也因此苟全了性命，在安史之乱后依然平稳地度过了余生，但其内心的凄凉，无人知晓。</p>' },
+            'yangguifei': { name: '杨玉环 (杨贵妃)', subtitle: '被皇权绑架的绝世名花，盛世倾覆的凄美替罪羊', content: '<p>作为中国古代四大美女之一，杨玉环不仅拥有倾国倾城的容貌，更是精通音律、擅长舞蹈的顶尖艺术家。她与精通音乐的唐玄宗在艺术上有着极高的共鸣，这也是她能让玄宗“春宵苦短日高起，从此君王不早朝”的重要原因。</p><p>与武则天、韦后不同，杨玉环本人对政治毫无野心。她未曾干预朝政，但她身后的杨氏家族（以杨国忠为首）却因为她的受宠而鸡犬升天，迅速腐蚀了大唐的权力中枢。她的存在，本身就打破了朝堂原有的政治平衡。</p><p>天宝十五载，安史叛军逼近长安，玄宗仓皇西逃。行至马嵬坡时，护驾禁军将对国家破败的怒火全部发泄在了杨家身上。在乱刀砍死杨国忠后，将士们逼迫玄宗必须处死杨玉环。在这个权力游戏的最后，昔日高高在上的大唐天子选择了保全自己，三十八岁的杨玉环被迫在佛堂自缢，用生命为大唐的衰败买了单。</p>' },
+            'yangguozhong': { name: '杨国忠', subtitle: '靠裙带关系飞黄腾达，却志大才疏的末路狂徒', content: '<p>杨国忠原本只是四川地区一个沉迷赌博、被人看不起的市井无赖。但凭借远房堂妹杨玉环的得宠，他踩中了历史的狗屎运，如火箭般窜升进入大唐权力核心。在李林甫死后，他更是顺利接过了宰相的大印。</p><p>然而，杨国忠拥有李林甫揽权的野心，却没有李林甫驾驭群臣和边将的手腕。为了巩固自己的地位，彰显军功，他屡次发动对南诏的战争，导致数十万唐军精锐命丧西南，甚至强抓壮丁，搞得民怨沸腾。</p><p>他一生最大的败笔，是过度膨胀地挑衅安禄山。为了除掉这个眼中钉，他天天在玄宗面前断言安禄山必反，甚至在长安大肆抓捕安禄山的亲信。这种不留后路的逼迫，最终让本想等玄宗死后再动手的安禄山提前起兵。马嵬坡兵变中，惹众怒的杨国忠被禁军追杀至西门内，不仅被乱刀分尸，首级还被挂在长矛上示众，落得个死无全尸的下场。</p>' },
+            'anlushan': { name: '安禄山', subtitle: '极度伪装的乱世枭雄，撕裂盛唐的终极野兽', content: '<p>安禄山是一个精通六国外语的粟特族混血儿。他外表肥胖痴傻，实则狡黠腹黑到了极点。为了向上爬，他不惜装疯卖傻，以三百多斤的肥胖身躯在玄宗面前跳胡旋舞。为了讨好杨贵妃，他甚至认比自己小十几岁的杨玉环为干妈，上演了荒唐的“贵妃洗儿”闹剧。</p><p>在玄宗和杨贵妃被他逗得哈哈大笑、认为他毫无心机时，安禄山却在暗中疯狂经营。他身兼平卢、范阳、河东三镇节度使，控制着大唐东北边境最精锐的十五万大军，并暗中提拔了大量只忠于自己、骁勇善战的同族将领。</p><p>当杨国忠在朝堂上步步紧逼时，天宝十四载冬，安禄山以“清君侧”为名悍然起兵。他的叛军如同出闸的猛虎，迅速摧毁了中原的和平，将辉煌的大唐生生折断。不过，称帝后的安禄山晚年双目失明，性情极度暴躁，动辄打杀身边人，最终在睡梦中被自己的亲生儿子安庆绪联合宦官残忍刺杀，死在了自己的龙床上。</p>' },
+            
+            // ================= 事件数据 =================
+            'maweipo': { 
+                name: '马嵬坡兵变', 
+                subtitle: '大唐盛极而衰的血色转折点', 
+                content: `
+                    <p><strong>【背景起因】</strong><br>
+                    天宝十五载（756年），安禄山叛军攻破潼关，长安无险可守。唐玄宗带着杨贵妃、宰相杨国忠、太子李亨以及部分禁军仓皇弃都，逃往蜀地。途经马嵬坡（今陕西兴平）时，连日奔波、食不果腹的护驾禁军将士群情激愤，对引发战乱的杨氏家族怨气达到了极点。</p>
+                    
+                    <p><strong>【事变经过】</strong><br>
+                    禁军龙武大将军陈玄礼认为是宰相杨国忠招致了安史之乱，暗中联络太子李亨，决定发动兵变。乱军首先发难，将正在与吐蕃使者交涉的杨国忠乱刀砍死，并将其肢解、首级挂于矛端示众。随后，禁军死死包围了玄宗的驿站，高呼“除恶务尽”，要求必须处死杨贵妃，否则全军不肯继续保驾。</p>
+                    
+                    <p><strong>【最终结果与影响】</strong><br>
+                    面对彻底失控的军队，七十二岁的唐玄宗为求自保，无奈命高力士将三十八岁的杨贵妃勒死于驿站佛堂的梨树下。马嵬坡兵变不仅宣告了杨氏外戚集团的物理覆灭，更导致了最高皇权的彻底分裂——兵变后，太子李亨以“平叛”为由与玄宗分道扬镳，北上灵武登基（唐肃宗），直接架空了逃往四川的玄宗。大唐历史就此翻开了残酷平叛与藩镇割据的新篇章。</p>
+                ` 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
