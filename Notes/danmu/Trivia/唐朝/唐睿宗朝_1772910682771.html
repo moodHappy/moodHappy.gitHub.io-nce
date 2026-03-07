@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐睿宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色政变杀戮与敌对线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 60px; /* 严格对齐关系图最左侧卡片中轴 */
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 20px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 16px 14px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐睿宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 160px; top: 160px; width: 320px; height: 1px;"></div>
+        <div class="line" style="left: 160px; top: 160px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 320px; top: 160px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 480px; top: 160px; width: 1px; height: 60px;"></div>
+        
+        <div class="line-h-dashed" style="left: 160px; top: 80px; width: 120px;"></div>
+        
+        <div class="line-h-dashed" style="left: 370px; top: 220px; width: 60px;"></div>
+
+        <div class="line" style="left: 160px; top: 260px; width: 1px; height: 120px;"></div>
+        
+        <div class="line" style="left: 480px; top: 260px; width: 1px; height: 120px;"></div>
+
+        <div class="kill-h" style="left: 220px; top: 240px; width: 200px;"></div>
+        
+        <div class="kill-v" style="left: 450px; top: 270px; height: 80px;"></div>
+        <div class="kill-h" style="left: 210px; top: 350px; width: 240px;"></div>
+        <div class="kill-v" style="left: 210px; top: 350px; height: 30px;"></div>
+
+        <div class="label" style="left: 220px; top: 80px;">废黜取代</div>
+        <div class="label" style="left: 200px; top: 140px;">兄妹/军国倚重</div>
+        <div class="label" style="left: 320px; top: 130px;">嫡长子</div>
+        <div class="label" style="left: 440px; top: 140px;">父子/晚年禅让</div>
+        
+        <div class="label" style="left: 400px; top: 200px;">主动让嫡</div>
+        <div class="label" style="left: 320px; top: 240px; color: #c62828; font-weight: bold;">姑侄生死决战</div>
+        
+        <div class="label" style="left: 160px; top: 310px;">太平党(七宰相占五)</div>
+        <div class="label" style="left: 480px; top: 310px;">潜邸心腹</div>
+        <div class="label" style="left: 330px; top: 350px; color: #c62828; font-weight: bold;">先天政变 (雷霆诛杀)</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('ruizong')">
+            <div class="c-dark">太上皇</div>
+            <div class="c-emperor" style="font-size: 18px;">李旦</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 80px;" onclick="showInfo('shangdi')">
+            <div class="c-dark">废帝 / 温王</div>
+            <div class="c-minister">李重茂</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 240px;" onclick="showInfo('taiping')">
+            <div class="c-dark">镇国公主</div>
+            <div class="c-consort">太平公主</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('chengqi')">
+            <div class="c-dark">宋王</div>
+            <div class="c-minister">李成器</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 240px;" onclick="showInfo('longji')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李隆基</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 400px;" onclick="showInfo('dou')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">窦怀贞</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 400px;" onclick="showInfo('liu')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">刘幽求</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">关键历史事件</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('chanrang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">延和元年 (712年)</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">睿宗禅让</div>
+            </div>
+            <div class="event-card" onclick="showInfo('xiantian')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">先天二年 (713年)</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">先天政变</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'ruizong': { 
+                name: '李旦 (唐睿宗)', 
+                subtitle: '三让天下的生存大师，高压锅里的走钢丝者', 
+                content: '<p>在经历了唐隆政变后，相王李旦再次被推上皇位。但他立刻陷入了另一个绝境：功高震主的儿子李隆基，和权倾朝野的妹妹太平公主，两人都拥有废立皇帝的能量。作为大唐名义上的最高统治者，睿宗每天都在这对姑侄之间小心翼翼地走钢丝。</p><p>睿宗深知权力的残酷，他一生做过最聪明的决定就是“让”。712年，天空出现彗星（被认为是除旧布新的天象），太平公主本想借此天象逼睿宗废掉李隆基，没想到睿宗顺水推舟，直接宣布禅位给李隆基，自己退居太上皇。这一手不仅保全了自己，还强行打破了朝堂僵局。</p><p>但在禅位后，他依然保留了三品以上官员的任免权，这导致大唐出现了“两个权力中心”，最终不可避免地催生了极其血腥的先天政变。</p>' 
+            },
+            'shangdi': { 
+                name: '李重茂 (唐殇帝)', 
+                subtitle: '龙椅上只坐了17天的傀儡废帝', 
+                content: '<p>李重茂是唐中宗的幼子。在中宗被毒死后，韦后为了临朝称制，将年仅16岁的他强行按在皇位上当了几天傀儡。随着唐隆政变的爆发，李隆基带兵杀入后宫诛灭韦氏一族。</p><p>政变平息后的朝堂上，太平公主直接走到龙椅前，一把揪住李重茂的衣领将他拽了下来，对他说：“这已经不是你的位子了。”随后李重茂被降为温王，不久后被外放，最终在哥哥李重福的叛乱中受到牵连，惊惧而死，年仅20岁。</p>' 
+            },
+            'taiping': { 
+                name: '太平公主', 
+                subtitle: '离女皇宝座只有一步之遥的大唐暗影', 
+                content: '<p>作为武则天最宠爱的女儿，太平公主不仅完美继承了母亲的政治手腕，更在除掉韦后之后，将大唐朝堂经营成了自己的后花园。史载当时朝廷七个宰相中，有五个是她的死党（太平党），可谓权倾天下。</p><p>她极度忌惮杀伐果断的侄子李隆基，为了防止他登基，太平公主无所不用其极：散布谣言、买通李隆基身边的人下毒、甚至计划废黜皇帝。但在权力的最终对决中，她犯了和当年长孙无忌一样的错误——她过度迷信朝堂上文官集团的人数优势，却低估了李隆基掌控禁军、一剑封喉的武力决心。先天政变失败后，她被赐死家中，家产被抄，其巨额财富足以支撑大唐数年的国库开销。</p>' 
+            },
+            'chengqi': { 
+                name: '李成器 (宋王)', 
+                subtitle: '大唐最清醒的皇子，以退为进保全一生的让嫡者', 
+                content: '<p>李成器是睿宗李旦的嫡长子。按照古代宗法制，睿宗复辟后，皇太子的位置铁定是他的。但他目睹了三弟李隆基在唐隆政变中那种杀人不眨眼的铁血手段，深刻意识到如果自己贪恋储君之位，绝对活不到登基的那一天。</p><p>于是，李成器上演了历史上极其罕见的“泣血让嫡”。他跪在父亲面前坚决推辞太子之位，说：“国家安定时可以立嫡长子，但国家危难时必须立有大功的人（指李隆基），否则天下难安。”他的清醒与退让，换来了李隆基一生的敬重与感激。玄宗登基后，兄弟二人感情极深，李成器死后甚至被玄宗破例追封为“让皇帝”。</p>' 
+            },
+            'longji': { 
+                name: '李隆基 (唐玄宗)', 
+                subtitle: '连诛两大女主的铁血真龙', 
+                content: '<p>此时的李隆基，正处于他人生的武力值与政治权谋巅峰。在唐隆政变中剿灭韦后集团后，他被立为皇太子，随后立刻与曾并肩作战的姑姑太平公主变成了不死不休的政敌。</p><p>面对太平公主在朝堂上近乎窒息的文官包围圈和频繁的暗杀企图，李隆基展现出了绝佳的忍耐力与爆发力。他悄悄在禁军（羽林军和万骑）中安插死忠。先天二年，当太平公主准备动手的前夕，李隆基没有等待太上皇的调停，而是直接带领三百亲兵暴起发难，抢先斩杀了太平公主的所有核心党羽，用最纯粹的暴力砍断了太平公主的政治网络，彻底终结了半个世纪以来大唐皇权旁落的局面。</p>' 
+            },
+            'dou': { 
+                name: '窦怀贞', 
+                subtitle: '谄媚至极却站错队的墙头草宰相', 
+                content: '<p>窦怀贞是大唐官场上著名的“马屁精”。在中宗朝，为了讨好韦后，他竟然不惜以当朝宰相的尊贵身份，迎娶韦后年老色衰、甚至曾在掖庭做过奴婢的乳母（被称为“褩嫂”），并在文武百官面前沾沾自喜，自称“皇后阿褩”。</p><p>韦后倒台后，他亲手杀了自己的妻子向李隆基表忠心，勉强活了下来。随后他又迅速投靠了势力更大的太平公主，成为太平公主在朝堂上的头号文臣打手。在先天政变中，李隆基突然发难，窦怀贞见大势已去，逃亡城外上吊自杀。李隆基对其极度厌恶，下令斩下他的首级，并将其姓氏改为“毒”。</p>' 
+            },
+            'liu': { 
+                name: '刘幽求', 
+                subtitle: '唐隆政变的智囊，三起三落的硬骨头', 
+                content: '<p>刘幽求是李隆基在藩王时期的绝对心腹。在唐隆政变前夜，正是他极力劝说李隆基当机立断，抢先对韦后动手，甚至亲自起草了诛杀韦氏的檄文。政变成功后，他被提拔为宰相。</p><p>在随后的岁月里，他作为李隆基集团的核心智囊，与太平公主集团展开了激烈的明争暗斗。他曾多次向李隆基和睿宗进言，要求除掉太平公主的党羽，结果反遭太平公主构陷，被贬谪流放至极南之地。直到先天政变李隆基彻底掌权后，他才被重新召回朝廷重用。</p>' 
+            },
+
+            /* 事件库 */
+            'chanrang': { 
+                name: '睿宗禅让 (712年)', 
+                subtitle: '退一步海阔天空，甩开烫手山芋', 
+                content: '<p><strong>【背景起因】</strong><br>延和元年（712年），天空出现了彗星。在古代星象学中，这被视为“除旧布新、帝王易位”的凶兆。太平公主借题发挥，指使术士向睿宗进言：“彗星出现，意味着皇太子要当皇帝了。”其真实目的是想挑拨睿宗猜忌李隆基，进而废掉太子。</p><p><strong>【事变经过】</strong><br>睿宗李旦听完后，做出了一个让所有人都瞠目结舌的决定。他平静地说：“既然天意如此，那传位给太子正好可以化解灾祸，有什么可避忌的！”他不顾太平公主的拼命阻拦和李隆基的故作推辞，坚决下达了禅位诏书，退居太上皇。</p><p><strong>【最终结果】</strong><br>睿宗的禅位，让李隆基获得了名正言顺的最高法理地位（虽然睿宗依然把持着三品以上官员的人事任命权）。这彻底打乱了太平公主“废太子”的计划，也标志着双方的斗争从“储位之争”正式升级为“皇权保卫战”。</p>' 
+            },
+            'xiantian': { 
+                name: '先天政变 (713年)', 
+                subtitle: '三百死士平定天下，大唐红妆时代终结', 
+                content: '<p><strong>【背景起因】</strong><br>李隆基登基（玄宗）后，太平公主的危机感达到顶峰。她密谋在先天二年七月发动政变，计划由常元楷、李慈控制羽林军突入武德殿杀掉李隆基，并指使宫女在李隆基的常服里投毒。</p><p><strong>【事变经过】</strong><br>情报泄露后，李隆基决定背水一战。七月甲子日，他没有调动大规模军队（因为兵权在太上皇手里），而是仅率领王毛仲、高力士等亲信和三百名羽林军死士，以迅雷不及掩耳之势冲入宫中。他们当场斩杀了准备起事的常元楷、李慈，随后兵分几路，将太平公主在朝中的党羽（宰相窦怀贞、萧至忠、岑羲等）全部诛杀。</p><p><strong>【最终结果】</strong><br>政变发生的第二天，太上皇睿宗见大势已去，下发制书宣布彻底交出所有军政大权，退居百福殿养老。失去所有庇护和党羽的太平公主逃入南山寺庙，三天后被赐死家中。至此，从武则天开始、历经韦后、安乐公主、上官婉儿、太平公主，长达半个世纪的“大唐女性干政时代”被李隆基用铁血手段彻底斩断。大唐帝国正式迎来了辉煌的开元盛世。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
