@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>高定文章排版 & GitHub 推送引擎 (双模融合版)</title>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/converter_biography.png">
     <style>
         :root {
             --primary: #007AFF;
@@ -113,9 +114,8 @@
     <div class="card">
         <label>
             1. 自动排版区 
-            <span style="font-size:0.8rem; color:#888; font-weight:normal;">(输入文本，首行识别为标题)</span>
         </label>
-        <textarea id="inputText" class="input-area" placeholder="在此粘贴纯文本文章内容..."></textarea>
+        <textarea id="inputText" class="input-area" placeholder=""></textarea>
 
         <div class="action-bar">
             <button class="btn-primary" onclick="generateHTML()">🎨 随机主题并转换 ↓</button>
@@ -127,12 +127,11 @@
     <div class="card">
         <label>
             2. HTML 源码编辑区 
-            <span style="font-size:0.8rem; color:#888; font-weight:normal;">(可直接粘贴已有 HTML 源码)</span>
         </label>
         
-        <input type="text" id="inlineFileName" placeholder="自定义推送文件名 (推送时会自动补全 _时间戳.html)">
+        <input type="text" id="inlineFileName" placeholder="">
         
-        <textarea id="outputText" class="result-area" placeholder="精美的 HTML 源码将在此生成，你也可以直接在这里粘贴或修改写好的 HTML 代码..."></textarea>
+        <textarea id="outputText" class="result-area" placeholder=""></textarea>
     </div>
 </div>
 
@@ -173,16 +172,13 @@
 <div id="toast">操作成功</div>
 
 <script>
-    // GitHub 仓库配置 (请根据实际情况修改)
     const GITHUB_USER = "moodHappy";
     const GITHUB_REPO = "moodHappy.gitHub.io-nce";
     
-    // 本地存储 Key
     const PATH_HISTORY_KEY = "gh_article_path_list";
     const DEFAULT_PATH_KEY = "gh_article_default_path";
     const INITIAL_PATH = "Notes/Articles";
 
-    // 6套丰富且明亮的高级主题
     const premiumThemes = [
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, serif; background-color: #FAFAFA; color: #2C2C2C; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 2; letter-spacing: 0.05em; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #111; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 20px; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
         `body { font-family: "Georgia", "Xin Gothic", "Hiragino Sans GB", serif; background-color: #F8F4E6; color: #4A3F35; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.9; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.2em; color: #2C241B; border-bottom: 2px dashed #D5CBBB; padding-bottom: 20px; } p { margin-bottom: 1.6em; text-indent: 2em; }`,
@@ -196,7 +192,6 @@
         if (!localStorage.getItem('gh_token')) openTokenSettings(); 
     };
 
-    // --- 模式1：纯文本排版生成 ---
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
         if (!input) { showToast('⚠️ 纯文本框为空，请先输入文字'); return; }
@@ -204,7 +199,7 @@
         const lines = input.split(/\n+/).map(line => line.trim()).filter(line => line !== '');
         if (lines.length === 0) return;
 
-        const articleTitle = lines[0]; // 第一行作为标题
+        const articleTitle = lines[0]; 
         const bodyLines = lines.slice(1);
         const randomTheme = premiumThemes[Math.floor(Math.random() * premiumThemes.length)];
 
@@ -218,7 +213,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${articleTitle}</title>
     <style>
-        /* 自动生成的精美主题 */
         ${randomTheme}
     </style>
 </head>
@@ -229,14 +223,12 @@ ${htmlBody}
 
         document.getElementById('outputText').value = fullHtml;
         
-        // 自动将生成的标题填充到文件名输入框，方便用户查看和修改
         const safeTitle = articleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
         document.getElementById('inlineFileName').value = safeTitle;
 
         showToast('✨ 转换成功！源码已更新至下方区域。');
     }
 
-    // --- 复制源码 ---
     function copyHTML() {
         const outputText = document.getElementById('outputText').value.trim();
         if (!outputText) { showToast('⚠️ HTML 源码区为空，请先生成或粘贴'); return; }
@@ -249,7 +241,6 @@ ${htmlBody}
         });
     }
 
-    // --- GitHub Token 管理 ---
     function openTokenSettings() {
         document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
         document.getElementById('tokenModal').style.display = 'flex';
@@ -264,7 +255,6 @@ ${htmlBody}
         }
     }
 
-    // --- GitHub 推送管理 (融合核心逻辑) ---
     function openPushDialog() {
         const htmlContent = document.getElementById('outputText').value.trim();
         if (!htmlContent) { 
@@ -321,7 +311,6 @@ ${htmlBody}
         }
     }
 
-    // --- GitHub API 推送执行 ---
     async function confirmPushAction() {
         const contentToPush = document.getElementById('outputText').value.trim();
         const targetPath = document.getElementById('newPathInput').value.trim().replace(/^\/+|\/+$/g, '');
@@ -333,7 +322,6 @@ ${htmlBody}
         btn.innerText = "⏳ 正在推送...";
         btn.disabled = true;
 
-        // 保存路径记录
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
         if (!paths.includes(targetPath)) { 
             paths.push(targetPath); 
@@ -346,9 +334,7 @@ ${htmlBody}
         try {
             let baseName = "";
 
-            // 1. 获取基础文件名（用户输入优先，或智能提取后备）
             if (customFileName) {
-                // 去除用户可能顺手写的 .html 后缀
                 baseName = customFileName.replace(/\.html$/i, '');
             } else {
                 let extractedTitle = "未命名网页";
@@ -363,13 +349,9 @@ ${htmlBody}
                 baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
             }
 
-            // 2. 统一强制追加 _时间戳.html
             const finalFileName = `${baseName}_${Date.now()}.html`;
-
             const token = localStorage.getItem('gh_token');
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${finalFileName}`;
-
-            // 使用 Base64 编码支持中文 HTML
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
 
             const res = await fetch(url, {
@@ -399,7 +381,6 @@ ${htmlBody}
         }
     }
 
-    // --- 通用辅助函数 ---
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showToast(msg) { 
         const t = document.getElementById('toast'); 
