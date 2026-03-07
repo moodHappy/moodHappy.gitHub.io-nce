@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高定版文章排版引擎</title>
+    <style>
+        /* 转换器本身的 UI 样式 */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --primary: #4A90E2;
+            --success: #43A047;
+            --text-main: #2C3E50;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 850px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+        }
+        h2 { text-align: center; margin-bottom: 24px; font-weight: 600; font-size: 1.5rem; letter-spacing: 1px; }
+        .grid-layout { display: grid; gap: 20px; }
+        textarea {
+            width: 100%;
+            height: 220px;
+            padding: 16px;
+            border: 1px solid #e1e4e8;
+            border-radius: 12px;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            background: #fafbfc;
+        }
+        textarea:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+            background: #fff;
+        }
+        .controls { display: flex; gap: 15px; margin: 10px 0; }
+        button {
+            flex: 1; padding: 14px; border: none; border-radius: 10px;
+            font-size: 1rem; font-weight: 600; cursor: pointer;
+            transition: transform 0.1s, filter 0.2s; color: white;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button:active { transform: scale(0.98); }
+        button:hover { filter: brightness(1.1); }
+        .btn-magic { background: var(--primary); }
+        .btn-copy { background: var(--success); }
+        
+        #toast {
+            text-align: center; font-size: 0.95rem; font-weight: 500;
+            min-height: 24px; transition: color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .controls { flex-direction: column; }
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>✨ 高定版文章排版引擎</h2>
+    
+    <div class="grid-layout">
+        <div>
+            <textarea id="inputText" placeholder="请将文章粘贴于此。第一行将自动被识别为文章大标题（H1），其余内容将转换为段落..."></textarea>
+        </div>
+
+        <div class="controls">
+            <button class="btn-magic" onclick="generateAndTheme()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                随机主题并生成
+            </button>
+            <button class="btn-copy" onclick="copyResult()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                一键复制源码
+            </button>
+        </div>
+
+        <div id="toast"></div>
+
+        <div>
+            <textarea id="outputText" readonly placeholder="精美的 HTML 源码将在此生成..."></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 精心设计的 4 套大字号高颜值主题
+    const premiumThemes = [
+        // 主题1：典雅书卷
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Times New Roman", serif; background-color: #FAFAFA; color: #2C2C2C; max-width: 800px; margin: 0 auto; padding: 40px 24px; font-size: 20px; line-height: 2; letter-spacing: 0.05em; } h1 { text-align: center; font-size: 2em; margin-bottom: 1.5em; color: #111; font-weight: bold; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        
+        // 主题2：深夜沉浸
+        `body { font-family: system-ui, -apple-system, sans-serif; background-color: #1A1C1E; color: #E3E5E8; max-width: 800px; margin: 0 auto; padding: 40px 24px; font-size: 19px; line-height: 1.9; letter-spacing: 0.02em; } h1 { text-align: center; font-size: 1.9em; margin-bottom: 1.5em; color: #FFFFFF; font-weight: 600; } p { margin-bottom: 1.4em; }`,
+        
+        // 主题3：温润纸张
+        `body { font-family: "Georgia", "Xin Gothic", "Hiragino Sans GB", serif; background-color: #F7F3E8; color: #4A3F35; max-width: 800px; margin: 0 auto; padding: 40px 24px; font-size: 20px; line-height: 1.85; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.2em; color: #2C241B; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; } p { margin-bottom: 1.6em; text-indent: 2em; }`,
+        
+        // 主题4：现代极简
+        `body { font-family: "Helvetica Neue", Helvetica, "Microsoft YaHei", sans-serif; background-color: #FFFFFF; color: #333333; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 21px; line-height: 1.8; font-weight: 300; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #000000; font-weight: 700; letter-spacing: -0.02em; } p { margin-bottom: 1.5em; }`
+    ];
+
+    function showToast(message, color) {
+        const toast = document.getElementById('toast');
+        toast.style.color = color;
+        toast.innerText = message;
+        setTimeout(() => { toast.innerText = ''; }, 3000);
+    }
+
+    function generateAndTheme() {
+        const input = document.getElementById('inputText').value.trim();
+        if (!input) {
+            showToast('⚠️ 文本框为空，请先输入文字', '#e74c3c');
+            return;
+        }
+
+        // 随机抽取一套神仙主题
+        const themeCSS = premiumThemes[Math.floor(Math.random() * premiumThemes.length)];
+
+        // 分割段落并清洗空行 (修正了正则语法)
+        const lines = input.split(/\n+/).map(line => line.trim()).filter(line => line !== '');
+        
+        if (lines.length === 0) return;
+
+        // 提取第一行作为 H1 标题
+        const title = lines[0];
+        const bodyLines = lines.slice(1);
+
+        let htmlBody = `    <h1>${title}</h1>\n`;
+        htmlBody += bodyLines.map(p => `    <p>${p}</p>`).join('\n');
+
+        // 修正了模板字符串语法
+        const finalHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        /* 自动生成的精美主题 (大字号适配) */
+        ${themeCSS}
+    </style>
+</head>
+<body>
+${htmlBody}
+</body>
+</html>`;
+
+        document.getElementById('outputText').value = finalHtml;
+        showToast('✨ 转换成功！已自动提取标题并应用高级主题。', '#2E7D32');
+    }
+
+    async function copyResult() {
+        const output = document.getElementById('outputText').value;
+        if (!output) {
+            showToast('⚠️ 还没生成源码哦，请先点击转换', '#e74c3c');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(output);
+            showToast('✅ 源码已成功复制到剪贴板！', '#2E7D32');
+        } catch (err) {
+            // 降级方案
+            const textArea = document.getElementById('outputText');
+            textArea.select();
+            document.execCommand('copy');
+            showToast('✅ 源码已复制（使用兼容模式）', '#2E7D32');
+            window.getSelection().removeAllRanges();
+        }
+    }
+</script>
+
+</body>
+</html>
