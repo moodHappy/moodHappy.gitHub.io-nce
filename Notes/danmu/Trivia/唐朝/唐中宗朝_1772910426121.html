@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐中宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 居中主标题 */
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片（无形容词） */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色政变杀戮线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 严格设置左内边距，使事件卡片组的左边界刚好对齐关系图最左侧李旦的卡片中轴 */
+            padding-left: 60px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        /* 三大政变并排展示 */
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            position: absolute;
+            top: 0;
+            bottom: 80px; 
+            width: 100%;
+            max-width: 680px; 
+            background-color: #fff;
+            border-radius: 0 0 16px 16px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 30px 30px 20px 30px; 
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            font-size: 54px; 
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            font-weight: 300;
+        }
+        .modal-close:hover { color: #333; }
+
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+
+        .modal-content {
+            padding: 20px 30px 40px 30px;
+            flex: 1;
+            overflow-y: auto; 
+            font-size: 28px; 
+            color: #222; 
+            line-height: 1.8; 
+            text-align: justify;
+        }
+
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐中宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 60px; top: 120px; width: 260px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 120px; width: 140px; height: 1px;"></div>
+        
+        <div class="line" style="left: 60px; top: 120px; width: 1px; height: 160px;"></div>
+        <div class="line" style="left: 320px; top: 120px; width: 1px; height: 160px;"></div>
+        <div class="line" style="left: 460px; top: 120px; width: 1px; height: 160px;"></div>
+        
+        <div class="line" style="left: 320px; top: 120px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 180px; top: 180px; width: 140px; height: 1px;"></div>
+        <div class="line" style="left: 180px; top: 180px; width: 1px; height: 100px;"></div>
+
+        <div class="line-h-dashed" style="left: 460px; top: 120px; width: 120px;"></div>
+        <div class="line-h-dashed" style="left: 320px; top: 280px; width: 260px;"></div>
+
+        <div class="kill-v" style="left: 180px; top: 280px; height: 50px;"></div> <div class="kill-h" style="left: 180px; top: 330px; width: 400px;"></div> <div class="kill-v" style="left: 580px; top: 280px; height: 50px;"></div> <div class="kill-v" style="left: 60px; top: 280px; height: 120px;"></div> <div class="kill-h" style="left: 60px; top: 400px; width: 420px;"></div> <div class="kill-v" style="left: 320px; top: 280px; height: 120px;"></div> <div class="kill-v" style="left: 460px; top: 280px; height: 120px;"></div> <div class="kill-v" style="left: 480px; top: 120px; height: 280px;"></div> <div class="label" style="left: 120px; top: 110px;">兄妹</div>
+        <div class="label" style="left: 250px; top: 110px;">兄妹</div>
+        <div class="label" style="left: 390px; top: 110px;">夫妻</div>
+        <div class="label" style="left: 520px; top: 110px;">政治同盟/私通</div>
+        <div class="label" style="left: 450px; top: 270px;">秽乱结党</div>
+        
+        <div class="label" style="left: 250px; top: 170px;">庶长子</div>
+        <div class="label" style="left: 330px; top: 200px;">代拟诏书</div>
+        <div class="label" style="left: 470px; top: 200px;">嫡出/极宠</div>
+
+        <div class="label" style="left: 380px; top: 320px; color: #c62828; font-weight: bold;">景龙政变 (兵变诛杀)</div>
+        <div class="label" style="left: 270px; top: 390px; color: #c62828; font-weight: bold;">唐隆政变 (姑侄联手清算)</div>
+
+        <div class="person" style="left: 320px; top: 120px;" onclick="showInfo('zhongzong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李显</div>
+        </div>
+
+        <div class="person" style="left: 460px; top: 120px;" onclick="showInfo('wei')">
+            <div class="c-dark">皇后</div>
+            <div class="c-consort">韦氏</div>
+        </div>
+
+        <div class="person" style="left: 60px; top: 120px;" onclick="showInfo('lidan')">
+            <div class="c-dark">相王</div>
+            <div class="c-emperor">李旦</div>
+        </div>
+
+        <div class="person" style="left: 180px; top: 120px;" onclick="showInfo('taiping')">
+            <div class="c-dark">镇国公主</div>
+            <div class="c-consort">太平公主</div>
+        </div>
+
+        <div class="person" style="left: 60px; top: 280px;" onclick="showInfo('longji')">
+            <div class="c-dark">临淄王</div>
+            <div class="c-minister">李隆基</div>
+        </div>
+
+        <div class="person" style="left: 180px; top: 280px;" onclick="showInfo('chongjun')">
+            <div class="c-dark">皇太子</div>
+            <div class="c-emperor">李重俊</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 280px;" onclick="showInfo('waner')">
+            <div class="c-dark">昭容</div>
+            <div class="c-consort">上官婉儿</div>
+        </div>
+
+        <div class="person" style="left: 460px; top: 280px;" onclick="showInfo('anle')">
+            <div class="c-dark">公主</div>
+            <div class="c-consort">安乐公主</div>
+        </div>
+
+        <div class="person" style="left: 580px; top: 120px;" onclick="showInfo('wusansi')">
+            <div class="c-dark">司空 / 梁王</div>
+            <div class="c-minister">武三思</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">中宗朝核心政变</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('shenlong')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">705年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">神龙政变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('jinglong')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">707年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">景龙兵变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('tanglong')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">710年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">唐隆政变</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'zhongzong': { 
+                name: '李显 (唐中宗)', 
+                subtitle: '史上独一无二的“六位帝皇丸”与软弱悲剧', 
+                content: '<p>李显的家谱简直是神仙阵容：爷爷唐太宗，父亲唐高宗，母亲武则天，弟弟唐睿宗，侄子唐玄宗，加上他自己，一家子全当过皇帝。他一生两次登基，早年被母亲武则天废黜流放，担惊受怕了十五年。</p><p>正因为在流放时与妻子韦氏相依为命，他曾立誓：“异日幸复见天日，惟请所欲，不相禁止。”复辟后，他真的履行了诺言，对韦后和安乐公主的骄纵贪婪一味纵容，甚至任由韦后干政、与武三思私通。他上朝时甚至会让韦后坐在帷帐后一同听政，重现了父母当年的“二圣”局面。</p><p>但他的无底线退让并没有换来好报。景龙四年（710年），李显暴毙于神龙殿。尽管现代有学者怀疑他是自然心脑血管疾病死亡，但《新唐书》和《资治通鉴》都坚称，他是被急于当“女皇”的韦后和“皇太女”的安乐公主在饼里下毒鸩杀的。</p>' 
+            },
+            'wei': { 
+                name: '韦氏 (韦皇后)', 
+                subtitle: '疯狂复刻武则天的野心家', 
+                content: '<p>韦后曾陪伴李显在均州、房州度过了十五年朝不保夕的幽禁岁月。但当李显复辟后，苦尽甘来的她没有选择母仪天下，而是产生了极度膨胀的政治野心——她要成为第二个武则天。</p><p>为了巩固权力，她竟然与武则天的侄子武三思结成同盟甚至私通，两人联手在朝堂上大肆卖官鬻爵，清洗当年发动“神龙政变”复辟李显的功臣。在后宫，她极度打压非亲生的太子李重俊，纵容亲生女儿安乐公主干政。</p><p>在中宗暴毙后，韦后秘不发丧，迅速调集自己的亲信掌控长安南北衙禁军，企图效仿武则天临朝称制。但她拥有武则天的野心，却没有武则天的手腕和威望。仅仅半个多月后，就被李隆基发动的唐隆政变彻底剿灭，死后被追贬为庶人。</p>' 
+            },
+            'anle': { 
+                name: '安乐公主 (李裹儿)', 
+                subtitle: '大唐第一美人的极致疯狂与贪婪', 
+                content: '<p>李裹儿出生在李显被废流放途中的马车上，因当时连襁褓都没有，李显脱下衣服将她包裹，故名裹儿。因为觉得亏欠，李显和韦后对她宠溺到了病态的地步。她被称为大唐第一美人，但也拥有大唐第一的贪婪。</p><p>她不仅大肆抢占强拆平民甚至官员的宅邸来修建自己的豪华公主府，更荒唐的是，她甚至自己写好任命官员的诏书，直接把空白处蒙住，让父亲李显闭着眼睛签字盖章（斜封墨敕）。</p><p>她的野心甚至超过了母亲，竟公开要求李显废掉太子，立自己为中国历史上绝无仅有的“皇太女”。太子李重俊忍无可忍发动兵变，险些将其诛杀。在唐隆政变中，正在画眉的安乐公主被冲入府邸的士兵斩首。</p>' 
+            },
+            'waner': { 
+                name: '上官婉儿', 
+                subtitle: '八面玲珑的巾帼宰相，绝境中的致命平衡', 
+                content: '<p>上官婉儿的祖父是被武则天杀害的宰相上官仪，但武则天极其欣赏她的文采，将她提拔为贴身女官。到了中宗朝，她被封为昭容，专掌皇帝诏命，被称为“巾帼首相”。</p><p>婉儿深谙宫廷生存之道。她表面上依附韦后，甚至主动把自己的情夫武三思推荐给韦后以巩固联盟；但暗地里，她又与太平公主保持着极深厚的交情，试图在两大政治集团间走钢丝。</p><p>中宗暴毙后，婉儿极其敏锐地察觉到韦后必败，于是连夜联合太平公主起草了一份平衡各方利益的遗诏（立温王为帝，相王李旦辅政，韦后临朝）。在唐隆政变李隆基带兵冲入后宫时，她从容拿出这份遗诏作为“免死金牌”。但李隆基为了彻底铲除武韦势力的残余，不受太平公主的求情，坚决下令将其当场斩杀。</p>' 
+            },
+            'wusansi': { 
+                name: '武三思', 
+                subtitle: '武氏家族的残党，靠裙带乱政的权臣', 
+                content: '<p>作为武则天的侄子，武三思在神龙政变武周倒台后，本该被清算。但他靠着圆滑的手段，通过上官婉儿搭上了韦后，甚至成为韦后的地下情人，从而在中宗朝不可思议地继续权倾朝野。</p><p>他联合韦后，将当年逼武则天退位的张柬之等“五王”全部构陷流放至死。在朝堂上，他飞扬跋扈，甚至公开打压和侮辱太子李重俊，骂太子毫无能耐。这种极致的嚣张最终为他引来了杀身之祸。景龙政变中，愤怒的太子带兵冲入其府邸，将武三思及其子武崇训（也是安乐公主的丈夫）乱刀砍死。</p>' 
+            },
+            'chongjun': { 
+                name: '李重俊', 
+                subtitle: '被逼上绝路的太子，悲壮的困兽之斗', 
+                content: '<p>李重俊是中宗的庶长子。虽然被立为太子，但因为不是韦后亲生，他在宫中地位极其卑微。安乐公主及其丈夫武崇训根本不把他放在眼里，经常当众直呼其为“奴才”，并天天在李显面前吹风要废掉他。</p><p>忍无可忍的李重俊决定鱼死网破。景龙元年，他联合左羽林大将军李多祚发动兵变，以极其果断的手段先斩杀了武三思父子，随后挥师猛攻皇宫，试图一举诛杀韦后、安乐公主和上官婉儿。</p><p>但在玄武门外，性格懦弱的李显趴在城墙上对叛军喊话：“你们都是我的禁军，为什么要跟着太子造反？杀了他们我重重有赏！”皇权威严下，禁军瞬间倒戈，斩杀了李多祚。李重俊兵败逃亡终南山，被身边的亲信砍下首级。</p>' 
+            },
+            'taiping': { 
+                name: '太平公主', 
+                subtitle: '几乎成为武则天第二的大唐幕后大鳄', 
+                content: '<p>太平公主是武则天与唐高宗的小女儿，性格和政治手腕都极度酷似其母。在武则天晚年，她暗中参与筹划了神龙政变，成功帮助哥哥李显复辟，因功被封为“镇国太平公主”。</p><p>面对韦后的专权，太平公主隐忍不发。当中宗死后，她敏锐地与侄子李隆基结盟，共同策划了唐隆政变，一举粉碎了韦后集团，并将自己的亲哥哥相王李旦推上了皇位。此后，她的权势达到了极点，“军国大事，事必问之”。但这最终导致了她与同样强势的侄子李隆基发生不可调和的权力冲突，最终在先天政变中被李隆基赐死。</p>' 
+            },
+            'lidan': { 
+                name: '李旦 (唐睿宗)', 
+                subtitle: '三让天下的生存大师', 
+                content: '<p>相王李旦是中宗李显的同母弟弟。在大唐残酷的政治绞肉机里，他靠着极致的“让”活了下来。他曾将皇位让给母亲武则天（降为皇嗣），后又将皇嗣之位让给回宫的哥哥李显。</p><p>在中宗朝的乱局中，他闭门不出，绝不干预朝政。直到儿子李隆基和妹妹太平公主发动唐隆政变平定大局后，他才被推出来重新登基。两年后，面对妹妹和儿子的白热化斗争，他再次选择退让，将皇位禅让给李隆基，做起了太上皇，得享天年。</p>' 
+            },
+            'longji': { 
+                name: '李隆基 (唐玄宗)', 
+                subtitle: '斩断女主干政传统的执剑人', 
+                content: '<p>此时的李隆基还只是相王李旦的第三子（临淄王）。面对韦后篡权的危机，25岁的李隆基展现出了令人胆寒的果决和狠辣。他暗中结交禁军将领万骑，与姑姑太平公主一拍即合。</p><p>唐隆元年六月，李隆基带兵冲入太极宫。他下令：“凡是韦氏一族，身高超过马鞭的，不论男女老幼一律诛杀！”在这场血腥的清洗中，韦后、安乐公主、上官婉儿被全部斩杀，持续了半个世纪的“大唐女性干政”时代被他用刀剑彻底终结，为日后的开元盛世扫清了政治障碍。</p>' 
+            },
+
+            /* 事件库 */
+            'shenlong': { 
+                name: '神龙政变 (705年)', 
+                subtitle: '武周帝国的落幕，大唐王朝的复辟', 
+                content: '<p><strong>【背景】</strong><br>武则天晚年病重，居住在迎仙宫，朝政大权落入了其男宠张易之、张昌宗兄弟手中。二张飞扬跋扈，甚至逼死了太子的儿子和女儿，引发了李唐宗室和满朝文武的极度恐慌与愤怒。</p><p><strong>【经过】</strong><br>神龙元年正月，宰相张柬之联合桓彦范、敬晖等五位重臣（史称“五王”），联合右羽林卫大将军李多祚，发动禁军逼宫。他们率先斩杀了张易之兄弟，随后包围了武则天的寝宫。在刀剑的威逼下，病榻上的武则天被迫同意传位于太子李显。</p><p><strong>【结果】</strong><br>李显复辟，恢复大唐国号。长达十五年的武周政权终结。但中宗复辟后，未能保护这五位功臣，他们很快被武三思和韦后构陷，全部流放并被残忍虐杀。</p>' 
+            },
+            'jinglong': { 
+                name: '景龙兵变 (707年)', 
+                subtitle: '皇太子的困兽之斗与绝命冲锋', 
+                content: '<p><strong>【背景】</strong><br>太子李重俊因非韦后亲生，在宫中饱受屈辱。安乐公主及其驸马武崇训视其为奴仆，并疯狂向中宗施压要求废太子，立安乐公主为“皇太女”。李重俊深知再不反击，自己必死无疑。</p><p><strong>【经过】</strong><br>景龙元年七月，李重俊联合左羽林大将军李多祚发动突袭，先率兵冲入武三思府邸，将武三思及武崇训父子乱刀砍死。随后乘胜追击，挥师猛攻玄武门，要求皇帝交出韦后、安乐公主和上官婉儿。</p><p><strong>【结果】</strong><br>在上官婉儿的急智下，中宗登上城楼安抚叛军。中宗一句“杀反贼者重赏”，导致李重俊手下的禁军瞬间倒戈，反杀了将领李多祚。李重俊兵败出逃终南山，被部下割下首级献给朝廷。这场政变虽然失败，但也极大重创了武氏家族的残余势力。</p>' 
+            },
+            'tanglong': { 
+                name: '唐隆政变 (710年)', 
+                subtitle: '血洗后宫的雷霆行动', 
+                content: '<p><strong>【背景】</strong><br>中宗李显暴毙（疑似被毒杀）后，韦后秘不发丧，迅速控制京城禁军，立16岁的温王李重茂为傀儡皇帝（唐殇帝），自己临朝称制，图谋重演武则天称帝的历史。甚至有密谋要诛杀相王李旦和太平公主。</p><p><strong>【经过】</strong><br>相王之子、临淄王李隆基先发制人。唐隆元年六月庚子日深夜，李隆基率领结交的禁军“万骑”突入皇宫。禁军将领葛福顺直接冲入羽林营斩杀了韦后的亲信统帅。随后大军冲入内宫，将正在逃跑的韦后斩首于飞骑营，安乐公主在照镜子画眉时被斩杀，上官婉儿手捧遗诏试图求生，依然被李隆基下令斩杀。</p><p><strong>【结果】</strong><br>李隆基以极其狠辣的手段，一夜之间将韦氏家族及死党屠杀殆尽。随后，太平公主逼迫小皇帝李重茂退位，相王李旦重新登基，大唐的最高权力终于彻底回到了李氏男系手中。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
