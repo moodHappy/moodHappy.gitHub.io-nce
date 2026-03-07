@@ -125,10 +125,9 @@
                 <option value="2">🏢 现代极简 (居中)</option>
                 <option value="3">🍵 护眼抹茶 (居中)</option>
                 <option value="4">🌸 樱花浅粉 (居中)</option>
-                <option value="5">🏔️ 苍山秋水 (左对齐)</option>
             </select>
         </label>
-        <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder=""></textarea>
+        <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder="请输入文章标题（第一行）及正文..."></textarea>
 
         <div class="action-bar">
             <button class="btn-primary" onclick="generateHTML()">🎨 转换</button>
@@ -140,9 +139,9 @@
     <div class="card">
         <label>2. HTML 源码编辑区</label>
 
-        <input type="text" id="inlineFileName" name="dummy_filename_ignore" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" spellcheck="false" data-lpignore="true" placeholder="">
+        <input type="text" id="inlineFileName" name="dummy_filename_ignore" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" spellcheck="false" data-lpignore="true" placeholder="自动生成文件名...">
 
-        <textarea id="outputText" class="result-area" autocomplete="off" spellcheck="false" placeholder=""></textarea>
+        <textarea id="outputText" class="result-area" autocomplete="off" spellcheck="false" placeholder="这里将显示生成的HTML代码..."></textarea>
     </div>
 </div>
 
@@ -190,13 +189,22 @@
     const DEFAULT_PATH_KEY = "gh_article_default_path";
     const INITIAL_PATH = "Notes/Articles";
 
+    // 统一排版结构，仅更改配色方案
     const premiumThemes = [
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, serif; background-color: #FAFAFA; color: #2C2C2C; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 2; letter-spacing: 0.05em; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #111; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 20px; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-        `body { font-family: "Georgia", "Xin Gothic", "Hiragino Sans GB", serif; background-color: #F8F4E6; color: #4A3F35; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.9; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.2em; color: #2C241B; border-bottom: 2px dashed #D5CBBB; padding-bottom: 20px; } p { margin-bottom: 1.6em; text-indent: 2em; }`,
-        `body { font-family: "Helvetica Neue", Helvetica, "Microsoft YaHei", sans-serif; background-color: #FFFFFF; color: #333333; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 21px; line-height: 1.8; font-weight: 300; } h1 { text-align: center; font-size: 2.4em; margin-bottom: 1.2em; color: #000000; font-weight: 700; letter-spacing: -0.02em; } p { margin-bottom: 1.5em; }`,
-        `body { font-family: system-ui, -apple-system, sans-serif; background-color: #F0F7F4; color: #2D4035; max-width: 780px; margin: 0 auto; padding: 40px 24px; font-size: 19px; line-height: 1.85; } h1 { text-align: center; font-size: 2em; margin-bottom: 1.5em; color: #1A2E22; font-weight: 600; } p { margin-bottom: 1.4em; }`,
-        `body { font-family: "Optima", "Microsoft YaHei", sans-serif; background-color: #FFF7F8; color: #4A3B42; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #6E4A55; font-weight: bold; } p { margin-bottom: 1.5em; text-indent: 2em; }`,
-        `body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; background-color: #F2F5F8; color: #344356; max-width: 800px; margin: 0 auto; padding: 45px 24px; font-size: 20px; line-height: 1.9; } h1 { font-size: 2.1em; margin-bottom: 1.5em; color: #1C2D42; font-weight: bold; border-left: 6px solid #6082B6; padding-left: 15px; text-align: left; } p { margin-bottom: 1.5em; }`
+        // 0: 典雅书卷
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FAFAFA; color: #2C2C2C; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #EEEEEE; padding-bottom: 20px; color: #111111; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        
+        // 1: 温润纸张
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F8F4E6; color: #4A3F35; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; color: #2C241B; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        
+        // 2: 现代极简
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFFFFF; color: #333333; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #E0E0E0; padding-bottom: 20px; color: #000000; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        
+        // 3: 护眼抹茶
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        
+        // 4: 樱花浅粉
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`
     ];
 
     window.onload = () => { 
