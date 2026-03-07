@@ -60,7 +60,6 @@
         .btn-push { background-color: var(--push-btn); }
         .btn-secondary { background-color: #8E8E93; }
 
-        /* Modal 样式 */
         .modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
@@ -112,10 +111,8 @@
     <h1>✨ 网页排版 & GitHub 推送融合引擎</h1>
 
     <div class="card">
-        <label>
-            1. 自动排版区 
-        </label>
-        <textarea id="inputText" class="input-area" placeholder=""></textarea>
+        <label>1. 自动排版区</label>
+        <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false"></textarea>
 
         <div class="action-bar">
             <button class="btn-primary" onclick="generateHTML()">🎨 随机主题并转换 ↓</button>
@@ -125,21 +122,18 @@
     </div>
 
     <div class="card">
-        <label>
-            2. HTML 源码编辑区 
-        </label>
+        <label>2. HTML 源码编辑区</label>
         
-        <input type="text" id="inlineFileName" placeholder="">
+        <input type="text" id="inlineFileName" autocomplete="off" spellcheck="false" data-lpignore="true">
         
-        <textarea id="outputText" class="result-area" placeholder=""></textarea>
+        <textarea id="outputText" class="result-area" autocomplete="off" spellcheck="false"></textarea>
     </div>
 </div>
 
 <div id="tokenModal" class="modal">
     <div class="modal-content">
         <h3>🔐 设置 GitHub Token</h3>
-        <p style="font-size:0.85rem; color:#666; margin:0;">请确保 Token 具有 repo 权限。</p>
-        <input type="password" id="ghToken" placeholder="ghp_xxxxxx...">
+        <input type="password" id="ghToken" autocomplete="off" data-lpignore="true">
         <div style="display:flex; gap:10px; margin-top:5px;">
             <button class="btn-primary" style="flex:2" onclick="saveToken()">保存 Token</button>
             <button class="btn-secondary" style="flex:1" onclick="closeModal('tokenModal')">取消</button>
@@ -154,7 +148,7 @@
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
             <label style="font-size: 0.9rem;">选择推送文件夹</label>
             <div class="path-list-container" id="pathList"></div>
-            <input type="text" id="newPathInput" placeholder="例如: Notes/Articles">
+            <input type="text" id="newPathInput" autocomplete="off" data-lpignore="true">
         </div>
         
         <div style="font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
@@ -194,7 +188,7 @@
 
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
-        if (!input) { showToast('⚠️ 纯文本框为空，请先输入文字'); return; }
+        if (!input) { showToast('⚠️ 纯文本框为空'); return; }
 
         const lines = input.split(/\n+/).map(line => line.trim()).filter(line => line !== '');
         if (lines.length === 0) return;
@@ -226,18 +220,18 @@ ${htmlBody}
         const safeTitle = articleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
         document.getElementById('inlineFileName').value = safeTitle;
 
-        showToast('✨ 转换成功！源码已更新至下方区域。');
+        showToast('✨ 转换成功');
     }
 
     function copyHTML() {
         const outputText = document.getElementById('outputText').value.trim();
-        if (!outputText) { showToast('⚠️ HTML 源码区为空，请先生成或粘贴'); return; }
+        if (!outputText) { showToast('⚠️ 源码区为空'); return; }
         navigator.clipboard.writeText(outputText).then(() => {
-            showToast('✅ 源码已成功复制！');
+            showToast('✅ 已复制');
         }).catch(() => {
             document.getElementById('outputText').select();
             document.execCommand('copy');
-            showToast('✅ 源码已复制！');
+            showToast('✅ 已复制');
         });
     }
 
@@ -258,11 +252,10 @@ ${htmlBody}
     function openPushDialog() {
         const htmlContent = document.getElementById('outputText').value.trim();
         if (!htmlContent) { 
-            showToast("⚠️ HTML 源码区为空，请先生成或直接粘贴"); 
+            showToast("⚠️ 源码区为空"); 
             return; 
         }
         if (!localStorage.getItem('gh_token')) { 
-            showToast("⚠️ 请先设置 Token"); 
             openTokenSettings(); 
             return; 
         }
@@ -319,7 +312,7 @@ ${htmlBody}
         if (!targetPath) { showToast("⚠️ 推送路径不能为空"); return; }
 
         const btn = document.getElementById('confirmPushBtn');
-        btn.innerText = "⏳ 正在推送...";
+        btn.innerText = "⏳ 推送中...";
         btn.disabled = true;
 
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
@@ -371,7 +364,7 @@ ${htmlBody}
                 throw new Error(err.message || "请求失败"); 
             }
 
-            showToast("🎉 推送成功！文件已保存至 GitHub");
+            showToast("🎉 推送成功");
             closeModal('pushModal');
         } catch (e) { 
             alert("推送失败: " + e.message); 
