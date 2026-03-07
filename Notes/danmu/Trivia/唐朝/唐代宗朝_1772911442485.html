@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐代宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/构陷/逼反线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧郭子仪卡片中心在100px，半宽34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐代宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 100px; top: 100px; width: 220px; height: 1px;"></div>
+
+        <div class="line" style="left: 100px; top: 100px; width: 1px; height: 160px;"></div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 100px; width: 1px; height: 160px;"></div>
+
+        <div class="line" style="left: 320px; top: 60px; width: 1px; height: 40px;"></div>
+        <div class="line" style="left: 320px; top: 60px; width: 240px; height: 1px;"></div>
+        <div class="line" style="left: 440px; top: 60px; width: 1px; height: 200px;"></div>
+        <div class="line" style="left: 560px; top: 60px; width: 1px; height: 200px;"></div>
+
+        <div class="kill-h" style="left: 320px; top: 100px; width: 220px;"></div>
+
+        <div class="kill-v" style="left: 540px; top: 100px; height: 80px;"></div>
+        <div class="kill-h" style="left: 440px; top: 180px; width: 100px;"></div>
+        <div class="kill-v" style="left: 440px; top: 180px; height: 80px;"></div>
+
+        <div class="kill-solid-v" style="left: 560px; top: 180px; height: 80px;"></div>
+
+        <div class="kill-v" style="left: 100px; top: 260px; height: 80px;"></div>
+        <div class="kill-v" style="left: 440px; top: 260px; height: 80px;"></div>
+        <div class="kill-v" style="left: 560px; top: 260px; height: 80px;"></div>
+        <div class="kill-h" style="left: 100px; top: 340px; width: 460px;"></div>
+
+        <div class="label" style="left: 210px; top: 90px;">剥夺兵权 / 临危复用</div>
+        <div class="label" style="left: 430px; top: 90px; color: #c62828; font-weight: bold;">尊为尚父 / 深夜斩首</div>
+        
+        <div class="label" style="left: 335px; top: 180px;">洛阳失散 / 终生寻觅</div>
+        <div class="label" style="left: 90px; top: 180px;">提拔 / 部将</div>
+
+        <div class="label" style="left: 380px; top: 50px;">扶植新宦官</div>
+        <div class="label" style="left: 490px; top: 170px; color: #c62828;">背刺 / 夺权</div>
+        <div class="label" style="left: 560px; top: 200px; color: #c62828; font-weight: bold;">设局勒死</div>
+
+        <div class="label" style="left: 330px; top: 330px; color: #c62828; font-weight: bold;">宦官疯狂构陷 / 逼反大将</div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('daizong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李豫</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('guo')">
+            <div class="c-dark">副元帅 / 汾阳王</div>
+            <div class="c-minister">郭子仪</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('lifuguo')">
+            <div class="c-dark">中书令 / 尚父</div>
+            <div class="c-minister">李辅国</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 260px;" onclick="showInfo('shen')">
+            <div class="c-dark">睿真皇后 (追尊)</div>
+            <div class="c-consort">沈氏</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 260px;" onclick="showInfo('pugu')">
+            <div class="c-dark">副元帅 / 节度使</div>
+            <div class="c-minister">仆固怀恩</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 260px;" onclick="showInfo('cheng')">
+            <div class="c-dark">骠骑大将军</div>
+            <div class="c-minister">程元振</div>
+        </div>
+
+        <div class="person" style="left: 560px; top: 260px;" onclick="showInfo('yu')">
+            <div class="c-dark">观军容使</div>
+            <div class="c-minister">鱼朝恩</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">代宗朝三大权力剧变</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('cisha')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">762年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">刺杀辅国</div>
+            </div>
+            <div class="event-card" onclick="showInfo('tubo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">763年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">吐蕃陷京</div>
+            </div>
+            <div class="event-card" onclick="showInfo('pingpan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">763 - 765年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">安史落幕与平叛</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'daizong': { 
+                name: '李豫 (唐代宗)', 
+                subtitle: '扮猪吃老虎的极道刺客，宦官专政的助推者', 
+                content: '<p>作为在安史之乱的尸山血海中摸爬滚打出来的皇长子，李豫深知权力的残酷。他被宦官李辅国扶上皇位时，李辅国嚣张地说：“大家（皇帝）只管在宫里坐着，外面的事听老奴处置。”李豫表面上唯唯诺诺，甚至尊李辅国为“尚父”，暗地里却是一条致命的毒蛇。</p><p>他利用宦官内部的矛盾，提拔程元振架空了李辅国，随后在一个深夜直接派刺客砍下了李辅国的头颅。后来，面对同样权倾朝野的宦官鱼朝恩，他隐忍数年，最终在寒食节设下鸿门宴将其当场勒死。然而，代宗虽然极其擅长“物理消灭”权臣，却因为极度猜忌郭子仪等武将，彻底将神策军（禁军）的兵权交给了宦官，打开了中晚唐“宦官随意废立皇帝”的潘多拉魔盒。</p>' 
+            },
+            'guo': { 
+                name: '郭子仪', 
+                subtitle: '大唐最完美的救火队长与背锅侠', 
+                content: '<p>郭子仪是平定安史之乱的第一功臣，但他的一生都在“被剥夺兵权”和“临危受命”之间反复横跳。代宗极其忌惮他在军中的威望，宦官程元振和鱼朝恩更是日夜进谗言，导致郭子仪多次被剥夺兵权，闲居长安。</p><p>但每当大唐面临灭顶之灾——比如吐蕃攻陷长安、仆固怀恩引回纥大军入寇，代宗身边无人可用时，只能哭着去请郭子仪出山。郭子仪靠着极致的高情商活了下来：他故意敞开自家大门让人参观以示没有阴谋，甚至在鱼朝恩挖了他家祖坟后，为了国家大局，他当着皇帝的面痛哭说：“这都是我统兵不严，导致士兵挖了百姓祖坟，现在是上天惩罚我，不怪别人。”这种极致的隐忍，让他成为大唐极少数功高震主却能得以善终的异姓王。</p>' 
+            },
+            'lifuguo': { 
+                name: '李辅国', 
+                subtitle: '权倾天下的第一阉党，死于茅坑的傲慢狂徒', 
+                content: '<p>李辅国在肃宗朝权势滔天，甚至敢当面斩杀张皇后。拥立代宗后，他自认为是太上皇，跋扈到了极点。但他忘记了代宗也是从死人堆里爬出来的狠角色。</p><p>代宗表面上对他恩宠有加，暗中却联合另一名宦官程元振夺取了他的禁军兵权。失去兵权的李辅国被赶出皇宫。宝应元年十月的一个深夜，代宗派出的刺客潜入李辅国府中，不仅一剑斩下了这位“尚父”的头颅，还极其侮辱性地砍下他的一条胳膊，将残尸扔进了府内的溷厕（茅坑）中。第二天，代宗甚至假惺惺地“大惊失色”，下令严查凶手，可谓影帝级别的政治表演。</p>' 
+            },
+            'shen': { 
+                name: '沈氏 (沈珍珠)', 
+                subtitle: '大唐史上最令人唏嘘的失踪悬案', 
+                content: '<p>沈氏是代宗在广平王时期的结发妻子，也是唐德宗的生母。安史之乱爆发时，玄宗带着皇室核心仓皇逃亡四川，沈氏等大量女眷被遗弃在长安，随后被叛军劫掠至洛阳。</p><p>代宗收复洛阳后，曾短暂与沈氏重逢。但不久后史思明再次攻陷洛阳，沈氏从此彻底失踪。代宗登基后，用尽余生在全天下疯狂寻找这位结发妻子，十几年间无数女子冒充沈氏，代宗宁可被骗也不愿放弃。甚至到了她的孙子唐宪宗时期，寻找沈氏的诏书依然在发布。这位生不见人、死不见尸的皇后，成为了大唐皇室永远的痛。</p>' 
+            },
+            'pugu': { 
+                name: '仆固怀恩', 
+                subtitle: '满门忠烈却被宦官逼反的绝路悲歌', 
+                content: '<p>仆固怀恩是铁勒族将领，在平定安史之乱中立下了赫赫战功，他的一家为了大唐死难了四十六口人，甚至为了借兵平叛，他狠心将两个亲生女儿嫁给了回纥可汗（和亲）。</p><p>然而，这样一位功臣，却遭到了宦官辛云京、骆奉先、程元振的疯狂构陷。他们截留他的奏折，诬陷他拥兵自重。代宗的猜忌让仆固怀恩彻底心寒。他悲愤地喊出：“我一家死难四十六人，却换来如此下场！”最终，在走投无路之下，他举兵造反，甚至引诱吐蕃和回纥三十万大军进攻大唐。在进军途中，这位极具悲剧色彩的将军暴病而亡。</p>' 
+            },
+            'cheng': { 
+                name: '程元振', 
+                subtitle: '扳倒李辅国的新贵，葬送长安的罪人', 
+                content: '<p>程元振是代宗用来对付李辅国的一把快刀。在成功夺取禁军控制权后，他迅速接管了李辅国的权力遗产，成为了新一代的权阉。</p><p>他比李辅国更加短视和闭塞视听。广德元年，吐蕃二十万大军逼近长安，前线的告急文书如雪片般飞来，程元振为了粉饰太平，竟然全部截留不报。直到吐蕃军队打到长安城外，代宗才如梦初醒，仓皇逃亡陕州。长安被吐蕃洗劫一空。愤怒的朝臣将矛头直指程元振，代宗迫于压力将其流放，不久后赐死。</p>' 
+            },
+            'yu': { 
+                name: '鱼朝恩', 
+                subtitle: '掌控神策军的狂妄太监，死于女皇式鸿门宴', 
+                content: '<p>鱼朝恩是代宗朝后期的核心权阉。他最大的政治资本，是在代宗逃亡陕州时，带领禁军（后来的神策军）护驾有功，从此彻底掌控了大唐最精锐的中央军。</p><p>鱼朝恩狂妄到了极点，他不仅在朝堂上公开辱骂宰相，甚至为了破坏郭子仪的风水，派人挖了郭子仪父亲的祖坟。面对如此权臣，代宗再次施展了极致的隐忍，暗中收买鱼朝恩的心腹。大历五年寒食节，代宗在宫中设宴招待鱼朝恩，宴会结束后，早已埋伏好的武士将其当场诱捕并用绳子勒死，随后对外宣称其是“上吊自杀”。</p>' 
+            },
+
+            /* 事件库 */
+            'cisha': { 
+                name: '刺杀李辅国 (762年)', 
+                subtitle: '最原始的暴力，终结最狂妄的权阉', 
+                content: '<p><strong>【背景起因】</strong><br>李辅国不仅手握禁军，还曾派人假传圣旨软禁太上皇玄宗、当面诛杀张皇后。代宗即位后，李辅国自封为“尚父”，要求皇帝交出所有政务处理权。</p><p><strong>【事变经过】</strong><br>代宗极其冷静，他先是满足李辅国的一切要求，麻痹其神经；暗中利用程元振掌控了禁军。在剥夺李辅国兵权让其退休回家后，代宗依然觉得不安全。宝应元年十月的一个深夜，数名刺客翻入李府，用剑砍下李辅国的头颅和右臂，将其残尸丢入茅坑。</p><p><strong>【最终结果】</strong><br>这是大唐历史上极其罕见的“皇帝派刺客暗杀大臣”的事件，展现了代宗在权力斗争中不择手段的残酷本性。</p>' 
+            },
+            'tubo': { 
+                name: '吐蕃陷京 (763年)', 
+                subtitle: '大唐首都的第二次沦陷，宦官乱政的恶果', 
+                content: '<p><strong>【背景起因】</strong><br>安史之乱耗尽了大唐的军事精锐，西部边防空虚。吐蕃趁机纠集二十万大军东进。权阉程元振为了垄断朝政，竟然将所有边关告急的军情全部扣下不报。</p><p><strong>【事变经过】</strong><br>广德元年十月，吐蕃大军突然出现在长安城外。毫无防备的代宗仓皇出逃陕州，长安再次沦陷。吐蕃人在长安扶持了傀儡皇帝，并对全城进行了残酷的洗劫。</p><p><strong>【最终结果】</strong><br>国难当头，代宗被迫再次启用被闲置的郭子仪。郭子仪由于手中无兵，只能派出少量骑兵在长安周边虚张声势，白天击鼓，晚上点火，硬生生通过心理战吓退了吐蕃大军。大唐的虚弱在此刻暴露无遗。</p>' 
+            },
+            'pingpan': { 
+                name: '安史落幕与平叛 (763 - 765年)', 
+                subtitle: '大乱终结，却开启了藩镇割据的毒瘤', 
+                content: '<p><strong>【背景起因】</strong><br>持续八年的安史之乱已经让大唐财政崩溃。代宗即位后，急于结束战争，采取了极其妥协的平叛策略。</p><p><strong>【事变经过】</strong><br>广德元年（763年），安史叛军最后的首领史朝义在穷途末路下自缢身亡。为了迅速稳定局面，代宗做出了一个遗患无穷的决定：全盘接受了叛军将领（如田承嗣、李宝臣等）的投降，并让他们继续控制原来的地盘，任命他们为节度使。</p><p><strong>【最终结果】</strong><br>虽然安史之乱在名义上结束了，但河北一带的军阀实际上成为了独立王国（河朔三镇）。大唐从“平叛模式”直接无缝切换到了晚唐的“藩镇割据模式”，中央集权遭到了毁灭性的破坏。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
