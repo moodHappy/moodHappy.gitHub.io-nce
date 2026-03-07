@@ -36,6 +36,11 @@
 
         label { font-size: 0.95rem; font-weight: 600; color: #555; display: flex; justify-content: space-between; align-items: center; }
 
+        select {
+            padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 0.9rem; outline: none; background: #FFF; cursor: pointer; color: #333;
+        }
+
         textarea {
             width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 14px;
             font-size: 16px; font-family: inherit; resize: vertical; background-color: #FAFAFA;
@@ -111,11 +116,22 @@
     <h1>✨ 传记排版 & 源码推送</h1>
 
     <div class="card">
-        <label>1. 自动排版区</label>
+        <label>
+            <span>1. 自动排版区</span>
+            <select id="themeSelect">
+                <option value="random">🎲 随机主题</option>
+                <option value="0">📖 典雅书卷 (居中)</option>
+                <option value="1">📜 温润纸张 (居中)</option>
+                <option value="2">🏢 现代极简 (居中)</option>
+                <option value="3">🍵 护眼抹茶 (居中)</option>
+                <option value="4">🌸 樱花浅粉 (居中)</option>
+                <option value="5">🏔️ 苍山秋水 (左对齐)</option>
+            </select>
+        </label>
         <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder=""></textarea>
 
         <div class="action-bar">
-            <button class="btn-primary" onclick="generateHTML()">🎨 随机主题并转换 ↓</button>
+            <button class="btn-primary" onclick="generateHTML()">🎨 应用主题并转换 ↓</button>
             <button class="btn-success" onclick="copyHTML()">📋 复制底部源码</button>
             <button class="btn-push" onclick="openPushDialog()">📤 推送底部源码</button>
         </div>
@@ -180,7 +196,7 @@
         `body { font-family: "Helvetica Neue", Helvetica, "Microsoft YaHei", sans-serif; background-color: #FFFFFF; color: #333333; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 21px; line-height: 1.8; font-weight: 300; } h1 { text-align: center; font-size: 2.4em; margin-bottom: 1.2em; color: #000000; font-weight: 700; letter-spacing: -0.02em; } p { margin-bottom: 1.5em; }`,
         `body { font-family: system-ui, -apple-system, sans-serif; background-color: #F0F7F4; color: #2D4035; max-width: 780px; margin: 0 auto; padding: 40px 24px; font-size: 19px; line-height: 1.85; } h1 { text-align: center; font-size: 2em; margin-bottom: 1.5em; color: #1A2E22; font-weight: 600; } p { margin-bottom: 1.4em; }`,
         `body { font-family: "Optima", "Microsoft YaHei", sans-serif; background-color: #FFF7F8; color: #4A3B42; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #6E4A55; font-weight: bold; } p { margin-bottom: 1.5em; text-indent: 2em; }`,
-        `body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; background-color: #F2F5F8; color: #344356; max-width: 800px; margin: 0 auto; padding: 45px 24px; font-size: 20px; line-height: 1.9; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.5em; color: #1C2D42; font-weight: bold; border-left: 6px solid #6082B6; padding-left: 15px; text-align: left; } p { margin-bottom: 1.5em; }`
+        `body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; background-color: #F2F5F8; color: #344356; max-width: 800px; margin: 0 auto; padding: 45px 24px; font-size: 20px; line-height: 1.9; } h1 { font-size: 2.1em; margin-bottom: 1.5em; color: #1C2D42; font-weight: bold; border-left: 6px solid #6082B6; padding-left: 15px; text-align: left; } p { margin-bottom: 1.5em; }`
     ];
 
     window.onload = () => { 
@@ -196,7 +212,14 @@
 
         const articleTitle = lines[0]; 
         const bodyLines = lines.slice(1);
-        const randomTheme = premiumThemes[Math.floor(Math.random() * premiumThemes.length)];
+        
+        const themeSelect = document.getElementById('themeSelect').value;
+        let randomTheme;
+        if (themeSelect === 'random') {
+            randomTheme = premiumThemes[Math.floor(Math.random() * premiumThemes.length)];
+        } else {
+            randomTheme = premiumThemes[parseInt(themeSelect)];
+        }
 
         let htmlBody = `    <h1>${articleTitle}</h1>\n`;
         htmlBody += bodyLines.map(p => `    <p>${p}</p>`).join('\n');
@@ -220,7 +243,6 @@ ${htmlBody}
         
         const safeTitle = articleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
         
-        // 生成后处理 readonly 状态以便赋值
         const fileNameInput = document.getElementById('inlineFileName');
         fileNameInput.removeAttribute('readonly');
         fileNameInput.value = safeTitle;
