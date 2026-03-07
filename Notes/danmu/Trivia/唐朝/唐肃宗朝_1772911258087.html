@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐肃宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 380px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/构陷/逼迫线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧太上皇卡片中心在100px，半宽34px，左边缘为66px，完美垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐肃宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 100px; top: 100px; width: 220px; height: 1px;"></div>
+        
+        <div class="line" style="left: 320px; top: 100px; width: 220px; height: 1px;"></div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 80px;"></div>
+        <div class="line" style="left: 160px; top: 180px; width: 160px; height: 1px;"></div>
+        <div class="line" style="left: 160px; top: 180px; width: 1px; height: 100px;"></div> <div class="line" style="left: 320px; top: 180px; width: 1px; height: 100px;"></div> <div class="line-v-dashed" style="left: 535px; top: 100px; height: 180px;"></div>
+        <div class="kill-v" style="left: 545px; top: 100px; height: 180px;"></div>
+
+        <div class="kill-h" style="left: 100px; top: 110px; width: 220px;"></div>
+
+        <div class="kill-v" style="left: 320px; top: 130px; height: 150px;"></div>
+        <div class="kill-h" style="left: 320px; top: 130px; width: 220px;"></div>
+
+        <div class="kill-h" style="left: 320px; top: 280px; width: 220px;"></div>
+
+        <div class="kill-h" style="left: 100px; top: 280px; width: 440px;"></div>
+        <div class="kill-v" style="left: 100px; top: 100px; height: 180px;"></div>
+
+        <div class="label" style="left: 210px; top: 90px;">父子 / 法理</div>
+        <div class="label" style="left: 210px; top: 120px; color: #c62828;">遥尊架空 / 终生猜忌</div>
+        <div class="label" style="left: 430px; top: 90px;">夫妻</div>
+        
+        <div class="label" style="left: 505px; top: 190px;">内廷勾结</div>
+        <div class="label" style="left: 580px; top: 190px; color: #c62828; font-weight: bold;">发兵诛杀</div>
+
+        <div class="label" style="left: 240px; top: 170px;">庶长子</div>
+        <div class="label" style="left: 350px; top: 210px;">统军立功</div>
+
+        <div class="label" style="left: 430px; top: 120px; color: #c62828; font-weight: bold;">进谗陷害</div>
+        <div class="label" style="left: 430px; top: 270px; color: #c62828; font-weight: bold;">构陷赐死</div>
+        <div class="label" style="left: 210px; top: 270px; color: #c62828; font-weight: bold;">强行软禁 / 惊吓</div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('xuanzong')">
+            <div class="c-dark">太上皇</div>
+            <div class="c-emperor" style="font-size: 18px;">李隆基</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('suzong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李亨</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('zhang')">
+            <div class="c-dark">皇后</div>
+            <div class="c-consort">张氏</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 280px;" onclick="showInfo('liyu')">
+            <div class="c-dark">皇太子</div>
+            <div class="c-emperor">李豫</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 280px;" onclick="showInfo('litan')">
+            <div class="c-dark">齐王 / 建宁王</div>
+            <div class="c-minister">李倓</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 280px;" onclick="showInfo('lifuguo')">
+            <div class="c-dark">尚父 / 中书令</div>
+            <div class="c-minister">李辅国</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">肃宗朝三大权力节点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('lingwu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">756年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">灵武登基</div>
+            </div>
+            <div class="event-card" onclick="showInfo('cisi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">757年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">赐死建宁</div>
+            </div>
+            <div class="event-card" onclick="showInfo('baoying')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">762年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">宝应政变</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'xuanzong': { 
+                name: '李隆基', 
+                subtitle: '落毛凤凰不如鸡，晚景凄凉的昔日霸主', 
+                content: '<p>马嵬坡兵变后，李隆基逃往四川，却在路上接到了儿子李亨在灵武自行登基、将自己“遥尊”为太上皇的消息。面对既成事实的夺权，这位曾经叱咤风云的帝王只能苦涩地接受现实。</p><p>安史之乱平定后，他回到长安，被安置在兴庆宫。但肃宗对他依然极度防备。晚年的他遭遇了极其屈辱的对待：权阉李辅国假传圣旨，带着刀斧手将他强行劫持软禁到太极宫，并将他身边的老臣高力士、陈玄礼全部流放。失去所有亲信的李隆基在极度的孤独、抑郁和惊恐中度过了残生，最终郁郁而终。</p>' 
+            },
+            'suzong': { 
+                name: '李亨', 
+                subtitle: '一生都在恐惧与猜忌中挣扎的平庸天子', 
+                content: '<p>作为当了近三十年“惊弓之鸟”的太子，李亨的性格中刻满了多疑与怯懦。在安史之乱的国难当头，他在灵武果断夺权登基，这是他一生中唯一的高光时刻。</p><p>然而，掌权后的他完美继承了父亲对武将和儿子的猜忌。为了制衡大将和防备皇子，他将皇权无底线地让渡给身边的宦官（李辅国）和妻子（张皇后）。他甚至听信谗言，亲口下令赐死了在平叛中立下赫赫战功的亲生儿子李倓。在位晚年，他彻底沦为宦官与皇后的傀儡，病重时甚至眼睁睁听着殿外的禁军火拼，在极度的惊吓与绝望中崩逝。</p>' 
+            },
+            'zhang': { 
+                name: '张氏', 
+                subtitle: '妄图复刻武则天，却惨死在宦官刀下的野心家', 
+                content: '<p>张皇后在肃宗逃亡灵武的艰难岁月里，曾日夜持刀站在肃宗帐外护卫，两人患难与共。但在当上皇后之后，她的权力欲急剧膨胀。她敏锐地发现肃宗性格软弱，便开始大肆干政，企图成为第二个武则天或韦皇后。</p><p>她首先联合权阉李辅国，除掉了眼中钉建宁王李倓。随着肃宗病危，她图谋废掉皇太子李豫，并密谋诛杀已经尾大不掉的李辅国。但她严重低估了宦官对禁军的掌控力。在政变当夜，她被李辅国的禁军追杀，吓得逃入肃宗的病房，死死抱住奄奄一息的肃宗哭喊求救。李辅国的士兵竟然当着皇帝的面，硬生生将她拖出殿外斩杀。</p>' 
+            },
+            'lifuguo': { 
+                name: '李辅国', 
+                subtitle: '开启中晚唐“宦官专政”魔盒的终极权奴', 
+                content: '<p>长相极其丑陋的李辅国，本是东宫的一名养马太监。但他极其狡猾，在灵武登基时首倡有功，深受肃宗信任，不仅掌握了禁军（元帅府行军司马），还被封为当朝宰相（中书令），甚至被尊称为“尚父”。大唐的宦官专权，正是从他这里正式制度化、军事化。</p><p>他飞扬跋扈到了极点，强行软禁太上皇玄宗，逼迫肃宗杀子。在肃宗临终前，他带兵冲入皇宫诛杀张皇后，彻底掌控了大局。代宗（李豫）继位后，李辅国竟然傲慢地对新皇帝说：“大家（皇帝）但内里坐，外事听老奴处置。”这种极致的狂妄最终引来了杀身之祸，不久后他在深夜被代宗派去的刺客斩下首级，扔进了茅坑。</p>' 
+            },
+            'litan': { 
+                name: '李倓', 
+                subtitle: '战功赫赫却死于谗言的大唐意难平', 
+                content: '<p>建宁王李倓是肃宗的第三子，英勇善战，极具军事统帅的才干。在平定安史之乱的初期，他身先士卒，多次率领轻骑血战叛军，极大地稳住了风雨飘摇的唐军阵线。</p><p>但他性格极其刚烈正直，多次当面痛斥张皇后与李辅国干预朝政、祸乱纲常，这为他招致了杀身之祸。张皇后和李辅国日夜在肃宗耳边吹风，诬陷李倓图谋杀害太子、企图篡位。生性多疑且软弱的肃宗竟然信以为真，下诏赐死了这位大唐的救命恩人。李倓的冤死，让无数前线将士寒心，也被后世视为肃宗一生最大的政治污点。</p>' 
+            },
+            'liyu': { 
+                name: '李豫', 
+                subtitle: '在刀光剑影中隐忍苟活的最终赢家', 
+                content: '<p>作为肃宗的庶长子和皇太子，李豫（即后来的唐代宗）亲眼目睹了弟弟李倓因为刚直而被谗言赐死的惨剧。从此，他学会了极致的隐忍和伪装。面对张皇后和李辅国的百般刁难与挑衅，他始终表现得唯唯诺诺、毫无主见。</p><p>正是这种懦弱的表象，让他成功活到了肃宗驾崩的那一天。在宝应政变中，李辅国诛杀了张皇后，将李豫推上了皇位。登基后的李豫立刻展现出了与其父完全不同的帝王手腕，他先是安抚李辅国，随后暗中剥夺其兵权，最终派刺客将其暗杀，成功夺回了皇权，并接手了这个千疮百孔的帝国。</p>' 
+            },
+
+            /* 事件库 */
+            'lingwu': { 
+                name: '灵武登基 (756年)', 
+                subtitle: '逼宫与割裂，天无二日的权力交接', 
+                content: '<p><strong>【背景起因】</strong><br>安史之乱爆发，长安沦陷，唐玄宗仓皇逃往四川。太子李亨在马嵬坡兵变后，听从当地百姓和将领的挽留，与父亲分道扬镳，北上前往朔方军大本营——灵武（今宁夏）。</p><p><strong>【事变经过】</strong><br>在灵武，面对群龙无首的平叛大军，在李辅国等人的极力劝进下，李亨未经玄宗同意，直接在灵武南门城楼上登基称帝（即唐肃宗），并单方面下发诏书，尊远在四川的玄宗为“上皇天帝”。</p><p><strong>【最终结果】</strong><br>这次登基虽然在法理上属于“篡位”，但在当时极大地振奋了北方平叛唐军的士气。然而，这也导致大唐帝国出现了两个皇帝的尴尬局面，为日后玄宗与肃宗之间刻骨铭心的猜忌与软禁埋下了祸根。</p>' 
+            },
+            'cisi': { 
+                name: '赐死建宁 (757年)', 
+                subtitle: '自毁长城的亲情悲剧', 
+                content: '<p><strong>【背景起因】</strong><br>建宁王李倓在平叛前线屡立战功，威望极高。但他对后宫张良娣（张皇后）和太监李辅国干政深恶痛绝，多次向肃宗进言要求诛杀此二人，导致双方水火不容。</p><p><strong>【事变经过】</strong><br>张皇后和李辅国先下手为强，利用肃宗多疑的性格，日夜进谗言，声称李倓因为没当上兵马大元帅而心怀怨恨，正在密谋杀害太子李豫并篡夺皇位。肃宗在恐惧和愤怒之下，竟然不顾李泌等重臣的拼死阻拦，直接下令赐死李倓。</p><p><strong>【最终结果】</strong><br>李倓的死不仅是大唐皇室的悲剧，更让平叛前线的将士心灰意冷。肃宗这种“亲小人、远骨肉”的做法，彻底暴露了他作为帝王的平庸，也确立了张皇后与李辅国在朝堂上不可撼动的专权地位。</p>' 
+            },
+            'baoying': { 
+                name: '宝应政变 (762年)', 
+                subtitle: '病榻前的绝杀，张皇后的末日', 
+                content: '<p><strong>【背景起因】</strong><br>肃宗病危，太上皇玄宗也在十几日前刚刚抑郁而终。张皇后企图效仿韦后临朝称制，并深知权阉李辅国不会受自己摆布，于是密谋召集越王李系，准备在宫中埋伏甲士诛杀李辅国和太子李豫。</p><p><strong>【事变经过】</strong><br>张皇后的密谋被宦官告发。李辅国立刻调集禁军包围了皇宫，并将太子李豫保护起来。随后，禁军冲入内宫抓捕张皇后。张皇后吓得逃入肃宗的寝殿，扑在病榻上大呼救命。李辅国的士兵毫无顾忌，直接当着奄奄一息的肃宗的面，将张皇后强行拖出斩杀。</p><p><strong>【最终结果】</strong><br>本就病入膏肓的肃宗受此巨大惊吓，当天便驾崩于长生殿。李辅国彻底掌控大局，拥立太子李豫登基（唐代宗）。这场政变标志着肃宗朝的落幕，也宣告了宦官势力正式在唐朝的权力金字塔上登顶。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
