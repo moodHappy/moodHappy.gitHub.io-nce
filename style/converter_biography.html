@@ -2,163 +2,228 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高定版文章排版引擎</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>传记推送</title>
     <style>
-        /* 转换器本身的 UI 样式 */
         :root {
-            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --primary: #4A90E2;
-            --success: #43A047;
-            --text-main: #2C3E50;
+            --primary: #007AFF;
+            --success: #34C759;
+            --push-btn: #FF9500;
+            --bg: #F2F2F7;
+            --card: #FFFFFF;
+            --text: #1C1C1E;
+            --border: #E5E5EA;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: var(--bg-gradient);
-            min-height: 100vh;
-            color: var(--text-main);
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg); color: var(--text); margin: 0; padding: 20px 15px;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
-        .container {
-            width: 100%;
-            max-width: 850px;
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            backdrop-filter: blur(10px);
+
+        .main-container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 20px; }
+
+        #settings-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; z-index: 10; transition: transform 0.2s; }
+        #settings-icon:hover { transform: rotate(45deg); }
+
+        h1 { font-size: 1.4rem; text-align: center; margin: 0 0 10px 0; color: #333; font-weight: 700; }
+
+        .card {
+            background: var(--card); border-radius: 16px; padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 15px;
         }
-        h2 { text-align: center; margin-bottom: 24px; font-weight: 600; font-size: 1.5rem; letter-spacing: 1px; }
-        .grid-layout { display: grid; gap: 20px; }
+
+        label { font-size: 0.95rem; font-weight: 600; color: #555; display: flex; justify-content: space-between; align-items: center; }
+
         textarea {
-            width: 100%;
-            height: 220px;
-            padding: 16px;
-            border: 1px solid #e1e4e8;
-            border-radius: 12px;
-            font-size: 1rem;
-            line-height: 1.6;
-            resize: vertical;
-            transition: border-color 0.3s, box-shadow 0.3s;
-            background: #fafbfc;
+            width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+            font-size: 16px; font-family: inherit; resize: vertical; background-color: #FAFAFA;
+            box-sizing: border-box; outline: none; line-height: 1.6; transition: border-color 0.3s;
         }
-        textarea:focus {
-            outline: none; border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
-            background: #fff;
-        }
-        .controls { display: flex; gap: 15px; margin: 10px 0; }
+        textarea:focus { border-color: var(--primary); background-color: #FFF; }
+
+        .input-area { height: 220px; }
+        .result-area { height: 250px; background-color: #f8f9fa; }
+
+        .action-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
         button {
-            flex: 1; padding: 14px; border: none; border-radius: 10px;
-            font-size: 1rem; font-weight: 600; cursor: pointer;
-            transition: transform 0.1s, filter 0.2s; color: white;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+            border: none; padding: 14px; border-radius: 10px; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;
+            gap: 6px; transition: all 0.2s;
         }
-        button:active { transform: scale(0.98); }
-        button:hover { filter: brightness(1.1); }
-        .btn-magic { background: var(--primary); }
-        .btn-copy { background: var(--success); }
+        button:active { transform: scale(0.97); opacity: 0.8; }
+        .btn-primary { background-color: var(--primary); }
+        .btn-success { background-color: var(--success); }
+        .btn-push { background-color: var(--push-btn); }
+        .btn-secondary { background-color: #8E8E93; }
+
+        /* Modal 样式 */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+            z-index: 1000; backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; padding: 24px; border-radius: 20px;
+            width: 90%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .modal h3 { margin: 0; font-size: 1.2rem; color: #333; }
         
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 1rem; box-sizing: border-box; outline: none;
+        }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: var(--primary); }
+
+        .path-list-container {
+            border: 1px solid #eee; border-radius: 12px; max-height: 180px; 
+            overflow-y: auto; background: #fafafa; margin-bottom: 5px;
+        }
+        .path-item {
+            display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
+        }
+        .path-item:last-child { border-bottom: none; }
+        .path-item.selected { background: #eef6ff; color: var(--primary); font-weight: bold; }
+        .path-item .del-btn { margin-left: auto; color: #ff3b30; padding: 0 5px; font-size: 1.2rem; }
+
         #toast {
-            text-align: center; font-size: 0.95rem; font-weight: 500;
-            min-height: 24px; transition: color 0.3s;
+            visibility: hidden; min-width: 150px; background-color: rgba(0,0,0,0.85);
+            color: #fff; text-align: center; border-radius: 50px; padding: 12px 24px;
+            position: fixed; z-index: 1001; left: 50%; bottom: 40px;
+            transform: translateX(-50%); font-size: 0.95rem; transition: all 0.3s;
         }
-        
+        #toast.show { visibility: visible; bottom: 60px; }
+
         @media (max-width: 600px) {
-            .controls { flex-direction: column; }
-            .container { padding: 20px; }
+            .action-bar { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>✨ 高定版文章排版引擎</h2>
-    
-    <div class="grid-layout">
-        <div>
-            <textarea id="inputText" placeholder="请将文章粘贴于此。第一行将自动被识别为文章大标题（H1），其余内容将转换为段落..."></textarea>
+<div id="settings-icon" title="设置 GitHub Token" onclick="openTokenSettings()">🔐</div>
+
+<div class="main-container">
+    <h1>传记排版并推送</h1>
+
+    <div class="card">
+        <label>
+            输入原始文章 
+            <span style="font-size:0.8rem; color:#888; font-weight:normal;">(首行将自动识别为大标题)</span>
+        </label>
+        <textarea id="inputText" class="input-area" placeholder="在此粘贴文章内容..."></textarea>
+
+        <div class="action-bar">
+            <button class="btn-primary" onclick="generateHTML()">🎨 随机主题并转换</button>
+            <button class="btn-success" onclick="copyHTML()">📋 复制源码</button>
+            <button class="btn-push" onclick="openPushDialog()">📤 推送到 GitHub</button>
         </div>
+    </div>
 
-        <div class="controls">
-            <button class="btn-magic" onclick="generateAndTheme()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                随机主题并生成
-            </button>
-            <button class="btn-copy" onclick="copyResult()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                一键复制源码
-            </button>
-        </div>
+    <div class="card">
+        <label>生成的 HTML 源码</label>
+        <textarea id="outputText" class="result-area" readonly placeholder="精美的 HTML 源码将在此生成..."></textarea>
+    </div>
+</div>
 
-        <div id="toast"></div>
-
-        <div>
-            <textarea id="outputText" readonly placeholder="精美的 HTML 源码将在此生成..."></textarea>
+<div id="tokenModal" class="modal">
+    <div class="modal-content">
+        <h3>🔐 设置 GitHub Token</h3>
+        <p style="font-size:0.85rem; color:#666; margin:0;">请确保 Token 具有 repo 权限。</p>
+        <input type="password" id="ghToken" placeholder="ghp_xxxxxx...">
+        <div style="display:flex; gap:10px; margin-top:5px;">
+            <button class="btn-primary" style="flex:2" onclick="saveToken()">保存 Token</button>
+            <button class="btn-secondary" style="flex:1" onclick="closeModal('tokenModal')">取消</button>
         </div>
     </div>
 </div>
 
+<div id="pushModal" class="modal">
+    <div class="modal-content">
+        <h3 id="pushModalTitle">📂 选择推送文件夹</h3>
+        <div class="path-list-container" id="pathList"></div>
+        <input type="text" id="newPathInput" placeholder="例如: Notes/Articles">
+        
+        <div style="font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setAsDefault" checked> 
+            <label for="setAsDefault" style="display:inline; margin:0; cursor:pointer;">设为默认路径</label>
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn-push" id="confirmPushBtn" style="flex:2" onclick="confirmPushAction()">🚀 确认推送</button>
+            <button class="btn-secondary" style="flex:1" onclick="closeModal('pushModal')">取消</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast">操作成功</div>
+
 <script>
-    // 精心设计的 4 套大字号高颜值主题
+    // GitHub 仓库配置 (请根据实际情况修改或保留默认)
+    const GITHUB_USER = "moodHappy";
+    const GITHUB_REPO = "moodHappy.gitHub.io-nce";
+    
+    // 本地存储 Key
+    const PATH_HISTORY_KEY = "gh_article_path_list";
+    const DEFAULT_PATH_KEY = "gh_article_default_path";
+    const INITIAL_PATH = "Notes/Articles";
+
+    // 状态管理
+    let currentArticleTitle = "未命名文章";
+    let currentHtmlContent = "";
+
+    // ✨ 新增：6套丰富且明亮的高级主题 (去除了黑色系)
     const premiumThemes = [
-        // 主题1：典雅书卷
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Times New Roman", serif; background-color: #FAFAFA; color: #2C2C2C; max-width: 800px; margin: 0 auto; padding: 40px 24px; font-size: 20px; line-height: 2; letter-spacing: 0.05em; } h1 { text-align: center; font-size: 2em; margin-bottom: 1.5em; color: #111; font-weight: bold; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        // 1. 典雅书卷 (明亮灰底，深灰字，适合传记文学)
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, serif; background-color: #FAFAFA; color: #2C2C2C; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 2; letter-spacing: 0.05em; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #111; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 20px; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
         
-        // 主题2：深夜沉浸
-        `body { font-family: system-ui, -apple-system, sans-serif; background-color: #1A1C1E; color: #E3E5E8; max-width: 800px; margin: 0 auto; padding: 40px 24px; font-size: 19px; line-height: 1.9; letter-spacing: 0.02em; } h1 { text-align: center; font-size: 1.9em; margin-bottom: 1.5em; color: #FFFFFF; font-weight: 600; } p { margin-bottom: 1.4em; }`,
+        // 2. 温润纸张 (羊皮纸暖色调，复古英伦感)
+        `body { font-family: "Georgia", "Xin Gothic", "Hiragino Sans GB", serif; background-color: #F8F4E6; color: #4A3F35; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.9; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.2em; color: #2C241B; border-bottom: 2px dashed #D5CBBB; padding-bottom: 20px; } p { margin-bottom: 1.6em; text-indent: 2em; }`,
         
-        // 主题3：温润纸张
-        `body { font-family: "Georgia", "Xin Gothic", "Hiragino Sans GB", serif; background-color: #F7F3E8; color: #4A3F35; max-width: 800px; margin: 0 auto; padding: 40px 24px; font-size: 20px; line-height: 1.85; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.2em; color: #2C241B; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; } p { margin-bottom: 1.6em; text-indent: 2em; }`,
+        // 3. 现代极简 (纯白背景，无衬线大字号，Medium 博客风)
+        `body { font-family: "Helvetica Neue", Helvetica, "Microsoft YaHei", sans-serif; background-color: #FFFFFF; color: #333333; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 21px; line-height: 1.8; font-weight: 300; } h1 { text-align: center; font-size: 2.4em; margin-bottom: 1.2em; color: #000000; font-weight: 700; letter-spacing: -0.02em; } p { margin-bottom: 1.5em; }`,
         
-        // 主题4：现代极简
-        `body { font-family: "Helvetica Neue", Helvetica, "Microsoft YaHei", sans-serif; background-color: #FFFFFF; color: #333333; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 21px; line-height: 1.8; font-weight: 300; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #000000; font-weight: 700; letter-spacing: -0.02em; } p { margin-bottom: 1.5em; }`
+        // 4. 护眼抹茶 (低饱和度淡绿背景，柔和护眼)
+        `body { font-family: system-ui, -apple-system, sans-serif; background-color: #F0F7F4; color: #2D4035; max-width: 780px; margin: 0 auto; padding: 40px 24px; font-size: 19px; line-height: 1.85; } h1 { text-align: center; font-size: 2em; margin-bottom: 1.5em; color: #1A2E22; font-weight: 600; } p { margin-bottom: 1.4em; }`,
+        
+        // 5. 樱花浅粉 (极浅的粉色背景，深紫灰色文字，文艺清新)
+        `body { font-family: "Optima", "Microsoft YaHei", sans-serif; background-color: #FFF7F8; color: #4A3B42; max-width: 760px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; color: #6E4A55; font-weight: bold; } p { margin-bottom: 1.5em; text-indent: 2em; }`,
+        
+        // 6. 苍山秋水 (极淡的蓝灰背景，深蓝灰文字，冷静客观)
+        `body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; background-color: #F2F5F8; color: #344356; max-width: 800px; margin: 0 auto; padding: 45px 24px; font-size: 20px; line-height: 1.9; } h1 { text-align: center; font-size: 2.1em; margin-bottom: 1.5em; color: #1C2D42; font-weight: bold; border-left: 6px solid #6082B6; padding-left: 15px; text-align: left; } p { margin-bottom: 1.5em; }`
     ];
 
-    function showToast(message, color) {
-        const toast = document.getElementById('toast');
-        toast.style.color = color;
-        toast.innerText = message;
-        setTimeout(() => { toast.innerText = ''; }, 3000);
-    }
+    window.onload = () => { 
+        if (!localStorage.getItem('gh_token')) openTokenSettings(); 
+    };
 
-    function generateAndTheme() {
+    // --- 核心排版生成逻辑 ---
+    function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
-        if (!input) {
-            showToast('⚠️ 文本框为空，请先输入文字', '#e74c3c');
-            return;
-        }
+        if (!input) { showToast('⚠️ 文本框为空，请先输入文字'); return; }
 
-        // 随机抽取一套神仙主题
-        const themeCSS = premiumThemes[Math.floor(Math.random() * premiumThemes.length)];
-
-        // 分割段落并清洗空行 (修正了正则语法)
         const lines = input.split(/\n+/).map(line => line.trim()).filter(line => line !== '');
-        
         if (lines.length === 0) return;
 
-        // 提取第一行作为 H1 标题
-        const title = lines[0];
+        currentArticleTitle = lines[0]; // 第一行作为标题
         const bodyLines = lines.slice(1);
+        const randomTheme = premiumThemes[Math.floor(Math.random() * premiumThemes.length)];
 
-        let htmlBody = `    <h1>${title}</h1>\n`;
+        let htmlBody = `    <h1>${currentArticleTitle}</h1>\n`;
         htmlBody += bodyLines.map(p => `    <p>${p}</p>`).join('\n');
 
-        // 修正了模板字符串语法
-        const finalHtml = `<!DOCTYPE html>
+        currentHtmlContent = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title}</title>
+    <title>${currentArticleTitle}</title>
     <style>
-        /* 自动生成的精美主题 (大字号适配) */
-        ${themeCSS}
+        /* 自动生成的精美主题 */
+        ${randomTheme}
     </style>
 </head>
 <body>
@@ -166,28 +231,149 @@ ${htmlBody}
 </body>
 </html>`;
 
-        document.getElementById('outputText').value = finalHtml;
-        showToast('✨ 转换成功！已自动提取标题并应用高级主题。', '#2E7D32');
+        document.getElementById('outputText').value = currentHtmlContent;
+        showToast('✨ 转换成功！已应用随机高级主题。');
     }
 
-    async function copyResult() {
-        const output = document.getElementById('outputText').value;
-        if (!output) {
-            showToast('⚠️ 还没生成源码哦，请先点击转换', '#e74c3c');
-            return;
+    function copyHTML() {
+        const outputText = document.getElementById('outputText').value;
+        if (!outputText) { showToast('⚠️ 还没生成源码哦，请先点击转换'); return; }
+        navigator.clipboard.writeText(outputText).then(() => {
+            showToast('✅ 源码已成功复制！');
+        }).catch(() => {
+            document.getElementById('outputText').select();
+            document.execCommand('copy');
+            showToast('✅ 源码已复制！');
+        });
+    }
+
+    // --- GitHub Token 管理 ---
+    function openTokenSettings() {
+        document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
+        document.getElementById('tokenModal').style.display = 'flex';
+    }
+
+    function saveToken() {
+        const token = document.getElementById('ghToken').value.trim();
+        if (token) { 
+            localStorage.setItem('gh_token', token); 
+            showToast("✅ Token 已保存"); 
+            closeModal('tokenModal'); 
+        }
+    }
+
+    // --- GitHub 推送目录管理 ---
+    function openPushDialog() {
+        if (!currentHtmlContent) { showToast("⚠️ 请先点击【随机主题并转换】生成内容"); return; }
+        if (!localStorage.getItem('gh_token')) { showToast("⚠️ 请先设置 Token"); openTokenSettings(); return; }
+        
+        renderPathList();
+        document.getElementById('pushModal').style.display = 'flex';
+    }
+
+    function renderPathList() {
+        const list = document.getElementById('pathList');
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
+        
+        list.innerHTML = '';
+        paths.forEach(p => {
+            const div = document.createElement('div');
+            div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
+            div.innerHTML = `
+                <span onclick="selectPath('${p}')" style="flex:1">${p}</span>
+                <span class="del-btn" onclick="deletePath('${p}', event)">✕</span>
+            `;
+            list.appendChild(div);
+        });
+        
+        if(!document.getElementById('newPathInput').value) {
+            document.getElementById('newPathInput').value = defaultPath;
+        }
+    }
+
+    function selectPath(p) { 
+        document.getElementById('newPathInput').value = p; 
+        renderPathList(); 
+    }
+
+    function deletePath(p, event) {
+        event.stopPropagation();
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        if (paths.length <= 1) { showToast("⚠️ 至少保留一个路径"); return; }
+        if (confirm(`确定要删除路径记录: ${p} 吗?`)) {
+            paths = paths.filter(item => item !== p);
+            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
+            if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
+                localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
+            }
+            renderPathList();
+        }
+    }
+
+    // --- GitHub API 推送执行 ---
+    async function confirmPushAction() {
+        const targetPath = document.getElementById('newPathInput').value.trim().replace(/^\/+|\/+$/g, '');
+        if (!targetPath) { showToast("⚠️ 推送路径不能为空"); return; }
+
+        const btn = document.getElementById('confirmPushBtn');
+        btn.innerText = "⏳ 正在推送...";
+        btn.disabled = true;
+
+        // 保存路径记录
+        let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        if (!paths.includes(targetPath)) { 
+            paths.push(targetPath); 
+            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); 
+        }
+        if (document.getElementById('setAsDefault').checked) {
+            localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
         }
 
         try {
-            await navigator.clipboard.writeText(output);
-            showToast('✅ 源码已成功复制到剪贴板！', '#2E7D32');
-        } catch (err) {
-            // 降级方案
-            const textArea = document.getElementById('outputText');
-            textArea.select();
-            document.execCommand('copy');
-            showToast('✅ 源码已复制（使用兼容模式）', '#2E7D32');
-            window.getSelection().removeAllRanges();
+            // 清理标题作为文件名
+            const safeTitle = currentArticleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+            const fileName = `${safeTitle}_${Date.now()}.html`;
+            const token = localStorage.getItem('gh_token');
+            const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${fileName}`;
+
+            // 使用 Base64 编码支持中文
+            const base64Content = btoa(unescape(encodeURIComponent(currentHtmlContent)));
+
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${token}`, 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    message: `Auto-push Article: ${currentArticleTitle}`, 
+                    content: base64Content 
+                })
+            });
+
+            if (!res.ok) { 
+                const err = await res.json(); 
+                throw new Error(err.message || "请求失败"); 
+            }
+
+            showToast("🎉 推送成功！文件已保存至 GitHub");
+            closeModal('pushModal');
+        } catch (e) { 
+            alert("推送失败: " + e.message); 
+        } finally {
+            btn.innerText = "🚀 确认推送";
+            btn.disabled = false;
         }
+    }
+
+    // --- 通用辅助函数 ---
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function showToast(msg) { 
+        const t = document.getElementById('toast'); 
+        t.innerText = msg; 
+        t.className = 'show'; 
+        setTimeout(() => t.className = '', 2500); 
     }
 </script>
 
