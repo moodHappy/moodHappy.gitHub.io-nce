@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>武则天朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：绝不含任何主观形容，只留冰冷的职务 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条：血缘与正常君臣 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮线：谋反、构陷、赐死、政变 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧卡片中心点在 100px，卡片宽度约 68px (半宽34px)。66px 刚好完美对齐左边缘 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">武则天朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 260px;"></div>
+        <div class="line" style="left: 220px; top: 280px; width: 240px; height: 1px;"></div>
+        <div class="line" style="left: 220px; top: 280px; width: 1px; height: 40px;"></div>
+        <div class="line" style="left: 460px; top: 280px; width: 1px; height: 40px;"></div>
+
+        <div class="line" style="left: 320px; top: 130px; width: 140px; height: 1px;"></div>
+        <div class="line" style="left: 460px; top: 130px; width: 1px; height: 50px;"></div>
+
+        <div class="line-h-dashed" style="left: 350px; top: 240px; width: 110px;"></div>
+        <div class="line-v-dashed" style="left: 460px; top: 180px; height: 60px;"></div>
+        <div class="line-v-dashed" style="left: 350px; top: 240px; height: 80px;"></div>
+
+        <div class="line-h-dashed" style="left: 220px; top: 130px; width: 100px;"></div>
+        <div class="line-v-dashed" style="left: 220px; top: 130px; height: 50px;"></div>
+
+        <div class="kill-h" style="left: 100px; top: 100px; width: 220px;"></div>
+        <div class="kill-v" style="left: 100px; top: 100px; height: 80px;"></div>
+
+        <div class="kill-h" style="left: 320px; top: 100px; width: 260px;"></div>
+        <div class="kill-v" style="left: 580px; top: 100px; height: 80px;"></div>
+
+        <div class="kill-v" style="left: 580px; top: 180px; height: 80px;"></div>
+        <div class="kill-h" style="left: 360px; top: 260px; width: 220px;"></div>
+        <div class="kill-v" style="left: 360px; top: 260px; height: 60px;"></div> <div class="kill-v" style="left: 100px; top: 220px; height: 100px;"></div>
+        <div class="kill-h" style="left: 100px; top: 220px; width: 180px;"></div>
+        <div class="kill-v" style="left: 280px; top: 80px; height: 140px;"></div> <div class="kill-solid-v" style="left: 220px; top: 200px; height: 100px;"></div>
+
+        <div class="label" style="left: 180px; top: 100px; color: #c62828;">纵容 / 扑杀</div>
+        <div class="label" style="left: 260px; top: 130px;">晚年极宠</div>
+        <div class="label" style="left: 390px; top: 130px;">国士 / 倚重</div>
+        <div class="label" style="left: 450px; top: 100px; color: #c62828;">鹰犬 / 赐死平愤</div>
+        
+        <div class="label" style="left: 480px; top: 260px; color: #c62828;">罗织屠杀 / 恐怖倾轧</div>
+        <div class="label" style="left: 405px; top: 240px;">力保皇储</div>
+        
+        <div class="label" style="left: 190px; top: 220px; color: #c62828; font-weight: bold;">武装叛乱</div>
+        <div class="label" style="left: 220px; top: 250px; color: #c62828; font-weight: bold;">神龙政变 (兵变诛杀)</div>
+        <div class="label" style="left: 320px; top: 200px;">极度压制 / 随时丧命</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('wu')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">武则天</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 180px;" onclick="showInfo('xue')">
+            <div class="c-dark">白马寺主 / 左威卫大将军</div>
+            <div class="c-consort">薛怀义</div>
+        </div>
+
+        <div class="person" style="left: 220px; top: 180px;" onclick="showInfo('zhang')">
+            <div class="c-dark">奉宸令 / 春官侍郎</div>
+            <div class="c-consort">张易之/昌宗</div>
+        </div>
+
+        <div class="person" style="left: 460px; top: 180px;" onclick="showInfo('di')">
+            <div class="c-dark">宰相 / 内史</div>
+            <div class="c-minister">狄仁杰</div>
+        </div>
+
+        <div class="person" style="left: 580px; top: 180px;" onclick="showInfo('lai')">
+            <div class="c-dark">御史中丞</div>
+            <div class="c-minister">来俊臣</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 320px;" onclick="showInfo('xu')">
+            <div class="c-dark">叛军大都督</div>
+            <div class="c-rebel">徐敬业</div>
+        </div>
+
+        <div class="person" style="left: 220px; top: 320px;" onclick="showInfo('lixian')">
+            <div class="c-dark">皇太子</div>
+            <div class="c-emperor">李显</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('lidan')">
+            <div class="c-dark">皇嗣 / 相王</div>
+            <div class="c-emperor">李旦</div>
+        </div>
+
+        <div class="person" style="left: 460px; top: 320px;" onclick="showInfo('taiping')">
+            <div class="c-dark">镇国公主</div>
+            <div class="c-consort">太平公主</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">武周三大历史节点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('yangzhou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">684年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">扬州兵变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('kuli')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">690-697年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">酷吏恐怖</div>
+            </div>
+            <div class="event-card" onclick="showInfo('shenlong')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">705年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">神龙政变</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'wu': { 
+                name: '武则天', 
+                subtitle: '前无古人后无来者的铁血女皇', 
+                content: '<p>从唐太宗的才人，到唐高宗的皇后，再到大周的开国皇帝，武则天的登顶之路铺满了鲜血。为了在极度男尊女卑的封建社会中坐稳龙椅，她展现出了超乎想象的冷酷与帝王心术。</p><p>她刻意放权给来俊臣等“酷吏”，在朝堂上掀起血雨腥风，将所有忠于李唐的老臣和宗室屠杀殆尽。但同时，她又极具识人眼光，大力提拔寒门科举子弟，重用狄仁杰、姚崇等千古名相，确保了国家机器的高效运转。在统治后期，随着年龄的增长，她开始沉溺于张易之兄弟的男色，导致朝政废弛，最终在病榻上被自己亲手召回的儿子发动政变推翻，以“则天大圣皇后”的身份与唐高宗合葬乾陵，留下了一块无字碑。</p>' 
+            },
+            'xue': { 
+                name: '薛怀义', 
+                subtitle: '因妒生恨火烧明堂的市井男宠', 
+                content: '<p>薛怀义原名冯小宝，本是洛阳城里一个卖野药的小贩。因身材魁梧被太平公主看中，随后进献给寡居的武则天，成为她称帝前后的第一任专职男宠。为了掩人耳目，武则天让他剃度出家，当了白马寺的主持，甚至封他为大将军。</p><p>仗着女皇的恩宠，薛怀义在长安城内横行霸道，连当朝宰相见了他都要下跪。他曾主持修建了极其奢华的“万象神宫”（明堂）。然而，随着武则天新宠御医沈南璆的出现，薛怀义失宠了。极度嫉妒和狂妄的他，竟然在正月十五夜里一把火将耗资巨大的明堂烧成灰烬。武则天虽然表面没有发作，但暗中授意太平公主，带人将其在宫中活活打死，尸体送回白马寺烧毁。</p>' 
+            },
+            'zhang': { 
+                name: '张易之 / 张昌宗', 
+                subtitle: '垄断晚年女皇的绝美夺命双花', 
+                content: '<p>张氏兄弟出身名门，容貌极为俊美（被称为“面如莲花”）。在武则天统治的最后八年里，这兄弟俩几乎垄断了老女皇所有的私生活。武则天专门设立了“奉宸府”来安置他们，权力极大。</p><p>随着武则天年老病重，张氏兄弟甚至成为了朝臣见皇帝的唯一通道，他们开始肆无忌惮地干预朝政。就连皇太子李显、相王李旦和太平公主见到他们都要卑躬屈膝。李显的儿子和女儿仅仅因为在私下议论了张氏兄弟几句，就被武则天逼迫自杀。这种极度的膨胀最终激怒了整个李唐宗室和文武百官，在神龙政变中，两人被冲入宫殿的羽林军乱刀剁成肉泥。</p>' 
+            },
+            'di': { 
+                name: '狄仁杰', 
+                subtitle: '武周朝的定海神针，李唐复辟的幕后推手', 
+                content: '<p>狄仁杰是武则天最敬重的宰相，被女皇尊称为“国老”。在酷吏横行的恐怖时代，他凭借极高的政治智慧和断案能力，保护了无数无辜官员的性命。他自己也曾被酷吏来俊臣诬陷下狱，但他机智地在衣服里藏了血书让儿子带给武则天，才侥幸逃过死劫。</p><p>狄仁杰一生最大的政治遗产，是在武则天晚年“立武氏（侄子）还是立李氏（儿子）”的储君问题上，发挥了一锤定音的作用。他用一句“臣只听说过儿子把母亲供奉在太庙，从未听说过侄子把姑姑供奉在太庙的”彻底击碎了武则天立侄子为储的念头，促使武则天将流放的李显召回立为太子，保住了大唐的法统。</p>' 
+            },
+            'lai': { 
+                name: '来俊臣', 
+                subtitle: '《罗织经》的作者，杀人如麻的终极反犬', 
+                content: '<p>来俊臣是中国历史上最臭名昭著的酷吏。为了迎合武则天清洗政敌的需要，他发明了各种极其残忍的刑具（如“请君入瓮”），并编纂了一本专门教人如何无中生有、构陷罪名的奇书——《罗织经》。</p><p>在他的恐怖统治下，无论是开国元勋、李唐宗亲，还是平民百姓，只要被他盯上，几乎无一幸免，数千家破人亡。然而，来俊臣只是一条政治走狗。当武则天完成了权力清洗，且来俊臣的狂妄已经威胁到武氏家族和太平公主时，武则天果断将其抛弃。来俊臣被判处斩首并陈尸街头，全城的百姓愤怒地冲上去，瞬间将他的尸肉割食干净，甚至连骨头都被踩碎。</p>' 
+            },
+            'xu': { 
+                name: '徐敬业', 
+                subtitle: '名将之后，吹响反武第一声号角的悲情统帅', 
+                content: '<p>徐敬业是唐初开国名将李勣（徐懋功）的孙子。在武则天废黜中宗李显、临朝称制（尚未正式称帝）时，徐敬业在扬州聚集了十万大军，以“匡复李唐”为名发动了震惊天下的兵变。</p><p>初唐著名诗人骆宾王为他撰写了那篇名垂千古的《为徐敬业讨武曌檄》（武则天读后不仅没生气，反而感叹宰相没有发现这样的人才）。然而，徐敬业在战略上犯了致命错误，没有直取洛阳，而是南下试图割据江南。武则天迅速调遣三十万大军平叛，仅仅三个月，扬州兵变就被残酷镇压，徐敬业在逃亡途中被部下斩杀，其家族被武则天连根拔起。</p>' 
+            },
+            'lixian': { 
+                name: '李显', 
+                subtitle: '惊弓之鸟，十五载流亡后重返储位的皇太子', 
+                content: '<p>李显曾做过不到一年的皇帝，因为说错了一句话被母亲武则天废为庐陵王，流放至房州。在长达十五年的软禁生活中，武则天经常派使者去“探望”他，每次听到使者来了，极度恐惧的李显都会准备上吊自杀，全靠妻子韦氏的苦苦劝阻才活下来。</p><p>在狄仁杰的力劝和武则天晚年对身后的政治考量下，李显被秘密接回洛阳，重新立为皇太子。但在母亲的高压下，他依然活得如履薄冰，甚至眼睁睁看着自己的嫡长子被武则天赐死而不敢发出一句怨言。直到神龙政变，他才终于翻身复辟。</p>' 
+            },
+            'lidan': { 
+                name: '李旦', 
+                subtitle: '被囚禁在宫廷深处的“皇嗣”', 
+                content: '<p>在哥哥李显被废后，李旦被母亲武则天扶上皇位当了几年傀儡。当武则天决定自己称帝时，李旦极其识趣地带头请求母亲登基，自己甚至请求赐姓“武”，降级为“皇嗣”（而不是皇太子）。</p><p>在武周时期，李旦被软禁在东宫，身边的人经常被酷吏抓走拷打。最惊险的一次，酷吏诬陷李旦谋反，李旦手下的乐工安金藏当着武则天的面，用刀直接切开自己的肚子，以死证明皇嗣的清白，这才让武则天动容并停止了对李旦的迫害。这种极度压抑的生存环境，造就了李旦日后“三让天下”的政治生存哲学。</p>' 
+            },
+            'taiping': { 
+                name: '太平公主', 
+                subtitle: '在母亲的杀戮中觉醒的权力继承者', 
+                content: '<p>太平公主是武则天唯一的女儿。在武周早期的恐怖清洗中，为了活命，太平公主极力掩饰自己的聪明才智，整日表现出沉迷玩乐、贪财好色的样子，甚至亲自为母亲物色并进献男宠（包括薛怀义、张昌宗等），以此来换取母亲的信任。</p><p>但实际上，她在一旁冷静地观察和学习着母亲高超的帝王心术与残酷手段。在武则天统治后期，太平公主的暗中势力已经极其庞大，她甚至成为了李唐宗室与武氏家族之间的润滑剂。在最终推翻母亲的“神龙政变”中，太平公主在幕后发挥了极其关键的作用。</p>' 
+            },
+
+            /* 事件库 */
+            'yangzhou': { 
+                name: '扬州兵变 (684年)', 
+                subtitle: '大唐旧勋贵的绝望反扑', 
+                content: '<p><strong>【背景起因】</strong><br>武则天废黜中宗李显后，大权独揽。大批遭到贬斥的李唐忠臣和门阀勋贵聚集在江南扬州。名将之后徐敬业借机发难，假称奉了被废庐陵王李显的密诏，起兵讨伐武则天。</p><p><strong>【事变经过】</strong><br>叛军十万之众声势浩大，骆宾王的讨武檄文更是传檄天下。然而，徐敬业没有采纳直捣黄龙（洛阳）的正确战略，而是试图先攻打南京巩固江南地盘。武则天立刻展现出雷霆手段，派出三十万精锐大军南下镇压。</p><p><strong>【最终结果】</strong><br>仅仅三个月，叛军土崩瓦解，徐敬业被杀。这场叛乱给了武则天极其完美的借口，她借此在朝堂上掀起了更大规模的清洗，彻底肃清了反对派，为她日后改唐为周扫清了最后的军事障碍。</p>' 
+            },
+            'kuli': { 
+                name: '酷吏恐怖 (690-697年)', 
+                subtitle: '令人窒息的告密网与《罗织经》', 
+                content: '<p><strong>【背景起因】</strong><br>为了震慑天下、消灭所有潜藏的反对势力，武则天在称帝前后大开“告密”之门，规定任何人都可以进京告密且国家报销差旅费。这催生了一大批如来俊臣、索元礼、周兴等毫无底线的酷吏。</p><p><strong>【事变经过】</strong><br>这些酷吏发明了“定百脉”、“请君入瓮”等令人发指的刑具，只要进了他们的推事院，没有人能活着且完整地出来。来俊臣甚至编纂了《罗织经》，总结了一套“无中生有、牵连九族”的系统性诬陷理论。期间，大批李唐宗亲（如越王李贞等）和正直大臣被满门抄斩。</p><p><strong>【最终结果】</strong><br>当朝堂上的旧势力被清洗得干干净净、李唐宗室彻底失去反抗能力后，酷吏们失去了利用价值，甚至开始把诬陷的矛头指向了武氏亲王和太平公主。武则天顺应民意，果断将这批酷吏全部斩杀，成功地把所有怨恨都转移到了死人身上，自己则以“仁慈明君”的姿态安抚天下。</p>' 
+            },
+            'shenlong': { 
+                name: '神龙政变 (705年)', 
+                subtitle: '武周帝国的黄昏，病榻上的逼宫', 
+                content: '<p><strong>【背景起因】</strong><br>武则天晚年卧病在床，男宠张易之、张昌宗兄弟掌控了宫廷的唯一出入通道，专权跋扈。他们甚至暗中谋划在武则天死后作乱。为了保住大唐国本，宰相张柬之决定铤而走险。</p><p><strong>【事变经过】</strong><br>神龙元年正月，张柬之等“五王”联合右羽林卫大将军，率领五百名全副武装的禁军，拥簇着战战兢兢的皇太子李显，直接撞开了皇宫大门。禁军在迎仙宫外斩杀了张氏兄弟，随后提着带血的刀剑冲入武则天的寝宫。面对昔日不可一世的老女皇，张柬之逼迫其立刻传位给太子。</p><p><strong>【最终结果】</strong><br>82岁的武则天被迫同意退位。李显复辟，大唐国号恢复。一代女皇被软禁在上阳宫，不到一年后在孤寂中病逝，长达半个世纪的“武曌时代”至此终结。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
