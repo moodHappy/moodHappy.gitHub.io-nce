@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>南朝陈(残阳绝唱)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/废黜/灭国线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧王琳/杨广卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">南朝陈(残阳绝唱)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 30px;"></div>
+        <div class="line" style="left: 320px; top: 110px; width: 160px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 110px; width: 1px; height: 50px;"></div> <div class="line" style="left: 480px; top: 110px; width: 1px; height: 50px;"></div> <div class="line" style="left: 320px; top: 160px; width: 1px; height: 80px;"></div>
+
+        <div class="line" style="left: 480px; top: 160px; width: 1px; height: 120px;"></div>
+
+        <div class="line-h-dashed" style="left: 200px; top: 220px; width: 120px;"></div>
+        <div class="line-v-dashed" style="left: 200px; top: 220px; height: 20px;"></div>
+        <div class="line-v-dashed" style="left: 320px; top: 160px; height: 60px;"></div>
+
+        <div class="line-h-dashed" style="left: 480px; top: 380px; width: 120px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 160px; width: 220px;"></div>
+
+        <div class="kill-solid-v" style="left: 480px; top: 160px; height: 80px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 240px; width: 160px;"></div>
+
+        <div class="kill-h" style="left: 200px; top: 240px; width: 120px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 380px; width: 380px;"></div>
+        <div class="kill-solid-h" style="left: 480px; top: 380px; width: 120px;"></div> <div class="label" style="left: 360px; top: 100px;">无子传侄 / 延续国祚</div>
+        <div class="label" style="left: 320px; top: 200px;">父死子继</div>
+        <div class="label" style="left: 260px; top: 210px;">绝世君臣 / 兵权相托</div>
+        
+        <div class="label" style="left: 210px; top: 150px; color: #c62828;">发兵平叛 / 斩杀梁朝死忠</div>
+        <div class="label" style="left: 400px; top: 230px; color: #c62828; font-weight: bold;">南朝诅咒 / 皇叔篡位废杀亲侄</div>
+        <div class="label" style="left: 260px; top: 250px; color: #c62828;">构陷诛杀功臣</div>
+        
+        <div class="label" style="left: 540px; top: 370px;">荒淫误国 / 玉树后庭花</div>
+        <div class="label" style="left: 290px; top: 370px; color: #c62828; font-weight: bold;">大军渡江灭国 / 俘虏后主 / 斩杀妖妃</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('chenbaxian')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">陈霸先</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 160px;" onclick="showInfo('wanglin')">
+            <div class="c-dark">刺史 / 丞相 (叛)</div>
+            <div class="c-rebel">王琳</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 160px;" onclick="showInfo('chenqian')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">陈蒨</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 160px;" onclick="showInfo('chenxu')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">陈顼</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 240px;" onclick="showInfo('han')">
+            <div class="c-dark">右军将军</div>
+            <div class="c-minister">韩子高</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('bozong')">
+            <div class="c-dark">皇帝 / 废帝</div>
+            <div class="c-emperor">陈伯宗</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 380px;" onclick="showInfo('shubao')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">陈叔宝</div>
+        </div>
+
+        <div class="person" style="left: 600px; top: 380px;" onclick="showInfo('zhang')">
+            <div class="c-dark">贵妃</div>
+            <div class="c-consort">张丽华</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 380px;" onclick="showInfo('yangguang')">
+            <div class="c-dark">行军元帅</div>
+            <div class="c-minister">杨广</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">南朝落幕的三大历史界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('taiping')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">557 - 566年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">浴火建国</div>
+            </div>
+            <div class="event-card" onclick="showInfo('taijian')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">573 - 578年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">太建北伐</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yanzhi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">589年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">胭脂井之亡</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'chenbaxian': { 
+                name: '陈霸先 (陈武帝)', 
+                subtitle: '在末日废墟中拯救江南文明的铁血雄主', 
+                content: '<p>在侯景之乱将南朝经济文化摧毁殆尽、江南出现“千里绝烟”的惨状时，底层将领出身的陈霸先横空出世。他以极其强悍的军事能力，北抗强敌北齐的入侵，内平各地割据的军阀，硬生生在废墟中拼凑出了南朝的最后一块版图。</p><p>他建立陈朝，生活极其节俭，史载他“常膳不过数品，私宴用瓦器”。他唯一的儿子在北朝当人质被害，他只能将皇位传给随自己四处征战的侄子陈蒨。陈霸先用一己之力，让南方的华夏衣冠又延续了三十年。</p>' 
+            },
+            'wanglin': { 
+                name: '王琳', 
+                subtitle: '为前朝流尽最后一滴血的愚忠之将', 
+                content: '<p>王琳本是梁朝的将领，在陈霸先代梁建陈时，他手握重兵，坚决不承认陈朝的合法性，立志要光复梁朝。他在长江中游拉起大军，甚至不惜向北齐借兵，与陈朝死磕到底。</p><p>陈霸先和陈蒨两代皇帝用了极大的精力才将他击败。王琳兵败被俘后，陈朝将领将其斩首。江南百姓和他的旧部对他极其敬仰，听闻他死后，哭声震天。他是南朝乱世中少有的死节之臣。</p>' 
+            },
+            'chenqian': { 
+                name: '陈蒨 (陈文帝)', 
+                subtitle: '南朝最后一位明君，缔造天嘉之治', 
+                content: '<p>陈蒨是陈霸先的侄子。接手陈朝时，国家版图极小，四周强敌环伺。他展现出了极高的军事与内政天赋，不仅彻底剿灭了王琳等残余叛乱势力，收复了湘、郢等地，还与民休息，让江南经济奇迹般地恢复了生机，史称“天嘉之治”。</p><p>但在他死后，南朝宗室互杀的诅咒再次降临。他将皇位传给儿子陈伯宗，并让弟弟陈顼辅政。结果重演了前朝的历史，弟弟篡位，儿子惨死。</p>' 
+            },
+            'han': { 
+                name: '韩子高', 
+                subtitle: '容貌倾国倾城的常胜将军，死于猜忌的功臣', 
+                content: '<p>韩子高是中国历史上极其传奇的人物。史书记载他容貌绝美（“容貌艳丽，纤妍洁白”），在战乱中被陈蒨一眼看中，从此常伴左右。他绝不仅是花瓶，而是随陈蒨南征北战、屡立战功的右军将军，深得陈蒨的绝对信任，两人同吃同睡，甚至有野史称陈蒨曾许诺立他为“男皇后”。</p><p>陈蒨死后，其弟陈顼图谋篡位。因为韩子高手握重兵，陈顼极其忌惮，于是捏造了一个“谋反”的罪名，将这位年仅三十岁的俊美将军逮捕赐死，彻底扫清了自己篡位的军事障碍。</p>' 
+            },
+            'bozong': { 
+                name: '陈伯宗 (陈废帝)', 
+                subtitle: '南朝“叔杀侄”魔咒的最终受害者', 
+                content: '<p>陈伯宗是陈蒨的嫡长子，性格极其懦弱。他登基时，朝政大权完全被叔叔陈顼掌控。尽管他父亲生前留下了辅政大臣，但在陈顼的政治手腕下，这些辅政大臣（如韩子高、到仲举）被逐一清洗斩杀。</p><p>不到两年，陈顼便以皇太后的名义下诏，强行废黜了陈伯宗，将其降为临海王。不久之后，这位可怜的废帝便在幽禁中不明不白地死去（大概率是被陈顼派人杀害），年仅19岁。南朝刘宋、萧齐、南陈三朝，无一例外地上演了叔叔废杀侄子的伦理惨剧。</p>' 
+            },
+            'chenxu': { 
+                name: '陈顼 (陈宣帝)', 
+                subtitle: '野心勃勃的篡位者，输光国运的赌徒', 
+                content: '<p>陈顼篡位后，为了用军功来洗刷自己弑君篡位的政治污点，同时趁着北方北齐和北周互掐的机会，发动了声势浩大的“太建北伐”。</p><p>初期，陈朝名将吴明彻一路凯歌，收复了淮南大片领土，陈朝版图达到极盛。但陈顼好大喜功，在北周灭掉北齐后，不仅不见好就收，反而想继续强行北伐抢地盘。结果，北周腾出手来，派出大军在吕梁大败陈军。陈朝不仅将之前打下的土地全部吐了出去，连原本的精锐主力也折损殆尽，从此只能彻底转入龟缩防御，再也无力与北方抗衡。</p>' 
+            },
+            'shubao': { 
+                name: '陈叔宝 (陈后主)', 
+                subtitle: '极品文艺昏君，“玉树后庭花”的创作者', 
+                content: '<p>陈叔宝是陈朝的亡国之君。在北方隋朝已经统一并磨刀霍霍准备渡江时，他却在建康（南京）的皇宫里大建奢华的“结绮阁”，整日与张丽华等妃嫔、文臣饮酒作乐，谱写了著名的亡国之音《玉树后庭花》。</p><p>当前线告急的文书如同雪片般飞来时，他竟然将其随手扔在床下，甚至还说：“长江天险，自古就是用来划江而治的，隋军怎么可能飞过来？”当隋军攻破都城大门时，文武百官跑得精光，他竟然带着张丽华和另一个妃嫔，极其狼狈地躲进了后宫的一口枯井（胭脂井）里。最终被隋军用绳子像钓鱼一样拉了上来，颜面扫地。</p>' 
+            },
+            'zhang': { 
+                name: '张丽华', 
+                subtitle: '发长七尺的绝世妖妃，被斩于青溪的亡国红颜', 
+                content: '<p>张丽华是陈后主最宠爱的贵妃，史载她“发长七尺，黑如漆，光可鉴人”，且极其聪慧，记忆力惊人。陈叔宝对她迷恋到了极点，甚至在上朝时都要把她抱在膝盖上，让她一起处理朝政。</p><p>在她的干预下，陈朝后期的朝政乌烟瘴气，卖官鬻爵，忠臣被排挤。隋朝大军攻入建康后，在枯井里抓到了她。隋朝统帅晋王杨广本想一睹她的芳容将她留下，但长史高颎（jiǒng）坚决反对，认为“昔日商朝因妲己而亡，今天绝不能留这个祸水”。于是高颎未等杨广下令，直接命人将张丽华押到青溪斩首。</p>' 
+            },
+            'yangguang': { 
+                name: '杨广 (隋朝行军元帅)', 
+                subtitle: '指挥五十一万大军渡江的帝国碾压者', 
+                content: '<p>公元588年，隋文帝杨坚下达了平陈的诏书。年仅二十岁的晋王杨广被任命为行军元帅，统帅五十一万大军，水陆并进，对偏安一隅的陈朝发起了泰山压顶般的降维打击。</p><p>隋朝大军极其顺利地渡过长江，以极小的代价攻破了建康。杨广入城后，下令封存陈朝的府库，秋毫无犯，展现了极高的政治素养，彻底收服了江南民心。这一战，不仅覆灭了陈朝，更结束了中国自西晋末年以来长达近三百年的大分裂，天下重新一统于隋。</p>' 
+            },
+
+            /* 事件库 */
+            'taiping': { 
+                name: '浴火建国 (557-566年)', 
+                subtitle: '在末日废墟中重建江南秩序', 
+                content: '<p><strong>【背景起因】</strong><br>侯景之乱导致江南士族被屠戮殆尽，经济彻底崩溃。陈霸先在此绝境中代梁建陈，面临的是内有军阀割据、外有北齐数十万大军压境的必死开局。</p><p><strong>【事变经过】</strong><br>陈霸先和陈蒨两代皇帝展现了惊人的韧性。他们击退了北齐的全面入侵，又用铁血手段削平了王琳、留异等地方军阀。在极度困难中，他们推行节俭，劝课农桑。</p><p><strong>【最终结果】</strong><br>陈朝奇迹般地在江南站稳了脚跟。虽然版图是南朝历代中最小的，但在“天嘉之治”期间，江南经济得以恢复，华夏文明的火种在南方得以延续。</p>' 
+            },
+            'taijian': { 
+                name: '太建北伐 (573-578年)', 
+                subtitle: '南朝最后一次的回光返照与豪赌', 
+                content: '<p><strong>【背景起因】</strong><br>陈宣帝陈顼篡位后，为了立威并趁北方北齐与北周交战之机，命吴明彻率领十万大军北伐，意图收复淮南故土。</p><p><strong>【事变经过】</strong><br>北伐初期极其顺利，陈军水陆并进，收复了寿阳等大片土地，将国界线推进到了淮河一带。但陈顼被胜利冲昏了头脑，在北周灭掉北齐后，依然拒绝撤军，在徐州（吕梁）与北周铁骑展开决战。结果陈朝水军被北周切断退路，主帅吴明彻被俘。</p><p><strong>【最终结果】</strong><br>太建北伐以惨败告终。陈朝不仅丧失了所有刚刚收复的土地，更将其辛苦积攒的精锐野战部队和将领损失殆尽，彻底失去了自保的能力，只能坐等北方一统后挥师南下。</p>' 
+            },
+            'yanzhi': { 
+                name: '胭脂井之亡 (589年)', 
+                subtitle: '大分裂时代的终结与南朝的最后绝响', 
+                content: '<p><strong>【背景起因】</strong><br>北方隋朝已经统一，隋文帝厉兵秣马准备灭陈。而陈后主却在建康沉迷酒色，坚信“长江天堑”可保万世太平，对前线的紧急军情置若罔闻。</p><p><strong>【事变经过】</strong><br>隋朝五十一万大军在贺若弼、韩擒虎等名将的率领下，轻松横渡长江。陈朝军队毫无斗志，建康城防瞬间崩溃。陈叔宝带着张丽华和孔贵嫔躲入景阳殿后的枯井中。隋军士兵向井底喊话不答，威胁要扔石头，井底这才传出惊恐的求救声。士兵用绳子拉人，觉得极其沉重，拉上来一看，原来是皇帝和两个贵妃紧紧抱在一起被拽了上来。</p><p><strong>【最终结果】</strong><br>陈朝灭亡。隋朝将陈后主及陈朝宗室押往长安。中国历史走出了长达近三百年的魏晋南北朝大乱世，再次迎来了大一统。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
