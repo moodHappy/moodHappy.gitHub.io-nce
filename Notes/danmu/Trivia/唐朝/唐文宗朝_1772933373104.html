@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐文宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 400px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/埋伏/逼宫软禁线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧李训卡片中心在100px，半宽34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐文宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 100px; top: 140px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 140px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 220px; top: 140px; width: 1px; height: 60px;"></div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 120px; width: 240px;"></div>
+        <div class="line-v-dashed" style="left: 560px; top: 120px; height: 80px;"></div>
+
+        <div class="kill-h" style="left: 320px; top: 160px; width: 120px;"></div>
+        <div class="kill-v" style="left: 440px; top: 160px; height: 40px;"></div>
+
+        <div class="kill-v" style="left: 100px; top: 220px; height: 40px;"></div>
+        <div class="kill-h" style="left: 100px; top: 260px; width: 460px;"></div>
+        <div class="kill-v" style="left: 560px; top: 220px; height: 40px;"></div>
+
+        <div class="kill-solid-v" style="left: 560px; top: 220px; height: 80px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 300px; width: 460px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 220px; height: 80px;"></div>
+        <div class="kill-solid-v" style="left: 220px; top: 220px; height: 80px;"></div>
+
+        <div class="kill-solid-v" style="left: 560px; top: 40px; height: 160px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 40px; width: 240px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 40px; height: 40px;"></div>
+
+        <div class="label" style="left: 160px; top: 130px;">密谋夺权 / 绝对授权</div>
+        <div class="label" style="left: 440px; top: 110px;">提拔制衡旧党</div>
+        
+        <div class="label" style="left: 380px; top: 150px; color: #c62828;">送毒酒赐死</div>
+        <div class="label" style="left: 330px; top: 250px; color: #c62828; font-weight: bold;">石榴树降甘露 / 甲士设伏</div>
+
+        <div class="label" style="left: 330px; top: 310px; color: #c62828; font-weight: bold;">禁军大屠杀 / 灭门四宰相及千余官员</div>
+        <div class="label" style="left: 440px; top: 30px; color: #c62828; font-weight: bold;">强行劫持 / 终生幽禁</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('wenzong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李昂</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('lixun')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">李训</div>
+        </div>
+
+        <div class="person" style="left: 220px; top: 200px;" onclick="showInfo('zhengzhu')">
+            <div class="c-dark">凤翔节度使</div>
+            <div class="c-minister">郑注</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 200px;" onclick="showInfo('wangshoucheng')">
+            <div class="c-dark">右神策军中尉</div>
+            <div class="c-minister">王守澄</div>
+        </div>
+
+        <div class="person" style="left: 560px; top: 200px;" onclick="showInfo('qiushiliang')">
+            <div class="c-dark">左神策军中尉</div>
+            <div class="c-minister">仇士良</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">甘露绝唱三大血色节点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('dusha')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">835年10月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">鸩杀旧阉</div>
+            </div>
+            <div class="event-card" onclick="showInfo('ganlu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">835年11月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">甘露之变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('youjin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">835 - 840年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">囚禁太极</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'wenzong': { 
+                name: '李昂 (唐文宗)', 
+                subtitle: '满腔热血的明君苗子，受制于家奴的绝望囚徒', 
+                content: '<p>唐文宗是被太监王守澄等人在内乱中扶上位的。但他登基后，生活极其简朴，勤于政事，唯一的梦想就是效仿太宗、宪宗，彻底铲除拥立自己的这群“宦官毒瘤”。</p><p>为了这个目的，他卧薪尝胆数年，秘密提拔李训、郑注进行反击布局。然而甘露之变因为李训的仓促行事而惨败。事变爆发时，宦官仇士良直接冲上大殿，当着文武百官的面强行将文宗塞进软轿劫持回后宫。此后五年，大唐天子彻底沦为连平民都不如的阶下囚。文宗在病榻前凄凉地问大臣自己像哪位亡国之君，得知自己连受制于强臣的周赧王、汉献帝都不如，而是“受制于家奴”时，他泣不成声，最终在极度的抑郁和屈辱中病逝。</p>' 
+            },
+            'lixun': { 
+                name: '李训', 
+                subtitle: '自作聪明的狂徒，葬送帝国的引线', 
+                content: '<p>李训本是靠给宦官王守澄讲《周易》而混入朝堂的，但他极其精明，很快洞察了文宗想杀太监的真实意图，于是倒戈成为文宗的“灭阉总指挥”，一路升至宰相。</p><p>原本他与郑注约定：由郑注带领外藩镇的重兵入京，再将太监一网打尽。但李训为了独吞这泼天的首功，竟然决定提前动手。他在没有任何外围重兵支持的情况下，仅仅靠几百个没有战斗力的金吾卫和宫廷小吏，就敢在大明宫设下“甘露之局”。事机败露后，他抛下皇帝仓皇逃出长安，最终在终南山被捕，被太监砍下首级献俘长安，可谓志大才疏的典型。</p>' 
+            },
+            'zhengzhu': { 
+                name: '郑注', 
+                subtitle: '配制毒药的江湖游医，死于队友背刺的藩镇大员', 
+                content: '<p>郑注出身江湖郎中，精通医术和奇门遁甲，和李训一样是文宗的心腹。他成功地为文宗配制了毒酒，神不知鬼不觉地除掉了老牌权阉王守澄。</p><p>按照原定计划，郑注已经担任了凤翔节度使，手握数万精锐边军。他计划在王守澄下葬那天，借口带兵回京护灵，在葬礼上将所有高级太监聚而歼之。这个计划本万无一失。但他的猪队友李训为了抢功提前动手导致惨败。远在凤翔的郑注得知甘露之变失败后，依然想带兵进京勤王，结果被自己手下的监军太监煽动兵变，在军营中被乱刀砍死。</p>' 
+            },
+            'wangshoucheng': { 
+                name: '王守澄', 
+                subtitle: '作恶十四载的宦官教父，倒在皇帝的慢性毒药下', 
+                content: '<p>王守澄经历了宪宗、穆宗、敬宗、文宗四朝，是杀害宪宗、拥立文宗的头号人物，大唐朝政十几年间全看他的脸色。</p><p>文宗深知硬拼不过，于是采纳了李训的计策，实行“明升暗降”。先是提拔仇士良来分化王守澄的兵权，然后不断给王守澄加官进爵（甚至封他为神策军最高统帅的虚职）。在王守澄完全放松警惕、交出实际兵权后，文宗派人送去了郑注特制的鸩酒。这位嚣张了半辈子的宦官头子，就这样不明不白地死在了自己的府邸中。</p>' 
+            },
+            'qiushiliang': { 
+                name: '仇士良', 
+                subtitle: '大唐历史上的终极魔王，文臣的梦魇', 
+                content: '<p>仇士良是文宗为了对付王守澄而亲手提拔上来的。但他比王守澄更加残暴、更加敏锐。在甘露之变的现场，当他发觉风吹起帷幕、里面藏着全副武装的甲士时，他没有丝毫犹豫，立刻大呼“有变”，拉起皇帝的软轿就往后宫狂奔。</p><p>劫持皇帝回到神策军大营后，仇士良下达了极其血腥的报复指令：一千多名神策军铁骑直接冲出军营，对长安城内的政府官员展开无差别大屠杀。当朝的四位宰相（王涯、贾餗等）全被当众斩首，连在衙门里办公的无辜小吏和上访的百姓都没能幸免。此后仇士良彻底垄断朝纲，甚至留下了一段著名的“教导太监如何控制皇帝”的黑暗兵法：绝不能让皇帝闲下来读书思考，必须用声色犬马腐蚀他！</p>' 
+            },
+
+            /* 事件库 */
+            'dusha': { 
+                name: '鸩杀旧阉 (835年10月)', 
+                subtitle: '帝王心术的成功预演', 
+                content: '<p><strong>【背景起因】</strong><br>文宗为了夺权，必须先除掉树大根深的王守澄。李训与郑注设计了极其精密的“捧杀”计划。</p><p><strong>【事变经过】</strong><br>文宗任命王守澄为左右神策观军容使（极其尊贵的虚职），剥夺了他对左神策军的实际控制权。紧接着，文宗派贴身宦官去王守澄家中慰问，赐下了一壶御酒。这壶酒中早已被郑注下了剧毒。王守澄饮下后毒发身亡。</p><p><strong>【最终结果】</strong><br>这个计划极其成功，大唐朝野欢欣鼓舞，认为皇权重振在望。但这让李训彻底膨胀，认为太监不过是一群蠢猪，从而导致了随后的致命灾难。</p>' 
+            },
+            'ganlu': { 
+                name: '甘露之变 (835年11月)', 
+                subtitle: '长安街头的修罗场，大唐官员的绝种之劫', 
+                content: '<p><strong>【背景起因】</strong><br>为了抢在郑注之前立下全功，李训决定在大明宫内动手。十一月壬戌日早朝，左金吾卫大将军韩约奏报：“左金吾衙门后院的石榴树上降下了天降祥瑞——甘露。”</p><p><strong>【事变经过】</strong><br>文宗按计划命令仇士良等所有高级太监前去查验祥瑞。李训早已在那里埋伏了几百名甲士，准备关门打狗。然而，一阵阴风吹起帷帐，仇士良看到了里面刀光闪烁的甲士。太监们立刻惊呼逃跑。李训急呼卫兵追杀，但太监们拼死冲回大殿，架起文宗的软轿就逃回了神策军大营。</p><p><strong>【最终结果】</strong><br>安全后的仇士良立刻放出神策军精骑。禁军如狼似虎地冲入长安各部衙门，见穿官服的人就砍。四位宰相被抓，受尽酷刑后在独柳树下被腰斩，一千多名官员家破人亡。大唐的文官系统脊梁被彻底打断。</p>' 
+            },
+            'youjin': { 
+                name: '囚禁太极 (835-840年)', 
+                subtitle: '受制于家奴的绝望哀歌', 
+                content: '<p><strong>【背景起因】</strong><br>甘露之变后，仇士良等太监已经彻底撕破了脸皮，不再对皇权有任何表面的尊重。</p><p><strong>【事变经过】</strong><br>文宗被软禁在太极宫中，身边的人全部换成了仇士良的眼线。天下大政、官员任免全由宦官在神策军大营内决定，皇帝只需要盖章。任何敢于上书为皇帝抱不平的官员，都会立刻消失。</p><p><strong>【最终结果】</strong><br>文宗在这种极度的高压和屈辱下迅速衰老。他曾独自在宫中吟诵悲诗，最终在开成五年郁郁而终。他至死都没能夺回哪怕一丝一毫的权力，甘露之变彻底宣告了皇权在唐朝中后期的全面破产。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
