@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>东魏(极道傀儡)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/殴打/篡位线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧元善见卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">东魏(极道傀儡)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 280px;"></div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 80px; width: 220px;"></div>
+        <div class="line-v-dashed" style="left: 100px; top: 80px; height: 60px;"></div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 80px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 220px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 140px; height: 80px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 220px; height: 80px;"></div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 220px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 60px; top: 360px; width: 260px;"></div>
+        <div class="kill-solid-v" style="left: 60px; top: 140px; height: 220px;"></div>
+        <div class="kill-solid-h" style="left: 60px; top: 140px; width: 40px;"></div>
+
+        <div class="label" style="left: 210px; top: 70px;">拥立傀儡 / 全面监视</div>
+        <div class="label" style="left: 430px; top: 70px;">生前震慑 / 死后必反</div>
+        <div class="label" style="left: 335px; top: 150px;">霸业传承</div>
+        
+        <div class="label" style="left: 210px; top: 210px; color: #c62828; font-weight: bold;">授意折辱天子</div>
+        <div class="label" style="left: 100px; top: 260px; color: #c62828; font-weight: bold;">连揍三拳 / 狗脚朕</div>
+
+        <div class="label" style="left: 430px; top: 210px; color: #c62828; font-weight: bold;">不堪虐待 / 厨子反杀</div>
+
+        <div class="label" style="left: 335px; top: 290px;">兄终弟及</div>
+        <div class="label" style="left: 150px; top: 350px; color: #c62828; font-weight: bold;">逼迫禅让 / 毒酒鸩杀 / 灭东魏</div>
+
+        <div class="person" style="left: 100px; top: 140px;" onclick="showInfo('yuanshanjian')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">元善见</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('gaohuan')">
+            <div class="c-dark">大丞相 / 渤海王</div>
+            <div class="c-minister">高欢</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('houjing')">
+            <div class="c-dark">河南道大行台</div>
+            <div class="c-rebel">侯景</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 220px;" onclick="showInfo('gaocheng')">
+            <div class="c-dark">大将军 / 齐王</div>
+            <div class="c-minister">高澄</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 220px;" onclick="showInfo('lanjing')">
+            <div class="c-dark">膳奴</div>
+            <div class="c-rebel">兰京</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 300px;" onclick="showInfo('cuijishu')">
+            <div class="c-dark">散骑常侍</div>
+            <div class="c-minister">崔季舒</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('gaoyang')">
+            <div class="c-dark">丞相 / 齐王</div>
+            <div class="c-minister">高洋</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">极道傀儡的三大耻辱界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('qiandu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">534年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">迁都邺城</div>
+            </div>
+            <div class="event-card" onclick="showInfo('goujiao')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">547年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">狗脚朕之辱</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chuzi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">549年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">膳奴刺齐王</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yuanshanjian': { 
+                name: '元善见 (孝静帝)', 
+                subtitle: '中国历史上受辱最深的傀儡天子', 
+                content: '<p>元善见11岁被高欢拥立为东魏皇帝。他其实文武双全，史载他“好文学，膂力过人”，不仅能挟石狮子跳跃，还能骑马射箭。但在高家的绝对强权下，他的武力值毫无用处。</p><p>高欢在世时，表面上还对他执臣子之礼。但高欢死后，其子高澄接班，彻底撕破了脸。高澄派人在皇帝身边全天候监视，元善见稍微抱怨一句，高澄就派人当众揍他。元善见忍无可忍，曾暗中挖地道试图逃出皇宫起兵，结果被高澄发现。高澄带兵冲入皇宫逼问，元善见绝望地喊出：“自古只有臣子造皇帝的反，哪有皇帝造臣子的反！”最终，他被高洋逼迫禅让，并在喝下高洋送来的毒酒后惨死，年仅28岁。</p>' 
+            },
+            'gaohuan': { 
+                name: '高欢', 
+                subtitle: '东魏的缔造者与真正的无冕之王', 
+                content: '<p>高欢是尔朱荣死后崛起的超级军阀。在北魏孝武帝逃往长安投奔宇文泰后，高欢在邺城拥立了元善见，正式建立了东魏。他本人坐镇晋阳（今太原）遥控朝政。</p><p>高欢一生都在与西魏的宇文泰进行生死决战，虽然兵力占优，却在沙苑之战、玉壁之战中屡次受挫。特别是玉壁之战，高欢苦攻数十天不克，死伤七万余人，高欢因此忧愤成疾。临终前，他为了稳定军心，强撑病体让部下斛律金领唱了那首千古绝唱《敕勒歌》（天苍苍，野茫茫，风吹草低见牛羊），随后病逝，将霸业留给了性格狂暴的长子高澄。</p>' 
+            },
+            'gaocheng': { 
+                name: '高澄', 
+                subtitle: '狂妄绝伦的天才权臣，死于非命的暴徒', 
+                content: '<p>高澄是高欢的长子，极其聪明，但也极其狂妄和残暴。他接手权力后，迅速平定了侯景的叛乱，展现了卓越的军事和政治才能。</p><p>但他对皇帝元善见毫无敬意，甚至在宴会上直接举起大杯子逼皇帝喝酒，皇帝不喝，他竟破口大骂皇帝是“狗脚朕”。他将篡位的一切流程都已经准备就绪，甚至连登基的诏书都拟好了。但他有一个致命的弱点：极度喜欢虐待下人。最终，在登基前夕，他被不堪忍受虐待的厨师兰京用切肉刀刺杀，将胜利果实拱手让给了弟弟高洋。</p>' 
+            },
+            'cuijishu': { 
+                name: '崔季舒', 
+                subtitle: '替权臣出手殴打皇帝的狗腿子', 
+                content: '<p>崔季舒是高澄的绝对心腹，被高澄安插在皇帝元善见身边担任散骑常侍，名义上是伺候皇帝，实际上是贴身监视。</p><p>有一次，高澄在宴会上大骂皇帝“狗脚朕”，皇帝悲愤交加。高澄竟然还不解气，回头示意崔季舒。崔季舒心领神会，竟然走上前去，对着堂堂大魏天子连挥三拳，打得皇帝跌坐在地。这种臣子当众殴打皇帝的恶劣行径，彻底击穿了中国封建社会君臣伦理的底线。</p>' 
+            },
+            'lanjing': { 
+                name: '兰京', 
+                subtitle: '一把切肉刀改变中国历史走向的厨子', 
+                content: '<p>兰京是南朝梁朝将领兰钦的儿子，在战争中被俘虏到东魏，被分配给高澄当“膳奴”（厨师）。兰京曾多次请求用财物赎身，高澄不仅不答应，反而将他毒打一顿，并威胁说：“你再敢提赎身的事，我就杀了你！”</p><p>面临死境的兰京决定铤而走险。549年，高澄正在邺城与亲信密谋篡位事宜。兰京以送食物为名进入房间，高澄警觉地让他退下。过了一会儿，兰京直接拔出藏在餐盘下的尖刀冲了进去。高澄吓得从床上跳下来试图躲避，脚却崴了，被兰京等人按在地上乱刀捅死。一个小小的厨子，就这样改变了北朝的历史进程。</p>' 
+            },
+            'gaoyang': { 
+                name: '高洋', 
+                subtitle: '装疯卖傻的接盘侠，终结东魏的建立者', 
+                content: '<p>高洋是高澄的同母弟。在高澄生前，高洋一直表现得极其木讷、结巴，经常流着鼻涕，被哥哥高澄和周围人当成傻子嘲笑。</p><p>但当高澄遇刺、整个高氏集团群龙无首陷入巨大恐慌时，高洋瞬间撕下了伪装。他拔出佩剑，眼神变得如狼一般冷酷，极其干脆利落地指挥军队镇压了兰京等刺客，并迅速接管了所有兵权。次年，他带兵入宫，逼迫元善见禅让，终结了东魏，建立了北齐政权，彻底展现了他“英雄天子”的一面。</p>' 
+            },
+            'houjing': { 
+                name: '侯景', 
+                subtitle: '高欢留下的定时炸弹，引爆南北朝大乱的叛贼', 
+                content: '<p>侯景是东魏驻守河南的大将，拥兵十万，极其狡诈。他只服高欢一人，曾公开说：“高王在，我不敢异心；高王死，我绝不能和高澄那小子共事！”</p><p>高欢临终前特意嘱咐高澄一定要防备侯景。果然，高欢一死，侯景立刻宣布叛乱，先是投降西魏，后又投降南朝梁。他的叛变不仅让东魏失去了一大片领土，更直接导致了后来毁灭整个江南文明的“侯景之乱”。</p>' 
+            },
+
+            /* 事件库 */
+            'qiandu': { 
+                name: '迁都邺城 (534年)', 
+                subtitle: '东魏傀儡政权的强行开机', 
+                content: '<p><strong>【背景起因】</strong><br>北魏孝武帝元修不愿做高欢的傀儡，率领亲军逃出洛阳，投奔了西部的宇文泰。</p><p><strong>【事变经过】</strong><br>高欢带兵进入洛阳后，发现皇帝跑了，立刻在洛阳群臣中挑中了11岁的元善见拥立为帝。为了远离西部威胁，并彻底将朝廷置于自己的掌控之下，高欢强行下令将首都从洛阳迁往邺城（今河北临漳）。在迁都途中，高欢派兵将洛阳的宫殿全部拆毁，木材顺黄河漂流至邺城。</p><p><strong>【最终结果】</strong><br>北魏正式分裂，东魏政权在邺城建立。元善见从登基的那一刻起，就注定了他在邺城皇宫里度过悲惨而屈辱的一生。</p>' 
+            },
+            'goujiao': { 
+                name: '狗脚朕之辱 (547年)', 
+                subtitle: '皇权尊严的终极粉碎机', 
+                content: '<p><strong>【背景起因】</strong><br>高欢死后，高澄全面接管大权，篡位野心昭然若揭。元善见如坐针毡，君臣矛盾白热化。</p><p><strong>【事变经过】</strong><br>在一次皇宫宴会上，高澄举起大酒杯走到皇帝面前，强行敬酒。元善见悲愤地说：“自古哪有不亡的朝代，朕这皇帝当得有什么意思！”高澄听后勃然大怒，当着满朝文武的面指着皇帝破口大骂：“朕，朕，狗脚朕！”随后示意心腹崔季舒上前，对着皇帝的肚子连捶了三拳，然后扬长而去。</p><p><strong>【最终结果】</strong><br>此事件是中国历史上皇权被武臣践踏到最卑微谷底的标志。元善见受此奇耻大辱后，决定挖地道反抗，结果以失败告终，彻底沦为案板上的鱼肉。</p>' 
+            },
+            'chuzi': { 
+                name: '膳奴刺齐王 (549年)', 
+                subtitle: '暴力狂人的宿命反噬', 
+                content: '<p><strong>【背景起因】</strong><br>高澄已经逼迫皇帝封自己为“齐王”，赞拜不名，篡位大典只差一个良辰吉日。同时，他极度苛待身边的奴仆。</p><p><strong>【事变经过】</strong><br>膳奴兰京因多次请求赎身被拒且遭到毒打，怀恨在心。趁着高澄在北城与亲信商议禅让事宜时，兰京端着餐盘进入。高澄呵斥他退下，兰京大喊：“我来杀你！”抽出藏在盘下的利刃。高澄崴脚倒地，被兰京及其同党按在床下乱刀刺死。</p><p><strong>【最终结果】</strong><br>高澄的死导致东魏的篡位进程被迫中断。一直装疯卖傻的高洋借此机会接管了大权，展现出了惊人的雷霆手段，随后建立北齐，开启了另一段更加疯狂的“禽兽王朝”历史。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
