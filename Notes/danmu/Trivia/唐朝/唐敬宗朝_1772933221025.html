@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐敬宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/暴动/构陷线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧张韶卡片中心在100px，半宽34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐敬宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line-v-dashed" style="left: 100px; top: 100px; height: 140px;"></div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 100px; width: 220px;"></div>
+
+        <div class="line-v-dashed" style="left: 540px; top: 100px; height: 140px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 100px; width: 220px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 140px;"></div>
+
+        <div class="kill-v" style="left: 540px; top: 240px; height: 120px;"></div>
+
+        <div class="kill-solid-v" style="left: 480px; top: 100px; height: 140px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 240px; width: 160px;"></div>
+
+        <div class="label" style="left: 210px; top: 90px; color: #c62828; font-weight: bold;">染车藏兵 / 攻占龙椅</div>
+        <div class="label" style="left: 100px; top: 170px;">谶语蛊惑起事</div>
+        
+        <div class="label" style="left: 320px; top: 170px; color: #c62828; font-weight: bold;">无法忍受虐待 / 深夜弑君</div>
+        
+        <div class="label" style="left: 430px; top: 90px;">纵容沉迷 / 幕后独裁</div>
+        <div class="label" style="left: 540px; top: 170px;">内外勾结 (八关之交)</div>
+        
+        <div class="label" style="left: 400px; top: 230px; color: #c62828; font-weight: bold;">发兵剿灭 / 抢夺拥立大功</div>
+        <div class="label" style="left: 540px; top: 300px; color: #c62828;">党争排挤 / 构陷外放</div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('zhangshao')">
+            <div class="c-dark">染坊役夫</div>
+            <div class="c-rebel">张韶</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('suxuanming')">
+            <div class="c-dark">卜者</div>
+            <div class="c-rebel">苏玄明</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('jingzong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李湛</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('liukeming')">
+            <div class="c-dark">宦官 / 击球军将</div>
+            <div class="c-minister">刘克明</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('wangshoucheng')">
+            <div class="c-dark">神策军护军中尉</div>
+            <div class="c-minister">王守澄</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('lifengji')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">李逢吉</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 360px;" onclick="showInfo('lideyu')">
+            <div class="c-dark">浙西节度使</div>
+            <div class="c-minister">李德裕</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">敬宗朝荒诞乱象</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('ranfang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">824年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">染坊暴动</div>
+            </div>
+            <div class="event-card" onclick="showInfo('baguan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">824-826年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">八关之结</div>
+            </div>
+            <div class="event-card" onclick="showInfo('shijun')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">826年12月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">击球弑君</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'jingzong': { 
+                name: '李湛 (唐敬宗)', 
+                subtitle: '大唐顶级荒唐玩家，死于职场霸凌的暴君', 
+                content: '<p>李湛16岁登基，完美继承了父亲穆宗的荒唐基因，甚至青出于蓝。他视国家政务为粪土，每天唯一的爱好就是打马球、看力士摔跤，以及在深夜跑到宫外去打猎（打夜狐）。</p><p>更致命的是，他性格极其暴躁，把身边的太监和陪他打球的运动员当成畜生。稍有不顺心，轻则罢免，重则直接打断胳膊打断腿，甚至活活打死。整个内廷的人每天都活在极度的恐惧中。甚至在平民张韶攻入大殿、他狼狈逃往神策军大营避难之后，他依然没有吸取任何教训，回宫后继续吃喝玩乐、殴打下人。这种毫无底线的“职场霸凌”，最终逼得他手下的太监和陪练们在深夜联手将其残忍杀死，年仅18岁。</p>' 
+            },
+            'zhangshao': { 
+                name: '张韶', 
+                subtitle: '染坊里的泥腿子，中国历史上最离谱的叛乱首领', 
+                content: '<p>张韶只是长安城里一个给宫廷染布的底层役夫。他被算命先生苏玄明的一句“你会坐在皇帝的龙椅上吃饭”彻底洗脑。为了实现这个荒诞的预言，他竟然纠集了一百多个同样底层的染工和市井无赖，把武器藏在运送紫草（染料）的车里，直接大摇大摆地推向了皇宫。</p><p>因为敬宗只顾着玩乐，宫廷安保烂到了极点。张韶等人竟然真的抽刀杀入了清思殿（皇帝理政的大殿）。敬宗吓得连滚带爬逃出皇宫。张韶如愿以偿地坐上了龙椅，和苏玄明一起吃起了皇帝桌上的大餐。然而吃完后，两人大眼瞪小眼，完全不知道下一步该干嘛。很快，神策军赶到，将这群在龙椅上发呆的泥腿子全部乱箭射死。</p>' 
+            },
+            'suxuanming': { 
+                name: '苏玄明', 
+                subtitle: '靠一个卦象颠覆皇宫的神棍', 
+                content: '<p>苏玄明是个在长安街头算卦的卜者，平时和张韶关系很好。他利用张韶的无知，编造卦象说：“现在的皇帝整天打球不理朝政，天下人都怨恨他。卦象显示，你张韶有帝王之相，必定能坐在大殿里享受御膳。”</p><p>极其荒诞的是，这个完全没有战略、没有外援、连兵器都凑不齐的“两人团伙”，居然真的成功把大唐皇帝赶出了宫。当两人坐在龙椅上吃完饭后，张韶问苏玄明：“现在我们该怎么办？”苏玄明直接傻眼了：“卦象上只说你能坐在这里吃饭，没说吃完饭该干嘛啊！”这场闹剧以两人被赶来的禁军砍成肉泥收场。</p>' 
+            },
+            'liukeming': { 
+                name: '刘克明', 
+                subtitle: '忍无可忍的马球陪练，绝望的弑君者', 
+                content: '<p>刘克明是宫中的宦官，也是敬宗最常使用的“击球军将”（马球陪练兼保镖）。由于敬宗喜怒无常，刘克明和同事们经常因为在球场上的一点小失误就被打得半死，每天上班都像在上刑场。</p><p>宝历二年十二月，敬宗又去打夜狐，深夜回宫后与刘克明等人大口喝酒。敬宗喝醉后去更衣，由于刚刚又无端责打了几个太监，刘克明等人终于爆发。他们互相对视一眼，突然熄灭了殿内的蜡烛。在黑暗中，这群被逼到绝路的太监和陪练一拥而上，将18岁的皇帝当场弑杀。随后，刘克明试图伪造遗诏拥立绛王，但在残酷的政治斗争中，他很快就被王守澄“黑吃黑”剿灭。</p>' 
+            },
+            'wangshoucheng': { 
+                name: '王守澄', 
+                subtitle: '稳坐钓鱼台的太上皇，两度拥立的大权阉', 
+                content: '<p>王守澄是拥立穆宗上台的首席太监，到了敬宗朝，他依然牢牢掌控着大唐最精锐的神策军。面对敬宗的荒唐，王守澄不仅不劝阻，反而极力纵容，因为皇帝越是不理朝政，他这个枢密太监的权力就越大。</p><p>当刘克明弑杀敬宗并试图拥立新帝时，王守澄敏锐地嗅到了“再次拥立捞取大功”的机会。他立刻调集神策军，以“平叛勤王”的名义攻入后宫，不仅把刘克明等刺客全部杀光，还顺手除掉了刘克明拥立的绛王。随后，王守澄按照自己的意愿，把敬宗的弟弟李昂推上了皇位（唐文宗），再次巩固了自己不可撼动的独裁地位。</p>' 
+            },
+            'lifengji': { 
+                name: '李逢吉', 
+                subtitle: '勾结阉党的牛党领袖，败坏朝纲的宰相', 
+                content: '<p>李逢吉是牛党的早期核心人物。在敬宗这个荒唐皇帝手下当宰相，他完全没有匡扶社稷的心思，而是把全部精力放在了“如何搞死政敌（李党）”上。</p><p>为了垄断朝堂，他不惜自降身段，与大太监王守澄结成极其肮脏的政治同盟。李逢吉的八个亲信官员与王守澄的八个亲信太监结拜为兄弟，史称“八关十六子”。这个利益集团在朝堂上遮天蔽日，大肆受贿，并将以李德裕为首的正直官员全部贬谪出京。这是大唐文官集团向宦官彻底屈膝投降的耻辱标志。</p>' 
+            },
+            'lideyu': { 
+                name: '李德裕', 
+                subtitle: '被小人和太监联手赶出京城的治世之才', 
+                content: '<p>李德裕在敬宗朝原本担任翰林学士，深得皇帝的信任。但他极其厌恶李逢吉的结党营私，更不愿与王守澄等太监同流合污。</p><p>在“八关”利益集团的疯狂构陷下，李德裕独木难支，最终被排挤出朝廷核心，被贬为浙西观察使。虽然在地方上他依然做出了卓越的政绩（如毁除淫祠、发展经济），但他被迫离开中枢，标志着在敬宗这混乱的三年里，大唐朝廷已经容不下任何清流与骨气。</p>' 
+            },
+
+            /* 事件库 */
+            'ranfang': { 
+                name: '染坊暴动 (824年)', 
+                subtitle: '中国宫廷安保史上最离谱的笑话', 
+                content: '<p><strong>【背景起因】</strong><br>敬宗李湛极度贪玩，整日带着禁军在外打猎打球，皇宫防卫如同虚设。算命先生苏玄明用一句“你能坐在龙椅上吃饭”的预言，成功忽悠了染坊苦力张韶。</p><p><strong>【事变经过】</strong><br>一百多个市井混混把兵器藏在染布用的紫草车里，顺利混入皇宫。由于实在没有安保，他们竟然一路砍杀到了皇帝理政的清思殿。敬宗吓得躲进了左神策军大营。张韶如愿坐在龙椅上吃了顿饭，然后就因为没有后续计划，呆坐在大殿里。</p><p><strong>【最终结果】</strong><br>神策军将领率领骑兵赶到，一波冲锋就将这群泥腿子全部射杀。这起荒诞的暴动不仅没让敬宗警醒，反而让他觉得皇宫晦气，更加频繁地跑出宫去玩乐，最终命丧宫外。</p>' 
+            },
+            'baguan': { 
+                name: '八关之结 (824-826年)', 
+                subtitle: '文官与阉党的至暗融合', 
+                content: '<p><strong>【背景起因】</strong><br>随着宦官掌握了废立皇帝和禁军的绝对权力，朝堂上的文官（尤其是牛党）为了打击政敌，开始主动向宦官出卖尊严。</p><p><strong>【事变经过】</strong><br>宰相李逢吉为了彻底扳倒李德裕，指使自己的八个心腹官员（如张又新、李续等），与神策军中尉王守澄的八个亲信太监结为兄弟，内外勾结。他们在朝中织起了一张密不透风的网，凡是要升官发财的人，必须先贿赂这“八关”。</p><p><strong>【最终结果】</strong><br>党争与阉党合流，导致大唐的吏治彻底崩坏。正直的大臣被一网打尽，朝堂成了一个纯粹的利益分赃场，加速了大唐国力的衰竭。</p>' 
+            },
+            'shijun': { 
+                name: '击球弑君 (826年12月)', 
+                subtitle: '被职场霸凌逼出的午夜凶杀案', 
+                content: '<p><strong>【背景起因】</strong><br>敬宗不仅荒废朝政，还极其残暴。陪他打球的太监和力士稍微犯点错，就会被他打碎骨头。长期的高压和虐待，让刘克明等近侍每天都生活在随时可能被杀的恐惧中。</p><p><strong>【事变经过】</strong><br>十二月的一个深夜，敬宗去郊外“打夜狐”归来，在宫中大摆酒宴。敬宗喝得酩酊大醉去更衣，刘克明等人觉得这是唯一活命的机会。他们突然熄灭蜡烛，在黑暗中将这位18岁的残暴主子当场击杀。</p><p><strong>【最终结果】</strong><br>刘克明试图矫诏拥立新君，但大太监王守澄反应极快，立刻率领神策军将其剿灭，并拥立了敬宗的弟弟李昂（唐文宗）。皇帝像草芥一样被杀，太监再次掌控了最高皇权。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
