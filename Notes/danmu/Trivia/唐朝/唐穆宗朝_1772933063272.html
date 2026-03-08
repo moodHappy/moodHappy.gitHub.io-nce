@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐穆宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/倾轧/叛乱线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧王守澄卡片中心在100px，半宽34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐穆宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="kill-solid-h" style="left: 100px; top: 100px; width: 220px;"></div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 220px; height: 1px;"></div>
+        
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 120px;"></div>
+        <div class="line" style="left: 100px; top: 220px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 220px; width: 1px; height: 120px;"></div>
+
+        <div class="kill-v" style="left: 540px; top: 100px; height: 140px;"></div>
+
+        <div class="kill-h" style="left: 100px; top: 340px; width: 160px;"></div>
+
+        <div class="kill-v" style="left: 260px; top: 220px; height: 120px;"></div>
+        <div class="kill-v" style="left: 420px; top: 220px; height: 120px;"></div>
+        <div class="kill-h" style="left: 260px; top: 220px; width: 160px;"></div>
+
+        <div class="label" style="left: 210px; top: 90px; color: #c62828; font-weight: bold;">弑父拥立 / 绝对控制</div>
+        <div class="label" style="left: 430px; top: 90px;">科举提拔 / 引入朝堂</div>
+        
+        <div class="label" style="left: 540px; top: 170px; color: #c62828; font-weight: bold;">牛李党争 / 互贬四十年</div>
+        
+        <div class="label" style="left: 210px; top: 210px;">微操调防 / 脱离根基</div>
+        
+        <div class="label" style="left: 180px; top: 330px; color: #c62828; font-weight: bold;">哗变屠杀 / 灭门</div>
+        <div class="label" style="left: 340px; top: 210px; color: #c62828; font-weight: bold;">河朔复叛 / 帝国崩盘</div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('muzong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李恒</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('wangshoucheng')">
+            <div class="c-dark">神策军护军中尉</div>
+            <div class="c-minister">王守澄</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('niu')">
+            <div class="c-dark">御史中丞 / 宰相</div>
+            <div class="c-minister">牛僧孺</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('li')">
+            <div class="c-dark">翰林学士 / 宰相</div>
+            <div class="c-minister">李德裕</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 340px;" onclick="showInfo('tian')">
+            <div class="c-dark">成德军节度使</div>
+            <div class="c-minister">田弘正</div>
+        </div>
+
+        <div class="person" style="left: 260px; top: 340px;" onclick="showInfo('wangtingcou')">
+            <div class="c-dark">成德兵马使 (叛)</div>
+            <div class="c-rebel">王庭凑</div>
+        </div>
+
+        <div class="person" style="left: 420px; top: 340px;" onclick="showInfo('zhu')">
+            <div class="c-dark">卢龙军节度使 (叛)</div>
+            <div class="c-rebel">朱克融</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">穆宗朝帝国崩盘节点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('shifu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">820年正月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">弑帝拥立</div>
+            </div>
+            <div class="event-card" onclick="showInfo('dangzheng')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">821年始</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">牛李党争</div>
+            </div>
+            <div class="event-card" onclick="showInfo('heshuo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">821年7月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">河朔复叛</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'muzong': { 
+                name: '李恒 (唐穆宗)', 
+                subtitle: '大唐顶级败家子，马球场上的瘫痪皇帝', 
+                content: '<p>宪宗遇弑后，宦官王守澄将李恒扶上皇位。面对父亲留下来的统一帝国和充盈国库，穆宗没有任何守业的觉悟。他上台的第一件事就是大肆赏赐拥立他的宦官和亲信，将国库挥霍一空。他不仅不上朝理政，反而疯狂痴迷于打马球（击鞠）和深夜酗酒。</p><p>在处理刚刚平定的河北三镇（藩镇）问题上，他的朝廷昏招迭出，克扣军饷，盲目调动统帅，硬生生把已经投降的军阀重新逼反。他在位仅仅四年，就把“元和中兴”的基业彻底砸碎。更讽刺的是，由于他在皇宫里打马球过于激烈，从马上重重摔下，导致中风瘫痪，不久后在一片内忧外患中痛苦死去，年仅30岁。</p>' 
+            },
+            'wangshoucheng': { 
+                name: '王守澄', 
+                subtitle: '开启中晚唐“太监立废皇帝”时代的极恶推手', 
+                content: '<p>王守澄是宪宗朝的贴身宦官，正是他带人潜入寝宫，极其残忍地毒杀（或闷死）了宪宗，伪造遗诏拥立了穆宗。这标志着大唐皇权的彻底沉沦——从此以后，大唐的皇帝就像是神策军中尉（太监首领）手里的玩具，谁当皇帝，全凭这几个死太监一句话。</p><p>穆宗对这位“弑父仇人”不仅不敢追究，反而将其奉若神明。王守澄独揽大权长达十四年，历经四朝皇帝，他在朝堂上大肆收受贿赂，甚至干预宰相的任免，将整个大唐官场搞得乌烟瘴气，成为了唐朝后期最大的一颗宦官毒瘤。</p>' 
+            },
+            'niu': { 
+                name: '牛僧孺 (牛党领袖)', 
+                subtitle: '科举策论引发的朝堂内战', 
+                content: '<p>牛僧孺是科举进士出身。在宪宗朝的一次科举考试中，他在答卷里极其尖锐地批评了当时的朝政。这本来是文人的正直之举，却得罪了当时的宰相李吉甫（李德裕的父亲）。李吉甫立刻向皇帝哭诉，将牛僧孺打压下去。</p><p>到了穆宗朝，穆宗为了显示自己“广开言路”，破格提拔了牛僧孺。这不仅是对李德裕的公然挑衅，更让朝堂上的官员开始迅速撕裂站队。牛党大多是科举出身的寒门士子，他们重文章、尚清谈，自此与以世家大族为主的李党展开了长达四十年的残酷互掐。</p>' 
+            },
+            'li': { 
+                name: '李德裕 (李党领袖)', 
+                subtitle: '门阀贵族的最后辉煌，只问阵营不论是非的政客', 
+                content: '<p>李德裕出身于赵郡李氏，是大唐最顶级的门阀贵族。他没有参加科举，全凭门荫入仕。他极其看不起科举出身的“做题家”牛僧孺，认为他们只会写文章，根本不懂治国理政。</p><p>在穆宗及其后代统治时期，李党和牛党形成了一种极其恶劣的默契：只要是牛党赞成的政策，李党不管对错一定要坚决反对；一旦李党掌权，就把牛党的人全部流放岭南。这种“只问阵营，不问是非”的极度内耗，让本就风雨飘摇的大唐中央政府彻底失去了处理藩镇叛乱和恢复经济的能力。</p>' 
+            },
+            'tian': { 
+                name: '田弘正', 
+                subtitle: '归顺朝廷的忠臣，死于瞎指挥的大将', 
+                content: '<p>田弘正是宪宗平定藩镇的最大功臣之一。他本是割据魏博的军阀，但在宪宗的威势下主动举镇归顺，被天下视为忠臣的典范。然而，穆宗登基后，做出了一个极其愚蠢的决定。</p><p>穆宗和宰相们认为，把田弘正调离他的老巢魏博，去接管刚刚投降、极其不稳定的成德镇，就能瓦解军阀的根基。他们竟然只给了田弘正两千兵马，就让他去满是骄兵悍将的成德军上任。失去嫡系部队保护的田弘正，一进入成德，就成了叛军眼中的肥肉。最终，他在深夜被成德军叛将乱刀砍死，全家老小被灭门。他的死，直接点燃了河北复叛的火药桶。</p>' 
+            },
+            'wangtingcou': { 
+                name: '王庭凑', 
+                subtitle: '杀官造反的乱世狂徒，逼迫朝廷低头的恶狼', 
+                content: '<p>王庭凑是回鹘（维吾尔族先民）后裔，在成德军中担任中级军官。他敏锐地察觉到新来的节度使田弘正兵力单薄，且朝廷腐败无能。于是，他在深夜发动兵变，直接带兵冲入节度使府邸，将田弘正及其家属亲信全部残忍屠杀。</p><p>杀了朝廷大员后，他立刻联合其他叛镇，不仅不投降，反而大肆进攻大唐的州县。面对这种赤裸裸的恐怖行径，昏庸的穆宗朝廷由于国库空虚且指挥混乱，打了几个败仗后竟然直接认怂。朝廷不仅没有诛杀王庭凑，反而下发圣旨，正式任命他为成德军节度使。这种“杀官就能升官”的软弱操作，让大唐的威信彻底扫地。</p>' 
+            },
+            'zhu': { 
+                name: '朱克融', 
+                subtitle: '被逼反的降将，撕裂大唐版图的推手', 
+                content: '<p>朱克融本是卢龙军的军官，在卢龙镇归降朝廷后，他被调往长安。结果，腐败的大唐后勤系统竟然连续几个月不给这些归降的将士发军饷，甚至连饭都吃不饱。朱克融多次上访要钱，不仅没要到，还被当朝宰相打了一顿。</p><p>满腔怒火的朱克融回到卢龙后，立刻煽动士兵哗变，囚禁了朝廷派来的节度使，自己割据幽州。他与王庭凑遥相呼应，彻底击碎了宪宗留下的统一局面。软弱的穆宗同样承认了朱克融的合法地位。安史之乱的策源地（河北三镇），在降服短短几年后，再次脱离了中央的控制，直到唐朝灭亡都未能再收复。</p>' 
+            },
+
+            /* 事件库 */
+            'shifu': { 
+                name: '弑帝拥立 (820年正月)', 
+                subtitle: '宦官彻底掌控大唐最高皇权的界碑', 
+                content: '<p><strong>【背景起因】</strong><br>唐宪宗晚年服食金丹，性格暴躁，大肆杖杀宦官。宦官王守澄等人为了保命，决定先下手为强，并在多位皇子中寻找一个容易控制的傀儡。</p><p><strong>【事变经过】</strong><br>正月庚子夜，王守澄等人潜入寝宫毒杀宪宗，随后迅速联合同党，伪造遗诏，封锁了皇宫大门。他们抢先拥立了平庸贪玩的皇太子李恒登基，同时立刻派人诛杀了另一派太监及其拥立的澧王。</p><p><strong>【最终结果】</strong><br>这不仅是一场皇宫内的谋杀，更宣告了大唐政治生态的彻底异化。连千古英主宪宗都能被太监轻易毒杀且无法追责，标志着宦官集团正式跃升为大唐的“太上皇”。</p>' 
+            },
+            'dangzheng': { 
+                name: '牛李党争 (821年始)', 
+                subtitle: '长达四十年的高层内耗与政治癌变', 
+                content: '<p><strong>【背景起因】</strong><br>长庆元年（821年）的科举考试爆出严重的舞弊丑闻，权贵的子弟纷纷高中。皇帝下令重考，这成为了门阀世族（李党）与科举寒门（牛党）彻底决裂的导火索。</p><p><strong>【事变经过】</strong><br>穆宗昏庸，面对大臣们的互相攻击毫无判断力，只能采取“和稀泥”的态度，今天用牛党，明天用李党。这导致两派为了争夺相位，无所不用其极地互相构陷。地方上的军阀叛乱他们漠不关心，只关心如何把政敌搞死流放。</p><p><strong>【最终结果】</strong><br>这场党争持续了近半个世纪，历经六朝皇帝。大唐中央政府在这无尽的内耗中彻底丧失了行政效率，成为了加速唐帝国灭亡的致命毒药。</p>' 
+            },
+            'heshuo': { 
+                name: '河朔复叛 (821年7月)', 
+                subtitle: '瞎指挥葬送了中兴大业', 
+                content: '<p><strong>【背景起因】</strong><br>宪宗费尽国力才让河北三镇（卢龙、成德、魏博）归降。穆宗的朝廷为了削弱地方兵权，频繁且毫无逻辑地调换各镇节度使，并克扣河北驻军的粮饷。</p><p><strong>【事变经过】</strong><br>七月，成德军都知兵马使王庭凑发动兵变，将朝廷派来的忠臣田弘正满门抄斩；紧接着，卢龙军将领朱克融也因为讨薪无果，囚禁朝廷大员宣布造反。两镇叛军声势浩大，连破大唐州县。</p><p><strong>【最终结果】</strong><br>穆宗派出十五万大军讨伐，结果因为统帅无能、后勤贪污，官军全线溃败。国库空虚的穆宗只得下诏向叛贼妥协，正式册封王庭凑、朱克融为节度使。宪宗的“元和中兴”如泡沫般彻底破灭，大唐失去了最后一次走向中兴的机会。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
