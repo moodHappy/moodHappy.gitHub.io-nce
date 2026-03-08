@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>北周(极道忍辱)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 520px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/弑君/灭族线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧宇文觉/杨坚卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">北周(极道忍辱)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line-h-dashed" style="left: 320px; top: 80px; width: 220px;"></div>
+        <div class="line-v-dashed" style="left: 540px; top: 80px; height: 60px;"></div>
+
+        <div class="line" style="left: 540px; top: 160px; width: 1px; height: 100px;"></div>
+
+        <div class="line" style="left: 100px; top: 260px; width: 440px; height: 1px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 20px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 120px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 120px; height: 40px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 60px;"></div>
+
+        <div class="kill-solid-v" style="left: 520px; top: 140px; height: 20px;"></div>
+        <div class="kill-solid-h" style="left: 340px; top: 140px; width: 180px;"></div>
+        <div class="kill-solid-v" style="left: 340px; top: 80px; height: 60px;"></div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 280px; height: 30px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 310px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 310px; height: 50px;"></div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 280px; height: 80px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 420px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 380px; height: 40px;"></div>
+
+        <div class="label" style="left: 210px; top: 110px; color: #c62828; font-weight: bold;">不甘傀儡 / 废黜绞杀</div>
+        <div class="label" style="left: 320px; top: 130px; color: #c62828; font-weight: bold;">暗下毒药</div>
+        
+        <div class="label" style="left: 430px; top: 70px;">十二年装孙子 / 极致蛰伏</div>
+        <div class="label" style="left: 430px; top: 130px; color: #c62828; font-weight: bold;">玉珽爆头 / 殿内刺杀权臣</div>
+
+        <div class="label" style="left: 540px; top: 210px;">盛极而衰 / 传位昏徒</div>
+        <div class="label" style="left: 210px; top: 250px;">外戚联姻 / 伺机篡国</div>
+
+        <div class="label" style="left: 210px; top: 300px; color: #c62828; font-weight: bold;">逼迫禅让 / 代周建隋</div>
+        <div class="label" style="left: 210px; top: 410px; color: #c62828; font-weight: bold;">斩草除根 / 屠尽宇文全族</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('yuwenhu')">
+            <div class="c-dark">大冢宰 / 晋国公</div>
+            <div class="c-minister" style="font-size: 18px;">宇文护</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 160px;" onclick="showInfo('yuwenjue')">
+            <div class="c-dark">皇帝 / 孝闵帝</div>
+            <div class="c-emperor">宇文觉</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 160px;" onclick="showInfo('yuwenyu')">
+            <div class="c-dark">皇帝 / 明帝</div>
+            <div class="c-emperor">宇文毓</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 160px;" onclick="showInfo('yuwenyong')">
+            <div class="c-dark">皇帝 / 武帝</div>
+            <div class="c-emperor" style="font-size: 18px;">宇文邕</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 260px;" onclick="showInfo('yangjian')">
+            <div class="c-dark">大丞相 / 随国公</div>
+            <div class="c-minister" style="font-size: 18px;">杨坚</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 260px;" onclick="showInfo('yanglihua')">
+            <div class="c-dark">皇太后</div>
+            <div class="c-consort">杨丽华</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 260px;" onclick="showInfo('yuwenyun')">
+            <div class="c-dark">天元皇帝 / 宣帝</div>
+            <div class="c-emperor">宇文赟</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('yuwenchan')">
+            <div class="c-dark">皇帝 / 静帝 (废)</div>
+            <div class="c-emperor">宇文阐</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 460px;" onclick="showInfo('zongshi')">
+            <div class="c-dark">北周宗室</div>
+            <div class="c-minister">宇文氏五王及全族</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">极道帝国的三大血色反转</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('hushijun')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">557-560年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">连弑两帝</div>
+            </div>
+            <div class="event-card" onclick="showInfo('diannei')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">572年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">殿内反杀</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chanrang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">581年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">杨坚代周</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yuwenhu': { 
+                name: '宇文护', 
+                subtitle: '中国历史上的弑君冠军，一手遮天的无冕之王', 
+                content: '<p>宇文护是宇文泰的亲侄子。宇文泰死前，将大权和年幼的儿子们托付给了他。宇文护接手后，立刻逼迫西魏皇帝禅让，建立了北周政权。但他对权力的掌控欲达到了病态的程度。</p><p>他先后立了宇文觉、宇文毓为帝。当宇文觉试图夺回权力时，他毫不犹豫地将其废黜并绞死；当宇文毓展现出明君潜质、深得民心时，他为了防止皇权失控，直接在皇帝的食物中下毒，将其毒杀。三年内连杀三位皇帝（西魏废帝、北周孝闵帝、明帝），宇文护成了北周初期让人闻风丧胆的超级独裁者。他以为第三个皇帝宇文邕是个懦弱的废物，却没想到自己这只老狐狸，最终栽在了一个装孙子装了十二年的隐忍狂魔手里。</p>' 
+            },
+            'yuwenjue': { 
+                name: '宇文觉 (孝闵帝)', 
+                subtitle: '不甘傀儡的开国之君，被堂兄绞杀的少年', 
+                content: '<p>宇文觉是北周的开国皇帝，登基时年仅15岁。他性格刚烈，极其反感堂兄宇文护在朝堂上的嚣张跋扈。为了夺回军权，他暗中联络了几位关陇老将，并在御花园的假山后安排武士，准备在宴会上将宇文护一举拿下。</p><p>但宇文护的情报网极其发达，提前得知了密谋。宇文护先下手为强，调动大军包围皇宫，诛杀了参与密谋的大臣，直接将宇文觉废黜。不久之后，宇文觉在幽禁中被宇文护派人绞死，成为北周历史上第一个悲剧牺牲品。</p>' 
+            },
+            'yuwenyu': { 
+                name: '宇文毓 (明帝)', 
+                subtitle: '锋芒微露的明君，倒在毒酒下的牺牲品', 
+                content: '<p>宇文毓是宇文觉的哥哥。宇文护以为他温和文弱，便将他扶上皇位。但宇文毓外柔内刚，登基后励精图治，深得百官和百姓的拥戴。他甚至巧妙地逼迫宇文护交出了部分军政大权，展现出了极强的帝王手腕。</p><p>这让宇文护感到了极大的恐惧。宇文护深知，如果任由宇文毓发展下去，自己必死无疑。于是，宇文护买通了负责皇帝饮食的御厨（李安），在宇文毓的食物中下毒。宇文毓毒发病危，临终前他极其清醒地口述遗诏，将皇位传给弟弟宇文邕，以此来保全宇文家族的血脉。</p>' 
+            },
+            'yuwenyong': { 
+                name: '宇文邕 (武帝)', 
+                subtitle: '装傻十二年的极限忍者，统一北方的无情铁腕', 
+                content: '<p>亲眼目睹两个哥哥被宇文护残忍杀害后，宇文邕登基了。为了活命，他展现出了令人毛骨悚然的隐忍。在长达十二年的时间里，他对宇文护言听计从，宇文护说什么就是什么，甚至连自己上朝时都对宇文护毕恭毕敬，成功让宇文护相信他是个没有任何野心的废物。</p><p>建德元年（572年），宇文邕以太后酗酒需要劝导为名，将《酒诰》交给宇文护，请他进宫念给太后听。当宇文护在太后面前毫无防备地低头诵读时，宇文邕突然从背后拔出玉珽（上朝用的玉板），用尽全身力气狠狠砸在宇文护的后脑勺上，将其当场砸倒，随后指挥躲在暗处的弟弟冲出来将其乱刀砍死。夺回大权的宇文邕如猛虎出笼，生活极度简朴，治军极其严酷，不仅灭佛充实国库，更御驾亲征，一举灭掉了北齐，统一了北方。可惜天妒英才，他在准备突袭突厥的途中暴病而亡，年仅36岁。</p>' 
+            },
+            'yuwenyun': { 
+                name: '宇文赟 (天元皇帝)', 
+                subtitle: '葬送帝国基业的荒唐天子', 
+                content: '<p>宇文邕一生英明，却因为对太子宇文赟的教育极其严厉苛刻（动辄棍棒相加），导致宇文赟心理严重扭曲。宇文邕死后，宇文赟登基。他看着父亲的棺材，不仅没有眼泪，反而摸着被父亲打过的伤疤大骂：“你这老家伙死得太晚了！”</p><p>登基后，他彻底放飞自我，极其荒淫暴虐。为了专心在后宫玩乐，他当了一年皇帝就直接传位给七岁的儿子，自己自称“天元皇帝”（太上皇）。他同时立了五个皇后，整日沉迷酒色，彻底掏空了身体。他22岁就因纵欲过度暴毙，留下了一群孤儿寡母和一个野心勃勃的老丈人杨坚。</p>' 
+            },
+            'yanglihua': { 
+                name: '杨丽华', 
+                subtitle: '眼看父亲篡权夺位的悲剧太后', 
+                content: '<p>杨丽华是杨坚的长女，也是宇文赟的五位皇后之一。宇文赟性格极其狂暴，曾有一次无故发怒，要逼杨丽华自杀。杨丽华的母亲独孤伽罗硬是闯进皇宫，把头磕得鲜血直流，才保住了女儿一命。</p><p>宇文赟暴毙后，杨丽华被尊为皇太后。但她万万没想到，自己的亲生父亲杨坚，竟然趁着新皇帝年幼，入宫夺取了辅政大权。虽然杨丽华对丈夫家族被屠杀感到极其悲愤，对父亲的篡位也多有不满，但在那种残酷的权力绞肉机里，她作为一个女人根本无力阻止父亲灭绝北周的步伐。</p>' 
+            },
+            'yangjian': { 
+                name: '杨坚 (隋文帝)', 
+                subtitle: '不动声色的终极收割机，踩着亲家尸骨登顶的开国大帝', 
+                content: '<p>杨坚是关陇集团的核心成员，也是宇文赟的岳父。由于长相奇特（史载其“龙颔，额上有五柱入顶”），他一直受到北周几代皇帝的猜忌。宇文赟甚至曾对杨丽华说：“我迟早要杀了你全家！”杨坚因此终日战战兢兢。</p><p>但命运的齿轮转得太快。宇文赟突然暴毙，杨坚在亲信的运作下，伪造诏书进入皇宫，瞬间控制了中央禁军，夺取了辅政大权（大丞相）。面对北周地方实力派（如尉迟迥）和宗室诸王（宇文氏五王）的起兵反抗，杨坚展现了极其冷酷的决断力。他不仅迅速派兵平定了所有叛乱，更是下达了血腥的屠杀令，将宇文泰的子孙后代全部杀得干干净净。在扫清一切障碍后，他逼迫年幼的外孙宇文阐禅让，建立了隋朝，就此完成了华夏大一统的最后一块拼图。</p>' 
+            },
+
+            /* 事件库 */
+            'hushijun': { 
+                name: '连弑两帝 (557-560年)', 
+                subtitle: '大冢宰的恐怖流水线', 
+                content: '<p><strong>【背景起因】</strong><br>宇文护作为托孤重臣，大权独揽。北周初期的皇帝不甘心做傀儡，导致皇权与相权的矛盾不可调和。</p><p><strong>【事变经过】</strong><br>557年，孝闵帝宇文觉密谋除掉宇文护失败，被宇文护废黜后绞死。560年，继任的明帝宇文毓展现出强烈的独立倾向，宇文护感到无法控制，买通御厨在皇帝的糖饼中下毒，将其毒杀。</p><p><strong>【最终结果】</strong><br>短短三年间，北周皇室连丧两帝，宇文护的权威达到了无人敢于直视的巅峰，整个大周朝堂笼罩在极度的血色恐怖之中，直到宇文邕开始了他长达十二年的装疯之旅。</p>' 
+            },
+            'diannei': { 
+                name: '殿内反杀 (572年)', 
+                subtitle: '十二年隐忍换来的雷霆爆头', 
+                content: '<p><strong>【背景起因】</strong><br>武帝宇文邕对宇文护百依百顺了十二年，宇文护终于对他彻底放下了戒心。随着宇文邕羽翼渐丰，他决定执行极其危险的刺杀计划。</p><p><strong>【事变经过】</strong><br>宇文邕骗宇文护进宫，请他向太后朗读《酒诰》以劝诫太后戒酒。当宇文护在太后面前专心低头念诵时，宇文邕从背后抽出极其坚硬的玉珽，用尽全力砸在宇文护的后脑勺上。宇文护倒地未死，回头震惊地看着皇帝，宇文邕立刻呼喊藏在暗处的弟弟宇文直冲出，将其乱刀砍死。</p><p><strong>【最终结果】</strong><br>这不仅是一场惊险的宫廷刺杀，更是皇权挣脱枷锁的绝地反击。宇文邕夺回权力后，立刻将宇文护的儿子和亲信全部诛杀，北周正式进入了武帝一统北方的铁血时代。</p>' 
+            },
+            'chanrang': { 
+                name: '杨坚代周 (581年)', 
+                subtitle: '窃取胜利果实与最彻底的斩草除根', 
+                content: '<p><strong>【背景起因】</strong><br>北周武帝一统北方，奠定了天下一统的基础，但死得太早。荒唐的宣帝宇文赟暴毙后，留下了巨大的权力真空。外戚杨坚在亲信的帮助下入宫矫诏，控制了朝局。</p><p><strong>【事变经过】</strong><br>面对杨坚的篡权，北周宗室（赵王、陈王等五王）极其愤怒，企图进京夺权，结果被杨坚以各种借口分散诱杀。随后，杨坚平定了地方总管尉迟迥的大规模叛乱，彻底掌控了天下兵马。581年，杨坚逼迫八岁的静帝宇文阐禅让，建立隋朝。</p><p><strong>【最终结果】</strong><br>为了斩草除根，杨坚下达了极其冷血的命令，将宇文家族的子孙无论老幼全部诛杀殆尽。宇文邕辛苦打下的江山和保全的血脉，被这位老丈人毫不留情地全盘接收并彻底抹除。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
