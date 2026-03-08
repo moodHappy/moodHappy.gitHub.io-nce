@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>西魏(极道傀儡)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/赐死/废黜线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">西魏(极道傀儡)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 200px; width: 1px; height: 40px;"></div>
+        <div class="line" style="left: 260px; top: 200px; width: 320px; height: 1px;"></div>
+        <div class="line" style="left: 260px; top: 140px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 420px; top: 140px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 580px; top: 140px; width: 1px; height: 60px;"></div>
+
+        <div class="line" style="left: 360px; top: 280px; width: 180px; height: 1px;"></div>
+
+        <div class="line" style="left: 240px; top: 140px; width: 1px; height: 260px;"></div>
+        <div class="line" style="left: 140px; top: 400px; width: 100px; height: 1px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 180px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 180px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 140px; height: 40px;"></div>
+
+        <div class="kill-solid-h" style="left: 360px; top: 280px; width: 80px;"></div>
+        <div class="kill-solid-v" style="left: 440px; top: 140px; height: 140px;"></div>
+
+        <div class="kill-v" style="left: 400px; top: 140px; height: 120px;"></div>
+        <div class="kill-h" style="left: 360px; top: 260px; width: 40px;"></div>
+
+        <div class="kill-solid-v" style="left: 580px; top: 140px; height: 100px;"></div>
+
+        <div class="kill-solid-v" style="left: 260px; top: 140px; height: 140px;"></div>
+        <div class="kill-solid-h" style="left: 140px; top: 280px; width: 120px;"></div>
+
+        <div class="kill-v" style="left: 100px; top: 320px; height: 40px;"></div>
+
+        <div class="label" style="left: 160px; top: 170px;">逃奔依附 / 终遭毒杀</div>
+        <div class="label" style="left: 420px; top: 190px;">关陇奠基 / 绝对掌控</div>
+        
+        <div class="label" style="left: 455px; top: 210px; color: #c62828; font-weight: bold;">废黜鸩杀</div>
+        <div class="label" style="left: 360px; top: 250px; color: #c62828;">密谋设伏</div>
+        
+        <div class="label" style="left: 590px; top: 190px; color: #c62828; font-weight: bold;">逼迫禅让 / 灭魏建周</div>
+        <div class="label" style="left: 450px; top: 270px;">霸业传承</div>
+
+        <div class="label" style="left: 180px; top: 270px; color: #c62828; font-weight: bold;">迫于强权 / 泣血赐死</div>
+        <div class="label" style="left: 180px; top: 390px;">政治联姻 / 屈辱和亲</div>
+        <div class="label" style="left: 110px; top: 340px; color: #c62828;">嫉妒相逼</div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('yuanxiu')">
+            <div class="c-dark">皇帝 / 孝武帝</div>
+            <div class="c-emperor">元修</div>
+        </div>
+
+        <div class="person" style="left: 260px; top: 100px;" onclick="showInfo('baoju')">
+            <div class="c-dark">皇帝 / 文帝</div>
+            <div class="c-emperor">元宝炬</div>
+        </div>
+
+        <div class="person" style="left: 420px; top: 100px;" onclick="showInfo('yuanqin')">
+            <div class="c-dark">皇帝 / 废帝</div>
+            <div class="c-emperor">元钦</div>
+        </div>
+
+        <div class="person" style="left: 580px; top: 100px;" onclick="showInfo('yuankuo')">
+            <div class="c-dark">皇帝 / 恭帝</div>
+            <div class="c-emperor">元廓</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 280px;" onclick="showInfo('yuwentai')">
+            <div class="c-dark">丞相 / 安定公</div>
+            <div class="c-minister" style="font-size: 18px;">宇文泰</div>
+        </div>
+
+        <div class="person" style="left: 580px; top: 280px;" onclick="showInfo('yuwenjue')">
+            <div class="c-dark">周天王</div>
+            <div class="c-emperor">宇文觉</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 280px;" onclick="showInfo('yifu')">
+            <div class="c-dark">废后</div>
+            <div class="c-consort">乙弗氏</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 400px;" onclick="showInfo('yujiulv')">
+            <div class="c-dark">悼皇后 / 柔然公主</div>
+            <div class="c-consort">郁久闾氏</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">极道傀儡的三大泣血时刻</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('benchi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">534年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">奔逃长安</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yifu_death')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">540年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">饮刀泣血</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chanrang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">557年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">恭帝禅让</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yuwentai': { 
+                name: '宇文泰', 
+                subtitle: '关陇集团缔造者，流水线般的“帝王收割机”', 
+                content: '<p>宇文泰是西魏的绝对主宰，中国历史上最顶级的政治家与军事家之一。面对东魏高欢的重兵压境，他创立了“府兵制”和“八柱国”体系，奠定了日后北周、隋、唐三代王朝的军事与政治班底。</p><p>但在对待皇帝的态度上，他比高欢更加冷酷无情。高欢只是让皇帝受辱，而宇文泰是直接在物理上消灭。孝武帝元修不听话，他一杯毒酒送走；废帝元钦试图反抗，他废黜后鸩杀。在国家利益面前，他甚至逼迫文帝元宝炬逼死结发妻子以讨好柔然。他把大魏天子彻底变成了自己霸业上的垫脚石，死前平稳地将大权交给了儿子，完成了改朝换代的全部准备。</p>' 
+            },
+            'yuanxiu': { 
+                name: '元修 (孝武帝)', 
+                subtitle: '逃离了虎穴，却主动走进了狼窝', 
+                content: '<p>元修本是北魏末代皇帝。因为无法忍受权臣高欢的控制，他做出了一个极其大胆的决定：率领亲信连夜逃出洛阳，一路狂奔到长安去投奔当时的西部统帅宇文泰。</p><p>他本以为宇文泰会是辅佐他的忠臣，结果到了长安才发现，宇文泰的控制欲和手腕比高欢还要恐怖。元修不仅失去了所有的自由，还因为他私生活糜烂（与堂妹乱伦等）引起了宇文泰的极度反感。仅仅几个月后，宇文泰便在酒中下毒，将这位千里迢迢跑来投奔的皇帝当场毒死，随后另立新君。</p>' 
+            },
+            'baoju': { 
+                name: '元宝炬 (西魏文帝)', 
+                subtitle: '极度懦弱的傀儡，连结发妻子都保不住的可怜人', 
+                content: '<p>元宝炬是宇文泰立的第一个傀儡皇帝。他在位十七年，看似平稳，但内心受尽了屈辱。他与结发妻子乙弗氏感情极深，生下了十二个孩子。但当时西魏面临东魏和北方柔然汗国的两面夹击，为了生存，宇文泰逼迫元宝炬废掉乙弗氏，迎娶柔然公主郁久闾氏为皇后。</p><p>柔然公主生性善妒，即便乙弗氏已经出家为尼，依然不肯罢休，逼迫西魏朝廷斩草除根。在宇文泰的国家利益大局和柔然的军事威慑下，元宝炬含着血泪，下达了赐死自己最心爱女人的诏书。他的一生，是傀儡天子最悲哀的缩影。</p>' 
+            },
+            'yifu': { 
+                name: '乙弗氏', 
+                subtitle: '母仪天下的废后，死于弱国的悲惨外交', 
+                content: '<p>乙弗氏出身高贵，生性节俭仁慈，深得西魏百姓的爱戴。面对柔然公主的逼迫，为了不让西魏遭到两面夹击的灭顶之灾，她主动要求出家并离开长安。</p><p>当元宝炬派去的使者带着赐死的毒药和诏书来到她的住所时，她没有丝毫怨恨。她平静地对使者说：“希望皇上能活过千万岁，天下能够太平。如果我的死能换来国家的安定，我还有什么可遗憾的呢？”随后，她留下了一缕头发作为对丈夫的诀别，从容饮下毒酒。她的死，换来了西魏北方的短暂和平，却成了元宝炬一生无法愈合的伤口。</p>' 
+            },
+            'yujiulv': { 
+                name: '郁久闾氏', 
+                subtitle: '挟兵威逼宫的柔然公主，作茧自缚的短命皇后', 
+                content: '<p>郁久闾氏是柔然可汗的女儿。她仗着柔然强大的骑兵，在西魏后宫飞扬跋扈。她对元宝炬与乙弗氏的旧情极度嫉妒，扬言如果不杀了乙弗氏，柔然大军就会踏平长安。</p><p>极其讽刺的是，在逼死乙弗氏之后，郁久闾氏自己也遭到了宿命的惩罚。她怀孕难产，在极度的痛苦中死去，年仅十六岁。死后被葬入皇陵，但她永远无法抹去逼死原配的恶名。</p>' 
+            },
+            'yuanqin': { 
+                name: '元钦 (西魏废帝)', 
+                subtitle: '绝不妥协的复仇者，死于反抗的刀尖', 
+                content: '<p>元钦是元宝炬的儿子。他即位时，宇文泰的权力已经达到了顶峰，满朝文武只知有丞相，不知有皇帝。</p><p>元钦不愿像父亲那样做一辈子窝囊废，他暗中联络了对宇文泰不满的尚书元烈，准备设下伏兵刺杀宇文泰。然而，宇文泰的特务系统极其严密，密谋瞬间败露。宇文泰毫不手软，先是处死了元烈，随后直接冲入皇宫将元钦废黜。几个月后，一杯毒酒送到了幽禁中的元钦面前。他虽然死了，但展现了西魏皇族最后的骨气。</p>' 
+            },
+            'yuankuo': { 
+                name: '元廓 (恭帝)', 
+                subtitle: '被剥夺了国姓的亡国之君', 
+                content: '<p>元廓是西魏的最后一位皇帝。为了彻底抹除北魏的政治痕迹，宇文泰在临死前甚至下令，强行剥夺了元廓的“元”姓，让他恢复鲜卑旧姓“拓跋”。</p><p>宇文泰死后，其侄子宇文护接管了大权。宇文护连表面的客套都不装了，直接派兵入宫，逼迫元廓将皇位“禅让”给宇文泰的儿子宇文觉。西魏就此灭亡。不久之后，失去任何利用价值的元廓也被宇文护暗杀。</p>' 
+            },
+            'yuwenjue': { 
+                name: '宇文觉', 
+                subtitle: '坐享其成的开国天王', 
+                content: '<p>宇文觉是宇文泰的嫡子。在堂兄宇文护的强力护航下，他毫无悬念地接受了西魏恭帝的禅让，建立了北周政权，称“周天王”。</p><p>但极其讽刺的是，宇文家族建立北周后，不仅没有摆脱傀儡的宿命，反而自己也深陷其中。宇文觉登基后试图夺回权力，结果被权臣堂兄宇文护毫不留情地废黜并杀害。权力的反噬，在这片关陇大地上循环上演。</p>' 
+            },
+
+            /* 事件库 */
+            'benchi': { 
+                name: '奔逃长安 (534年)', 
+                subtitle: '北魏帝国的大撕裂', 
+                content: '<p><strong>【背景起因】</strong><br>孝武帝元修在洛阳无法忍受权臣高欢的专横，暗中联络西部统帅宇文泰，企图引外兵入京勤王。</p><p><strong>【事变经过】</strong><br>高欢得知后率大军逼近洛阳。元修带领几千名亲信和宗室连夜逃出洛阳，经过艰难的跋涉，抵达了宇文泰控制的长安。高欢见皇帝跑了，便在邺城另立皇帝，北魏正式分裂为东西两半。</p><p><strong>【最终结果】</strong><br>元修本以为能借助宇文泰夺回大权，却发现自己只是从一个牢笼跳进了另一个更坚固的牢笼。西魏政权在长安建立，元修也在几个月后迎来了被毒杀的悲惨结局。</p>' 
+            },
+            'yifu_death': { 
+                name: '饮刀泣血 (540年)', 
+                subtitle: '弱国无外交，后宫成政治牺牲品', 
+                content: '<p><strong>【背景起因】</strong><br>西魏在与东魏的战争中屡遭重创，急需北方的柔然汗国提供军事支援。宇文泰为了结盟，强迫文帝元宝炬迎娶柔然公主，并废黜了深得人心的乙弗皇后。</p><p><strong>【事变经过】</strong><br>柔然公主依然不满足，声称只要乙弗氏还活着，柔然就不会出兵。前线军情紧急，宇文泰冷酷地下达了最后通牒。元宝炬在极度的痛苦中，含泪下达了赐死结发妻子的诏书。乙弗氏平静地接受了命运，为了国家大局自尽而亡。</p><p><strong>【最终结果】</strong><br>这一事件成为了西魏乃至整个中国历史上，皇帝为了国家生存而献祭妻子的最惨痛案例。它深刻反映了西魏政权在夹缝中求生的极限压力与皇权的极度衰微。</p>' 
+            },
+            'chanrang': { 
+                name: '恭帝禅让 (557年)', 
+                subtitle: '宇文氏霸业的终极变现', 
+                content: '<p><strong>【背景起因】</strong><br>宇文泰在病逝前，已经完成了所有的政治和军事布局，西魏的皇帝彻底沦为一个象征性的摆设。</p><p><strong>【事变经过】</strong><br>宇文泰的侄子宇文护接管大权后，立刻启动了改朝换代的程序。他带领满朝文武逼迫恭帝元廓脱下龙袍，交出玉玺，禅让给宇文泰的儿子宇文觉。</p><p><strong>【最终结果】</strong><br>西魏历经三帝、仅仅存在了二十三年后宣告灭亡。北周政权正式建立。虽然西魏寿命短暂，但它孕育的关陇军事贵族集团，将在接下来的几十年里横扫天下，最终完成中国的大一统。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
