@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐僖宗朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/叛乱/降唐背刺线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧郑畋卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐僖宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line-h-dashed" style="left: 320px; top: 80px; width: 220px;"></div>
+
+        <div class="line" style="left: 540px; top: 120px; width: 1px; height: 80px;"></div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 40px;"></div>
+        <div class="line" style="left: 100px; top: 140px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 140px; width: 1px; height: 60px;"></div>
+
+        <div class="line" style="left: 100px; top: 220px; width: 1px; height: 120px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 120px; height: 60px;"></div>
+
+        <div class="kill-h" style="left: 100px; top: 200px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 200px; width: 220px;"></div>
+
+        <div class="kill-v" style="left: 320px; top: 220px; height: 100px;"></div>
+
+        <div class="label" style="left: 430px; top: 70px;">尊为阿父 / 挟持出逃</div>
+        <div class="label" style="left: 550px; top: 150px;">引沙陀入关 / 饮鸩止渴</div>
+        
+        <div class="label" style="left: 210px; top: 130px;">委以国政 / 组织抗击</div>
+        <div class="label" style="left: 110px; top: 270px;">镇守淮南 / 拥兵求仙</div>
+
+        <div class="label" style="left: 330px; top: 150px; color: #c62828; font-weight: bold;">攻陷长安 / 皇帝西逃</div>
+        <div class="label" style="left: 210px; top: 190px; color: #c62828;">凤翔阻击 / 誓死不降</div>
+        <div class="label" style="left: 430px; top: 190px; color: #c62828; font-weight: bold;">鸦军出击 / 碾压收复</div>
+
+        <div class="label" style="left: 330px; top: 270px; color: #c62828; font-weight: bold;">叛变降唐 / 赐名全忠</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('xizong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李儇</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('tianlingzi')">
+            <div class="c-dark">左神策军中尉</div>
+            <div class="c-minister">田令孜</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('zhengtian')">
+            <div class="c-dark">宰相 / 节度使</div>
+            <div class="c-minister">郑畋</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px;" onclick="showInfo('huangchao')">
+            <div class="c-dark">大齐皇帝 (叛)</div>
+            <div class="c-rebel" style="font-size: 18px;">黄巢</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('likeyong')">
+            <div class="c-dark">雁门节度使</div>
+            <div class="c-minister">李克用</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 340px;" onclick="showInfo('gaopian')">
+            <div class="c-dark">剑南西川节度使</div>
+            <div class="c-minister">高骈</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 340px;" onclick="showInfo('zhuwen')">
+            <div class="c-dark">宣武军节度使</div>
+            <div class="c-rebel">朱温</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">帝国丧钟三大哀鸣</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('huangchao_event')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">874-884年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">黄巢起义</div>
+            </div>
+            <div class="event-card" onclick="showInfo('xingshu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">880年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">天子幸蜀</div>
+            </div>
+            <div class="event-card" onclick="showInfo('quanzhong')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">882年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">赐名全忠</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'xizong': { 
+                name: '李儇 (唐僖宗)', 
+                subtitle: '大唐顶级的顽童，葬送三百年基业的丧门星', 
+                content: '<p>李儇登基时只有12岁，是唐朝历史上出名的“顽童皇帝”。他对治国理政毫无兴趣，却对斗鸡、走马、打马球（击鞠）、算术甚至音律样样精通。他极其依赖身边的大太监田令孜，直接尊称其为“阿父”，将所有国家大事全部交给他处理。</p><p>在田令孜的横征暴敛下，本就千疮百孔的大唐彻底爆发了黄巢大起义。当黄巢的百万大军逼近长安时，这位每天还在马球场上挥洒汗水的皇帝终于慌了。在田令孜的安排下，僖宗抛弃了满朝文武和长安百姓，复刻了先祖唐玄宗的路线，仓皇逃往四川成都（天子幸蜀）。他在位15年，大唐的中央威权彻底清零，各地节度使完全军阀化，大唐帝国名存实亡。</p>' 
+            },
+            'tianlingzi': { 
+                name: '田令孜', 
+                subtitle: '祸国殃民的第一干爹，引火烧身的蠢权阉', 
+                content: '<p>田令孜是僖宗朝的左神策军中尉，因为陪僖宗玩乐有功，被皇帝尊为“阿父”，权倾天下。他极其贪婪，大肆买卖官爵，为了敛财，他甚至垄断了全国的盐铁贸易，直接把无数赖以生存的底层盐贩（包括黄巢）逼上了造反的绝路。</p><p>当黄巢大军打来时，田令孜手下的神策军因为长期腐败，里面的士兵全是长安城的富家子弟，平时只会穿华丽的军服摆谱，真到了战场上连弓都拉不开。眼看长安守不住，田令孜带着僖宗逃跑。为了平叛，他做出了一个将大唐推向无底深渊的决定：撤销了对沙陀族李克用的通缉，引这支极其残暴的草原铁骑入关平叛，彻底打开了五代十国军阀大混战的潘多拉魔盒。</p>' 
+            },
+            'zhengtian': { 
+                name: '郑畋', 
+                subtitle: '满朝懦夫中的擎天柱，死守凤翔的忠相', 
+                content: '<p>在黄巢攻陷长安、皇帝逃跑、满朝文武纷纷投降的至暗时刻，宰相郑畋展现出了极其硬核的文臣气节。他没有跟随皇帝逃跑，而是在凤翔（长安西大门）集结残兵败将，坚决抵抗。</p><p>郑畋变卖家产犒赏士兵，与将士同甘共苦。面对黄巢派来招降的使者和咄咄逼人的大军，郑畋在龙尾陂设下伏兵，大破黄巢军队，斩首两万余人。这场极其珍贵的胜利，极大地震慑了黄巢，保住了僖宗逃往四川的退路，也向全天下证明大唐还有人敢战、能战。他是在那个大崩盘时代里，大唐文官系统最后的一丝体面。</p>' 
+            },
+            'huangchao': { 
+                name: '黄巢', 
+                subtitle: '落第秀才的终极复仇，“满城尽带黄金甲”的毁灭者', 
+                content: '<p>黄巢本是山东的一个私盐贩子，早年多次参加科举不中，写下了杀气腾腾的“冲天香阵透长安，满城尽带黄金甲”。在被朝廷的盐税政策逼上绝路后，他加入了王仙芝的起义军，并在王仙芝死后成为最高统帅。</p><p>黄巢的军队采用流动作战，横扫了大半个中国，最终攻破洛阳和长安，登基称帝，国号“大齐”。但他没有建立稳固的根据地，军队军纪极差。在长安，他大肆屠杀唐朝宗室和不肯投降的官员；在撤出长安被围困在陈州时，由于缺乏粮草，他的军队甚至制造了骇人听闻的“捣磨寨”（将活人粉碎充作军粮）。最终，在李克用和降将朱温的夹击下，黄巢兵败狼虎谷，自刎而死。</p>' 
+            },
+            'likeyong': { 
+                name: '李克用', 
+                subtitle: '独眼苍狼，大唐请来的地狱平叛者', 
+                content: '<p>李克用是沙陀族（突厥别部）的首领，天生一目失明，极其骁勇善战。他原本因为叛乱正在被大唐通缉，躲在草原上。黄巢攻陷长安后，朝廷实在无兵可用，田令孜只能下诏赦免李克用，请他入关平叛。</p><p>李克用率领的四万沙陀骑兵全都穿着黑衣，被称为“鸦军”。这支军队战斗力极其恐怖，黄巢的农民军在他们面前如同纸糊一般。李克用在渭南之战中将黄巢主力彻底打崩，收复了长安。但他入关后，沙陀军的军纪极其败坏，在长安烧杀抢掠，其残暴程度甚至超过了黄巢叛军。大唐朝廷请神容易送神难，李克用从此成为晚唐最强大的军阀之一。</p>' 
+            },
+            'gaopian': { 
+                name: '高骈', 
+                subtitle: '曾经的国之柱石，晚年痴迷修仙的待宰羔羊', 
+                content: '<p>高骈曾是大唐的顶级名将，在西南打得南诏国哭爹喊娘，威震天下。黄巢起义时，他被朝廷任命为淮南节度使，镇守江南财赋重地，手握十万精锐，是大唐平叛的最大指望。</p><p>然而，当黄巢大军渡过长江时，晚年的高骈竟然见死不救，拥兵自重。他被一个叫吕用之的妖道彻底洗脑，每天不理军务，竟然在节度使府里雕刻木头人、画符念咒，指望用“法术”来撒豆成兵、修仙长生。最终，他的十万大军被黄巢轻松越过，他自己也被手下哗变的将领毕师铎囚禁，并在乱军中被残忍杀害，晚节不保到了极点。</p>' 
+            },
+            'zhuwen': { 
+                name: '朱温', 
+                subtitle: '黄巢的利刃，大唐的终结者，极致讽刺的“朱全忠”', 
+                content: '<p>朱温原本是黄巢手下最悍勇的大将，为黄巢攻陷长安立下了汗马功劳，被任命为同州防御使，负责防御唐军的反扑。</p><p>但在大唐官军（尤其是李克用）的围剿下，朱温敏锐地察觉到黄巢大势已去。他极其果断地杀死了黄巢派来的监军，向唐朝投降。大喜过望的唐僖宗为了千金市骨，立刻任命他为宣武军节度使，并赐名为“朱全忠”。这是中国历史上最讽刺的赐名——就是这个“全忠”，在平定黄巢后迅速吞并周边藩镇，最终在二十多年后，亲手杀死了唐昭宗和唐哀帝，篡唐建梁，彻底终结了二百八十九年的大唐王朝。</p>' 
+            },
+
+            /* 事件库 */
+            'huangchao_event': { 
+                name: '黄巢起义 (874-884年)', 
+                subtitle: '摧毁大唐根基的灭世飓风', 
+                content: '<p><strong>【背景起因】</strong><br>晚唐时期，关东连年旱灾，百姓颗粒无收，而朝廷不仅不赈灾，反而催逼赋税、严打私盐。王仙芝、黄巢先后在长垣揭竿而起。</p><p><strong>【事变经过】</strong><br>起义军采取“流寇”战术，避实击虚，从山东一路打到广州，又从广州杀回北方，横扫了大半个中国，彻底切断了长安的经济命脉。广明元年（880年），黄巢大军攻破潼关，直入长安。皇帝逃亡，黄巢在含元殿登基，大肆屠戮留在长安的李唐宗室。</p><p><strong>【最终结果】</strong><br>起义历时十年，虽然最终在李克用和降将朱温的镇压下失败，但它彻底摧毁了唐朝在各地的统治机构和经济基础。大唐帝国从此名存实亡，沦为各地军阀名义上的共主。</p>' 
+            },
+            'xingshu': { 
+                name: '天子幸蜀 (880年)', 
+                subtitle: '一百二十年后的历史重演，皇权颜面扫地', 
+                content: '<p><strong>【背景起因】</strong><br>黄巢六十万大军兵临潼关，守将向朝廷告急。神策军中尉田令孜派去支援的禁军全是长安的富家少爷，到了战场一触即溃。</p><p><strong>【事变经过】</strong><br>得知潼关失守，田令孜连夜带着18岁的僖宗，带上仅有的五百神策军骑兵，仓皇逃出长安长安西门，向四川成都狂奔。百官第二天早上准备上朝，才发现皇帝已经跑没影了，整个长安陷入极度混乱和绝望。</p><p><strong>【最终结果】</strong><br>这是继安史之乱唐玄宗逃蜀后，大唐天子第二次被赶出首都。皇帝抛弃臣民独自逃生的行为，让天下人对李唐皇室彻底失去了最后一丝敬畏。</p>' 
+            },
+            'quanzhong': { 
+                name: '赐名全忠 (882年)', 
+                subtitle: '引狼入室，亲手拔擢大唐的终结者', 
+                content: '<p><strong>【背景起因】</strong><br>黄巢占据长安后，被各路勤王的唐军包围。黄巢大将朱温镇守同州，屡次向黄巢求援，却被黄巢身边的孟楷扣留求援信。</p><p><strong>【事变经过】</strong><br>朱温深知孤军奋战必死无疑，于是果断背叛黄巢，向唐朝河中节度使王重荣投降。远在四川的僖宗得知黄巢的头号大将降唐，激动万分，立刻下诏封朱温为右金吾卫大将军，并亲自赐名为“朱全忠”。</p><p><strong>【最终结果】</strong><br>朱温（朱全忠）利用大唐给的合法身份和地盘（汴州），疯狂扩充实力。他在随后几十年里成为中原最强大的军阀，并在天祐四年（907年）逼迫唐哀帝禅位，彻底灭亡了唐朝。“全忠”二字，成了唐朝末年最冰冷的黑色幽默。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
