@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐哀帝朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/屠杀/逼迫线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧蒋玄晖/柳璨卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐哀帝朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line-h-dashed" style="left: 100px; top: 50px; width: 440px;"></div>
+        <div class="line-v-dashed" style="left: 100px; top: 50px; height: 50px;"></div>
+        <div class="line-v-dashed" style="left: 540px; top: 50px; height: 50px;"></div>
+
+        <div class="line" style="left: 420px; top: 100px; width: 1px; height: 140px;"></div>
+        <div class="line" style="left: 320px; top: 100px; width: 100px; height: 1px;"></div>
+        <div class="line" style="left: 420px; top: 240px; width: 120px; height: 1px;"></div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 380px; width: 220px;"></div>
+        <div class="line-v-dashed" style="left: 320px; top: 240px; height: 140px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 100px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 100px; width: 220px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 140px;"></div>
+
+        <div class="kill-v" style="left: 540px; top: 240px; height: 70px;"></div>
+        <div class="kill-h" style="left: 100px; top: 310px; width: 440px;"></div>
+        <div class="kill-v" style="left: 100px; top: 240px; height: 70px;"></div>
+
+        <div class="label" style="left: 320px; top: 40px;">太后暗中泣求保全皇脉</div>
+        
+        <div class="label" style="left: 210px; top: 90px; color: #c62828; font-weight: bold;">猜忌生疑 / 车裂枭首</div>
+        <div class="label" style="left: 430px; top: 90px; color: #c62828; font-weight: bold;">强行勒死 / 追废庶人</div>
+        
+        <div class="label" style="left: 430px; top: 170px;">绝对心腹 / 屠杀代理</div>
+        <div class="label" style="left: 250px; top: 170px; color: #c62828; font-weight: bold;">逼迫禅让 / 鸩杀废帝</div>
+
+        <div class="label" style="left: 320px; top: 300px; color: #c62828; font-weight: bold;">白马驿之祸 / 杀尽清流投尸黄河</div>
+        <div class="label" style="left: 210px; top: 370px;">拒认伪梁 / 遥奉大唐正朔</div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('jiang')">
+            <div class="c-dark">枢密使</div>
+            <div class="c-minister">蒋玄晖</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('zhuwen')">
+            <div class="c-dark">梁王 / 相国</div>
+            <div class="c-rebel">朱温</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('he')">
+            <div class="c-dark">皇太后</div>
+            <div class="c-consort">何氏</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('liucan')">
+            <div class="c-dark">宰相</div>
+            <div class="c-minister">柳璨</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('aidi')">
+            <div class="c-dark">皇帝 / 济阴王</div>
+            <div class="c-emperor" style="font-size: 18px;">李柷</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('lizhen')">
+            <div class="c-dark">枢密使</div>
+            <div class="c-minister">李振</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 380px;" onclick="showInfo('likeyong')">
+            <div class="c-dark">晋王 / 河东节度使</div>
+            <div class="c-rebel">李克用</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">帝国落葬三大哀音</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('shataihou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">905年12月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">诛杀太后</div>
+            </div>
+            <div class="event-card" onclick="showInfo('baima')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">905年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">白马驿之祸</div>
+            </div>
+            <div class="event-card" onclick="showInfo('mieguo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">907-908年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">大唐覆灭</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'aidi': { 
+                name: '李柷 (唐哀帝)', 
+                subtitle: '大唐三百年基业的最后一块遮羞布', 
+                content: '<p>李柷是唐昭宗的第九子，年仅13岁时，父亲被朱温派人砍死，他被生生拽上龙椅，成为了朱温篡位流程中的一个合法盖章机器。</p><p>在这短短的三年里，这个可怜的少年经历了世间最极致的恐怖。他看着母亲何太后被活活勒死，看着大唐名臣被屠戮一空扔进黄河，自己每天活在刀刃之下。天祐四年（907年），朱温觉得时机成熟，李柷极其“配合”地举行了禅让大典，脱下龙袍，降封为济阴王，大唐王朝正式灭亡。次年，失去最后利用价值的李柷，被朱温派人用一杯毒酒鸩杀，年仅16岁，化作了这段血色历史中最绝望的一缕亡魂。</p>' 
+            },
+            'zhuwen': { 
+                name: '朱温', 
+                subtitle: '亲手埋葬大唐的终极物理毁灭者', 
+                content: '<p>从黄巢起义的叛将，到大唐的宣武军节度使，再到篡唐建梁的大梁皇帝，朱温是个彻底没有底线、只相信纯粹暴力的乱世枭雄。</p><p>为了夺取皇位，他极其冷酷地执行着“扫清一切障碍”的计划。杀光七百太监拔除了内廷，在白马驿杀光了三十多位朝廷名臣拔除了外朝，最后连对自己的心腹（蒋玄晖）也毫不手软。他逼迫哀帝禅让，建立了后梁，正式开启了中国历史上极其混乱血腥的“五代十国”时期。他踩着大唐二百八十九年的尸骨登上了皇位，最终却在晚年因为荒淫残暴，被自己的亲生儿子朱友珪乱刀捅死在床上。</p>' 
+            },
+            'he': { 
+                name: '何氏 (何太后)', 
+                subtitle: '泣血求生的国母，死于无情的政治倾轧', 
+                content: '<p>何太后陪着唐昭宗度过了最屈辱的逃亡与软禁岁月，甚至在朱温的刺客砍向昭宗时，她依然挺身而出试图挡刀。儿子李柷被迫登基后，何太后深知大唐气数已尽，她唯一的愿望就是能保住儿子和自己的一条命。</p><p>为了活命，她放下了一切尊严，暗中向控制皇宫的枢密使蒋玄晖哭诉哀求。但这件事被朱温察觉。生性多疑的朱温认为太后在密谋复辟大唐，于是毫不留情地下令将何太后秘密勒死在寝宫中，并极其侮辱性地对外宣称太后与蒋玄晖私通，将其追废为庶人。</p>' 
+            },
+            'jiang': { 
+                name: '蒋玄晖', 
+                subtitle: '沾满皇室鲜血的恶犬，反遭主人车裂', 
+                content: '<p>蒋玄晖是朱温极其信任的爪牙。正是他，带人深夜冲入寝宫砍死了唐昭宗；也是他，一手包办了哀帝登基的全部流程。他在洛阳皇宫内替朱温死死盯着这孤儿寡母。</p><p>但他犯了一个致命的错误：他觉得篡位的流程应该循序渐进，慢慢来，不要太急，而且对何太后的哀求动了一丝恻隐之心。远在外地的朱温得知后勃然大怒，认为蒋玄晖背叛了自己、意图拥立大唐复辟。朱温立刻派人将其逮捕，施以极其残酷的“车裂”之刑（五马分尸），枭首示众。</p>' 
+            },
+            'liucan': { 
+                name: '柳璨', 
+                subtitle: '为虎作伥的投机宰相，死前幡然悔悟', 
+                content: '<p>柳璨出身名门（河东柳氏），但他在乱世中选择了毫无底线地投靠朱温。为了保住自己的宰相之位，他积极配合朱温和李振，将朝堂上所有不听话的忠臣列出一份死亡名单，亲手将大唐的文臣系统送上了断头台（白马驿之祸）。</p><p>但他没有想到，狡兔死走狗烹。当朱温决定加快篡位步伐时，因为柳璨曾和蒋玄晖一起建议“暂缓受禅”，朱温瞬间翻脸，将柳璨逮捕下狱并判处斩首。在刑场上，柳璨看着身边的刽子手，仰天长啸：“我为了贼人杀尽了大唐的忠臣，今天落得这个下场，是我活该啊！”</p>' 
+            },
+            'lizhen': { 
+                name: '李振', 
+                subtitle: '科举落榜生的极致复仇，“浊流”的制造者', 
+                content: '<p>李振曾多次参加大唐的科举考试，但屡屡落榜，因此他对长安城里那些自命清高的门阀贵族和朝廷高官充满了刻骨的仇恨。投靠朱温后，他成为了朱温的首席谋士和杀人代理。</p><p>在清洗朝堂时，正是李振向朱温提出了那个极其恶毒的建议：“这帮自称‘清流’的大臣，不如把他们全杀了扔进黄河里，让他们变成‘浊流’！”李振用三十多位大唐高官的鲜血，完成了自己心理上最扭曲的复仇，也亲手终结了中国门阀士族的时代。</p>' 
+            },
+            'likeyong': { 
+                name: '李克用', 
+                subtitle: '大唐余晖中最后的狂狼，死磕伪梁的晋王', 
+                content: '<p>李克用率领的沙陀骑兵曾是镇压黄巢起义的主力，他与朱温是势不两立的死敌。在天下节度使纷纷向朱温低头、大唐名存实亡的时刻，只有盘踞在河东（山西）的李克用，坚决不承认朱温的“大梁”政权。</p><p>他在自己的地盘上依然使用唐哀帝的“天祐”年号，依然自称大唐晋王。虽然在他有生之年没能打败朱温，但他临终前交给儿子李存勖三支箭，要求儿子必须消灭朱温。十几年后，李存勖果然攻灭后梁，打着大唐的旗号建立了“后唐”，算是为大唐报了这血海深仇。</p>' 
+            },
+
+            /* 事件库 */
+            'shataihou': { 
+                name: '诛杀太后 (905年12月)', 
+                subtitle: '大唐国母的惨死，篡位流程的加速', 
+                content: '<p><strong>【背景起因】</strong><br>朱温逼迫昭宗迁都洛阳后，将皇室完全置于自己的监视之下。何太后为了保住小皇帝的命，暗中向枢密使蒋玄晖求情。</p><p><strong>【事变经过】</strong><br>朱温的政敌（如王建等）发檄文讨伐朱温。朱温怀疑蒋玄晖与何太后里应外合，暴怒之下，直接下令车裂蒋玄晖。随后，朱温派人冲入洛阳宫中，在哀帝面前将何太后活活勒死。</p><p><strong>【最终结果】</strong><br>何太后被杀并被污蔑废为庶人，标志着朱温已经彻底撕下了最后一层伪装，不再顾忌任何政治影响。哀帝成了真正的孤家寡人，篡唐的步伐进入了最后的倒计时。</p>' 
+            },
+            'baima': { 
+                name: '白马驿之祸 (905年)', 
+                subtitle: '大唐衣冠扫地，名门望族的物理毁灭', 
+                content: '<p><strong>【背景起因】</strong><br>朱温在篡位前，需要彻底清除朝堂上可能反对他的李唐旧臣。在谋士李振的建议下，一场针对大唐官僚精英的大屠杀开始酝酿。</p><p><strong>【事变经过】</strong><br>朱温以贬谪为名，将裴枢、独孤损、崔远等三十多名大唐最核心的宰相、高官全部押送到滑州白马驿（今河南滑县）。在驿站里，朱温的士兵将这些大唐精英全部绞杀，并将他们的尸体集体投入波涛汹涌的黄河中。</p><p><strong>【最终结果】</strong><br>这场大屠杀不仅彻底摧毁了大唐的中央行政系统，更是从肉体上抹除了自魏晋南北朝以来统治中国数百年的门阀士族阶层。从此以后，中国历史进入了“兵强马壮者当为天子”的纯粹丛林法则时代。</p>' 
+            },
+            'mieguo': { 
+                name: '大唐覆灭 (907-908年)', 
+                subtitle: '二百八十九年的休止符与一杯毒酒', 
+                content: '<p><strong>【背景起因】</strong><br>内廷（太监、太后）、外朝（百官）被全部杀光后，大唐这棵枯树已经被彻底砍断了所有的根系，只等朱温最后推一把。</p><p><strong>【事变经过】</strong><br>天祐四年（907年）四月，在朱温的武力逼迫下，16岁的唐哀帝李柷举行了禅让大典，将传国玉玺交给了朱温。朱温登基称帝，国号大梁（后梁），降李柷为济阴王，并将其软禁在曹州。次年（908年）二月，朱温为了斩草除根，派人送去一杯毒酒，将李柷毒死。</p><p><strong>【最终结果】</strong><br>至此，自公元618年李渊建立唐朝以来，历经二十一帝、共二百八十九年的大唐王朝，在无尽的战火、屠杀与毒酒中彻底落下了帷幕，中国历史进入了极其分裂动荡的五代十国时期。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
