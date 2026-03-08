@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>南齐(屠藩修罗场)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/大屠杀/兵变弑君线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧萧昭业卡片中心在100px，此处设置100px保证事件区块左边缘与上方的中轴线绝对垂直对齐 */
+            padding-left: 100px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">南齐(屠藩修罗场)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 30px;"></div>
+        <div class="line" style="left: 160px; top: 130px; width: 160px; height: 1px;"></div>
+        <div class="line" style="left: 160px; top: 130px; width: 1px; height: 30px;"></div>
+
+        <div class="line" style="left: 320px; top: 130px; width: 160px; height: 1px;"></div>
+        <div class="line" style="left: 480px; top: 130px; width: 1px; height: 30px;"></div>
+
+        <div class="line" style="left: 160px; top: 190px; width: 1px; height: 30px;"></div>
+        <div class="line" style="left: 100px; top: 220px; width: 60px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 220px; width: 1px; height: 60px;"></div>
+
+        <div class="line" style="left: 480px; top: 190px; width: 1px; height: 90px;"></div>
+
+        <div class="line-h-dashed" style="left: 480px; top: 280px; width: 140px;"></div>
+
+        <div class="kill-solid-v" style="left: 480px; top: 190px; height: 40px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 230px; width: 380px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 230px; height: 50px;"></div>
+
+        <div class="kill-solid-v" style="left: 280px; top: 230px; height: 50px;"></div>
+
+        <div class="kill-v" style="left: 480px; top: 310px; height: 50px;"></div>
+        <div class="kill-h" style="left: 100px; top: 360px; width: 380px;"></div>
+        <div class="kill-v" style="left: 100px; top: 360px; height: 40px;"></div>
+
+        <div class="kill-solid-v" style="left: 140px; top: 310px; height: 90px;"></div>
+        <div class="kill-solid-h" style="left: 140px; top: 310px; width: 340px;"></div>
+        <div class="kill-solid-v" style="left: 480px; top: 310px; height: 10px;"></div>
+
+        <div class="label" style="left: 240px; top: 115px;">父死子继</div>
+        <div class="label" style="left: 400px; top: 115px;">抚养如子 / 委以重任</div>
+        
+        <div class="label" style="left: 310px; top: 215px; color: #c62828; font-weight: bold;">篡位大屠杀 / 斩草除根 (杀尽高武子孙)</div>
+        
+        <div class="label" style="left: 550px; top: 270px;">步步生莲</div>
+        
+        <div class="label" style="left: 300px; top: 345px; color: #c62828;">残杀勋旧 / 逼反大将</div>
+        <div class="label" style="left: 300px; top: 295px; color: #c62828; font-weight: bold;">雍州起兵 / 兵围建康 / 斩首废帝</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('gaodi')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">萧道成</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 160px;" onclick="showInfo('wudi')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">萧赜</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 160px;" onclick="showInfo('mingdi')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">萧鸾</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 280px;" onclick="showInfo('zhaoye')">
+            <div class="c-dark">皇帝 / 郁林王</div>
+            <div class="c-emperor">萧昭业</div>
+        </div>
+
+        <div class="person" style="left: 280px; top: 280px;" onclick="showInfo('zongshi')">
+            <div class="c-dark">皇族宗亲</div>
+            <div class="c-minister">诸王二十余人</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 280px;" onclick="showInfo('baojuan')">
+            <div class="c-dark">皇帝 / 东昏侯</div>
+            <div class="c-emperor">萧宝卷</div>
+        </div>
+
+        <div class="person" style="left: 620px; top: 280px;" onclick="showInfo('pan')">
+            <div class="c-dark">贵妃</div>
+            <div class="c-consort">潘玉儿</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 400px;" onclick="showInfo('xiaoyan')">
+            <div class="c-dark">雍州刺史 / 相国</div>
+            <div class="c-minister">萧衍</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">修罗场的三大血色界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('feishi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">494年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">废弑郁林</div>
+            </div>
+            <div class="event-card" onclick="showInfo('tufan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">494-498年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">萧鸾屠宗</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yongzhou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">500-502年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">雍州起兵</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'gaodi': { 
+                name: '萧道成 (齐高帝)', 
+                subtitle: '亲手埋葬刘宋，却没能防住自家侄子', 
+                content: '<p>萧道成是南朝齐的开国皇帝，他在刘宋王朝那场叔侄互杀的大逃杀中渔翁得利，篡位建齐。他深知骨肉相残是国家灭亡的根源，临终前死死拉着太子萧赜的手嘱咐：“一定要记住前朝刘氏骨肉相残的教训，善待你的兄弟们！”</p><p>萧道成本人确实做到了，但他犯了一个致命的错误：他觉得自己的侄子萧鸾从小失去父母很可怜，于是亲自抚养，视如己出，并委以重任。他绝对想不到，正是这个被他当亲儿子养的侄子，日后不仅篡了位，还把他和太子萧赜生下的所有子孙，像杀鸡一样杀得干干净净。</p>' 
+            },
+            'wudi': { 
+                name: '萧赜 (齐武帝)', 
+                subtitle: '开创“永明之治”的明君，后代惨遭绝嗣', 
+                content: '<p>萧赜是萧道成的嫡长子，在位期间注重农业、减免赋税，开创了南朝短暂的繁荣期“永明之治”。他牢记父亲的教诲，虽然对待大臣非常严苛，但对自家的皇室宗亲却极度宽容。</p><p>他生前安排得明明白白，让自己的嫡孙萧昭业继位，并任命知恩图报的堂弟萧鸾辅政。但他低估了权力的毒性。他死后不久，整个帝国就陷入了极度的血腥之中，他的一众皇子皇孙，成了萧鸾屠刀下的待宰羔羊。</p>' 
+            },
+            'zhaoye': { 
+                name: '萧昭业 (郁林王)', 
+                subtitle: '顶级双面人，被权臣先下手为强的短命皇帝', 
+                content: '<p>萧昭业是个天生的影帝。他爷爷齐武帝生病时，他在床前哭得死去活来，悲痛欲绝；但一回到自己的房间，立刻让人摆上酒肉，高兴地说：“老头子终于要死了！”</p><p>登基后，他挥霍无度，打破了爷爷节俭的国库。他深知辅政的堂叔公萧鸾手握重权，于是暗中与亲信密谋要除掉萧鸾。但萧鸾在宫中布满了眼线，得知皇帝要杀自己后，萧鸾果断带兵冲入皇宫。萧昭业惊慌失措，躲在爱妃的房间里，最终被搜出来当场砍死，死后被贬为“郁林王”。</p>' 
+            },
+            'mingdi': { 
+                name: '萧鸾 (齐明帝)', 
+                subtitle: '鳄鱼的眼泪，中国古代最令人胆寒的宗室屠夫', 
+                content: '<p>萧鸾是萧道成的侄子，本没有皇位继承权。在杀掉萧昭业并随后篡位登基后，他陷入了极度的不安全感中——因为满朝文武和各地藩王，全都是他伯父（萧道成）和堂哥（萧赜）的亲生子孙。</p><p>为了皇位永远留在自己这一脉，萧鸾下达了丧心病狂的屠杀令。他每次准备杀一位王爷前，都会在佛像前烧香，痛哭流涕地说：“我也不想杀他，但他要造反，我只能大义灭亲啊！”哭完之后，屠刀落下。在短短几年里，他将萧道成、萧赜一脉的二十多位成年王爷及其子嗣全部杀光，史称“高武子孙，屠戮殆尽”。南齐的宗室根基，被他彻底拔绝。</p>' 
+            },
+            'zongshi': { 
+                name: '诸王二十余人', 
+                subtitle: '齐明帝屠刀下的政治祭品', 
+                content: '<p>这些被萧鸾屠杀的王爷们（如鄱阳王萧锵、随郡王萧子隆等），本是南齐帝国镇守各方的藩王。他们大多并没有造反的实力和意图，仅仅因为他们流着开国皇帝的血，就成了萧鸾的眼中钉。</p><p>萧鸾的屠杀极其残酷，常常是派使者送去毒酒或白绫，或者直接派兵包围王府灭门。高帝和武帝的子孙几乎绝嗣。这种极其野蛮的内部大清洗，让整个南齐王朝丧失了所有的凝聚力，也让后来篡位的萧衍几乎没有遇到任何像样的宗室抵抗。</p>' 
+            },
+            'baojuan': { 
+                name: '萧宝卷 (东昏侯)', 
+                subtitle: '终极暴君与昏君的结合体，大齐的掘墓人', 
+                content: '<p>萧鸾为了把干干净净的皇位传给儿子萧宝卷，杀光了所有威胁。但他没料到，这个儿子是个纯粹的疯子。萧宝卷登基后，视国家大事为儿戏，最喜欢干的事是在宫里开集市，自己当屠夫切肉，让宠妃潘玉儿当老板娘卖酒。</p><p>他对武将和大臣的残杀毫无逻辑，看谁不顺眼就杀谁，连平定叛乱的功臣也照杀不误。这种逼着所有人造反的高压统治，最终让镇守雍州的刺史萧衍忍无可忍，举兵谋反。当萧衍的军队包围都城建康时，萧宝卷还在后宫里寻欢作乐。最终，他的两名近卫在深夜潜入，一刀砍下了他的脑袋，送给城外的萧衍作为投名状。</p>' 
+            },
+            'pan': { 
+                name: '潘玉儿', 
+                subtitle: '步步生莲的绝世妖姬', 
+                content: '<p>潘玉儿是萧宝卷最宠爱的妃子。萧宝卷为了讨好她，甚至用纯金打造了一朵朵莲花贴在地上，让潘玉儿光着脚在上面走，赞叹道：“这真是步步生莲花啊！”</p><p>在国家财政极其困难、前线战事吃紧的时候，萧宝卷依然在为潘玉儿建造极其奢华的宫殿，刮地三尺搜刮民脂民膏。南齐灭亡后，萧衍本想将潘玉儿收入后宫，但被大臣劝阻，最终将其赐给了一名将军。潘玉儿不堪受辱，上吊自尽。</p>' 
+            },
+            'xiaoyan': { 
+                name: '萧衍 (梁武帝)', 
+                subtitle: '被逼上绝路的复仇者，南朝第一长寿帝', 
+                content: '<p>萧衍是萧道成的远房本家。在萧宝卷发疯大肆屠杀大臣时，萧衍的哥哥萧懿也被昏君无故杀害。镇守雍州（今襄阳）的萧衍得知消息后，决定不再坐以待毙。</p><p>他立刻起兵，打着“清君侧、废昏君”的旗号，率军顺江而下，直扑都城建康。由于萧宝卷早已丧尽人心，加上南齐的皇室宗亲已经被萧鸾杀光，萧衍的军队几乎没有遇到什么有力的抵抗就包围了都城。萧宝卷死后，萧衍按照剧本逼迫南齐末帝禅让，建立了南朝梁（萧梁），结束了这短短23年、却血流成河的南齐王朝。</p>' 
+            },
+
+            /* 事件库 */
+            'feishi': { 
+                name: '废弑郁林 (494年)', 
+                subtitle: '权臣先下手为强的宫廷喋血', 
+                content: '<p><strong>【背景起因】</strong><br>萧昭业登基后荒唐无度，而辅政大臣萧鸾大权在握。萧昭业深感威胁，暗中联络将领准备除掉萧鸾。</p><p><strong>【事变经过】</strong><br>萧鸾的情报网极其发达，得知皇帝的计划后，决定先发制人。他收买了皇帝身边的禁军将领，直接带兵冲入皇宫。萧昭业惊慌失措逃往爱妃的宫中，被叛军追上乱刀砍死。</p><p><strong>【最终结果】</strong><br>萧鸾随后立萧昭业的弟弟为傀儡皇帝（海陵王），几个月后又将其废杀，自己正式登基为帝，开启了南齐最恐怖的大清洗时代。</p>' 
+            },
+            'tufan': { 
+                name: '萧鸾屠宗 (494-498年)', 
+                subtitle: '鳄鱼的眼泪与断子绝孙的大屠杀', 
+                content: '<p><strong>【背景起因】</strong><br>萧鸾作为旁支篡位，对高帝萧道成和武帝萧赜的众多嫡系子孙充满了极度的恐惧和猜忌。</p><p><strong>【事变经过】</strong><br>萧鸾展开了有计划、有预谋的系统性屠杀。每次举起屠刀前，他都会在朝堂上面对群臣痛哭流涕，烧香拜佛，表现得极其痛苦。然后立刻派兵将各位王爷满门抄斩，绝不留情。</p><p><strong>【最终结果】</strong><br>高武两帝的子孙几乎被彻底杀光。这场大屠杀虽然稳固了萧鸾个人的皇位，但也彻底耗尽了南齐王朝的政治资本，导致南齐皇室成为光杆司令，最终被外人轻易推翻。</p>' 
+            },
+            'yongzhou': { 
+                name: '雍州起兵 (500-502年)', 
+                subtitle: '大齐王朝的最后丧钟', 
+                content: '<p><strong>【背景起因】</strong><br>萧鸾死后，儿子萧宝卷不仅继续屠杀剩下的宗室，还大肆诛杀开国功臣和各地将领，逼得人人自危。雍州刺史萧衍的哥哥被杀，成为起义的导火索。</p><p><strong>【事变经过】</strong><br>萧衍在襄阳起兵，一路势如破竹。萧宝卷派出的平叛军队要么倒戈，要么被击溃。萧衍大军包围建康城，城内发生内讧，守将为了自保，深夜潜入后宫砍下了萧宝卷的头颅出城投降。</p><p><strong>【最终结果】</strong><br>萧衍入城后，彻底掌控大局。502年，萧衍逼迫傀儡皇帝禅让，南齐灭亡，南朝进入了萧衍统治下的“梁朝”时代。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
