@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>南汉(大象军团与太监治国)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/征服线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">南汉(象阵与太监治国)核心关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 100px; width: 2px; height: 50px;"></div>
+        <div class="line" style="left: 200px; top: 150px; width: 240px; height: 2px;"></div>
+        
+        <div class="line" style="left: 200px; top: 150px; width: 2px; height: 30px;"></div>
+        <div class="line" style="left: 440px; top: 150px; width: 2px; height: 30px;"></div>
+
+        <div class="kill-solid-h" style="left: 240px; top: 200px; width: 160px;"></div>
+
+        <div class="line" style="left: 440px; top: 220px; width: 2px; height: 100px;"></div>
+
+        <div class="line-h-dashed" style="left: 480px; top: 340px; width: 80px;"></div>
+
+        <div class="kill-solid-h" style="left: 240px; top: 340px; width: 160px;"></div>
+
+
+        <div class="label" style="left: 320px; top: 130px;">诸子相继 / 噩梦开始</div>
+        <div class="label" style="left: 320px; top: 190px; color: #c62828; font-weight: bold;">刺杀亲兄 / 杀光14个弟弟</div>
+        <div class="label" style="left: 440px; top: 270px;">荒唐末主继位</div>
+        <div class="label" style="left: 520px; top: 320px;">想做官，先自宫</div>
+        <div class="label" style="left: 320px; top: 330px; color: #c62828; font-weight: bold;">火烧象阵 / 灭亡南汉</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('liuyan')">
+            <div class="c-dark">南汉高祖 / 酷刑发明家</div>
+            <div class="c-emperor" style="font-size: 18px;">刘龑</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 200px;" onclick="showInfo('liubin')">
+            <div class="c-dark">南汉殇帝 (哥哥)</div>
+            <div class="c-emperor">刘玢</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 200px;" onclick="showInfo('liusheng')">
+            <div class="c-dark">南汉中宗 (弟弟)</div>
+            <div class="c-emperor">刘晟</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 340px;" onclick="showInfo('liuchang')">
+            <div class="c-dark">南汉后主 / 荒唐绝顶</div>
+            <div class="c-emperor">刘鋹</div>
+        </div>
+
+        <div class="person" style="left: 600px; top: 340px;" onclick="showInfo('gongchengshu')">
+            <div class="c-dark">太监首领 / 波斯女巫</div>
+            <div class="c-minister">宦官集团</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 340px;" onclick="showInfo('panmei')">
+            <div class="c-dark">大宋南征主帅</div>
+            <div class="c-rebel">潘美</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">南汉：五代最猎奇的暗黑政权</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('liguo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">917年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">大越/汉立国</div>
+            </div>
+            <div class="event-card" onclick="showInfo('taijian')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">958-971年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">两万太监治国</div>
+            </div>
+            <div class="event-card" onclick="showInfo('xiangzhen')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">970年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">火烧大象阵</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'liuyan': { 
+                name: '刘龑 (南汉高祖)', 
+                subtitle: '名字带龙，心如蛇蝎的酷刑狂魔', 
+                content: '<p>刘龑（原名刘岩）在哥哥刘隐打下的岭南基业上，正式称帝建立南汉。他不仅自己造了个“龑”（上龙下天）字当名字，还极度迷信和残暴。</p><p>他生平最大的爱好就是发明酷刑和看人受刑。他发明了包括灌鼻、割舌、支解、醢（剁成肉酱）、甚至是把人扔进煮沸的水锅里等一系列令人发指的刑罚。每次看到犯人在酷刑下惨叫翻滚，他都会高兴得手舞足蹈，甚至连嘴里的口水流下来都不知道。这种暴虐的基因，完美遗传给了他的子孙。</p>' 
+            },
+            'liubin': { 
+                name: '刘玢 (南汉殇帝)', 
+                subtitle: '荒淫无度，被弟弟找人摔死的倒霉蛋', 
+                content: '<p>刘龑死后，长子刘玢继位。还在给老爹办丧事期间，刘玢就公然招妓女进宫淫乐，甚至让男女扒光衣服在宫里追逐嬉戏，荒唐至极。</p><p>他的弟弟刘晟实在看不下去了（主要是想夺位），于是重金买通了几个力大无穷的刺客。趁着刘玢喝得酩酊大醉时，刺客冲进去，直接把刘玢像摔沙袋一样活活摔死在地上。</p>' 
+            },
+            'liusheng': { 
+                name: '刘晟 (南汉中宗)', 
+                subtitle: '屠戮手足，将亲兄弟赶尽杀绝的暴君', 
+                content: '<p>刘晟杀了哥哥篡位后，因为自己得位不正，极度缺乏安全感，整天怀疑剩下的弟弟们也要篡自己的位。</p><p>于是，他开启了中国历史上罕见的“屠弟模式”。他找各种借口，今天毒死一个，明天砍死两个，不到几年时间，竟然把自己的14个亲弟弟全部杀光！不仅杀弟弟，连他们的家属也一并屠戮。他在位期间，南汉宗室几乎被他一个人给杀绝了。</p>' 
+            },
+            'liuchang': { 
+                name: '刘鋹 (南汉后主)', 
+                subtitle: '逼迫全朝廷考公先自宫的魔幻国君', 
+                content: '<p>刘鋹是南汉的末代皇帝，他的脑回路堪称千古奇葩。他认为：朝廷里的文武百官都有老婆孩子，所以他们一定会为了给家里捞钱而贪污造反；只有太监断子绝孙，才会对皇帝百分百忠诚。</p><p>于是他颁布了神仙法令：在南汉，你想考科举、当大官，甚至是被皇帝看中提拔，第一步必须是“阉割”。导致当时岭南的读书人为了做官，纷纷挥刀自宫，南汉朝廷里的太监竟然多达两万多人！他还极度宠信一个波斯女巫，军国大事全听女巫占卜，最终把南汉带入了毁灭。</p>' 
+            },
+            'gongchengshu': { 
+                name: '宦官集团 / 波斯女巫', 
+                subtitle: '掌控南汉命脉的奇特统治阶层', 
+                content: '<p>以龚澄枢为首的宦官集团和波斯女巫樊胡子，是刘鋹时期南汉的实际统治者。刘鋹把朝政全扔给他们，自己天天在后宫用珍珠装饰宫殿。</p><p>当宋军兵临城下时，波斯女巫还在忽悠刘鋹：“宋军只是来抢点东西，抢完就会走的，这是天意，不用抵抗。”等到宋朝大军真的打过来了，这帮平时作威作福的太监跑得比谁都快，甚至在逃跑前还一把火把南汉的皇宫和金库烧了个精光。</p>' 
+            },
+            'panmei': { 
+                name: '潘美 (大宋名将)', 
+                subtitle: '终结太监帝国，火烧大象的克星', 
+                content: '<p>宋太祖赵匡胤派大将潘美南下平定南汉。潘美一路势如破竹，打到了韶州（今广东韶关），遭遇了南汉最后的王牌——大象军团。</p><p>南汉军队在十几头巨大的战象上绑着武器，企图用巨兽冲散宋军。潘美冷静应对，下令宋军万箭齐发，射出满天火箭。大象怕火，被烧得发狂，直接掉头踩死了无数南汉士兵，南汉主力全军覆没。随后潘美攻入广州，南汉灭亡。</p>' 
+            },
+
+            /* 事件库 */
+            'liguo': { 
+                name: '大越/汉立国 (917年)', 
+                subtitle: '偏安岭南的暴虐开端', 
+                content: '<p><strong>【背景起因】</strong><br>唐末黄巢起义军曾洗劫广州，岭南大乱。刘隐逐渐统一岭南。刘隐死后，其弟刘岩（刘龑）接班。</p><p><strong>【事变经过】</strong><br>917年，刘龑在番禺（广州）称帝，初定国号为“大越”，次年改国号为“汉”。南汉凭借着天然的地理屏障（五岭）和发达的海外贸易，在初期积攒了大量财富。</p><p><strong>【最终结果】</strong><br>虽然岭南免于了中原的战火，但却陷入了刘氏家族极其残暴和变态的统治之中，百姓的生存环境堪比人间地狱。</p>' 
+            },
+            'taijian': { 
+                name: '太监治国 (958-971年)', 
+                subtitle: '世界历史上罕见的阉割王朝', 
+                content: '<p><strong>【背景起因】</strong><br>南汉历代皇帝都有被亲人或武将暗杀的阴影，到了刘鋹这一代，对正常男性的不信任达到了顶点。</p><p><strong>【事变经过】</strong><br>刘鋹将国家所有核心权力（包括领兵打仗）全部交给了太监。凡是考中进士的才子，或者表现出众的武将，刘鋹的赏赐就是——亲自派人把他们阉了。整个南汉国家机器变成了由两万多名太监运转的畸形怪胎。</p><p><strong>【最终结果】</strong><br>这种反人类的制度彻底摧毁了南汉的国防和民心。宋军一来，那些没了生理机能的“高官”们除了搜刮财物逃跑，根本组织不起任何有效的抵抗。</p>' 
+            },
+            'xiangzhen': { 
+                name: '火烧大象阵与南汉灭亡 (970年)', 
+                subtitle: '巨兽与火箭的终极对决', 
+                content: '<p><strong>【背景起因】</strong><br>大宋南征主帅潘美一路打到韶州，这是广州北部的最后一道屏障。南汉派出了精锐的“大象军团”迎战。</p><p><strong>【事变经过】</strong><br>南汉军阵前排列着巨大的战象，象背上建有木塔，士兵居高临下射箭。潘美发现大象笨重且易受惊，于是集中了数千名弓弩手，点燃箭头，对准大象集中攒射。战象中箭着火，痛得发狂，掉头冲入南汉自己的军阵，南汉军队被自己人踩死无数，全线崩溃。</p><p><strong>【最终结果】</strong><br>象阵一破，南汉再无抵抗之力。刘鋹本想带着搜刮的财宝坐船逃往海外，结果被平时信任的太监把船偷走了。他只能绝望地向潘美投降，奇葩的南汉政权宣告灭亡。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
