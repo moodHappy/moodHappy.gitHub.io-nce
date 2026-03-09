@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>南唐(千古词帝与江南梦碎)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/征服线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">南唐(千古词帝与江南梦碎)核心关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 100px; width: 2px; height: 80px;"></div>
+        <div class="line" style="left: 320px; top: 220px; width: 2px; height: 100px;"></div>
+
+        <div class="kill-solid-h" style="left: 140px; top: 200px; width: 160px;"></div>
+
+        <div class="line-v-dashed" style="left: 540px; top: 220px; height: 100px;"></div>
+
+        <div class="kill-solid-h" style="left: 380px; top: 340px; width: 140px;"></div>
+
+        <div class="kill-h" style="left: 120px; top: 260px; width: 420px;"></div>
+        <div class="kill-v" style="left: 540px; top: 220px; height: 40px;"></div>
+        <div class="kill-v" style="left: 120px; top: 260px; height: 60px;"></div>
+
+        <div class="kill-solid-h" style="left: 180px; top: 340px; width: 100px;"></div>
+
+        <div class="label" style="left: 320px; top: 140px;">父死子继 / 由盛转衰</div>
+        <div class="label" style="left: 320px; top: 270px;">去帝号 / 传位末代</div>
+        <div class="label" style="left: 220px; top: 190px; color: #c62828; font-weight: bold;">三征南唐 / 尽夺江北</div>
+        <div class="label" style="left: 550px; top: 270px;">统兵南征</div>
+        <div class="label" style="left: 450px; top: 330px; color: #c62828; font-weight: bold;">城破投降 / 违命侯</div>
+        <div class="label" style="left: 340px; top: 250px; color: #c62828;">卧榻之侧，岂容他人鼾睡</div>
+        <div class="label" style="left: 230px; top: 330px; color: #c62828; font-weight: bold;">中反间计 / 鸩杀良将</div>
+
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('libian')">
+            <div class="c-dark">南唐烈祖 / 奠基人</div>
+            <div class="c-emperor">李昪 (徐知诰)</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px;" onclick="showInfo('lijing')">
+            <div class="c-dark">南唐中主</div>
+            <div class="c-emperor">李璟</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 340px;" onclick="showInfo('liyu')">
+            <div class="c-dark">南唐后主 / 千古词帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李煜</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 200px;" onclick="showInfo('chairong')">
+            <div class="c-dark">后周世宗</div>
+            <div class="c-rebel">柴荣</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('zhaokuangyin')">
+            <div class="c-dark">宋太祖</div>
+            <div class="c-rebel">赵匡胤</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 340px;" onclick="showInfo('linrenzao')">
+            <div class="c-dark">南唐第一猛将</div>
+            <div class="c-minister">林仁肇</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 340px;" onclick="showInfo('caobin')">
+            <div class="c-dark">大宋南征主帅</div>
+            <div class="c-rebel">曹彬</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">南唐：极致浪漫与残酷亡国的交响</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('xiumi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">937-943年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">息兵安民</div>
+            </div>
+            <div class="event-card" onclick="showInfo('huainan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">958年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">失丧江北</div>
+            </div>
+            <div class="event-card" onclick="showInfo('jinling')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">975年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">金陵城破</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'libian': { 
+                name: '李昪 (南唐烈祖)', 
+                subtitle: '篡吴建唐，保境息民的开国之君', 
+                content: '<p>李昪（原名徐知诰）逼迫吴睿帝禅让后，为了标榜正统，自称是唐宪宗之子建王李恪的后裔，恢复李姓，定国号为唐。</p><p>与五代十国其他穷兵黩武的君主不同，李昪深知江南财富来之不易。他在位期间坚持“息兵安民”的国策，绝不轻易对外用兵，大力发展农业和商业。在他的治理下，南唐迅速成为当时中国经济最繁荣、文化最发达的地区，吸引了大量中原士大夫南下避难，奠定了南唐的文化底蕴。</p>' 
+            },
+            'lijing': { 
+                name: '李璟 (南唐中主)', 
+                subtitle: '好大喜功，将南唐拖入深渊的文艺君王', 
+                content: '<p>李璟是李昪的长子，文学造诣极高（有词句“细雨梦回鸡塞远，小楼吹彻玉笙寒”传世）。但他好大喜功，抛弃了父亲“保境息民”的国策，四面出击，先后出兵灭了马楚和闽国。</p><p>表面上南唐版图达到了巅峰，但连年征战彻底掏空了国库。当遭遇北方刚刚崛起的后周世宗柴荣时，南唐军队一触即溃。李璟被迫割让长江以北的十四州（淮南），并且极度屈辱地去掉“皇帝”尊号，改称“国主”，向后周称臣，南唐从此一蹶不振。</p>' 
+            },
+            'liyu': { 
+                name: '李煜 (南唐后主)', 
+                subtitle: '作个才子真绝代，可怜薄命作君王', 
+                content: '<p>李煜是中国历史上最伟大的词人之一，但他却不幸生在了帝王家。接手南唐时，国家已是苟延残喘。他性格软弱，笃信佛教，对北方的大宋一味委曲求全，甚至送上了大量的岁贡以求自保。</p><p>但在大一统的浪潮面前，退让换不来和平。赵匡胤一句“卧榻之侧，岂容他人鼾睡”，粉碎了他偏安一隅的幻想。金陵城破后，他肉袒出降，被押往汴京，封为极具侮辱性的“违命侯”。三年后，因写下“问君能有几多愁，恰似一江春水向东流”的亡国之音，被宋太宗赵光义赐牵机药毒死。</p>' 
+            },
+            'chairong': { 
+                name: '柴荣 (后周世宗)', 
+                subtitle: '击碎南唐大国梦的北方战神', 
+                content: '<p>柴荣按照《平边策》“先易后难、先南后北”的战略，亲率大军三征南唐。南唐的精锐部队在柴荣的铁骑面前如同纸糊。</p><p>柴荣不仅打过了淮河，甚至一度兵临长江，吓得李璟不仅割地称臣，连日历都要改用后周的年号。柴荣的征伐，打断了南唐的脊梁骨，让后来赵匡胤灭南唐变得轻而易举。</p>' 
+            },
+            'linrenzao': { 
+                name: '林仁肇', 
+                subtitle: '南唐最后的钢铁长城，死于离间计的柱国', 
+                content: '<p>林仁肇是南唐末期少有的名将，骁勇善战，曾多次击退宋军的试探性进攻，甚至提出过趁宋军主力北伐契丹时，出兵收复淮南的惊天战略，让赵匡胤极为忌惮。</p><p>为了除掉这根眼中钉，赵匡胤买通南唐使者，在宋朝皇宫里挂了一幅林仁肇的画像，并故意泄露说林仁肇已经暗中投降大宋。昏庸多疑的李煜竟然中计，不顾群臣劝阻，用毒酒秘密杀死了这位南唐最后的希望。林仁肇一死，南唐门户洞开。</p>' 
+            },
+            'zhaokuangyin': { 
+                name: '赵匡胤 (宋太祖)', 
+                subtitle: '大一统的终结者，终结南唐偏安幻梦', 
+                content: '<p>赵匡胤建立北宋后，继续执行统一天下的战略。面对李煜不断的称臣纳贡，赵匡胤不为所动。当李煜派使臣徐铉去汴梁求情，说南唐对待宋朝就像儿子对待父亲一样恭顺，为什么还要出兵时？</p><p>赵匡胤勃然大怒，拔剑砍案，留下了那句震古烁今的名言：“不须多言！江南亦有何罪，但天下一家，卧榻之侧，岂容他人鼾睡乎！”彻底宣告了南唐的死刑。</p>' 
+            },
+            'caobin': { 
+                name: '曹彬', 
+                subtitle: '仁慈的征服者，兵不血刃下江南', 
+                content: '<p>曹彬是大宋南征南唐的主帅。与五代时期城破后动辄屠城的军阀不同，曹彬治军极其严明。在彻底包围金陵城后，他甚至假装生病，要求麾下所有将领发誓在破城后绝不滥杀无辜，才肯“痊愈”指挥。</p><p>最终，金陵城破，李煜投降。曹彬约束部下，不仅保护了南唐皇室的生命安全，甚至连金陵城的百姓和藏书都秋毫无犯，被后世誉为一代儒将典范。</p>' 
+            },
+
+            /* 事件库 */
+            'xiumi': { 
+                name: '息兵安民 (937-943年)', 
+                subtitle: '江南的黄金时代', 
+                content: '<p><strong>【背景起因】</strong><br>五代十国战乱频仍，中原百姓流离失所，而江南地区相对安定。</p><p><strong>【事变经过】</strong><br>李昪建立南唐后，坚定推行“保境息民”政策。他对内轻徭薄赋，奖励农桑；对外与吴越、闽、楚等邻国尽量修好，甚至在中原发生战乱时也不趁火打劫，而是接收难民。</p><p><strong>【最终结果】</strong><br>南唐迎来了长达几十年的繁荣期。金陵（南京）成为了当时世界上人口最密集、文化最繁荣的超级大都市，为后主李煜等文人提供了极度优渥的艺术土壤。</p>' 
+            },
+            'huainan': { 
+                name: '三征南唐与丧失江北 (955-958年)', 
+                subtitle: '从帝国跌落为藩镇', 
+                content: '<p><strong>【背景起因】</strong><br>南唐中主李璟好大喜功，盲目扩张，耗尽国力。后周世宗柴荣决定拿南唐开刀，以夺取富庶的淮南地区充实军资。</p><p><strong>【事变经过】</strong><br>柴荣三次御驾亲征，周军水陆并进，摧枯拉朽。南唐军队士气低落，屡战屡败。赵匡胤在清流关之战中更是表现神勇，南唐的江北防线彻底崩溃，周军兵临长江。</p><p><strong>【最终结果】</strong><br>李璟惊恐万分，被迫献出长江以北的十四个州，并且取消“帝号”，向后周称臣。南唐失去了最重要的战略缓冲区，从此完全暴露在中原铁骑的威慑之下。</p>' 
+            },
+            'jinling': { 
+                name: '金陵城破 (975年)', 
+                subtitle: '大宋统一江南，词帝梦醒', 
+                content: '<p><strong>【背景起因】</strong><br>北宋基本平定南方其他割据政权后，对南唐形成了C型包围圈。李煜虽然卑躬屈膝，但赵匡胤决意统一天下。</p><p><strong>【事变经过】</strong><br>宋太祖派曹彬率领十万大军，搭设浮桥跨越长江，直逼金陵。李煜此时还沉浸在佛教的法会上祈求神佛保佑，对前线战败的军情一无所知。直到宋军打到城墙下，李煜才如梦初醒。</p><p><strong>【最终结果】</strong><br>975年十一月，金陵城破。李煜率领南唐王公大臣奉表投降。立国三十九年的南唐正式灭亡，中国南方基本重归一统。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
