@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>晋安帝朝核心人物与事件关系图 (门阀落幕与刘裕崛起)</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭/威压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">晋安帝朝核心人物与事件关系图 (门阀落幕)</h1>
+
+    <div class="family-tree">
+        
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 150px;">父子专权 / 贪污腐败 / 引发大乱</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 100px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 100px; height: 140px;"></div>
+        <div class="label" style="left: 210px; top: 90px; color: #c62828; font-weight: bold;">天师道起义 / 屠戮江南士族</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 100px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 90px; color: #c62828; font-weight: bold;">攻入建康 / 夷灭司马父子</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 100px; height: 140px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 240px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 230px; color: #c62828; font-weight: bold;">逼迫禅让 / 建立桓楚政权 / 幽禁天子</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 240px; height: 140px;"></div>
+        <div class="label" style="left: 540px; top: 310px; color: #1565c0; font-weight: bold;">京口起兵 / 击杀桓玄</div>
+
+        <div class="line" style="left: 320px; top: 240px; width: 1px; height: 140px;"></div>
+        <div class="line" style="left: 320px; top: 380px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 320px; top: 310px; font-weight: bold;">名义复位 / 寒门代晋 / 绞死安帝</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 380px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 240px; height: 140px;"></div>
+        <div class="label" style="left: 210px; top: 370px; color: #1565c0; font-weight: bold;">铁血平叛 / 踏着百万尸骨积攒军功</div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('simadezong')">
+            <div class="c-dark">东晋第十任皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">晋安帝司马德宗</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('simadaozi')">
+            <div class="c-dark">太傅 / 录尚书事</div>
+            <div class="c-minister">司马道子 / 元显</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('huanxuan')">
+            <div class="c-dark">荆州刺史 / 楚帝</div>
+            <div class="c-rebel">桓玄 (桓温之子)</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('sunen')">
+            <div class="c-dark">五斗米道领袖</div>
+            <div class="c-rebel">孙恩 / 卢循</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 380px;" onclick="showInfo('liuyu')">
+            <div class="c-dark">北府兵神 / 寒门之光</div>
+            <div class="c-minister">刘裕 (宋武帝)</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">安帝朝的三场毁灭与重生</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('sunenqiyi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">399年</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">孙恩之乱血洗江南</div>
+            </div>
+            <div class="event-card" onclick="showInfo('huanxuancuan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">403年十二月</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">桓玄篡位建立桓楚</div>
+            </div>
+            <div class="event-card" onclick="showInfo('jingkou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">404年二月</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">刘裕京口建义反杀</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'simadezong': { 
+                name: '司马德宗 (晋安帝)', 
+                subtitle: '连冷热饥饱都不知晓的植物人皇帝，两度被废', 
+                content: '<p>司马德宗是中国历史上极其罕见的重度残疾皇帝。他口不能言，四体不勤，甚至连冬天和夏天的区别都不知道。孝武帝被捂死后，由于没有其他合适的成年代用人选，司马道子将他推上了皇位，以便于自己专权。</p><p>在位期间，他就像一件破烂的行李，先是被桓玄赶下台关起来（桓玄代晋建立桓楚）；后来刘裕打败了桓玄，又把他找回来重新放回龙椅上当摆设。刘裕利用他大搞北伐、清除政敌。当刘裕觉得司马德宗已经没有利用价值，准备自己篡位时，便在公元419年派人用极其粗暴的手段（用散衣绳子）将这位白痴皇帝活活勒死。</p>' 
+            },
+            'simadaozi': { 
+                name: '司马道子 / 司马元显', 
+                subtitle: '疯狂作死的父子档，东晋崩盘的催化剂', 
+                content: '<p>司马道子是安帝的叔叔，司马元显是道子的儿子。这父子俩掌权后，卖官鬻爵，大肆搜刮民脂民膏。司马元显为了对付地方军阀，强行征调江南的免役平民当兵（乐属），直接逼反了江南百姓，引发了极其惨烈的孙恩起义。</p><p>后来，司马元显自不量力，想要讨伐荆州的桓玄。结果桓玄顺江而下，朝廷军队一触即溃。桓玄攻入建康后，将司马元显斩首，将司马道子流放并毒死。司马氏的中央力量被这父子俩败得干干净净。</p>' 
+            },
+            'huanxuan': { 
+                name: '桓玄', 
+                subtitle: '完成了父亲桓温的篡位遗愿，却只当了几个月皇帝', 
+                content: '<p>桓玄是当年大权臣桓温的小儿子，极其聪明但也极其自负。他借着司马元显乱政的机会攻入建康，控制了朝政。公元403年，他逼迫白痴皇帝司马德宗禅让，自己登基称帝，国号“楚”。</p><p>但他称帝后骄奢淫逸，完全不把北府兵的底层将领放在眼里。仅仅两三个月后，刘裕等人在京口起兵，桓玄的军队竟然不堪一击。桓玄带着安帝仓皇逃回荆州，最终在逃亡益州的路上被益州刺史毛璩的部将斩杀，脑袋被送到建康挂在桥上示众。</p>' 
+            },
+            'sunen': { 
+                name: '孙恩 / 卢循', 
+                subtitle: '五斗米道教主，终结江南门阀繁华的死神', 
+                content: '<p>孙恩利用百姓对司马元显强征暴敛的愤怒，在会稽（今浙江绍兴）起兵。这场起义带有强烈的宗教狂热，起义军被称为“长生人”。他们对江南的世家大族展开了极其血腥的屠杀，王、谢等顶级门阀的子弟死伤惨重，江南百年繁华毁于一旦。</p><p>虽然孙恩后来兵败投海自尽（信徒认为他“水仙”了），他的妹夫卢循继续领导起义军，转战广州甚至一度逼近建康。这场大乱彻底摧毁了东晋门阀士族的经济和人力基础，为寒门将领刘裕的崛起扫清了阶级障碍。</p>' 
+            },
+            'liuyu': { 
+                name: '刘裕 (宋武帝)', 
+                subtitle: '从卖草鞋的赌徒到气吞万里如虎的寒门帝王', 
+                content: '<p>刘裕出身贫寒，早年靠卖草鞋为生，后来加入北府兵。在平定孙恩起义中，他展现出了极其恐怖的军事天赋，甚至曾一个人提着大刀追砍上千名起义军。桓玄篡位后，刘裕在京口联络北府兵旧将，仅靠一千多人的残兵，就打崩了桓玄的数万楚军，恢复了晋室。</p><p>此后，刘裕大权独揽。他与传统的门阀权臣（如王导、桓温）完全不同。他代表着底层军功地主，极其务实且铁血。他向南彻底平定了卢循起义，向北发动了两次规模宏大的北伐，灭亡了南燕和后秦，收复了山东、河南、关中等地。在积攒了无人能及的军功后，他勒死了晋安帝，准备彻底埋葬司马氏的江山。</p>' 
+            },
+
+            /* 事件库 */
+            'sunenqiyi': { 
+                name: '孙恩之乱血洗江南 (399年)', 
+                subtitle: '门阀士族的物理性毁灭', 
+                content: '<p><strong>【事件经过】</strong><br>由于朝廷的强征和五斗米道的煽动，八郡百姓同时造反。起义军攻陷会稽，将内史王凝之（王羲之的儿子，谢道韫的丈夫）全家杀害。整个江东陷入一片火海，朝廷只能依靠北府兵四处救火，刘裕正是在这场残酷的镇压战中脱颖而出，积累了第一桶军事资本。</p>' 
+            },
+            'huanxuancuan': { 
+                name: '桓玄篡位建立桓楚 (403年十二月)', 
+                subtitle: '桓温遗愿的短暂实现', 
+                content: '<p><strong>【事件经过】</strong><br>桓玄消灭了司马道子父子后，大权独揽。他自导自演了禅让大戏，把白痴皇帝司马德宗赶出皇宫，自己坐上了龙椅。但他心胸狭隘，忌惮北府兵将领，却没有彻底斩草除根，反而让刘裕等人回到了京口（北府兵大本营），这成了他最致命的失误。</p>' 
+            },
+            'jingkou': { 
+                name: '刘裕京口建义反杀 (404年二月)', 
+                subtitle: '寒门武将主宰天下的开端', 
+                content: '<p><strong>【事件经过】</strong><br>刘裕联合何无忌、刘毅等北府兵下级军官，在京口突然起兵。桓玄的军队虽然人数众多，但在这些身经百战的北府猛将面前毫无斗志。刘裕一路摧枯拉朽攻入建康，桓玄败逃荆州。这场起义标志着东晋的实际控制权，正式从世家大族（门阀）转移到了底层职业军人（寒门）手中。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
