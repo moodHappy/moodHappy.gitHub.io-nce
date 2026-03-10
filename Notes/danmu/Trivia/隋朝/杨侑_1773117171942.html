@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>隋恭帝朝核心人物与事件关系图 (大唐前夜的木偶)</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭/威压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } /* 李唐开国势力此时为隋朝叛臣 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">隋恭帝朝核心人物与事件关系图 (大唐前夜)</h1>
+
+    <div class="family-tree">
+        
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 170px; color: #c62828; font-weight: bold; background-color: #fff;">挟天子以令关中 / 逼迫禅让</div>
+
+        <div class="line" style="left: 100px; top: 100px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 210px; top: 90px; font-weight: bold;">统帅前锋 / 兵临长安</div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 100px; height: 140px;"></div>
+        <div class="label" style="left: 100px; top: 170px; color: #c62828; font-weight: bold; background-color: #fff;">攻破京师 / 报刨坟杀弟之仇</div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 240px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 230px; color: #777;">遥尊太上皇 (掩耳盗铃)</div>
+
+        <div class="line-v-dashed" style="left: 320px; top: 240px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 310px; color: #777; background-color: #fff;">大隋最后的两枚弃子 / 东西并立</div>
+
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('yangyou')">
+            <div class="c-dark">大隋第三任皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">隋恭帝杨侑</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('liyuan')">
+            <div class="c-dark">唐王 / 大丞相</div>
+            <div class="c-rebel" style="font-size: 18px;">李渊 (唐高祖)</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('lijiancheng')">
+            <div class="c-dark">大唐双子星</div>
+            <div class="c-rebel">李建成 / 李世民</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('yinshishi')">
+            <div class="c-dark">长安留守 (大隋死忠)</div>
+            <div class="c-minister">阴世师 / 骨仪</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('yangguang')">
+            <div class="c-dark">太上皇 (困于江都)</div>
+            <div class="c-emperor">隋炀帝杨广</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 380px;" onclick="showInfo('yangtong')">
+            <div class="c-dark">洛阳傀儡天子</div>
+            <div class="c-emperor">皇泰主杨侗</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">恭帝朝的大唐立国三步曲</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('gongxian')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">617年十一月</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">唐军攻陷长安</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yongli')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">617年十一月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">尊祖废孙拥立傀儡</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chanrang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">618年五月</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">恭帝禅位大唐建立</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yangyou': { 
+                name: '杨侑 (隋恭帝)', 
+                subtitle: '在祖父的阴影与权臣的刀锋下战栗的少年', 
+                content: '<p>杨侑是隋炀帝杨广的长孙。杨广三征高句丽以及巡幸江都时，都将他留在首都长安镇守，作为名义上的国家象征。李渊从太原起兵打入长安时，杨侑年仅十二岁。</p><p>李渊为了避免背上“乱臣贼子”的骂名，不仅没有杀他，反而强行把他按在龙椅上，立为大隋皇帝。杨侑度过了极其屈辱的六个月。这六个月里，李渊借着他的名义封自己为唐王、大丞相。当杨广在江都被杀的消息传回长安后，李渊立刻逼迫杨侑交出玉玺，禅位称臣。退位后的第二年，十五岁的杨侑在长安离奇病死（史学界普遍认为是被李渊暗杀灭口）。</p>' 
+            },
+            'liyuan': { 
+                name: '李渊 (唐高祖)', 
+                subtitle: '玩转“尊隋废隋”政治太极的开国老狐狸', 
+                content: '<p>李渊的起兵极其老谋深算。如果他直接在太原称帝，必然会遭到关中大批仍心向隋朝的将领的死战抵抗。因此，他打出了“废黜无道昏君杨广，拥立代王杨侑，匡复隋室”的旗号。这一招“尊隋”策略极其有效，极大瓦解了长安守军的斗志。</p><p>进入长安后，李渊大权独揽。他利用杨侑作为橡皮图章，迅速整合了关中的军事和经济资源。在确认杨广死透、隋朝彻底崩溃后，他果断撕下伪装，接受禅让，建立了近三百年的大唐王朝。</p>' 
+            },
+            'lijiancheng': { 
+                name: '李建成 / 李世民', 
+                subtitle: '大唐开国的绝世双子星', 
+                content: '<p>在进军长安的战役中，李建成和李世民分别担任左、右领军大都督。兄弟俩在霍邑之战中斩杀隋将宋老生，随后兵分两路合围长安。此时的兄弟二人亲密无间、配合默契，展现出了极其卓越的军事统帅能力，为父亲李渊夺取关中立下了首功。</p>' 
+            },
+            'yinshishi': { 
+                name: '阴世师 / 骨仪', 
+                subtitle: '大隋最后的愚忠，挖了李家祖坟的狠人', 
+                content: '<p>阴世师和骨仪是留守长安的辅政大臣，对隋朝死忠。面对李渊的叛乱，阴世师极其强硬。他不仅杀死了李渊留在长安的第五个儿子李智云，甚至派人去刨了李渊在长安附近的祖坟，试图以此破坏李家的风水。</p><p>这种极其决绝的结仇方式，注定了他们城破后的命运。李渊攻破长安后，极其愤怒，下令将阴世师和骨仪当众斩首，其家族男丁几乎被屠戮殆尽。</p>' 
+            },
+            'yangguang': { 
+                name: '杨广 (隋炀帝)', 
+                subtitle: '连自己被“升级”为太上皇都不知道的亡国之君', 
+                content: '<p>此时的杨广正躲在江都醉生梦死。远在千里之外的长安，他的孙子杨侑被迫登基，并发圣旨“遥尊”他为太上皇。杨广对关中的剧变已经完全失去了控制力，直到他被宇文化及用白绫缢死，他名义上的“太上皇”身份才算走到了尽头。</p>' 
+            },
+            'yangtong': { 
+                name: '杨侗 (皇泰主 / 隋恭帝)', 
+                subtitle: '洛阳城里的另一枚悲剧木偶', 
+                content: '<p>极其讽刺的是，杨广死后，大隋帝国同时出现了两位“傀儡皇帝”。除了长安的杨侑被李渊控制外，在东都洛阳，王世充等旧臣也拥立了杨广的另一个孙子杨侗为帝（史称皇泰主）。随着李渊在长安建唐，王世充在洛阳也依样画葫芦，逼迫杨侗禅让建立了“郑”国，随后更是狠毒地用毒酒和白练将杨侗残忍杀害。</p>' 
+            },
+
+            /* 事件库 */
+            'gongxian': { 
+                name: '唐军攻陷长安 (617年十一月)', 
+                subtitle: '关中易主的决定性时刻', 
+                content: '<p><strong>【事件经过】</strong><br>李渊的军队将长安城围得水泄不通。阴世师虽然死守，但长安城内的兵力单薄，且李渊打着“尊隋”的旗号，城内军心涣散。最终唐军攻破城池。李渊入城后，下令军纪严明，秋毫无犯，迅速稳定了关中的民心。</p>' 
+            },
+            'yongli': { 
+                name: '尊祖废孙拥立傀儡 (617年十一月)', 
+                subtitle: '一场极其虚伪的政治大戏', 
+                content: '<p><strong>【事件经过】</strong><br>李渊入城后，强行将十二岁的代王杨侑从深宫中拉出来，按在太极殿的龙椅上登基。李渊自己则假惺惺地跪在下面山呼万岁，随后顺理成章地被加封为唐王、大丞相、尚书令，掌握了国家的绝对控制权。这种“挟天子以令诸侯”的手段，曹操看了都要直呼内行。</p>' 
+            },
+            'chanrang': { 
+                name: '恭帝禅位大唐建立 (618年五月)', 
+                subtitle: '大隋国祚的彻底终结', 
+                content: '<p><strong>【事件经过】</strong><br>公元618年，杨广在江都被杀的消息传到长安。李渊认为隋朝的政治剩余价值已经被彻底榨干，于是指使手下逼迫杨侑写下禅位诏书。李渊在长安登基，改国号为唐。存在了仅三十八年的隋朝，在修完了大运河、完成了中国大一统的伟业后，轰然倒塌，为后世极其绚烂的大唐盛世做了最昂贵的嫁衣。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
