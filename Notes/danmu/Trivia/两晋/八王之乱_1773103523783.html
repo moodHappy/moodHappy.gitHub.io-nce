@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>西晋八王之乱核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; /* 增加高度以容纳八王 */
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 10px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/逼宫线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } /* 八王统一用紫色，象征宗室野心 */
+        .c-dark { color: #555555; font-size: 11px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">八王之乱全景关系图</h1>
+
+    <div class="family-tree">
+        
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 160px;">操纵傀儡</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 100px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 100px; height: 120px;"></div>
+        <div class="label" style="left: 210px; top: 90px; color: #c62828; font-weight: bold;">密诏杀亮 / 卸磨杀玮</div>
+
+        <div class="kill-h" style="left: 320px; top: 100px; width: 220px;"></div>
+        <div class="line" style="left: 540px; top: 100px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 430px; top: 90px; color: #c62828; font-weight: bold;">起兵诛贾 / 废帝自立</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 100px; height: 120px;"></div>
+        <div class="label" style="left: 540px; top: 160px; color: #c62828; font-weight: bold;">讨伐篡逆</div>
+
+        <div class="kill-h" style="left: 100px; top: 220px; width: 440px;"></div>
+        <div class="label" style="left: 430px; top: 210px; color: #c62828; font-weight: bold;">奉诏诛齐</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 380px; width: 300px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 220px; height: 160px;"></div>
+        <div class="label" style="left: 200px; top: 370px; color: #c62828; font-weight: bold;">联军攻城 / 烤死长沙王</div>
+
+        <div class="kill-h" style="left: 250px; top: 380px; width: 290px;"></div>
+        <div class="kill-v" style="left: 540px; top: 220px; height: 160px;"></div>
+        <div class="label" style="left: 450px; top: 370px; color: #c62828; font-weight: bold;">荡平诸王 / 毒杀天子</div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('jiananfeng')">
+            <div class="c-dark">皇后 (乱源)</div>
+            <div class="c-rebel">贾南风</div>
+        </div>
+        <div class="person" style="left: 320px; top: 220px;" onclick="showInfo('simazhong')">
+            <div class="c-dark">皇帝 (傀儡)</div>
+            <div class="c-emperor" style="font-size: 16px;">晋惠帝</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('simaliang')">
+            <div class="c-dark">① 汝南王</div>
+            <div class="c-rebel">司马亮</div>
+        </div>
+        <div class="person" style="left: 100px; top: 220px;" onclick="showInfo('simawei')">
+            <div class="c-dark">② 楚王</div>
+            <div class="c-rebel">司马玮</div>
+        </div>
+        
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('simalun')">
+            <div class="c-dark">③ 赵王</div>
+            <div class="c-rebel">司马伦</div>
+        </div>
+        <div class="person" style="left: 540px; top: 220px;" onclick="showInfo('simajiong')">
+            <div class="c-dark">④ 齐王</div>
+            <div class="c-rebel">司马冏</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 380px;" onclick="showInfo('simaai')">
+            <div class="c-dark">⑤ 长沙王</div>
+            <div class="c-rebel">司马乂</div>
+        </div>
+        <div class="person" style="left: 250px; top: 380px;" onclick="showInfo('simaying')">
+            <div class="c-dark">⑥ 成都王</div>
+            <div class="c-rebel">司马颖</div>
+        </div>
+        <div class="person" style="left: 400px; top: 380px;" onclick="showInfo('simayong')">
+            <div class="c-dark">⑦ 河间王</div>
+            <div class="c-rebel">司马颙</div>
+        </div>
+        <div class="person" style="left: 540px; top: 380px;" onclick="showInfo('simayue')">
+            <div class="c-dark">⑧ 东海王</div>
+            <div class="c-rebel">司马越</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">八王之乱的三个核心阶段</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('phase1')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">291年 - 299年</div>
+                <div class="c-rebel" style="font-size: 17px; font-weight: bold;">贾后干政期</div>
+            </div>
+            <div class="event-card" onclick="showInfo('phase2')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">300年 - 302年</div>
+                <div class="c-rebel" style="font-size: 17px; font-weight: bold;">赵王篡逆期</div>
+            </div>
+            <div class="event-card" onclick="showInfo('phase3')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">303年 - 306年</div>
+                <div class="c-rebel" style="font-size: 17px; font-weight: bold;">诸王血战期</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 核心人物 */
+            'jiananfeng': { name: '贾南风', subtitle: '引发十六年浩劫的毒后', content: '<p>由于晋惠帝痴愚，贾南风大权独揽。为了清除政敌，她利用诸王之间的矛盾，先用密诏引楚王进京杀杨骏，后又让楚王杀汝南王，最后过河拆桥处死楚王。当她残忍杀害愍怀太子后，彻底激起了宗室的众怒，被赵王司马伦毒杀，拉开了全面内战的序幕。</p>' },
+            'simazhong': { name: '晋惠帝司马衷', subtitle: '被八王来回争夺的“玉玺”', content: '<p>作为中国历史上最著名的白痴皇帝，他在八王之乱中毫无作为，完全是一个被各路军阀抢夺的活体玉玺。谁控制了他，谁就拥有了“挟天子以令诸侯”的合法性。最终他被东海王司马越毒死在洛阳。</p>' },
+            
+            /* 八王 */
+            'simaliang': { name: '汝南王 司马亮', subtitle: '第一个出局的辅政大臣', content: '<p>司马懿的第四子，资历最深。晋武帝死后，他作为太宰辅政。但他性格优柔寡断，试图削夺楚王司马玮的兵权，结果被贾南风和楚王联手反杀，连同卫瓘一家惨遭灭门。</p>' },
+            'simawei': { name: '楚王 司马玮', subtitle: '贾后手里最快的一把刀', content: '<p>性格暴躁，手握禁军兵权。他奉贾南风密诏接连杀了杨骏、司马亮、卫瓘等朝廷重臣。但当他杀完人后，贾南风立刻向天下宣称他“矫诏擅杀大臣”，将他推上刑场斩首。他是八王中最冤的替罪羊。</p>' },
+            'simalun': { name: '赵王 司马伦', subtitle: '狗尾续貂的无耻篡位者', content: '<p>司马懿的第九子。他利用贾南风杀太子的民怨起兵诛杀贾后，随后竟然废黜惠帝，自己登基称帝。他的篡位打破了西晋宗室“只争夺辅政权”的底线，直接导致了全国规模的几十万大军混战。</p>' },
+            'simajiong': { name: '齐王 司马冏', subtitle: '居功自傲的讨逆主帅', content: '<p>司马昭之孙。赵王称帝后，他第一个在许昌起兵讨伐。成功废杀赵王、迎惠帝复位后，他拜为大司马。但他掌权后骄奢淫逸，府第比皇宫还豪华，最终被长沙王司马乂联合河间王起兵诛杀。</p>' },
+            'simaai': { name: '长沙王 司马乂', subtitle: '洛阳孤城中被活烤的忠王', content: '<p>八王中罕见的忠心与勇猛兼备之人。他诛杀齐王后辅政，勤俭节约，善待皇帝。但成都王和河间王嫉妒他，合兵几十万围攻洛阳。司马乂死守孤城，屡败叛军。最终被城内的东海王司马越出卖生擒，被叛军残忍地放在火上活活烤死。</p>' },
+            'simaying': { name: '成都王 司马颖', subtitle: '从人望最高到跌落神坛', content: '<p>初期在讨伐赵王时立下大功，为人宽厚，一度人望极高，被立为皇太弟。但他为了争权，联合河间王烤死长沙王，随后变得骄奢。在与东海王司马越的交战中兵败，最终被赐死。</p>' },
+            'simayong': { name: '河间王 司马颙', subtitle: '长安心机深沉的阴谋家', content: '<p>常年镇守关中（长安）。他极少亲自上前线，总是通过发檄文挑动其他藩王互相残杀（先挑拨齐王，再挑拨长沙王、成都王）。最终在回洛阳就任太徒的路上，被东海王司马越派人暗杀。</p>' },
+            'simayue': { name: '东海王 司马越', subtitle: '踏着宗室尸骨上位的最后赢家', content: '<p>八王之乱的最终胜利者。他手段极其狠毒，出卖长沙王，击败成都王和河间王，毒死晋惠帝，立晋怀帝。但他赢得了内战，却把西晋的国防力量打得精光。面对匈奴南下，他带着重兵临阵脱逃，最终忧惧病死。</p>' },
+
+            /* 事件 */
+            'phase1': { name: '第一阶段：贾后干政', subtitle: '内廷阴谋与定点清除', content: '<p>时间：元康元年（291年）至元康九年（299年）。<br><br>此时的斗争主要局限在洛阳城内。贾南风通过连环密诏，借楚王司马玮之手杀掉了外戚杨骏、辅政大臣汝南王司马亮，随后又杀楚王灭口，确立了自己长达九年的绝对统治。这个阶段死伤范围较小，属于宫廷政变级别。</p>' },
+            'phase2': { name: '第二阶段：赵王篡逆', subtitle: '撕破底线，内战升级', content: '<p>时间：永康元年（300年）至永宁元年（301年）。<br><br>贾南风毒杀太子，给了赵王司马伦起兵的借口。司马伦杀贾后，随后膨胀到废帝自立。这彻底激怒了手握重兵的各路藩王。齐王、成都王、河间王联兵数十万讨伐洛阳，战争规模从京城械斗升级为战区级大兵团会战，赵王兵败被赐死。</p>' },
+            'phase3': { name: '第三阶段：诸王血战', subtitle: '同归于尽与胡人崛起', content: '<p>时间：太安元年（302年）至光熙元年（306年）。<br><br>这是最血腥、最漫长的阶段。齐王、长沙王、成都王、河间王、东海王如同养蛊一般互相绞杀。洛阳城多次被围攻洗劫，数十万大晋中央军在内战中灰飞烟灭。期间，藩王们为了打赢对方，甚至开始引入乌桓、鲜卑、匈奴等外族骑兵作为雇佣军，直接为“五胡乱华”打开了潘多拉魔盒。内战最终以东海王司马越毒死惠帝、大权独揽而告终，但西晋也已名存实亡。</p>' }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
