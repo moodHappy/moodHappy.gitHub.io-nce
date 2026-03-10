@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>晋惠帝朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/逼宫线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } /* 八王之乱的乱臣贼子用紫色系以示野心 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">晋惠帝朝核心人物与事件关系图 (八王之乱)</h1>
+
+    <div class="family-tree">
+        
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 150px;">彻底沦为提线木偶</div>
+
+        <div class="line" style="left: 320px; top: 220px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 290px;">痴父慧子 / 帝国希望</div>
+
+        <div class="kill-h" style="left: 100px; top: 80px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 70px; color: #c62828; font-weight: bold;">密诏借刀 / 事后灭口</div>
+
+        <div class="kill-v" style="left: 100px; top: 80px; height: 140px;"></div>
+        <div class="label" style="left: 100px; top: 150px; color: #c62828; font-weight: bold;">兵变屠杀 / 夷三族</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 80px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 70px; color: #c62828; font-weight: bold;">毒杀妖后 / 废帝篡位</div>
+
+        <div class="kill-h" style="left: 210px; top: 120px; width: 110px;"></div>
+        <div class="kill-v" style="left: 210px; top: 120px; height: 240px;"></div>
+        <div class="kill-h" style="left: 210px; top: 360px; width: 110px;"></div>
+        <div class="label" style="left: 210px; top: 240px; color: #c62828; font-weight: bold;">构陷谋反 / 厕中杖毙</div>
+
+        <div class="kill-v" style="left: 540px; top: 220px; height: 140px;"></div>
+        <div class="kill-h" style="left: 320px; top: 220px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 210px; color: #c62828; font-weight: bold;">挟持天子 / 面饼下毒</div>
+
+
+        <div class="person" style="left: 320px; top: 220px;" onclick="showInfo('simazhong')">
+            <div class="c-dark">皇帝 (傀儡)</div>
+            <div class="c-emperor" style="font-size: 18px;">晋惠帝司马衷</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('jiananfeng')">
+            <div class="c-dark">皇后 (乱国之源)</div>
+            <div class="c-rebel">贾南风</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('simayu')">
+            <div class="c-dark">愍怀太子</div>
+            <div class="c-minister">司马遹 (yù)</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 220px;" onclick="showInfo('yangjun')">
+            <div class="c-dark">太傅 / 国丈</div>
+            <div class="c-minister">杨骏</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 80px;" onclick="showInfo('simawei')">
+            <div class="c-dark">楚王 (八王之一)</div>
+            <div class="c-rebel">司马玮</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('simalun')">
+            <div class="c-dark">赵王 (八王之一)</div>
+            <div class="c-rebel">司马伦</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 360px;" onclick="showInfo('simayue')">
+            <div class="c-dark">东海王 (八王之一)</div>
+            <div class="c-rebel">司马越</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">八王之乱的三大悲剧时刻</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('zhuyang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">291年3月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">贾后政变诛杨</div>
+            </div>
+            <div class="event-card" onclick="showInfo('zhaowang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">301年正月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">赵王伦篡位称帝</div>
+            </div>
+            <div class="event-card" onclick="showInfo('dangyin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">304年7月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">荡阴之战与血衣</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'simazhong': { 
+                name: '司马衷 (晋惠帝)', 
+                subtitle: '“何不食肉糜”的凄惨提线木偶', 
+                content: '<p>司马衷是中国历史上最著名的白痴皇帝。他一生无法独立思考，连遇到饥荒时都只会问：“百姓肚子饿，为什么不喝肉粥呢？”</p><p>正因为他的智力缺陷，他成了一枚被各路野心家争夺的“玉玺”。在长达十六年的“八王之乱”中，他被妻子贾南风操纵，被赵王废黜，又被齐王、成都王、河间王、东海王像抢行李一样在洛阳和长安之间来回劫持。他曾被乱军射中脸颊，跌落马车；最终在公元307年，吃了几个面饼后突然暴毙（史学界普遍认为是控制他的东海王司马越下了毒），结束了极其悲惨而荒诞的一生。</p>' 
+            },
+            'jiananfeng': { 
+                name: '贾南风 (皇后)', 
+                subtitle: '打开潘多拉魔盒的黑暗执政者', 
+                content: '<p>贾南风不仅外貌奇丑，而且内心极度扭曲残忍。晋武帝死后，由于皇帝司马衷是个白痴，大权落入太傅杨骏手中。贾南风为了独揽大权，秘密联络藩王带兵进京诛杀杨骏，从而引爆了“八王之乱”的导火索。</p><p>在掌权期间，她极度善妒，随意杀戮，甚至为了防止非亲生的太子司马遹未来威胁自己，设下毒计将其残忍杖毙。这一举动彻底激怒了宗室，给了赵王司马伦起兵的绝佳借口。最终，不可一世的贾南风被赵王灌下金屑酒，在痛苦中死去。她亲手摧毁了西晋帝国的统治根基。</p>' 
+            },
+            'simayu': { 
+                name: '司马遹 (愍怀太子)', 
+                subtitle: '黑暗帝国中唯一的光，陨落于厕所中', 
+                content: '<p>与白痴父亲不同，司马遹自幼极其聪慧。小时候皇宫走火，他甚至知道拉住爷爷晋武帝的衣角，提醒爷爷“夜晚不要站在亮处，以免被刺客发现”。晋武帝正是因为喜欢这个聪明的孙子，才勉强同意让白痴儿子司马衷继位。</p><p>然而，他的存在成了贾南风的眼中钉。元康九年（299年），贾南风装病把他骗进宫，强行灌醉后，诱导他在神志不清时抄写了一篇“大逆不道”的逼宫信。随后贾南风拿着信逼迫惠帝废黜了太子。不久，贾南风派人在许昌的厕所里，用药杵将这位西晋最后的希望残忍活活打死。</p>' 
+            },
+            'yangjun': { 
+                name: '杨骏 (太傅)', 
+                subtitle: '志大才疏的权臣，西晋血雨腥风的第一个祭品', 
+                content: '<p>杨骏是晋武帝后期的权臣，也是当朝皇太后的父亲。晋武帝临终时，他排挤了其他顾命大臣，一个人垄断了朝政。但他才能平庸且心胸狭隘，引起了满朝文武和贾南风的强烈不满。</p><p>元康元年（291年），贾南风以惠帝名义下密诏，指控杨骏谋反。楚王司马玮率军包围杨府。杨骏惊慌失措逃到马厩中，被乱戟刺死。随后，杨骏被夷灭三族，牵连被杀的无辜者多达数千人，甚至连他的女儿杨太后都被贾南风活活饿死在金墉城。</p>' 
+            },
+            'simawei': { 
+                name: '司马玮 (楚王)', 
+                subtitle: '最锋利的刀，最可悲的替罪羊', 
+                content: '<p>司马玮是晋武帝的第五子，性格暴躁而凶悍。贾南风看中了他手中的兵权，用密诏将其召入京城，借他的手杀死了权臣杨骏，随后又借他的手杀死了德高望重的辅政大臣汝南王司马亮和卫瓘。</p><p>当司马玮替贾南风除掉所有政敌后，贾南风立刻翻脸，向全天下宣告：“楚王司马玮伪造圣旨，擅杀大臣！”司马玮百口莫辩，直接被推上刑场斩首。他到死才明白，自己不过是毒后手里的一把刀。</p>' 
+            },
+            'simalun': { 
+                name: '司马伦 (赵王)', 
+                subtitle: '厚颜无耻的篡位者，给狗封官的荒唐皇帝', 
+                content: '<p>司马伦是司马懿的第九子，论辈分是惠帝的爷爷。他为人贪婪且平庸，身边跟着个极其狡诈的谋士孙秀。当贾南风废杀太子时，司马伦不仅不救，反而推波助澜，等太子死透了，他才打着“为太子报仇”的旗号起兵，毒死了贾南风。</p><p>永宁元年（301年），膨胀到极点的司马伦竟然把惠帝赶下台，自己当了皇帝。他大肆封官，连亲信的奴仆和狗都封了官爵，导致当时官员的帽子上的貂尾都不够用了，只能用狗尾巴代替（成语“狗尾续貂”的由来）。他的篡位直接引发了其他所有拥有重兵的藩王的暴乱，两个月后他兵败被赐死。</p>' 
+            },
+            'simayue': { 
+                name: '司马越 (东海王)', 
+                subtitle: '“八王之乱”的最后赢家与西晋的掘墓人', 
+                content: '<p>在八王之乱的中后期，战争规模从几千人的京城械斗，演变成了数十万大军的灭国级会战。东海王司马越凭借极其深沉的城府和无底线的手段，先后熬死、打败了成都王司马颖、河间王司马颙等人。</p><p>他最终把残破不堪的朝廷搬回了洛阳，掌控了惠帝。为了彻底切断其他政治势力的念想，传说他在惠帝常吃的面饼中下了毒，毒死了这位受尽苦难的白痴皇帝。但此时的北方大地，因为藩王们的常年内战，国防已彻底空虚，匈奴、羯等少数民族已经举起了反旗。司马越最终也在无尽的恐惧与内乱中忧惧而死，西晋随即宣告灭亡。</p>' 
+            },
+
+            /* 事件库 */
+            'zhuyang': { 
+                name: '贾后政变诛杨 (291年)', 
+                subtitle: '八王之乱的血腥序幕', 
+                content: '<p><strong>【事件经过】</strong><br>晋武帝死后仅仅一年，皇后贾南风为了夺权，秘密下诏给拥有重兵的楚王司马玮。司马玮连夜率军包围了太傅杨骏的府邸。军队放火烧府，杨骏逃到马厩被乱兵刺死。随后，西晋朝廷开始了第一次大清洗，杨氏家族及党羽数千人被屠戮殆尽。</p><p><strong>【深远影响】</strong><br>这场政变打破了西晋初年的政治平衡。贾南风让地方藩王带兵进京干预中枢朝政，开启了一个极其恶劣的先例。从此，“谁兵强谁就能控制皇帝”成为了西晋宗室的共识。</p>' 
+            },
+            'zhaowang': { 
+                name: '赵王伦篡位称帝 (301年)', 
+                subtitle: '狗尾续貂的闹剧与全面内战的爆发', 
+                content: '<p><strong>【事件经过】</strong><br>赵王司马伦利用贾南风杀太子的民怨，起兵入宫逼贾南风喝下金屑酒。掌握大权后，在谋士孙秀的怂恿下，司马伦竟然伪造禅让诏书，把白痴皇帝司马衷赶到金墉城囚禁，自己穿上龙袍当了皇帝。</p><p><strong>【深远影响】</strong><br>这是八王之乱中最致命的转折点。在此之前，藩王们还只是争夺“辅政权”；司马伦称帝，直接撕碎了最后的底线。拥有十几万大军的齐王、成都王、河间王立刻以“讨逆复辟”的名义起兵，西晋帝国的中央军和地方军开始发生极其惨烈的几十万人规模的大会战，国家元气被彻底打空。</p>' 
+            },
+            'dangyin': { 
+                name: '荡阴之战与嵇侍中血 (304年)', 
+                subtitle: '皇帝中箭，帝国最后的尊严扫地', 
+                content: '<p><strong>【事件经过】</strong><br>东海王司马越挟持晋惠帝亲征邺城讨伐成都王司马颖。双方在荡阴（今河南汤阴）发生激战。司马越的军队大败，司马越本人扔下皇帝落荒而逃。晋惠帝的脸颊被乱箭射中三箭，百官吓得四散奔逃。</p><p>唯独侍中嵇绍（竹林七贤嵇康之子）冲上战车，用身体挡在惠帝身前。叛军将嵇绍按在车辕上斩杀，鲜血溅满了惠帝的衣服。事后，宫人要洗去惠帝衣服上的血，白痴的皇帝居然哭着说：“这是嵇侍中的血，不要洗去！”</p><p><strong>【深远影响】</strong><br>这一事件标志着西晋皇权已经连一丝遮羞布都不剩了。连白痴皇帝都知道心疼忠臣，而满朝的皇叔皇亲却只顾着争权夺利，五胡乱华的浩劫已在门外酝酿成型。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
