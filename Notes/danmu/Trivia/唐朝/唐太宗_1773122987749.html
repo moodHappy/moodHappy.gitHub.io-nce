@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>唐太宗朝核心人物与事件关系图 (贞观盛世与夺嫡)</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭/威压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">唐太宗朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        
+        <div class="line" style="left: 320px; top: 60px; width: 1px; height: 100px;"></div>
+        <div class="label" style="left: 320px; top: 110px; font-weight: bold;">千古绝配 / 一代贤后</div>
+
+        <div class="line" style="left: 100px; top: 60px; width: 1px; height: 100px;"></div>
+        <div class="label" style="left: 100px; top: 110px;">房谋杜断</div>
+
+        <div class="line" style="left: 100px; top: 160px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 210px; top: 150px; color: #1565c0; font-weight: bold;">以铜为镜 / 犯颜直谏</div>
+
+        <div class="line" style="left: 320px; top: 160px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 430px; top: 150px; font-weight: bold;">大唐军神 / 横扫四夷</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 60px; height: 100px;"></div>
+        <div class="label" style="left: 540px; top: 110px; color: #c62828; font-weight: bold;">雪耻渭水 / 俘获颉利</div>
+
+        <div class="line" style="left: 320px; top: 160px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 230px;">玄武门魔咒 / 晚年立储悲剧</div>
+        
+        <div class="line" style="left: 100px; top: 280px; width: 440px; height: 1px;"></div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 280px; height: 60px;"></div>
+        <div class="label" style="left: 100px; top: 310px; color: #c62828;">逼宫败露 / 废黜</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 280px; height: 60px;"></div>
+        <div class="label" style="left: 540px; top: 310px; color: #c62828;">杀子传弟 / 谎言败露</div>
+
+        <div class="line" style="left: 320px; top: 280px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 380px; color: #1565c0; font-weight: bold; background-color: #fff;">仁孝保全 / 最终赢家</div>
+
+        <div class="kill-h" style="left: 100px; top: 340px; width: 440px;"></div>
+        <div class="label" style="left: 320px; top: 330px; color: #c62828; font-weight: bold; background-color: #fff;">手足相残 / 储位党争</div>
+
+        <div class="person" style="left: 320px; top: 160px;" onclick="showInfo('lishimin')">
+            <div class="c-dark">大唐第二任皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">唐太宗李世民</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 60px;" onclick="showInfo('zhangsun')">
+            <div class="c-dark">文德皇后 / 绝世白月光</div>
+            <div class="c-minister">长孙皇后</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 60px;" onclick="showInfo('fangdu')">
+            <div class="c-dark">尚书左仆射 / 兵部尚书</div>
+            <div class="c-minister">房玄龄 / 杜如晦</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 160px;" onclick="showInfo('weizheng')">
+            <div class="c-dark">秘书监 / 谏臣天花板</div>
+            <div class="c-minister">魏征</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 160px;" onclick="showInfo('lijing')">
+            <div class="c-dark">大唐军神</div>
+            <div class="c-minister">李靖 / 李勣</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 60px;" onclick="showInfo('jielikehan')">
+            <div class="c-dark">东突厥最高首领</div>
+            <div class="c-rebel">颉利可汗</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 340px;" onclick="showInfo('lichengqian')">
+            <div class="c-dark">嫡长子 / 废太子</div>
+            <div class="c-rebel">李承乾</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 340px;" onclick="showInfo('litai')">
+            <div class="c-dark">嫡次子 / 魏王</div>
+            <div class="c-rebel">李泰</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 420px;" onclick="showInfo('lizhi')">
+            <div class="c-dark">嫡三子 / 晋王 (后继者)</div>
+            <div class="c-emperor">李治 (唐高宗)</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">太宗朝的三大辉煌与隐痛</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('zhenguan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">627年起</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">开启贞观之治</div>
+            </div>
+            <div class="event-card" onclick="showInfo('tiankehan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">630年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">尊号天可汗</div>
+            </div>
+            <div class="event-card" onclick="showInfo('duodi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">643年</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">承乾谋反与立晋王</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'lishimin': { 
+                name: '李世民 (唐太宗)', 
+                subtitle: '千古一帝的武功文治与晚年梦魇', 
+                content: '<p>李世民是中国帝王史上最无解的“六边形战士”。军事上，他一生所向无敌，灭王世充、窦建德，登基后更平定东突厥、吐谷浑、高昌，确立了大唐在亚洲的绝对霸权。政治上，他心胸极其开阔，敢于起用曾经的死敌魏征，虚心纳谏，缔造了国泰民安的“贞观之治”。</p><p>但他一生的隐痛，是靠杀兄屠弟（玄武门之变）上位的原罪。晚年，他最恐惧的就是儿子们为了皇位重演骨肉相残的悲剧。当太子李承乾与魏王李泰为了夺嫡斗得你死我活，甚至太子准备发兵逼宫时，这位天可汗在朝堂上崩溃痛哭，甚至拔出佩刀想要自杀。最终，为了保全所有儿子的性命，他选择了性格最软弱的李治继承大统。</p>' 
+            },
+            'zhangsun': { 
+                name: '长孙皇后', 
+                subtitle: '母仪天下的究极模板，大唐的政治润滑剂', 
+                content: '<p>长孙皇后不仅是李世民的白月光，更是李世民暴躁脾气的最佳“灭火器”。当魏征在朝堂上把李世民气得半死，李世民回后宫怒吼“迟早杀了这个乡巴佬”时，是长孙皇后穿上正式的朝服，向皇帝道贺“君明臣直”，从而保住了魏征。</p><p>她坚决不允许自己的娘家（长孙无忌）大权独揽。可惜天妒红颜，年仅36岁便因病早逝。她的早逝不仅让李世民悲痛欲绝（专门建了一座高台每天眺望她的陵墓），更让年幼的太子李承乾等嫡子失去了母爱的约束，直接加速了皇子们的心理扭曲与夺嫡之争。</p>' 
+            },
+            'weizheng': { 
+                name: '魏征', 
+                subtitle: '大唐第一“喷子”，太宗的一面铜镜', 
+                content: '<p>魏征本是隐太子李建成的心腹，甚至曾劝李建成早点杀了李世民。玄武门之变后，李世民不仅没杀他，反而重用他。魏征一生向太宗直言进谏两百多次，哪怕触犯龙颜也绝不退缩。魏征死后，太宗悲痛地说：“以铜为镜，可以正衣冠；以史为镜，可以知兴替；以人为镜，可以明得失。魏征没，朕亡一镜矣。”</p>' 
+            },
+            'fangdu': { 
+                name: '房玄龄 / 杜如晦', 
+                subtitle: '“房谋杜断”，大唐行政机器的双核引擎', 
+                content: '<p>房玄龄善于极其细致周密的谋划，但往往犹豫不决；杜如晦则极其果断，能迅速从众多方案中拍板定案。两人配合天衣无缝，是李世民夺取天下和治理天下的文臣核心。贞观朝完善的律法、制度、三省六部的高效运转，皆出自这二人之手。</p>' 
+            },
+            'lijing': { 
+                name: '李靖 / 李勣', 
+                subtitle: '横扫欧亚大陆的大唐双壁', 
+                content: '<p>李靖是中国古代极少数能入选“武庙十哲”的绝世战神。在贞观四年（630年），李靖率领三千精骑，在漫天大雪中长途奔袭定襄，一举端掉了东突厥的大本营，随后在阴山大破突厥主力，生擒颉利可汗。这一战彻底洗刷了当年李世民“渭水之盟”的耻辱，让唐太宗成为了周边各族俯首称臣的“天可汗”。</p>' 
+            },
+            'jielikehan': { 
+                name: '颉利可汗', 
+                subtitle: '从逼迫大唐签城下之盟，到给太宗跳舞的俘虏', 
+                content: '<p>颉利可汗曾趁李世民刚刚经历玄武门之变、立足未稳时，率领二十万大军直逼长安城外的渭水。李世民被迫设下疑兵之计，并倾尽国库财物与之签订“渭水之盟”才让他退兵。仅仅三年后，李靖大破突厥，颉利可汗被当做俘虏押送到长安。在太上皇李渊和李世民的酒宴上，这位曾经不可一世的草原霸主，被迫站起来给大唐天子跳舞助兴，堪称中国历史上最经典的“复仇爽文”。</p>' 
+            },
+            'lichengqian': { 
+                name: '李承乾', 
+                subtitle: '在重压下崩溃变形的悲剧太子', 
+                content: '<p>李承乾是长孙皇后长子，八岁即被立为太子。李世民对他寄予了极其变态的厚望，找了孔颖达等最严厉的儒臣去教导他。只要承乾有一点错，大臣们就疯狂批评。加上承乾后来患了足疾（腿瘸），心理变得极度扭曲。</p><p>看着父亲越来越偏爱弟弟李泰，承乾感觉自己随时会被废。为了自保，他竟然模仿父亲的玄武门之变，企图联络大将侯君集等人发兵逼宫。事情败露后，李世民痛心疾首，不忍杀他，将其废为庶人，流放黔州，次年郁郁而终。</p>' 
+            },
+            'litai': { 
+                name: '李泰', 
+                subtitle: '恃宠而骄，聪明反被聪明误的野心家', 
+                content: '<p>魏王李泰才华横溢，体态丰硕，深得李世民宠爱。李世民甚至允许他开府招揽文士（类似于当年的秦王府），这给了李泰极大的夺嫡错觉。</p><p>太子承乾被废后，李泰以为自己稳操胜券，甚至对李世民发下毒誓：“如果父皇传位给我，我死之前一定把自己的儿子杀了，把皇位传给弟弟李治（杀子传弟）。”褚遂良当场点破这是极其违背人性的谎言。李世民瞬间清醒：如果让李泰当皇帝，承乾和李治将来必死无疑。于是果断将李泰贬黜，断绝了他的念想。</p>' 
+            },
+            'lizhi': { 
+                name: '李治 (唐高宗)', 
+                subtitle: '因祸得福的仁孝老幺', 
+                content: '<p>在两位哥哥斗得两败俱伤时，性格温和、仁孝的晋王李治（当时年仅15岁）成了唯一的选择。长孙无忌等老臣坚决拥立李治。李世民对群臣说：“我立泰，则承乾与治皆死；我立治，则承乾与泰皆活。”为了保全这三个嫡子的性命，李治就这样意外地坐上了皇太子的宝座，并在日后接手了贞观的盛世江山。</p>' 
+            },
+
+            /* 事件库 */
+            'zhenguan': { 
+                name: '开启贞观之治 (627年起)', 
+                subtitle: '古代中国治世的巅峰标杆', 
+                content: '<p><strong>【事件经过】</strong><br>李世民登基后，以隋亡为鉴，偃武修文。他知人善任，不计前嫌，君臣之间能够公开、平等地讨论国政得失。国家轻徭薄赋，经济迅速恢复，出现了“夜不闭户，路不拾遗，行旅不赍粮”的极其繁荣、开放的社会景象。</p>' 
+            },
+            'tiankehan': { 
+                name: '尊号天可汗 (630年)', 
+                subtitle: '大唐武功的极致彰显', 
+                content: '<p><strong>【事件经过】</strong><br>李靖灭亡东突厥后，四夷君长汇聚长安，共同尊奉李世民为“天可汗”。这不仅代表了大唐在军事上不可挑战的霸权，更标志着唐朝皇帝成为了中原汉族与北方草原游牧民族共同的最高君主，开启了大唐极其包容且宏大的国际化视野。</p>' 
+            },
+            'duodi': { 
+                name: '承乾谋反与立晋王 (643年)', 
+                subtitle: '英雄迟暮的极致痛苦', 
+                content: '<p><strong>【事件经过】</strong><br>贞观十七年，齐王李祐谋反牵扯出太子李承乾逼宫的惊天大案。李世民在处理这桩案子时，内心的痛苦达到了极点。他亲自审问承乾，承乾哭着说：“我是太子，还求什么？是因为李泰逼我，我才出此下策。”李世民最终废黜了承乾，贬谪了李泰，立李治为皇太子，用尽全力避免了玄武门的惨剧在自己儿子身上重演。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
