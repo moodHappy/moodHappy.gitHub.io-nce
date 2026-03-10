@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>北魏献文帝拓跋弘核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 居中主标题 */
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色政变杀戮线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 60px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        /* 三大政变并排展示 */
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            position: absolute;
+            top: 0;
+            bottom: 80px; 
+            width: 100%;
+            max-width: 680px; 
+            background-color: #fff;
+            border-radius: 0 0 16px 16px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 30px 30px 20px 30px; 
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            font-size: 54px; 
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            font-weight: 300;
+        }
+        .modal-close:hover { color: #333; }
+
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+
+        .modal-content {
+            padding: 20px 30px 40px 30px;
+            flex: 1;
+            overflow-y: auto; 
+            font-size: 28px; 
+            color: #222; 
+            line-height: 1.8; 
+            text-align: justify;
+        }
+
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">北魏献文帝朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 140px; top: 120px; width: 180px; height: 1px;"></div>
+        <div class="label" style="left: 230px; top: 110px;">先帝与遗孀</div>
+
+        <div class="kill-h" style="left: 380px; top: 120px; width: 140px;"></div>
+        <div class="label" style="left: 450px; top: 110px; color: #c62828; font-weight: bold;">密谋诛杀夺权</div>
+
+        <div class="line" style="left: 230px; top: 120px; width: 1px; height: 70px;"></div>
+        <div class="line" style="left: 230px; top: 190px; width: 90px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 190px; width: 1px; height: 40px;"></div>
+        <div class="label" style="left: 270px; top: 180px;">嫡母与养子</div>
+
+        <div class="kill-v" style="left: 340px; top: 150px; height: 80px;"></div>
+        <div class="label" style="left: 385px; top: 190px; color: #c62828; font-weight: bold;">离奇暴毙 (疑毒杀)</div>
+
+        <div class="line-h-dashed" style="left: 380px; top: 140px; width: 160px;"></div>
+        <div class="line-v-dashed" style="left: 540px; top: 140px; height: 90px;"></div>
+        <div class="label" style="left: 460px; top: 130px;">宠幸面首</div>
+
+        <div class="kill-h" style="left: 380px; top: 260px; width: 120px;"></div>
+        <div class="label" style="left: 440px; top: 250px; color: #c62828; font-weight: bold;">强势下令诛杀</div>
+
+        <div class="line" style="left: 320px; top: 290px; width: 1px; height: 80px;"></div>
+        <div class="label" style="left: 365px; top: 330px;">18岁禅让 (太上皇)</div>
+
+        <div class="line" style="left: 140px; top: 260px; width: 140px; height: 1px;"></div>
+        <div class="kill-v" style="left: 140px; top: 260px; height: 110px;"></div>
+        <div class="label" style="left: 210px; top: 250px;">夫妻</div>
+        <div class="label" style="left: 140px; top: 315px; color: #c62828; font-weight: bold;">立太子赐死生母</div>
+
+        <div class="line-h-dashed" style="left: 180px; top: 400px; width: 100px;"></div>
+        <div class="label" style="left: 230px; top: 390px;">生母 (惨死)</div>
+
+
+        <div class="person" style="left: 320px; top: 260px;" onclick="showInfo('tuobahong_xianwen')">
+            <div class="c-dark">献文帝 / 太上皇</div>
+            <div class="c-emperor" style="font-size: 18px;">拓跋弘</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 120px;" onclick="showInfo('tuobajun')">
+            <div class="c-dark">文成帝 (先帝)</div>
+            <div class="c-emperor">拓跋濬</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 120px;" onclick="showInfo('fengtaihou')">
+            <div class="c-dark">文明太后</div>
+            <div class="c-consort" style="font-weight: bold; font-size: 16px;">冯氏 (冯太后)</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 120px;" onclick="showInfo('yihun')">
+            <div class="c-dark">太原王 / 权臣</div>
+            <div class="c-minister">乙浑</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 260px;" onclick="showInfo('liyi')">
+            <div class="c-dark">给事中 / 男宠</div>
+            <div class="c-minister">李奕</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 400px;" onclick="showInfo('lishi_consort')">
+            <div class="c-dark">李夫人 (追尊皇后)</div>
+            <div class="c-consort">李氏</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 400px;" onclick="showInfo('tuobahong_xiaowen')">
+            <div class="c-dark">孝文帝 (皇太子)</div>
+            <div class="c-emperor" style="font-size: 16px;">拓跋宏</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">献文帝朝核心事件：母与子的死局</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('yihun_event')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">466年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">诛杀权臣乙浑</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chanwei')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">471年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">壮年被迫禅位</div>
+            </div>
+            <div class="event-card" onclick="showInfo('baobi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">476年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">太上皇离奇暴毙</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'tuobahong_xianwen': { 
+                name: '拓跋弘 (北魏献文帝)', 
+                subtitle: '夹在佛道信仰与残酷皇权间的悲剧太上皇', 
+                content: '<p>拓跋弘12岁登基，因生母李贵人被赐死，由嫡母冯太后抚养长大。他早期在太后的庇护下成长，但随着年龄增长，性格果决的他试图摆脱太后的控制。</p><p>他崇尚黄老与佛教，甚至动过将皇位禅让给皇叔的念头，在群臣死谏下才作罢。18岁时，他将皇位传给不满5岁的儿子拓跋宏（孝文帝），自己退位为太上皇。但这并非真正的隐退，他依然大权在握，甚至多次御驾亲征，打得柔然落花流水。但因为他毫不留情地诛杀了冯太后的男宠李奕，触碰了太后的逆鳞，最终在23岁正值壮年时离奇暴毙。</p>' 
+            },
+            'fengtaihou': { 
+                name: '文明太后 (冯氏)', 
+                subtitle: '中国历史上最强硬的政治女强人之一', 
+                content: '<p>文成帝驾崩时，她曾悲痛欲绝跃入火海殉情，被救出后性格大变，开启了极其冷酷的政治生涯。献文帝初年，面对权臣乙浑的专权，她果断发动政变将其诛杀，第一次临朝称制。</p><p>但在还政给献文帝后，她因宠幸男宠李奕遭到了献文帝的极度不满。李奕被杀后，母子关系彻底破裂。面对手握重兵、正值壮年的太上皇，冯太后毫不手软，涉嫌毒杀献文帝，随后第二次临朝称制，全面接管北魏帝国，为后来的“太和改制”拉开了序幕。</p>' 
+            },
+            'tuobajun': { 
+                name: '文成帝 拓跋濬', 
+                subtitle: '留下孤儿寡母的先皇', 
+                content: '<p>拓跋弘的生父。他26岁英年早逝，留下了年幼的太子拓跋弘和年轻的遗孀冯皇后。他为了江山社稷，含泪赐死了拓跋弘的生母，却未曾料到，这个决定直接导致了自己妻子（冯太后）与儿子（献文帝）日后惨烈的权力死斗。</p>' 
+            },
+            'yihun': { 
+                name: '乙浑', 
+                subtitle: '昙花一现的狂悖权臣', 
+                content: '<p>文成帝驾崩后，车骑大将军乙浑趁新帝年幼，迅速控制朝政。他大肆伪造诏书，诛杀尚书杨保年等朝廷重臣，甚至将刀伸向了宗室，自封为太原王、丞相，权倾朝野。但他低估了后宫中那位年轻太后的手段，最终落得身首异处的下场。</p>' 
+            },
+            'liyi': { 
+                name: '李奕', 
+                subtitle: '引发帝国最高权力地震的男宠', 
+                content: '<p>李奕不仅容貌俊美，且有一定的才干，深得冯太后的宠爱。但李氏兄弟仗着太后的势力在朝中贪赃枉法，飞扬跋扈。这给了试图夺回皇权的献文帝一个完美的借口。献文帝将李奕兄弟下狱并处死，这被冯太后视为极大的政治挑衅和个人侮辱。</p>' 
+            },
+            'lishi_consort': { 
+                name: '李夫人', 
+                subtitle: '孝文帝之母，制度的再牺牲品', 
+                content: '<p>献文帝的妃子，生下了后来的千古一帝——孝文帝（拓跋宏）。皇兴三年（469年），拓跋宏被立为太子。残忍的“子贵母死”制度再次重演，李夫人被下令赐死。她的死，让年幼的孝文帝如同父亲一样，再次被交由冯太后抚养。</p>' 
+            },
+            'tuobahong_xiaowen': { 
+                name: '拓跋宏 (北魏孝文帝)', 
+                subtitle: '在血雨腥风中登基的幼童', 
+                content: '<p>此时的拓跋宏（后改汉姓元宏）只是一个不满5岁的孩童。生母被赐死，父亲（太上皇）与祖母（冯太后）势如水火。在父亲暴毙后，他完全处于冯太后的羽翼与控制之下，这段经历深刻塑造了他日后隐忍、宏大的政治格局。</p>' 
+            },
+
+            /* 事件库 */
+            'yihun_event': { 
+                name: '诛灭权臣乙浑 (466年)', 
+                subtitle: '冯太后的政治首秀', 
+                content: '<p><strong>【经过】</strong><br>和平六年（465年），文成帝刚死，权臣乙浑就在朝堂上大开杀戒，排除异己。天安元年（466年）春，冯太后秘密联络禁军将领，突然下诏历数乙浑罪状，果断将其逮捕并诛杀。</p><p><strong>【结果】</strong><br>冯太后凭借此举扫清了朝堂的乌烟瘴气，挽救了拓跋氏的皇权。随后她以献文帝年幼为由，第一次“临朝听政”，正式掌握了北魏帝国的最高权力。</p>' 
+            },
+            'chanwei': { 
+                name: '壮年被迫禅位 (471年)', 
+                subtitle: '史无前例的18岁太上皇', 
+                content: '<p><strong>【背景】</strong><br>随着献文帝逐渐成年，冯太后虽名义上归政，但依然极具影响力。同时，献文帝笃信佛教与黄老之学，对繁杂的政务感到厌倦（或言为躲避太后的政治压力）。</p><p><strong>【经过】</strong><br>皇兴五年（471年），18岁的献文帝执意要退位，甚至提出要传位给自己的叔叔。在群臣拼死阻拦下，他最终妥协，将皇位传给不满5岁的太子拓跋宏（孝文帝），自己搬出正宫，尊为太上皇。</p><p><strong>【结果】</strong><br>退位后的献文帝并没有闲云野鹤，他将繁杂的行政事务交给幼子（实际上是群臣和太后），自己则集中精力掌控军队，甚至御驾亲征，导致北魏实际上出现了“两个权力中心”。</p>' 
+            },
+            'baobi': { 
+                name: '太上皇离奇暴毙 (476年)', 
+                subtitle: '权力不容分享的终极惨剧', 
+                content: '<p><strong>【背景】</strong><br>献文帝诛杀李奕后，冯太后忌恨在心。而作为太上皇的献文帝，其军事威望日渐鼎盛，这严重威胁到了冯太后对帝国的绝对控制。</p><p><strong>【经过】</strong><br>承明元年（476年）六月，23岁的太上皇拓跋弘在平城永安殿突然离奇暴毙。《魏书》等正史对此讳莫如深，但后世史学家（如《资治通鉴》）普遍记载或认定，是冯太后为了重新掌权及报私仇，暗中将其毒杀。</p><p><strong>【结果】</strong><br>献文帝死后，冯太后再次临朝称制，全面接管了孝文帝朝的政权，北魏历史正式进入了长达十四年的“文明太后”独裁与改革期。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
