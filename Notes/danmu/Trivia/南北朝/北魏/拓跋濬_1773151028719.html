@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>北魏文成帝拓跋濬核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 居中主标题 */
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色政变杀戮线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 60px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        /* 三大政变并排展示 */
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            position: absolute;
+            top: 0;
+            bottom: 80px; 
+            width: 100%;
+            max-width: 680px; 
+            background-color: #fff;
+            border-radius: 0 0 16px 16px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 30px 30px 20px 30px; 
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            font-size: 54px; 
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            font-weight: 300;
+        }
+        .modal-close:hover { color: #333; }
+
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+
+        .modal-content {
+            padding: 20px 30px 40px 30px;
+            flex: 1;
+            overflow-y: auto; 
+            font-size: 28px; 
+            color: #222; 
+            line-height: 1.8; 
+            text-align: justify;
+        }
+
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">北魏文成帝朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="kill-h" style="left: 150px; top: 90px; width: 350px;"></div>
+        <div class="label" style="left: 320px; top: 80px; color: #c62828; font-weight: bold;">夷灭三族 / 酷刑凌迟</div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 360px; top: 160px;">皇太孙继承 (正统回归)</div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 160px; width: 220px;"></div>
+        <div class="line-v-dashed" style="left: 540px; top: 100px; height: 60px;"></div>
+        <div class="label" style="left: 450px; top: 150px;">拨乱反正 / 拥立登基</div>
+
+        <div class="line" style="left: 140px; top: 240px; width: 140px; height: 1px;"></div>
+        <div class="label" style="left: 210px; top: 230px;">乳母抚育 / 极度依恋</div>
+
+        <div class="line" style="left: 360px; top: 240px; width: 140px; height: 1px;"></div>
+        <div class="label" style="left: 450px; top: 230px;">结为帝后 / 开启传奇</div>
+
+        <div class="line" style="left: 320px; top: 240px; width: 1px; height: 70px;"></div> <div class="line" style="left: 200px; top: 310px; width: 240px; height: 1px;"></div> <div class="line" style="left: 200px; top: 310px; width: 1px; height: 70px;"></div> <div class="line" style="left: 440px; top: 310px; width: 1px; height: 70px;"></div> <div class="kill-v" style="left: 190px; top: 330px; height: 40px;"></div>
+        <div class="label" style="left: 140px; top: 350px; color: #c62828; font-weight: bold;">立储赐死 (子贵母死)</div>
+        <div class="label" style="left: 490px; top: 350px;">立为皇太子</div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('tuobajun')">
+            <div class="c-dark">文成帝</div>
+            <div class="c-emperor" style="font-size: 18px;">拓跋濬</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('zongai')">
+            <div class="c-dark">绝世权阉</div>
+            <div class="c-minister" style="text-decoration: line-through;">宗爱</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('tuobahuang')">
+            <div class="c-dark">景穆太子 (生父)</div>
+            <div class="c-emperor">拓跋晃</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('yulin')">
+            <div class="c-dark">平叛勋臣集团</div>
+            <div class="c-minister">源贺 / 陆丽 / 刘尼</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('changshi')">
+            <div class="c-dark">昭太后</div>
+            <div class="c-consort">常氏 (乳母)</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('fengshi')">
+            <div class="c-dark">文明皇后</div>
+            <div class="c-consort" style="font-weight: bold; font-size: 16px;">冯氏 (冯太后)</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 380px;" onclick="showInfo('lishi')">
+            <div class="c-dark">元皇后 (挚爱妃子)</div>
+            <div class="c-consort">李贵人</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 380px;" onclick="showInfo('tuobahong')">
+            <div class="c-dark">献文帝 (长子)</div>
+            <div class="c-emperor">拓跋弘</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">文成帝朝核心事件：治愈与残酷的交织</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('pingluan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">452年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">诛灭宗爱复正统</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yungang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">452年 - 465年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">复兴佛教与云冈石窟</div>
+            </div>
+            <div class="event-card" onclick="showInfo('zigui')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">456年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">含泪赐死李贵人</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'tuobajun': { 
+                name: '拓跋濬 (北魏文成帝)', 
+                subtitle: '将北魏从修罗场拉回人间的少年天子', 
+                content: '<p>太武帝的皇太孙。他登基时年仅13岁，面对的是祖父和叔叔接连被太监刺杀、生父被逼死、满朝文武人人自危的烂摊子。但他展现出了极高的政治天赋。</p><p>他上位后立刻停止了祖父晚年无休止的对外用兵，下令“休养生息”，恢复农业；同时废除了大量残酷的刑罚。最著名的是他正式下诏恢复了被太武帝毁灭的佛教，并开凿了代表大魏盛世气象的**云冈石窟**。在他的治下，北魏政局重新走向稳定与繁荣，可惜因病早逝，年仅26岁。</p>' 
+            },
+            'zongai': { 
+                name: '宗爱', 
+                subtitle: '恶贯满盈者的末日', 
+                content: '<p>连杀太武帝拓跋焘和南安王拓跋余的绝世权阉。在羽林军政变中，宗爱及其党羽被源贺、陆丽等人一网打尽。拓跋濬登基后，下令将宗爱等人处以极刑（史载具有“五刑”及具五刑凌迟之意），夷灭三族，用最残酷的手段祭奠了被谋害的祖父、父亲与叔叔，平息了天下的怒火。</p>' 
+            },
+            'tuobahuang': { 
+                name: '拓跋晃 (景穆太子)', 
+                subtitle: '迟来的正名与追尊', 
+                content: '<p>拓跋濬的生父，因宗爱诬陷而惊惧忧死。拓跋濬登基后，立刻为父亲平反，追尊其为景穆皇帝，庙号恭宗。这也向全天下昭示了大魏皇权正统的回归。</p>' 
+            },
+            'yulin': { 
+                name: '平叛勋臣集团 (源贺/陆丽/刘尼)', 
+                subtitle: '大魏的定海神针', 
+                content: '<p>这几位禁军将领和重臣是发动政变、诛杀宗爱、拥立拓跋濬的核心人物。拓跋濬对他们极其倚重和封赏。尤其是陆丽，不仅是拥立首功，后来更是成为了文成帝朝的股肱之臣，极力辅佐这位少年天子稳定天下。</p>' 
+            },
+            'changshi': { 
+                name: '昭太后 常氏', 
+                subtitle: '超越血缘的母子深情与宫廷庇护伞', 
+                content: '<p>常氏原本只是后宫的一名普通乳母。因为拓跋濬的生母（郁久闾氏）早逝，常氏从小抚养他长大，两人感情极深。在宗爱乱政的恐怖时期，常氏拼死保护了年幼的拓跋濬。</p><p>拓跋濬登基后，由于生母已死，加上对常氏的极度依恋，竟然破格尊封这位没有皇室血脉的乳母为皇太后（昭太后）。常氏在后宫拥有极高的权威，连后来的冯太后早年也必须在她的光环下小心行事。</p>' 
+            },
+            'fengshi': { 
+                name: '冯皇后 (文明冯太后)', 
+                subtitle: '千古一后的觉醒前夜', 
+                content: '<p>她的祖父是北燕末代皇帝冯弘，因国破家亡，她幼年便作为罪臣家属被没入北魏后宫为奴。但由于姑姑是太武帝的妃子，她得到了良好的教育。14岁时，她被拓跋濬选为贵人，15岁被正式册立为皇后。</p><p>在文成帝朝，她与拓跋濬感情极其深厚。虽然此时的她尚未展现出后来临朝称制、推行汉化改革（太和改制）的惊天手腕，但这段安稳的岁月，是她积累政治智慧、观察帝国运转的最重要时期。拓跋濬驾崩时，她悲痛欲绝，竟跳入焚烧皇帝遗物的大火中试图殉情，被左右拼死救出，由此彻底完成了掌权者的心理蜕变。</p>' 
+            },
+            'lishi': { 
+                name: '李贵人 (元皇后)', 
+                subtitle: '最宠爱的妃子，最绝望的死别', 
+                content: '<p>李氏是南朝刘宋将领的女儿，因战乱被俘入平城。拓跋濬对她一见倾心，极其宠爱，甚至因为她生下了长子拓跋弘，打破了鲜卑贵族通婚的惯例。但拓跋濬万万没有想到，这份宠爱最终变成了催命符。</p><p>太安二年（456年），拓跋濬决定立拓跋弘为太子。依照太武帝和明元帝留下的残酷祖制“子贵母死”，拓跋濬含着极大的悲痛，下令赐死了年仅十几岁的挚爱李贵人。李氏临死前与拓跋濬诀别的场景惨绝人寰。</p>' 
+            },
+            'tuobahong': { 
+                name: '拓跋弘 (北魏献文帝)', 
+                subtitle: '失去生母的皇太子', 
+                content: '<p>拓跋濬的长子。他在两岁时就被立为太子，同时也永远失去了生母李贵人。他后来由年仅十几岁的嫡母冯皇后（即冯太后）抚养长大。这段特殊的抚养关系，直接导致了后来北魏宫廷中太后与皇帝之间极其复杂甚至惨烈的母子权力斗争。</p>' 
+            },
+
+            /* 事件库 */
+            'pingluan': { 
+                name: '诛灭宗爱复正统 (452年)', 
+                subtitle: '黑暗时代的终结', 
+                content: '<p><strong>【经过】</strong><br>太武帝和南安王相继被宦官宗爱刺杀，北魏政局陷入了前所未有的恐怖。羽林军将领刘尼、源贺、陆丽等人密谋，突然发难，诛杀宗爱及其党羽，迎立故太子拓跋晃之子拓跋濬登基。</p><p><strong>【结果】</strong><br>拓跋濬以雷霆手段将宗爱等人夷灭三族，悬首示众。这不仅报了国仇家恨，也向天下宣告北魏的动荡岁月已经结束，国统回到了太武帝嫡传血脉的手中。</p>' 
+            },
+            'yungang': { 
+                name: '复兴佛教与云冈石窟', 
+                subtitle: '大魏帝王面容的石头史诗', 
+                content: '<p><strong>【背景】</strong><br>拓跋焘晚年推行了残酷的“太武灭佛”。拓跋濬登基后，认为连年征战和政治动荡需要信仰来安抚人心，随即下诏全面恢复佛教。</p><p><strong>【经过】</strong><br>和平元年（460年），沙门统昙曜向文成帝建议，在国都平城（今大同）西郊的武州山开凿石窟。文成帝欣然允诺，这就是著名的**昙曜五窟**（云冈石窟的最初五窟）。</p><p><strong>【结果】</strong><br>这五座巨大的佛像，实际上是按照北魏自道武帝拓跋珪到文成帝拓跋濬的五位皇帝的面容雕刻的（即“帝佛合一”）。北魏皇室通过将皇帝神格化，巧妙地把宗教信仰与皇权统治完美结合在一起，留下了震撼千古的文化遗产。</p>' 
+            },
+            'zigui': { 
+                name: '含泪赐死李贵人 (456年)', 
+                subtitle: '皇帝也无法抗拒的残酷体制', 
+                content: '<p><strong>【经过】</strong><br>尽管拓跋濬是一位宽仁之君，与李贵人感情极深，但面对确立储君这一涉及大魏国本的核心问题，群臣和宗室依然要求严格执行“子贵母死”的祖制以防止南朝汉女家族干政。</p><p><strong>【结果】</strong><br>太安二年，拓跋濬在立长子拓跋弘为太子的同时，被迫向挚爱李贵人下达了自尽的诏书。这不仅是李贵人的悲剧，更是北魏早期政治体制中极其变态和无人性的一面。李贵人死后，其子拓跋弘交由冯皇后抚养，为日后冯太后主宰天下埋下了伏笔。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
