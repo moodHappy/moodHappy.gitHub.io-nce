@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>高贵乡公朝核心人物与事件关系图 (大魏绝唱)</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭/威压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">高贵乡公朝核心人物与事件关系图 (大魏绝唱)</h1>
+
+    <div class="family-tree">
+        
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 170px; color: #c62828; font-weight: bold;">路人皆知 / 极限施压</div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 100px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 90px; color: #777;">临阵倒戈 / 出卖天子</div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 430px; top: 90px; font-weight: bold;">下达死令 / 镇压皇威</div>
+
+        <div class="line" style="left: 100px; top: 240px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 210px; top: 230px; color: #1565c0; font-weight: bold;">苦苦苦谏 / 宁死不卖主</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 100px; height: 140px;"></div>
+        <div class="label" style="left: 540px; top: 170px; color: #c62828; font-weight: bold;">正为今日！/ 授意下死手</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 240px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 230px; color: #c62828; font-weight: bold; background-color: #fff;">长戈穿胸 / 血溅街头</div>
+
+        <div class="line-v-dashed" style="left: 320px; top: 240px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 310px;">外部仅存的救魏力量 (覆灭)</div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('caomao')">
+            <div class="c-dark">曹魏第四任皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">高贵乡公曹髦</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('simazhao')">
+            <div class="c-dark">大将军 / 晋公</div>
+            <div class="c-rebel">司马昭</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('wangshi')">
+            <div class="c-dark">尚书 / 散骑常侍</div>
+            <div class="c-minister">王沈 / 王业</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('wangjing')">
+            <div class="c-dark">尚书 (忠臣)</div>
+            <div class="c-minister">王经</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('jiachong')">
+            <div class="c-dark">中护军 / 司马党羽</div>
+            <div class="c-rebel">贾充</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('chengji')">
+            <div class="c-dark">太子刺闺 / 刺客</div>
+            <div class="c-rebel">成济</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 380px;" onclick="showInfo('huainan')">
+            <div class="c-dark">淮南兵变统帅</div>
+            <div class="c-minister">毌丘俭 / 诸葛诞</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">曹髦朝的悲壮三部曲</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('huainanpan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">255年-258年</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">淮南二叛与三叛</div>
+            </div>
+            <div class="event-card" onclick="showInfo('luren')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">260年五月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">路人皆知决死反击</div>
+            </div>
+            <div class="event-card" onclick="showInfo('shijun')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">260年五月</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">血溅洛阳弑君案</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'caomao': { 
+                name: '曹髦 (高贵乡公)', 
+                subtitle: '宁可站着死，绝不跪着生的刚烈天子', 
+                content: '<p>曹髦是曹丕的孙子，年仅十三岁便被司马师迎立为帝。他天资聪颖，极其刚烈。面对司马昭步步紧逼、即将篡位的局面，他不甘心像汉献帝一样受辱。甘露五年（260年），二十岁的曹髦拔出长剑，对三位近臣说：“司马昭之心，路人所知也。吾不能坐受废辱，今日当与卿等自出讨之。”</p><p>即使遭到背叛，他依然亲自登上战车，率领着三百多名童仆和太监，直扑司马昭的相府。在街头面对贾充率领的重兵，他大声怒斥，吓得司马氏的士兵连连后退。最终，他被成济一枪刺穿胸膛，血染帝都。他用玉石俱焚的方式，毁掉了司马氏“合法禅让”的美梦，为曹魏皇室留下了最后的骨气。</p>' 
+            },
+            'simazhao': { 
+                name: '司马昭', 
+                subtitle: '被钉在历史耻辱柱上的野心家', 
+                content: '<p>司马师死后，司马昭接管了权力。他平定了诸葛诞的淮南之乱，消灭了曹魏最后的地方反抗力量，随后强迫朝廷封自己为晋公，加九锡，篡位野心已经不再掩饰。</p><p>当得知曹髦竟然亲自带人来杀他时，司马昭震惊之余，授意心腹不惜一切代价镇压。曹髦死后，司马昭虽然达到了彻底掌控皇权的目的，但“当街弑君”的滔天恶行让天下骇然。为了平息众怒，他扑倒在地痛哭流涕，并将责任全部推给成济，夷灭了成济三族，并在不久后另立曹奂为帝。</p>' 
+            },
+            'wangshi': { 
+                name: '王沈 / 王业', 
+                subtitle: '踩着主君鲜血向上爬的无耻叛徒', 
+                content: '<p>当曹髦将讨伐司马昭的密谋告诉尚书王经、王沈和散骑常侍王业时，王沈和王业被吓破了胆。一出宫门，这两人为了荣华富贵，立刻像丧家之犬一样跑去向司马昭告密，导致司马昭提前做好了重兵防备。曹髦的飞蛾扑火，很大程度上是因为这两个软骨头的出卖。</p>' 
+            },
+            'wangjing': { 
+                name: '王经', 
+                subtitle: '大魏最后的孤忠', 
+                content: '<p>与王沈、王业的背叛不同，尚书王经虽然在宫中苦苦劝说曹髦“敌强我弱，此举无异于以卵击石”，但在曹髦决意赴死后，王经选择了死守臣节，绝不告密。</p><p>曹髦遇弑后，司马昭大怒，将王经逮捕并判处夷灭三族。王经的母亲在刑场上对他说：“人谁不死？往年我不让你做官，你偏要做。今天因为忠于魏室而死，还有什么可遗憾的！”母子二人从容就义，天下人为之泣下。</p>' 
+            },
+            'jiachong': { 
+                name: '贾充', 
+                subtitle: '弑君惨案的直接导演者，司马氏的黑手套', 
+                content: '<p>贾充是司马昭的绝对心腹。当曹髦率领的队伍在街头与司马氏的军队相遇时，因为曹髦是皇帝，士兵们都不敢动手，纷纷后退。贾充见状，直接对成济厉声呵斥：“司马公养你们这些人，正是为了今天！还有什么可犹豫的！”正是贾充的这句死命令，直接导致了中国历史上最骇人听闻的当街弑君案。</p>' 
+            },
+            'chengji': { 
+                name: '成济', 
+                subtitle: '最可悲的弑君替罪羊', 
+                content: '<p>太子刺闺（近卫军官）成济在听到贾充的命令后，问：“是杀还是绑？”贾充说：“杀！”成济于是挺着长戈冲上前去，一枪刺穿了曹髦的胸膛，刃出于背。</p><p>事后，司马昭为了平息天下人“弑君”的愤怒指责，急需找一个替罪羊，于是下令以大逆不道罪将成济逮捕。成济被捕时不服，爬上屋顶大骂司马昭过河拆桥，最终被乱箭射杀，并被夷灭三族。</p>' 
+            },
+            'huainan': { 
+                name: '毌丘俭 / 诸葛诞 (淮南叛军)', 
+                subtitle: '外部仅存的救魏力量的覆灭', 
+                content: '<p>在曹髦登基前后，曹魏重镇淮南先后爆发了反对司马氏专权的兵变（即毌丘俭的淮南二叛，以及诸葛诞的淮南三叛）。这些将领虽然也有割据野心，但客观上构成了保卫曹魏的最后军事屏障。随着诸葛诞被司马昭率领大军彻底平定并夷灭，曹魏在地方上再无一兵一卒可以制衡司马氏，直接促成了曹髦最终绝望的冲锋。</p>' 
+            },
+
+            /* 事件库 */
+            'huainanpan': { 
+                name: '淮南二叛与三叛 (255年-258年)', 
+                subtitle: '大魏江山的最后军事挣扎', 
+                content: '<p><strong>【事件经过】</strong><br>镇东将军毌丘俭、文钦因不满司马师废黜曹芳而起兵，最终失败。几年后，征东大将军诸葛诞因恐惧司马昭的猜忌，在寿春再度起兵，甚至向东吴求援。司马昭挟持曹髦御驾亲征，用极其残酷的围城战术将诸葛诞平定。至此，曹魏地方军事反抗力量被彻底肃清。</p>' 
+            },
+            'luren': { 
+                name: '路人皆知决死反击 (260年五月)', 
+                subtitle: '以命相搏的帝王尊严', 
+                content: '<p><strong>【事件经过】</strong><br>司马昭逼迫朝廷加其为晋公、九锡，篡位只差一步。二十岁的曹髦在凌云台召见群臣，悲愤地说出了“司马昭之心，路人所知也”。他不顾一切劝阻，亲自拔剑，带着殿中仅有的杂役和宿卫，击鼓呼喊而出，要用帝王的鲜血去揭穿司马氏虚伪的禅让面具。</p>' 
+            },
+            'shijun': { 
+                name: '血溅洛阳弑君案 (260年五月)', 
+                subtitle: '千古权力游戏中最血腥的一幕', 
+                content: '<p><strong>【事件经过】</strong><br>曹髦的车驾在南阙下遭遇了贾充率领的重兵。曹髦亲自挥剑奋战，怒斥叛贼。贾充指使成济上前，成济一戈将曹髦刺死在车下。皇帝的鲜血染红了洛阳的街头。这一刺，不仅断送了曹魏最后的生机，也让司马氏建立的晋朝在法理上背负了永远无法洗刷的弑君原罪，埋下了后世东晋、南朝极其不尊重皇权的因果报应。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
