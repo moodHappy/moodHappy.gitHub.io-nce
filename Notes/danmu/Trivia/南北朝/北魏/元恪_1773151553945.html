@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>北魏宣武帝元恪核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 居中主标题 */
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色政变杀戮线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 60px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        /* 三大政变并排展示 */
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); 
+            display: flex;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            position: absolute;
+            top: 0;
+            bottom: 80px; 
+            width: 100%;
+            max-width: 680px; 
+            background-color: #fff;
+            border-radius: 0 0 16px 16px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 30px 30px 20px 30px; 
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            font-size: 54px; 
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            font-weight: 300;
+        }
+        .modal-close:hover { color: #333; }
+
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+
+        .modal-content {
+            padding: 20px 30px 40px 30px;
+            flex: 1;
+            overflow-y: auto; 
+            font-size: 28px; 
+            color: #222; 
+            line-height: 1.8; 
+            text-align: justify;
+        }
+
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">北魏宣武帝朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 200px; top: 110px; width: 240px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 110px; width: 1px; height: 70px;"></div>
+        <div class="label" style="left: 320px; top: 150px;">皇次子继位</div>
+
+        <div class="line-v-dashed" style="left: 500px; top: 110px; height: 70px;"></div>
+        <div class="line-h-dashed" style="left: 480px; top: 110px; width: 20px;"></div>
+        <div class="label" style="left: 500px; top: 150px;">兄妹 (渤海高氏)</div>
+
+        <div class="kill-h" style="left: 170px; top: 190px; width: 110px;"></div>
+        <div class="label" style="left: 230px; top: 180px; color: #c62828; font-weight: bold;">猜忌 / 构陷毒杀</div>
+
+        <div class="line" style="left: 320px; top: 220px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 160px; top: 280px; width: 280px; height: 1px;"></div>
+        <div class="line" style="left: 160px; top: 280px; width: 1px; height: 40px;"></div>
+        <div class="line" style="left: 320px; top: 280px; width: 1px; height: 40px;"></div>
+        <div class="line" style="left: 440px; top: 280px; width: 1px; height: 40px;"></div>
+
+        <div class="line-v-dashed" style="left: 440px; top: 220px; height: 40px;"></div>
+        <div class="line-h-dashed" style="left: 360px; top: 260px; width: 80px;"></div>
+        <div class="line-v-dashed" style="left: 360px; top: 260px; height: 60px;"></div>
+        <div class="label" style="left: 400px; top: 250px;">叔侄扶持</div>
+
+        <div class="kill-v" style="left: 110px; top: 220px; height: 100px;"></div>
+        <div class="kill-h" style="left: 110px; top: 220px; width: 350px;"></div>
+        <div class="label" style="left: 240px; top: 210px; color: #c62828; font-weight: bold;">密谋毒杀原配</div>
+
+        <div class="line" style="left: 440px; top: 360px; width: 1px; height: 50px;"></div>
+        <div class="label" style="left: 440px; top: 390px; color: #1565c0; font-weight: bold;">废除“子贵母死”存活</div>
+
+        <div class="person" style="left: 320px; top: 200px;" onclick="showInfo('yuanke')">
+            <div class="c-dark">宣武帝</div>
+            <div class="c-emperor" style="font-size: 18px;">元恪</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 80px;" onclick="showInfo('xiaowen')">
+            <div class="c-dark">孝文帝 (先皇)</div>
+            <div class="c-emperor">元宏</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 80px;" onclick="showInfo('gaozhaorong')">
+            <div class="c-dark">高照容 (生母)</div>
+            <div class="c-consort">高贵人</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 200px;" onclick="showInfo('yuanxie')">
+            <div class="c-dark">彭城王 / 宗室柱石</div>
+            <div class="c-minister" style="text-decoration: line-through;">元勰</div>
+        </div>
+
+        <div class="person" style="left: 500px; top: 200px;" onclick="showInfo('gaozhao')">
+            <div class="c-dark">尚书令 / 权戚</div>
+            <div class="c-minister">高肇</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 340px;" onclick="showInfo('yuhou')">
+            <div class="c-dark">顺皇后 (原配)</div>
+            <div class="c-consort" style="text-decoration: line-through;">于氏</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 340px;" onclick="showInfo('gaohou')">
+            <div class="c-dark">崇宪太后</div>
+            <div class="c-consort">高皇后</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 340px;" onclick="showInfo('hushi')">
+            <div class="c-dark">灵太后</div>
+            <div class="c-consort" style="font-weight: bold;">胡充华</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 430px;" onclick="showInfo('yuanxu')">
+            <div class="c-dark">孝明帝</div>
+            <div class="c-emperor">元诩</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">宣武帝朝核心事件：金玉其外，败絮其中</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('zhongli')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">507年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">钟离之战惨败</div>
+            </div>
+            <div class="event-card" onclick="showInfo('cisi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">508年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">毒杀彭城王</div>
+            </div>
+            <div class="event-card" onclick="showInfo('feichu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">515年 (帝崩)</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">废除子贵母死</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yuanke': { 
+                name: '宣武帝 元恪', 
+                subtitle: '缔造极盛版图，却掘开帝国坟墓的矛盾之君', 
+                content: '<p>元恪是孝文帝的次子，因兄长元恂叛逆被赐死而意外继位。他的统治时期是北魏的**疆域极盛期**，向南攻取了南朝大片土地（如汉中、淮南）。他笃信佛教，洛阳城内佛寺多达上千所，并在龙门石窟开凿了浩大的宾阳洞以纪念父母。</p><p>但在政治上，他极度多疑且怠政。因为早年失去了生母，他对母族（渤海高氏）有着病态的补偿心理，无限纵容舅舅高肇在朝野大肆党同伐异。他最不可饶恕的政治失误，是杀死了大魏皇室的擎天柱——亲叔叔彭城王元勰，这直接导致了北魏宗室的离心离德。</p>' 
+            },
+            'xiaowen': { 
+                name: '孝文帝 元宏', 
+                subtitle: '留下庞大汉化帝国的先皇', 
+                content: '<p>元宏呕心沥血推行汉化、迁都洛阳，为元恪留下了一个制度先进、国力强盛的大魏帝国。但他可能没有预料到，汉化后的洛阳朝廷，迅速染上了中原王朝外戚专权和奢靡腐败的恶习。</p>' 
+            },
+            'gaozhaorong': { 
+                name: '高照容', 
+                subtitle: '被毒杀的生母，权戚崛起的源头', 
+                content: '<p>元恪的生母。在孝文帝朝时，被心狠手辣的幽皇后冯润毒杀。元恪继位后，得知了生母的惨死真相，为了补偿母亲，他大肆提拔母亲的家族（渤海高氏），从而亲手放出了一头名为“高肇”的政治怪兽。</p>' 
+            },
+            'yuanxie': { 
+                name: '彭城王 元勰', 
+                subtitle: '大魏宗室的脊梁，悲剧的完美亲王', 
+                content: '<p>孝文帝最疼爱的弟弟，文武双全，是孝文帝太和改制、南征北战的最核心副手。孝文帝临终前，甚至有过将皇位传给他的念头（被他拼死拒绝）。元恪继位初年，元勰辅政，居功至伟。</p><p>正因为他威望太高、能力太强、品德太完美，遭到了元恪的深深猜忌和高肇的疯狂嫉恨。508年，在毫无实证的情况下，元恪强行派人逼迫元勰喝下毒药自尽。元勰临死前仰天长叹：“我哥哥（孝文帝）尸骨未寒，你竟然这样对我！”他的死，让整个北魏宗室寒心，大魏的脊梁断了。</p>' 
+            },
+            'gaozhao': { 
+                name: '高肇', 
+                subtitle: '毒蛇般的权臣，外戚乱政的极致', 
+                content: '<p>元恪的亲舅舅。原本毫无根基，全靠皇帝的偏爱平步青云。他为人极其阴险毒辣，擅长罗织罪名。为了稳固高家的权势，他不仅构陷杀害了彭城王元勰、北海王元详等宗室栋梁，还涉嫌毒杀了元恪的原配于皇后，将自己的侄女推上后位。元恪驾崩后，他在外地领兵，被回京的禁军将领连夜诛杀。</p>' 
+            },
+            'yuhou': { 
+                name: '顺皇后 于氏', 
+                subtitle: '将门虎女的离奇暴毙', 
+                content: '<p>北魏开国功臣名将家族于氏之女，元恪的第一任皇后。她性格温婉贤淑，但却在风华正茂时突然离奇暴毙。朝野上下皆知，这是高肇为了让自己的侄女上位，买通宫人将其毒杀的。但元恪对此却不闻不问，包庇了舅舅的罪行。</p>' 
+            },
+            'gaohou': { 
+                name: '崇宪太后 高氏', 
+                subtitle: '高肇的侄女，骄横的继后', 
+                content: '<p>在于皇后暴毙后，她被立为皇后。仗着叔父高肇和皇帝的宠爱，她在后宫骄横跋扈。由于自己生不出儿子，她试图效仿当年的冯润，意图在胡充华生下皇子后将其杀害并夺子。但元恪为了保护皇储，派严密看护，让她未能得逞。</p>' 
+            },
+            'hushi': { 
+                name: '灵太后 胡充华', 
+                subtitle: '勇敢的母亲，灾难的执政者', 
+                content: '<p>当时北魏后宫因“子贵母死”的残酷祖制，妃嫔们都不愿、也不敢生儿子，甚至偷偷堕胎。只有胡充华大义凛然地说：“怎能因为贪生怕死，就让皇家断绝血脉！”她生下了唯一的皇子元诩。</p><p>由于元恪笃信佛教心生不忍，加上群臣的劝谏，元恪最终没有处死她。这一仁慈之举，却给北魏带来了灭顶之灾。胡充华在元恪死后临朝称制（即著名的胡太后），她生活极度淫乱，政治极其腐败，掏空了国库，直接引爆了席卷北方的“六镇之乱”，埋葬了北魏王朝。</p>' 
+            },
+            'yuanxu': { 
+                name: '孝明帝 元诩', 
+                subtitle: '母亲阴影下的可怜傀儡', 
+                content: '<p>元恪的独子，5岁继位。他的一生都在生母胡太后的严密控制与阴影下度过。随着年龄增长，他试图夺回皇权，甚至密诏军阀尔朱荣进京勤王。结果事情败露，19岁的他竟被自己的亲生母亲胡太后残忍毒杀，酿成了北魏末期最大的惨剧。</p>' 
+            },
+
+            /* 事件库 */
+            'zhongli': { 
+                name: '钟离之战惨败 (507年)', 
+                subtitle: '南北朝水战的巅峰对决', 
+                content: '<p><strong>【背景】</strong><br>虽然宣武帝时期北魏整体对南朝梁占据优势，但梁武帝萧衍登基后，南朝开始反击。</p><p><strong>【经过】</strong><br>北魏派中山王元英率数十万大军围攻战略重镇钟离（今安徽凤阳）。梁朝名将韦睿（被北魏人敬畏地称为“韦虎”）率军救援。韦睿利用淮河春汛水涨，指挥水军用火攻大破北魏横跨淮河的浮桥。</p><p><strong>【结果】</strong><br>北魏大军被截断退路，落水淹死及被斩杀者高达二三十万人，主帅元英单骑逃回。这是刘裕北伐之后南朝取得的最大一次军事胜利，遏制了北魏南下吞并江南的企图。</p>' 
+            },
+            'cisi': { 
+                name: '毒杀彭城王 (508年)', 
+                subtitle: '自毁长城的致命一击', 
+                content: '<p><strong>【经过】</strong><br>彭城王元勰因威望极高，被京兆王元愉的叛乱军当作起事的旗号（虽然元勰完全不知情）。高肇趁机向宣武帝疯狂进谗言。宣武帝设下鸿门宴，强行将元勰留在宫中，派人递上毒酒。</p><p><strong>【结果】</strong><br>元勰在悲愤中饮鸩而死。此事造成了毁灭性的政治后果：大魏皇族和勋贵们意识到，即使像彭城王这样完美无瑕、忠心耿耿的柱石，依然难逃被杀的命运。从此，北魏宗室再无凝聚力，面对后来的六镇起义和尔朱荣之乱时，再也没有人愿意挺身而出保卫皇权了。</p>' 
+            },
+            'feichu': { 
+                name: '废除子贵母死 (515年)', 
+                subtitle: '一次致命的仁慈', 
+                content: '<p><strong>【经过】</strong><br>宣武帝元恪一生崇佛，不杀生。当独子元诩被立为太子时，他打破了自道武帝拓跋珪起实行了一百多年的“子贵母死”血腥祖制，没有赐死生母胡充华。</p><p><strong>【结果】</strong><br>515年元恪突然驾崩，胡充华作为太后临朝称制。事实证明，拓跋珪当年的担忧在一百年后化为了恐怖的现实：胡太后肆意妄为、包庇贪腐、秽乱宫廷，将北魏的国力挥霍一空，最终亲手毒杀了亲儿子，引发了尔朱荣进京洗劫百官的“河阴之变”，北魏自此走向分裂与灭亡。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
