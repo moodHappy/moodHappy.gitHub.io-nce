@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>晋明帝朝核心人物与事件关系图 (绝地反击)</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 460px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } /* 叛军权臣 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">晋明帝朝核心人物与事件关系图 (平定王敦)</h1>
+
+    <div class="family-tree">
+        
+        <div class="kill-solid-h" style="left: 320px; top: 100px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 90px; color: #c62828; font-weight: bold;">微服探营 / 决死反击</div>
+
+        <div class="line" style="left: 100px; top: 100px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 100px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 210px; top: 90px; font-weight: bold;">密谋讨贼 / 托付京畿</div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 70px; width: 440px;"></div>
+        <div class="line-v-dashed" style="left: 540px; top: 70px; height: 30px;"></div>
+        <div class="line-v-dashed" style="left: 100px; top: 70px; height: 30px;"></div>
+        <div class="label" style="left: 320px; top: 60px; color: #1565c0; font-weight: bold;">伪装投诚 / 刺探虚实 / 逃回建康</div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 320px; top: 170px;">大义灭亲 / 伪造丧报</div>
+
+        <div class="line" style="left: 100px; top: 360px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 240px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 210px; top: 350px;">妻族国舅 / 临终托孤</div>
+
+        <div class="line" style="left: 540px; top: 100px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 540px; top: 170px;">托付叛军 / 病死军中</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 240px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 230px; color: #c62828; font-weight: bold;">强攻建康 / 兵败被杀</div>
+
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('simashao')">
+            <div class="c-dark">东晋第二任皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">晋明帝司马绍</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('wenjiao')">
+            <div class="c-dark">丹阳尹 / 顶级特工</div>
+            <div class="c-minister">温峤 (qiáo)</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('xijian')">
+            <div class="c-dark">安西将军 / 兖州刺史</div>
+            <div class="c-minister">郗鉴 (xī)</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('wangdao')">
+            <div class="c-dark">司徒 / 琅琊王氏族长</div>
+            <div class="c-minister">王导</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('wangdun')">
+            <div class="c-dark">大将军 / 叛臣</div>
+            <div class="c-rebel">王敦</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('wanghan')">
+            <div class="c-dark">王敦之兄 / 叛军主将</div>
+            <div class="c-rebel">王含 / 钱凤</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 360px;" onclick="showInfo('yuliang')">
+            <div class="c-dark">中书监 / 国舅</div>
+            <div class="c-minister">庾亮 (yǔ)</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('simayan')">
+            <div class="c-dark">皇太子 (5岁)</div>
+            <div class="c-emperor">司马衍 (成帝)</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">皇权绝地反击的三大高光与遗憾</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('weifu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">323年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">黄须天子单骑探营</div>
+            </div>
+            <div class="event-card" onclick="showInfo('pingpan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">324年七月</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">假传死讯与反击战</div>
+            </div>
+            <div class="event-card" onclick="showInfo('zaoshi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">325年闰八月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">明帝暴毙与错付外戚</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'simashao': { 
+                name: '司马绍 (晋明帝)', 
+                subtitle: '智勇双全的年轻猛虎，东晋初年的救火队长', 
+                content: '<p>司马绍接手的是一个被权臣王敦彻底按在地上的屈辱朝廷。但他极其聪明果断，深知此时不能硬拼。他一面暗中调集郗鉴等流民帅的武装力量保卫建康，一面利用温峤去王敦阵营做卧底。</p><p>在得知王敦病重后，他果断出手。面对叛军的逼近，他甚至不顾帝王之尊，亲自穿着便服骑着快马，潜入王敦大营刺探敌情。在平叛决战中，他亲临前线，稳定军心，最终以弱胜强，击溃了不可一世的王氏叛军，将跌入谷底的东晋皇权重新拉了回来。可惜天妒英才，他在平叛次年就因病暴毙，年仅27岁。</p>' 
+            },
+            'wenjiao': { 
+                name: '温峤', 
+                subtitle: '东晋第一王牌特工，忍辱负重的国士', 
+                content: '<p>温峤本是司马绍的绝对亲信。为了麻痹王敦，他故意装出背叛朝廷的样子，跑到武昌去投奔王敦。王敦非常欣赏他，把他引为心腹，甚至让他参与机密谋划。</p><p>温峤在摸清了王敦已经病入膏肓且叛军内部矛盾重重后，借口去建康帮王敦探听虚实，成功脱身回到皇帝身边。他向司马绍详细汇报了叛军的情报，并坚定了司马绍出兵讨伐的决心。他的“无间道”是平定王敦之乱的胜负手。</p>' 
+            },
+            'xijian': { 
+                name: '郗鉴', 
+                subtitle: '流民帅的代表，皇权的强力外援', 
+                content: '<p>郗鉴手里掌握着从北方逃难过来的强悍流民武装（即后来的北府兵雏形）。王敦对他极其忌惮。司马绍暗中将郗鉴调回建康，任命他为安西将军。在后来的平叛战争中，郗鉴的军事力量成为了保卫皇都的最坚实盾牌。</p>' 
+            },
+            'wangdao': { 
+                name: '王导', 
+                subtitle: '在家族与国家间走钢丝的政治家', 
+                content: '<p>面对堂兄王敦的再次叛乱，王导这次坚决站在了皇帝司马绍这一边。他明白王敦的野心不仅会毁灭晋室，更会把整个琅琊王氏带入万劫不复的深渊。</p><p>为了瓦解叛军士气，司马绍与王导合演了一出大戏：司马绍对外宣称王敦已死，王导则带领留在建康的王氏宗族子弟，在朝堂上为王敦公开发丧、痛哭流涕。这一举动不仅洗清了王导一脉的谋反嫌疑，更让叛军将士真以为主帅已死，军心瞬间崩溃。</p>' 
+            },
+            'wangdun': { 
+                name: '王敦', 
+                subtitle: '病榻上的乱世枭雄，死不瞑目', 
+                content: '<p>王敦本计划彻底废掉司马氏，自己篡位。但他万万没想到，自己熬死了懦弱的晋元帝，却迎来了一个极其硬核的晋明帝。更致命的是，他在准备发动第二次叛乱时，自己病倒了。</p><p>当得知司马绍主动发起攻击，且温峤出卖了自己时，王敦在病榻上气得狂怒。但他已无力亲自指挥，只能将大军交给平庸的哥哥王含和干儿子钱凤。在战局不利的刺激下，王敦在军中病死。死后，他的尸体被司马绍下令从坟墓里挖出来，斩首示众。</p>' 
+            },
+            'wanghan': { 
+                name: '王含 / 钱凤', 
+                subtitle: '志大才疏的叛军统帅，送人头的代表', 
+                content: '<p>王敦死后，王含和谋士钱凤率领五万大军直扑建康。但他们毫无军事才能。面对司马绍亲自部署的防线，叛军屡攻不克。在司马绍“王敦已死”的心理战打击下，叛军大败。王含逃亡途中被荆州刺史王舒沉入江中淹死，钱凤被斩首，王敦之乱彻底平息。</p>' 
+            },
+            'yuliang': { 
+                name: '庾亮', 
+                subtitle: '清谈误国的国舅爷，种下下一次浩劫的种子', 
+                content: '<p>庾亮是司马绍的皇后（庾文君）的哥哥，深受司马绍信任。司马绍临终前，将年仅五岁的太子司马衍托付给庾亮和王导等人辅政。</p><p>然而，司马绍看走了眼。庾亮空有清高的名声，却心胸狭隘、刚愎自用。他掌权后，为了排挤异己，强行削减地方军阀苏峻的兵权，直接逼反了苏峻，导致建康城再次沦陷，百官受辱，甚至连司马绍的坟墓都被叛军挖开。这是后话。</p>' 
+            },
+
+            /* 事件库 */
+            'weifu': { 
+                name: '黄须天子单骑探营 (323年)', 
+                subtitle: '史上最硬核的皇帝微服私访', 
+                content: '<p><strong>【事件经过】</strong><br>面对拥兵武昌的王敦，年轻的司马绍决定亲自去摸底。他穿着便服，骑着一匹名为“巴滇骏”的快马，带着几个随从，竟然直接跑到了王敦的大营附近侦察。王敦在睡觉时惊醒，觉得不对劲，心想“鲜卑老妪的儿子（指司马绍）长着黄胡须，必定是他来了”，立刻派骑兵去追。</p><p><strong>【机智脱险】</strong><br>司马绍在逃跑路上，用冷水浇在一坨马粪上使其冷却，并把自己的七宝马鞭送给路边卖食的老妪，告诉她“如果后面有人追来，就把鞭子给他们看”。追兵赶到后，摸了摸冷马粪，又看了看华丽的马鞭，以为皇帝已经跑出很远，于是放弃了追击。司马绍的胆略可见一斑。</p>' 
+            },
+            'pingpan': { 
+                name: '假传死讯与平叛反击 (324年七月)', 
+                subtitle: '一场完美的心理战与防守反击', 
+                content: '<p><strong>【事件经过】</strong><br>面对王含、钱凤逼近建康的大军，司马绍没有选择逃跑，而是全副武装，亲自检阅军队。他敏锐地抓住王敦重病无法露面的弱点，与王导合谋，在京城为王敦“发丧”。叛军士兵听说主帅死了，士气大跌。随后，司马绍派军队趁夜渡过秦淮河，对叛军大营发起突袭，将其一举击溃。</p><p><strong>【历史影响】</strong><br>这场战役不仅彻底摧毁了王敦的军事集团，更向全天下宣告：东晋皇权并非任人宰割的羔羊。司马绍通过此战重新确立了中央朝廷的威权。</p>' 
+            },
+            'zaoshi': { 
+                name: '明帝暴毙与错付外戚 (325年闰八月)', 
+                subtitle: '大晋复兴希望的瞬间破灭', 
+                content: '<p><strong>【事件经过】</strong><br>就在天下人以为东晋将迎来一位如同汉光武帝般的中兴之主时，长期的殚精竭虑和巨大的精神压力摧垮了司马绍。平叛次年，年仅27岁的司马绍在建康太极殿病逝。</p><p><strong>【历史悲剧】</strong><br>他死前，将五岁的太子司马衍（晋成帝）托付给国舅庾亮等人。这导致东晋的大权从“琅琊王氏”手中，转移到了“颍川庾氏”等外戚手中。司马绍用命拼回来的皇权，因为继承人的年幼，再次旁落，并引发了更加惨烈的“苏峻之乱”。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
