@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>隋文帝朝核心人物与事件关系图 (统一与夺嫡)</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭/威压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">隋文帝朝核心人物与事件关系图 (统一与夺嫡)</h1>
+
+    <div class="family-tree">
+        
+        <div class="kill-solid-v" style="left: 320px; top: 60px; height: 100px;"></div>
+        <div class="label" style="left: 320px; top: 110px; color: #c62828; font-weight: bold;">逼外孙禅让 / 诛杀宇文皇族</div>
+
+        <div class="line" style="left: 100px; top: 160px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 210px; top: 150px; font-weight: bold;">并称二圣 / 极致一夫一妻制</div>
+
+        <div class="line" style="left: 320px; top: 160px; width: 220px; height: 1px;"></div>
+        <div class="label" style="left: 430px; top: 150px; color: #1565c0; font-weight: bold;">开皇名相 / 创三省六部制</div>
+
+        <div class="line" style="left: 320px; top: 160px; width: 1px; height: 70px;"></div>
+        <div class="line" style="left: 100px; top: 230px; width: 440px; height: 1px;"></div>
+
+        <div class="line" style="left: 100px; top: 230px; width: 1px; height: 70px;"></div>
+        <div class="label" style="left: 210px; top: 220px;">挥师五十万伐陈</div>
+        
+        <div class="kill-v" style="left: 320px; top: 230px; height: 70px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #c62828; font-weight: bold;">废长立幼</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 230px; height: 70px;"></div>
+        <div class="label" style="left: 430px; top: 220px; color: #c62828; font-weight: bold;">矫饰至孝 / 夺嫡上位</div>
+        <div class="label" style="left: 540px; top: 260px; color: #c62828; font-weight: bold;">仁寿宫变 / 弑父疑云</div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 300px; height: 120px;"></div>
+        <div class="label" style="left: 100px; top: 360px; color: #c62828; font-weight: bold;">攻陷建康 / 胭脂井擒虏</div>
+
+
+        <div class="person" style="left: 320px; top: 60px;" onclick="showInfo('yuwenchan')">
+            <div class="c-dark">北周静帝 (外孙)</div>
+            <div class="c-minister">宇文阐</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 160px;" onclick="showInfo('yangjian')">
+            <div class="c-dark">隋朝开国皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">隋文帝杨坚</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 160px;" onclick="showInfo('dugujieluo')">
+            <div class="c-dark">文献皇后 / 终极贤内助</div>
+            <div class="c-minister">独孤伽罗</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 160px;" onclick="showInfo('gaojiong')">
+            <div class="c-dark">尚书左仆射 / 第一功臣</div>
+            <div class="c-minister">高颎 (jiǒng)</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 300px;" onclick="showInfo('jiangling')">
+            <div class="c-dark">灭陈统帅</div>
+            <div class="c-minister">贺若弼 / 韩擒虎</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 420px;" onclick="showInfo('chenshubao')">
+            <div class="c-dark">陈后主 (亡国之君)</div>
+            <div class="c-rebel">陈叔宝</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 300px;" onclick="showInfo('yangyong')">
+            <div class="c-dark">废太子 (长子)</div>
+            <div class="c-minister">杨勇</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 300px;" onclick="showInfo('yangguang')">
+            <div class="c-dark">晋王 / 隋炀帝 (次子)</div>
+            <div class="c-rebel" style="font-size: 16px;">杨广</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">隋文帝朝的三大定鼎时刻</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('cuanzhou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">581年二月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">代周建隋屠戮前朝</div>
+            </div>
+            <div class="event-card" onclick="showInfo('miechen')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">589年正月</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">灭亡陈朝天下一统</div>
+            </div>
+            <div class="event-card" onclick="showInfo('renshou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">604年七月</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">仁寿宫变暴毙疑云</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yangjian': { 
+                name: '杨坚 (隋文帝)', 
+                subtitle: '终结三百年乱世的伟大帝王，被后院起火反噬的悲剧老翁', 
+                content: '<p>杨坚是历史上最具作为的大一统君主之一（西方常将他与秦始皇并列）。他不仅结束了自西晋永嘉之乱以来中国长达近三百年的大分裂，更从制度上进行了彻底的革新。他创立的“三省六部制”和科举制雏形，直接为后来的大唐盛世奠定了基础。</p><p>但他性格中带有极其强烈的猜忌心。晚年时，他在独孤皇后的影响下，杀戮功臣，甚至废黜了相对仁厚的长子杨勇，改立伪善的次子杨广为太子。临终前，当他发现杨广调戏自己的宠妃时，才惊觉上当，大呼“独孤误我！”但为时已晚，在著名的“仁寿宫变”中，他极大概率是被杨广派人谋杀在病榻之上的。</p>' 
+            },
+            'dugujieluo': { 
+                name: '独孤伽罗 (文献皇后)', 
+                subtitle: '深度参与朝政的女强人，道德洁癖的极端执行者', 
+                content: '<p>独孤伽罗绝非普通的后宫嫔妃，她与杨坚在朝堂上并称“二圣”，深刻影响了隋朝初期的诸多重大决策。她对杨坚有着极强的控制欲，两人立下誓言“誓无异生之子”（决不让别的女人生孩子），贯彻了皇室极其罕见的一夫一妻制。</p><p>有一次杨坚没忍住宠幸了一个宫女，独孤皇后趁杨坚上朝时直接将宫女乱棍打死。堂堂大隋天子杨坚气得离家出走，骑着马在山里狂奔了二十多里，悲叹“吾贵为天子，而不得自由”。她极度厌恶男人宠妾灭妻。太子杨勇因为宠爱小妾冷落正妻，直接被她痛恨并运作废黜；而晋王杨广看准了母亲的痛点，故意只和萧妃生孩子，装出极其专情简朴的样子，成功骗过了独孤皇后，夺取了太子之位。</p>' 
+            },
+            'yuwenchan': { 
+                name: '宇文阐 (北周静帝)', 
+                subtitle: '九岁夭折的傀儡外孙', 
+                content: '<p>北周静帝是北周宣帝与杨丽华（杨坚之女）的儿子，也就是杨坚的亲外孙。杨坚以外戚的身份掌控大权后，毫不手软地逼迫这个年仅八岁的外孙退位。建隋后，杨坚对北周的宇文皇族展开了极其彻底的肉体消灭，诛杀了宇文氏诸王。九岁的宇文阐也在退位不久后被秘密暗杀，杨坚的帝王之路上充满了前朝皇室的鲜血。</p>' 
+            },
+            'gaojiong': { 
+                name: '高颎', 
+                subtitle: '开皇盛世的总设计师，死于帝后猜忌的直臣', 
+                content: '<p>高颎是隋朝建国和灭陈的第一功臣，他规划了隋朝的税收、法律和均田制度。当杨坚因为宫女被杀而离家出走时，高颎劝解杨坚说：“陛下怎么能因为一个女人（妇人）而放弃天下？”这句话传到了独孤皇后的耳朵里，独孤皇后对他恨之入骨。</p><p>后来在太子废立问题上，高颎坚决支持原太子杨勇，反对杨广上位。最终在独孤皇后的枕边风和杨坚的猜忌下，这位一代名相被罢免，后被隋炀帝杨广处死。</p>' 
+            },
+            'jiangling': { 
+                name: '贺若弼 / 韩擒虎', 
+                subtitle: '直捣金陵的北朝猛将', 
+                content: '<p>在589年的灭陈之战中，贺若弼和韩擒虎分别率领大军强渡长江。韩擒虎更是以五百精锐直扑建康（南京）皇宫，生擒了陈后主。这两位名将用极其雷霆的军事行动，宣告了江南长达数百年割据政权的终结。</p>' 
+            },
+            'chenshubao': { 
+                name: '陈叔宝 (陈后主)', 
+                subtitle: '“商女不知亡国恨，隔江犹唱后庭花”的缔造者', 
+                content: '<p>陈后主是典型的亡国昏君。面对隋朝五十万大军的压境，他依然在宫中与张丽华等妃嫔饮酒作乐、填词谱曲。当隋军攻入皇宫时，他竟然带着张丽华和孔贵嫔躲进了一口枯井里。隋军士兵在上面喊话不出来就要扔石头，他才呼救，被士兵用绳子拉了上来，颜面尽失。杨坚念其昏庸无害，将其养在长安，赐号长城公，得以善终。</p>' 
+            },
+            'yangyong': { 
+                name: '杨勇 (废太子)', 
+                subtitle: '因为私生活不检点而丢掉天下的倒霉蛋', 
+                content: '<p>杨勇本是名正言顺的太子，性格宽厚但生活奢靡。他最大的错误是冷落了独孤皇后为他挑选的正妃，而宠爱小妾云昭训，导致正妃郁郁而终。这彻底触碰了独孤皇后的逆鳞。在母亲的厌恶、弟弟杨广的构陷以及父亲杨坚的猜疑下，他最终被废为庶人。杨广登基后，立刻假传隋文帝遗诏将其赐死。</p>' 
+            },
+            'yangguang': { 
+                name: '杨广 (隋炀帝)', 
+                subtitle: '奥斯卡级影帝，毁灭大隋的暴君与奇才', 
+                content: '<p>在夺嫡之争中，杨广展现了极其恐怖的伪装能力。他故意在父母视察时，把名贵的乐器弄得布满灰尘；他身边只有萧妃一个女人，连生病了都亲自熬药。他成功骗过了所有人，让杨坚和独孤皇后认为他才是最符合道德标准的继承人。</p><p>然而，当杨坚病重，杨广自以为稳操胜券时，竟然忍不住去非礼杨坚的宠妃宣华夫人。杨坚得知真相后气得吐血，下令召废太子杨勇进宫。杨广见事情败露，立刻发动“仁寿宫变”，切断了老皇帝的寝宫，杨坚当晚暴毙。杨广登基后，脱下面具，开启了他大运河与征高句丽的浩大且残暴的统治时代。</p>' 
+            },
+
+            /* 事件库 */
+            'cuanzhou': { 
+                name: '代周建隋屠戮前朝 (581年二月)', 
+                subtitle: '血腥而高效的开国', 
+                content: '<p><strong>【事件经过】</strong><br>杨坚作为辅政大臣，迅速翦除了北周的宗室力量（如赵王宇文招等）。随后，他逼迫年幼的北周静帝禅让，改国号为隋。为了防止前朝死灰复燃，他几乎将宇文氏皇族诛杀殆尽，手段极其冷酷。</p>' 
+            },
+            'miechen': { 
+                name: '灭亡陈朝天下一统 (589年正月)', 
+                subtitle: '三百年分裂的终结', 
+                content: '<p><strong>【事件经过】</strong><br>晋王杨广为名义统帅，贺若弼、韩擒虎为先锋，隋朝分八路大军五十万南下讨伐陈朝。长江天险瞬间被突破，建康城破。这场战争不仅消灭了南朝最后一个政权，更象征着自西晋永嘉之乱以来，长达270多年的大分裂局面彻底结束，中国历史重回大一统轨道。</p>' 
+            },
+            'renshou': { 
+                name: '仁寿宫变暴毙疑云 (604年七月)', 
+                subtitle: '大隋国运的惊天逆转', 
+                content: '<p><strong>【事件经过】</strong><br>隋文帝杨坚在仁寿宫病重。太子杨广写信给杨素询问后事安排，信件却阴差阳错送到了杨坚手里；同时宠妃宣华夫人衣衫不整地跑来哭诉杨广非礼她。杨坚大悟，痛骂“畜生何足付大事！独孤误我！”急令召废太子杨勇。杨广当机立断，派宇文述等亲信包围寝宫，赶走所有侍从。当晚，这位大一统的开国皇帝不明不白地死在榻上。杨广顺利继位，大隋王朝即将迎来史上最绚烂也最致命的烟火。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
