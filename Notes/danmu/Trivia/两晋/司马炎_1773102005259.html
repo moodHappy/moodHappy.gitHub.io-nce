@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>晋武帝朝核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对/毁灭线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">晋武帝朝核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 100px; top: 100px; width: 440px; height: 1px;"></div>
+
+        <div class="line" style="left: 100px; top: 100px; width: 1px; height: 260px;"></div>
+
+        <div class="line" style="left: 540px; top: 100px; width: 1px; height: 140px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 360px; width: 220px;"></div>
+        
+        <div class="kill-v" style="left: 540px; top: 240px; height: 60px;"></div>
+        <div class="kill-h" style="left: 450px; top: 240px; width: 90px;"></div>
+
+        <div class="label" style="left: 210px; top: 90px;">绝对信任 / 托付灭吴</div>
+        <div class="label" style="left: 430px; top: 90px;">固执己见 / 传位痴儿</div>
+
+        <div class="label" style="left: 100px; top: 170px;">病危遗疏 / 举荐奇才</div>
+        <div class="label" style="left: 100px; top: 300px;">并肩伐吴 / 势如破竹</div>
+
+        <div class="label" style="left: 210px; top: 350px; color: #c62828; font-weight: bold;">铁索沉江 / 破城受降</div>
+        
+        <div class="label" style="left: 540px; top: 170px; color: #555;">结发夫妻 / 极度惧内</div>
+        <div class="label" style="left: 480px; top: 230px; color: #c62828; font-weight: bold;">干政乱国</div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('simayan')">
+            <div class="c-dark">西晋开国皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">司马炎</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('yanghu')">
+            <div class="c-dark">荆州都督</div>
+            <div class="c-minister">羊祜</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('duyu')">
+            <div class="c-dark">镇南大将军</div>
+            <div class="c-minister">杜预</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 360px;" onclick="showInfo('wangjun')">
+            <div class="c-dark">益州刺史 / 龙骧将军</div>
+            <div class="c-minister">王濬</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('sunhao')">
+            <div class="c-dark">东吴末帝 (降)</div>
+            <div class="c-rebel">孙皓</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('simazhong')">
+            <div class="c-dark">皇太子 / 晋惠帝</div>
+            <div class="c-minister">司马衷</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('jiananfeng')">
+            <div class="c-dark">太子妃 / 毒后</div>
+            <div class="c-rebel">贾南风</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">西晋盛极而衰的三大转折点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('cuanwei')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">265年12月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">篡魏建晋</div>
+            </div>
+            <div class="event-card" onclick="showInfo('pingwu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">280年3月</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">平吴统一</div>
+            </div>
+            <div class="event-card" onclick="showInfo('fenfeng')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">泰始至太康年间</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">大封宗室与立痴嗣</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'simayan': { 
+                name: '司马炎 (晋武帝)', 
+                subtitle: '终结三国乱世的统一者，却亲手埋下八王之乱的祸根', 
+                content: '<p>司马炎是司马懿之孙，司马昭之子。他在父祖两代人架空曹魏皇权的基础上，顺理成章地逼迫魏元帝曹奂禅让，建立西晋。他最具魄力的功绩是力排众议，支持羊祜、杜预等人发动灭吴之战，彻底终结了自东汉末年以来长达近百年的分裂局面，开创了“太康之治”。</p><p>然而，统一天下后的司马炎迅速堕落。他极度骄奢淫逸，后宫妃嫔多达万人，甚至每天坐着羊车在后宫游荡，羊停在哪里就在哪里下榻。更致命的是，他在政治上犯下两大不可挽回的错误：一是大肆分封同姓王并赋予兵权；二是无视群臣反对，坚决将皇位传给弱智的太子司马衷。这两大昏招，最终导致他死后不久，帝国便陷入了万劫不复的深渊。</p>' 
+            },
+            'yanghu': { 
+                name: '羊祜', 
+                subtitle: '儒将典范，遗策灭吴的战略设计师', 
+                content: '<p>羊祜是西晋初年极其罕见的完美政治家与军事家。他镇守荆州十余年，不仅在军事上对东吴形成压倒性优势，更以仁信治军，甚至与东吴名将陆抗结下了“羊陆之交”的千古佳话。</p><p>他为司马炎制定了完整的水陆并进灭吴战略。当朝中多数大臣反对伐吴时，只有他反复上疏陈述利害，坚决要求出兵。可惜天不假年，羊祜在灭吴战争发动的两年前病逝。临终前，他向司马炎拼死举荐杜预接替自己的位置。后来西晋灭吴的战略，几乎完全按照羊祜生前的规划执行，可谓“功成不必在我”。</p>' 
+            },
+            'duyu': { 
+                name: '杜预', 
+                subtitle: '势如破竹的灭吴主帅，无所不能的“杜武库”', 
+                content: '<p>杜预不仅是接替羊祜的统帅，更是一位精通历法、法律、数学、工程和《左传》的超级全才，被时人称为“杜武库”。</p><p>咸宁五年（279年），杜预统领西晋大军多路伐吴。在连克吴国重镇后，有将领认为江南正值雨季，容易爆发瘟疫，建议等到冬天再打。杜预拍案而起，留下了千古名言：“今兵威已振，譬如破竹，数节之后，皆迎刃而解！”他坚决抗命继续进军，最终水陆配合，直捣建业，成就了灭吴的第一奇功。</p>' 
+            },
+            'wangjun': { 
+                name: '王濬', 
+                subtitle: '楼船下益州的霸气水军统帅', 
+                content: '<p>王濬在益州（四川）受命秘密建造规模极其庞大的战舰，为顺长江而下灭吴做准备。造船的木屑顺江漂流到吴国，甚至引起了吴将的警觉。</p><p>太康元年（280年），王濬率领铺天盖地的楼船大军顺流东下。面对吴国在长江险要处设置的铁锁链和暗藏的铁锥，他巧妙地用大木筏清扫暗礁，并用灌满麻油的火炬烧断了拦江铁索（史称“千寻铁锁沉江底”）。水军一路摧枯拉朽，率先攻入吴国首都建业，接受了东吴末帝孙皓的投降。</p>' 
+            },
+            'sunhao': { 
+                name: '孙皓', 
+                subtitle: '暴虐亡国之君，洛阳廷上的最后倔强', 
+                content: '<p>孙皓是东吴最后一位皇帝。他在位期间穷奢极欲、残暴嗜杀，动辄对臣下施以剥脸皮、挖眼睛等酷刑，导致东吴上下离心离德，国防体系在西晋的攻势下迅速土崩瓦解。</p><p>当王濬的楼船兵临建业城下时，孙皓自知大势已去，反绑双手，抬着棺材出城投降。被押送到洛阳后，司马炎在大殿上赐座对他说：“朕设此座以待卿久矣。”孙皓却毫不示弱地硬刚道：“臣于南方，亦设此座以待陛下！”这成了这位亡国之君最后的傲骨。</p>' 
+            },
+            'simazhong': { 
+                name: '司马衷 (晋惠帝)', 
+                subtitle: '“何不食肉糜”的千古痴帝', 
+                content: '<p>司马衷是司马炎的次子（长子早夭）。他天生智力低下，无法处理任何复杂的政务。当天下发生饥荒，百姓饿死时，他竟问出了那句震惊千古的名言：“百姓无粟米充饥，何不食肉糜（肉粥）？”</p><p>司马炎明明知道儿子愚钝，群臣也多次明示暗示必须换太子。但司马炎出于维护嫡长子继承制的私心，以及对儿媳贾南风家族政治势力的依赖，固执地将西晋这个初生的庞大帝国交到了这个白痴手中。这是导致西晋迅速灭亡的最直接原因。</p>' 
+            },
+            'jiananfeng': { 
+                name: '贾南风', 
+                subtitle: '搅乱西晋天下的黑暗野心家', 
+                content: '<p>贾南风是开国功臣贾充的女儿。史书记载她身材矮小、面目黑青，且生性极其残忍嫉妒，甚至曾亲手用戟刺死怀孕的宫女。但她政治手段极其狠毒毒辣。</p><p>司马衷继位后，贾南风迅速掌握了朝政大权。为了铲除政敌（包括太后杨芷家族以及掌握兵权的其他司马氏王爷），她极其疯狂地利用各地藩王进京互相残杀。这如同打开了潘多拉魔盒，直接引爆了长达十六年、极度血腥的“八王之乱”，彻底摧毁了西晋的统治根基，引发了后来的五胡乱华。</p>' 
+            },
+
+            /* 事件库 */
+            'cuanwei': { 
+                name: '篡魏建晋 (265年)', 
+                subtitle: '司马氏三代人隐忍与杀戮的终极果实', 
+                content: '<p><strong>【背景起因】</strong><br>自高平陵之变起，司马懿、司马师、司马昭父子三人历经十几年血腥洗牌，已经彻底清除了曹魏宗室和忠臣（如夏侯玄、毌丘俭、诸葛诞），并成功消灭了蜀汉，使得司马氏代魏的威望达到顶点。</p><p><strong>【事变经过】</strong><br>司马昭死后仅数月，袭封晋王的司马炎迫不及待地导演了禅让大戏。泰始元年（265年）十二月，魏元帝曹奂被迫下诏禅位。司马炎在洛阳南郊登基称帝，国号为晋，曹魏正式灭亡。</p><p><strong>【最终结果】</strong><br>虽然得国不正，但司马炎在建国初期展现了宽容的一面。他不仅没有杀害曹奂，反而封其为陈留王，允许其使用天子銮仪。西晋成为了当时天下最强大的正统政权，开始着手准备统一中国的最后一步。</p>' 
+            },
+            'pingwu': { 
+                name: '平吴统一 (280年)', 
+                subtitle: '三分归一统，长达百年的分裂终结', 
+                content: '<p><strong>【背景起因】</strong><br>西晋经过十余年的休养生息，国力空前强盛；而江东的吴国在暴君孙皓的统治下已经千疮百孔。羊祜生前制定的水陆夹击战略已准备就绪。</p><p><strong>【事变经过】</strong><br>咸宁五年（279年）冬，司马炎下令发兵二十余万，兵分六路大举伐吴。杜预在荆襄势如破竹，王濬的水军沿江东下，烧毁铁索。短短三个月内，晋军全线突破长江天险，直捣建业。</p><p><strong>【最终结果】</strong><br>太康元年（280年）三月，孙皓出降，东吴灭亡。自黄巾起义（184年）以来分裂近百年的中国本部重新归于统一，迎来了短暂但繁荣的“太康之治”。</p>' 
+            },
+            'fenfeng': { 
+                name: '大封宗室与立痴嗣', 
+                subtitle: '昏招频出，盛世中埋下毁灭的引线', 
+                content: '<p><strong>【背景起因】</strong><br>司马炎总结曹魏灭亡的教训，错误地认为曹魏是因为没有强大的宗室藩王保卫皇权才被自己家族篡位的。因此，他在建国后大搞历史倒车。</p><p><strong>【事变经过】</strong><br>司马炎将二十七个同姓子弟分封为王，不仅给予大片封地，还允许他们自己组建军队。与此同时，他明知太子司马衷智力低下，却为了维护嫡长子制度和权臣贾充的联姻，坚决不肯换太子。后来为了遏制外戚，又让藩王具有督军的权力。</p><p><strong>【最终结果】</strong><br>弱智皇帝 + 狠毒皇后 + 手握重兵且野心勃勃的皇叔皇室，构成了中国历史上最致命的政治炸弹。司马炎死后，这个炸弹瞬间爆炸（八王之乱），将他一手建立的西晋王朝撕得粉碎。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
