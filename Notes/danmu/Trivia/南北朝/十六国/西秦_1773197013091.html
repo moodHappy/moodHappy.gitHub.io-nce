@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>西秦(毒酒与灭族)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/车裂/背信灭门线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧卡片中心在100px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 100px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">西秦(毒酒与灭族)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 100px; top: 80px; width: 1px; height: 100px;"></div>
+
+        <div class="line" style="left: 100px; top: 180px; width: 1px; height: 100px;"></div>
+
+        <div class="line" style="left: 100px; top: 280px; width: 1px; height: 100px;"></div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 370px; width: 240px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 180px; width: 240px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 260px; width: 240px;"></div>
+        <div class="kill-solid-v" style="left: 340px; top: 180px; height: 80px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 280px; width: 240px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 390px; width: 240px;"></div>
+
+        <div class="label" style="left: 100px; top: 130px;">兄终弟及</div>
+        <div class="label" style="left: 100px; top: 230px;">父死子继</div>
+        <div class="label" style="left: 100px; top: 330px;">父死子继</div>
+        
+        <div class="label" style="left: 220px; top: 170px; color: #c62828; font-weight: bold;">亲侄谋逆 / 乱刀弑君</div>
+        <div class="label" style="left: 220px; top: 250px; color: #c62828;">雷霆镇压 / 车裂全家</div>
+        <div class="label" style="left: 220px; top: 290px; color: #c62828; font-weight: bold;">吞并南凉 / 假意受降后毒杀</div>
+        
+        <div class="label" style="left: 220px; top: 360px;">走投无路 / 出城纳降</div>
+        <div class="label" style="left: 220px; top: 400px; color: #c62828; font-weight: bold;">毫无底线 / 杀尽五百皇族</div>
+
+        <div class="person" style="left: 100px; top: 80px;" onclick="showInfo('guoren')">
+            <div class="c-dark">大单于 / 大将军</div>
+            <div class="c-minister">乞伏国仁</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 180px;" onclick="showInfo('qiangui')">
+            <div class="c-dark">秦王</div>
+            <div class="c-emperor">乞伏乾归</div>
+        </div>
+
+        <div class="person" style="left: 340px; top: 180px;" onclick="showInfo('gongfu')">
+            <div class="c-dark">尚书令</div>
+            <div class="c-rebel">乞伏公府</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 280px;" onclick="showInfo('chipan')">
+            <div class="c-dark">秦王</div>
+            <div class="c-emperor" style="font-size: 18px;">乞伏炽磐</div>
+        </div>
+
+        <div class="person" style="left: 340px; top: 280px;" onclick="showInfo('rutan')">
+            <div class="c-dark">凉王 (南凉)</div>
+            <div class="c-emperor">秃发傉檀</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 380px;" onclick="showInfo('mumo')">
+            <div class="c-dark">秦王</div>
+            <div class="c-emperor">乞伏暮末</div>
+        </div>
+
+        <div class="person" style="left: 340px; top: 380px;" onclick="showInfo('helianding')">
+            <div class="c-dark">皇帝 (夏)</div>
+            <div class="c-emperor">赫连定</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">西秦三大血色界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('gongfuzhiluan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">412年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">公府之乱</div>
+            </div>
+            <div class="event-card" onclick="showInfo('mieliang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">414年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">毒杀降君</div>
+            </div>
+            <div class="event-card" onclick="showInfo('nanan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">431年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">南安灭族</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'guoren': { 
+                name: '乞伏国仁', 
+                subtitle: '趁乱起家的鲜卑首领，西秦的奠基者', 
+                content: '<p>乞伏国仁是陇西鲜卑乞伏部的首领。前秦天王苻坚强盛时，他被迫臣服。当苻坚在淝水之战中全军覆没、帝国瞬间崩塌时，乞伏国仁敏锐地察觉到了机会。</p><p>他立刻在陇西（今甘肃一带）收拢旧部，聚众十万，自称大都督、大单于，正式割据一方。在那个遍地是军阀的混乱时代，他凭借彪悍的鲜卑骑兵打下了一块根据地，为西秦的建立奠定了基础。他死后，因儿子年幼，将大位传给了弟弟乞伏乾归。</p>' 
+            },
+            'qiangui': { 
+                name: '乞伏乾归', 
+                subtitle: '在夹缝中反复横跳的王者，死于亲侄子之手的悲剧', 
+                content: '<p>乞伏乾归接手西秦后，正式称“秦王”。他是个极其务实的生存大师。面对周边强大的后秦、后凉等政权，他打不过就投降，先后向前秦、后秦甚至东晋称臣，一旦对方虚弱，他又立刻复叛自立。</p><p>凭借这种没有底线的反复横跳，他成功让西秦在夹缝中生存了下来。但他千算万算，没算到自家人。他的亲侄子乞伏公府（前任君主乞伏国仁的儿子）一直认为皇位本该是自己的，怀恨在心。最终，乞伏公府发动兵变，将乞伏乾归及其十几个儿子全部乱刀砍死，西秦皇室遭遇了第一次惨烈的内部大洗牌。</p>' 
+            },
+            'gongfu': { 
+                name: '乞伏公府', 
+                subtitle: '心理极度扭曲的弑叔篡位者，落得车裂的下场', 
+                content: '<p>乞伏公府作为先帝的嫡子，眼看着叔叔乞伏乾归稳坐皇位，内心的嫉妒与仇恨如同毒蛇般滋长。他暗中培植死士，在一次狩猎归来时发动突袭，成功弑杀了乞伏乾归。</p><p>但他低估了乞伏乾归留下来的政治遗产。乞伏乾归的太子乞伏炽磐当时镇守在外，得知父亲被杀后，立刻率领大军回击。乞伏公府的叛军一触即溃。兵败被俘后，乞伏炽磐为了泄愤，下令将乞伏公府及其四个儿子全部处以极刑——活生生车裂（五马分尸），结束了这场短暂的叛乱。</p>' 
+            },
+            'chipan': { 
+                name: '乞伏炽磐', 
+                subtitle: '西秦的巅峰缔造者，背信弃义的毒杀者', 
+                content: '<p>乞伏炽磐是西秦最具军事才能的君主。他车裂了弑父的堂兄后，牢牢掌控了政权。在他的带领下，西秦不仅彻底消灭了周边的死敌南凉，还将版图扩张到了极致，甚至逼得周边小国纷纷纳贡。</p><p>但在光鲜的武功背后，他行事极其阴毒。南凉国王秃发傉檀被他击败并投降时，他曾当众发誓绝不加害。但秃发傉檀在西秦都城表现出的高尚气节和威望，让乞伏炽磐感到了深深的忌惮。不顾之前的誓言，他派人秘密送去毒酒，将这位亡国之君残忍毒死。这种背信弃义的行径，彻底败光了西秦的政治信誉。</p>' 
+            },
+            'rutan': { 
+                name: '秃发傉檀', 
+                subtitle: '南凉的末代亡君，死于毒酒的悲歌', 
+                content: '<p>秃发傉檀是南凉的国君，一生征战无数，但在与西秦乞伏炽磐的长期消耗战中最终落败，被迫出降。作为一个亡国之君，他深知自己凶多吉少，因此在软禁期间表现得极其从容淡定。</p><p>当乞伏炽磐送来毒酒时，他没有乞求饶命，而是坦然对身边人说：“我生前杀人无数，今天被别人毒死，也是因果报应。”说完一饮而尽。他的死，不仅是南凉的绝唱，也为后来西秦皇室遭到同样的背信屠杀埋下了宿命的伏笔。</p>' 
+            },
+            'mumo': { 
+                name: '乞伏暮末', 
+                subtitle: '末路狂奔的暴君，把西秦带入深渊的败家子', 
+                content: '<p>乞伏暮末接手西秦时，国家已经因为连年征战而疲惫不堪。面对强大的胡夏和北凉的夹击，他不仅没有安抚内部，反而动辄使用残酷的刑罚（如将人抛入火坑、用毒药灌肠）来镇压异己，导致文武百官纷纷叛逃。</p><p>在都城被围、粮草断绝、甚至发生人吃人惨剧的绝境下，乞伏暮末被迫开城，向夏国皇帝赫连定投降。他以为交出国家就能换取全家老小的一条活路，却不知道他投降的是一个比他更加残暴百倍的恶魔。</p>' 
+            },
+            'helianding': { 
+                name: '赫连定 (夏)', 
+                subtitle: '毫无底线的屠夫，西秦皇族的终极清道夫', 
+                content: '<p>赫连定是胡夏政权的皇帝，其家族（赫连勃勃一脉）在十六国时期以极其残暴、用人头筑京观而闻名。当乞伏暮末率领西秦皇族和百官出城投降时，赫连定表面上笑脸相迎，接受了他们的武器。</p><p>但就在西秦皇族放下防备的那一刻，赫连定立刻翻脸。他下达了冷血的屠杀令：将乞伏暮末以及西秦皇族宗室整整五百多人，全部拉到刑场一刀砍死。西秦乞伏家族在这场毫无底线的背信大屠杀中，被彻底从地图上抹除，连一滴血脉都没有留下。</p>' 
+            },
+
+            /* 事件库 */
+            'gongfuzhiluan': { 
+                name: '公府之乱 (412年)', 
+                subtitle: '亲情在权力面前的彻底撕裂', 
+                content: '<p><strong>【背景起因】</strong><br>乞伏乾归作为弟弟继承了皇位，引起了先帝嫡子乞伏公府的极度不满。随着乞伏公府势力的暗中膨胀，一场针对皇权的阴谋悄然展开。</p><p><strong>【事变经过】</strong><br>乞伏乾归外出狩猎，防备松懈。乞伏公府率领心腹死士发动突袭，将乞伏乾归及其十几个儿子全部当场砍杀。随后乞伏公府企图控制都城，但被在外统兵的太子乞伏炽磐迅速回师镇压。</p><p><strong>【最终结果】</strong><br>叛乱被平息，乞伏炽磐为了立威和复仇，将乞伏公府全家施以车裂之刑。这次内乱虽然短暂，但极大消耗了西秦的宗室力量，让其内部始终笼罩在互相猜忌的阴影中。</p>' 
+            },
+            'mieliang': { 
+                name: '毒杀降君 (414年)', 
+                subtitle: '背弃誓言换来的政治污点', 
+                content: '<p><strong>【背景起因】</strong><br>西秦灭亡南凉，凉王秃发傉檀投降。乞伏炽磐起初以上宾之礼相待，并公开承诺绝不加害。</p><p><strong>【事变经过】</strong><br>秃发傉檀在鲜卑各部中威望极高，乞伏炽磐越发觉得如芒在背。一年后，乞伏炽磐撕毁誓言，派人暗中在秃发傉檀的饮食中下毒，将其毒死，并对外宣称其是病故。</p><p><strong>【最终结果】</strong><br>这一事件让西秦彻底丧失了招降纳叛的政治信誉，周边势力认清了乞伏家族“毫无底线”的真面目。这种因果循环，最终在西秦自己投降时，得到了最惨烈的报应。</p>' 
+            },
+            'nanan': { 
+                name: '南安灭族 (431年)', 
+                subtitle: '西秦的终点：被屠戮殆尽的绝望', 
+                content: '<p><strong>【背景起因】</strong><br>西秦末年内外交困，国力耗尽。乞伏暮末被困在南安城（今甘肃陇西），城内发生严重的饥荒，甚至出现了易子而食的人间惨剧。</p><p><strong>【事变经过】</strong><br>走投无路的乞伏暮末，带领群臣打开城门，向围城的夏国皇帝赫连定投降。赫连定在受降仪式后，毫无征兆地下达了屠杀令。夏国士兵一拥而上，将乞伏暮末及其宗室五百余人当场斩首。</p><p><strong>【最终结果】</strong><br>立国四十六年、历经四任君主的西秦政权宣告灭亡。乞伏家族为他们祖上违背誓言、毒杀降君的行为付出了最惨痛的代价——被另一个暴君用同样背信弃义的方式，全族诛灭。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
