@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>前燕(妒火燎原)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色构陷/剿灭/战争线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-jin { color: #1565c0; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">前燕(妒火燎原)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 100px; top: 80px; width: 1px; height: 120px;"></div>
+
+        <div class="line" style="left: 100px; top: 80px; width: 320px; height: 1px;"></div>
+
+        <div class="line-v-dashed" style="left: 420px; top: 80px; height: 120px;"></div>
+
+        <div class="line" style="left: 100px; top: 200px; width: 160px; height: 1px;"></div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 360px; width: 320px;"></div>
+
+        <div class="kill-solid-h" style="left: 420px; top: 360px; width: 180px;"></div>
+
+        <div class="kill-v" style="left: 420px; top: 200px; height: 160px;"></div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 200px; height: 160px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 280px; width: 310px;"></div>
+        <div class="kill-solid-v" style="left: 410px; top: 200px; height: 80px;"></div>
+
+        <div class="label" style="left: 260px; top: 70px;">帝后同源</div>
+        <div class="label" style="left: 120px; top: 140px;">父死子继</div>
+        <div class="label" style="left: 430px; top: 140px;">后党干政 / 狼狈为奸</div>
+        
+        <div class="label" style="left: 180px; top: 190px;">鞠躬尽瘁 / 擎天一柱</div>
+        
+        <div class="label" style="left: 510px; top: 350px; color: #c62828; font-weight: bold;">枋头血战 / 大破晋军</div>
+        <div class="label" style="left: 435px; top: 240px; color: #c62828;">嫉妒军功 / 构陷逼杀</div>
+        
+        <div class="label" style="left: 260px; top: 370px;">被逼绝路 / 叛逃敌国</div>
+        
+        <div class="label" style="left: 120px; top: 230px; color: #c62828; font-weight: bold;">大军压境 / 亡国生擒</div>
+        <div class="label" style="left: 260px; top: 270px; color: #c62828; font-weight: bold;">潞川之战 / 碾碎燕军主力</div>
+
+        <div class="person" style="left: 100px; top: 80px;" onclick="showInfo('murongjun')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">慕容儁</div>
+        </div>
+
+        <div class="person" style="left: 420px; top: 80px;" onclick="showInfo('kezuhun')">
+            <div class="c-dark">皇太后</div>
+            <div class="c-consort">可足浑氏</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('murongwei')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">慕容暐</div>
+        </div>
+
+        <div class="person" style="left: 260px; top: 200px;" onclick="showInfo('murongke')">
+            <div class="c-dark">太宰 / 大司马</div>
+            <div class="c-minister">慕容恪</div>
+        </div>
+
+        <div class="person" style="left: 420px; top: 200px;" onclick="showInfo('murongping')">
+            <div class="c-dark">太傅 / 上庸王</div>
+            <div class="c-minister">慕容评</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 360px;" onclick="showInfo('wangmeng')">
+            <div class="c-dark">丞相 (秦)</div>
+            <div class="c-minister" style="font-size: 18px;">王猛</div>
+        </div>
+
+        <div class="person" style="left: 420px; top: 360px;" onclick="showInfo('murongchui')">
+            <div class="c-dark">吴王 / 冠军将军</div>
+            <div class="c-minister">慕容垂</div>
+        </div>
+
+        <div class="person" style="left: 600px; top: 360px;" onclick="showInfo('huanwen')">
+            <div class="c-dark">大司马 (晋)</div>
+            <div class="c-jin">桓温</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">前燕三大血色界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('yizhu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">367年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">遗柱倾塌</div>
+            </div>
+            <div class="event-card" onclick="showInfo('fangtou')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">369年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">枋头之战</div>
+            </div>
+            <div class="event-card" onclick="showInfo('luchuan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">370年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">潞川覆灭</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'murongjun': { 
+                name: '慕容儁', 
+                subtitle: '消灭冉魏的霸主，定鼎中原的天子', 
+                content: '<p>慕容儁是前燕的第二任君主（第一任称帝者）。他接手了父亲慕容皝打下的辽东基业，趁着中原大乱、后赵灭亡之际，挥师南下，一举击败并擒杀了颁布“杀胡令”的冉闵，彻底吞并了中原的东半部。</p><p>他极具帝王手腕，将前燕的国力推向了巅峰。临终前，他深知太子慕容暐年幼懦弱，特意将大权托付给了一生最信任的弟弟、战神慕容恪，从而保住了前燕数十年的平稳。但他没算到，他那个嫉妒心极强的皇后（可足浑氏），日后会把整个国家带入深渊。</p>' 
+            },
+            'kezuhun': { 
+                name: '可足浑氏 (皇太后)', 
+                subtitle: '因私怨葬送整个帝国的毒妇', 
+                content: '<p>可足浑氏是慕容儁的皇后。慕容儁死后，她作为皇太后干预朝政。她生性极度狭隘嫉妒，最恨的就是战功赫赫的慕容垂，因为慕容垂的前妻段氏出身高贵且深得宠爱，可足浑氏当年竟然捏造罪名将段氏严刑拷打至死。</p><p>在慕容垂于枋头之战中拯救了前燕后，可足浑氏不仅不感激，反而与腐败的太傅慕容评勾结，决定趁机将慕容垂满门抄斩。正是她的这种丧心病狂的内斗，硬生生把大燕国唯一的战神逼去了敌国，亲手推倒了前燕灭亡的多米诺骨牌。</p>' 
+            },
+            'murongwei': { 
+                name: '慕容暐', 
+                subtitle: '毫无主见的提线木偶，大燕帝国的亡国之君', 
+                content: '<p>慕容暐十一岁登基。在慕容恪辅政期间，他做个安稳的太平天子。但慕容恪一死，他立刻失去了主心骨，朝政大权被母亲可足浑氏和叔叔慕容评牢牢把持。</p><p>面对太后和慕容评对国之柱石慕容垂的迫害，他不仅不敢阻拦，反而听之任之。当前秦大军杀来、慕容评在前线极其荒唐地倒卖军用物资时，慕容暐依然无力掌控局面。最终长安城破，他向王猛投降，被押送到前秦，前燕就此灭亡。后来在淝水之战后企图复国，被前秦天王苻坚诛杀。</p>' 
+            },
+            'murongke': { 
+                name: '慕容恪', 
+                subtitle: '十六国第一完人，大燕的定海神针', 
+                content: '<p>慕容恪是前燕的绝对灵魂。在军事上，他擒杀冉闵、攻克洛阳，百战百胜；在政治上，他作为辅政大臣，大权独揽却毫无篡位之心，对幼主慕容暐忠心耿耿，其品格和能力被后世史学家誉为“十六国时期的诸葛亮”。</p><p>只要慕容恪活着，前秦的苻坚和东晋的桓温连大气都不敢喘。他临终前，流着泪向皇帝和满朝文武举荐自己的弟弟慕容垂，说：“慕容垂的军事才能胜过我十倍，只要重用他，大燕就可保万无一失。”但他死后，这句话成了催命符，那些心胸狭隘的政客立刻对慕容垂举起了屠刀。</p>' 
+            },
+            'murongping': { 
+                name: '慕容评', 
+                subtitle: '极度贪婪的蠢贼，战场上卖水卖柴的奇葩统帅', 
+                content: '<p>慕容评在慕容恪死后接管了最高军政大权。但他是个极其贪婪、嫉贤妒能的废物。他与皇太后勾结，逼走了慕容垂。</p><p>当前秦丞相王猛率领大军打来时，慕容评率领三十万前燕绝对主力迎战。在国家生死存亡的潞川前线，慕容评竟然干出了一件震碎中国军事史的奇葩事：他把军队驻地周围的山泉和树林全部封锁起来，让士兵自己花钱向他买水喝、买柴烧。他因此聚敛了成山的金银，但燕军将士毫无斗志、怨声载道。结果王猛一波冲锋，三十万燕军瞬间全线崩溃，前燕帝国就在他数钱的手里彻底覆灭。</p>' 
+            },
+            'murongchui': { 
+                name: '慕容垂', 
+                subtitle: '隐忍半生的绝世战神，被逼叛逃的悲剧英雄', 
+                content: '<p>慕容垂是慕容恪的弟弟，武力值堪称十六国的天花板。在东晋桓温率领大军北伐、前燕朝廷吓得准备放弃国都逃跑时，是慕容垂挺身而出，在枋头将桓温的军队打得全军覆没，挽救了国家。</p><p>然而，盖世奇功换来的是满门抄斩的密令。得知太后和慕容评要杀自己后，慕容垂悲愤交加，为了保全家族性命，只能抛弃自己拼死保卫的国家，连夜逃亡前秦投奔苻坚。他的离开，不仅带走了前燕最后的一丝国防力量，更向敌国暴露了前燕内部“腐败无能、君臣离心”的致命底牌。</p>' 
+            },
+            'wangmeng': { 
+                name: '王猛 (秦)', 
+                subtitle: '抓住战机的绝世名相，碾碎前燕的冷酷绞肉机', 
+                content: '<p>王猛是前秦的丞相。在慕容恪活着时，王猛一直劝阻苻坚不要攻打前燕。但当得知慕容垂被迫叛逃到前秦后，王猛立刻意识到：前燕的防线已经千疮百孔，那是一座没有地基的大厦。</p><p>王猛极其果断地率领大军出击。在潞川之战中，面对慕容评那支军心涣散的三十万大军，王猛下令将士破釜沉舟，一战斩首、俘虏燕军十几万人。随后大军直扑前燕国都邺城，将这个曾经盛极一时的鲜卑帝国彻底抹除，帮助前秦完成了统一北方的大业。</p>' 
+            },
+            'huanwen': { 
+                name: '桓温 (晋)', 
+                subtitle: '北伐的狂人，成就慕容垂战神之名的垫脚石', 
+                content: '<p>桓温是东晋大司马，一心想通过北伐收复中原来篡位。公元369年，他率领五万精锐水陆并进，直逼前燕国都邺城（枋头之战）。</p><p>前期桓温势如破竹，前燕皇帝吓得准备逃回辽东老家。但在最关键时刻，慕容垂出面阻击，通过坚壁清野切断了桓温的粮道。桓温被迫撤军，慕容垂率领八千精骑一路尾随，在晋军最疲惫时发动雷霆奇袭，晋军被斩首三万余人，死伤惨重。桓温的北伐梦彻底碎裂，但也正是这场胜利，让慕容垂功高震主，引来了杀身之祸。</p>' 
+            },
+
+            /* 事件库 */
+            'yizhu': { 
+                name: '遗柱倾塌 (367年)', 
+                subtitle: '前燕帝国由盛转衰的致命拐点', 
+                content: '<p><strong>【背景起因】</strong><br>太宰慕容恪是前燕的最高军事和政治统帅，他以一人之力压制了国内的党争和国外的强敌。</p><p><strong>【事变经过】</strong><br>367年，慕容恪病重。临终前，他再三叮嘱皇帝慕容暐和太傅慕容评，必须将军政大权移交给吴王慕容垂。慕容恪死后，慕容评表面答应，实则极度嫉妒，不仅没有重用慕容垂，反而处处打压，自己独揽大权。</p><p><strong>【最终结果】</strong><br>慕容恪的死，让东晋的桓温和前秦的苻坚同时松了一口气。前燕内部的权力平衡被打破，太后和庸臣上位，国家的高层建筑开始急剧腐烂。</p>' 
+            },
+            'fangtou': { 
+                name: '枋头之战 (369年)', 
+                subtitle: '帝国最后的辉煌与逼反功臣的极度荒诞', 
+                content: '<p><strong>【背景起因】</strong><br>东晋桓温大举北伐，兵临枋头，前燕面临亡国危机。慕容垂主动请缨，迎击晋军。</p><p><strong>【事变经过】</strong><br>慕容垂展现了惊人的战术素养，击退桓温，挽救了帝国。但他回朝后，太傅慕容评和皇太后可足浑氏因为嫉妒其威望，拒绝兑现战前的赏赐承诺，并密谋将其处死。慕容垂为了活命，带领亲信在深夜逃出都城，投奔了前秦。</p><p><strong>【最终结果】</strong><br>前燕亲手把本国唯一能打的统帅送给了最大的死敌。慕容垂的叛逃，彻底抽干了前燕的军事骨髓，前秦天王苻坚得知后大喜过望，立刻开始筹备灭燕计划。</p>' 
+            },
+            'luchuan': { 
+                name: '潞川覆灭 (370年)', 
+                subtitle: '卖水敛财的统帅与鲜卑帝国的末日', 
+                content: '<p><strong>【背景起因】</strong><br>慕容垂叛逃后，前秦丞相王猛率大军伐燕。前燕派太傅慕容评率领三十万主力在潞川（今山西境内）迎战。</p><p><strong>【事变经过】</strong><br>慕容评在国难当头之际，竟然将营地周围的泉水和树林据为己有，让士兵花钱向他买水买柴，燕军将士离心离德。王猛得知后，下令大军直冲燕军大营。燕军毫无战意，一触即溃，被斩首和俘虏十五万人。慕容评只身逃回邺城。</p><p><strong>【最终结果】</strong><br>王猛乘胜包围邺城，前燕皇帝慕容暐出城投降。立国三十三年的前燕帝国宣告灭亡。这片曾经强盛的土地，因为高层的内斗与极致的贪婪，最终化为历史的尘埃。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
