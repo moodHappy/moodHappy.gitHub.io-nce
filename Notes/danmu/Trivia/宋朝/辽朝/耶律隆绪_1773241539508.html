@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>大辽巅峰：圣宗耶律隆绪与澶渊之盟</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 彩色连接线 */
+        .line-purple { position: absolute; background-color: #8e24aa; z-index: 1; height: 2px; }
+        .line-blue { position: absolute; background-color: #1565c0; z-index: 1; height: 2px; }
+        .line-green { position: absolute; background-color: #2e7d32; z-index: 1; width: 2px; }
+
+        /* 红色对抗/流血/镇压线 */
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 大辽皇权 */
+        .c-minister { color: #1565c0; font-weight: bold; } /* 文臣/将领 */
+        .c-queen { color: #8e24aa; font-weight: bold; } /* 太后/后宫 */
+        .c-song { color: #e65100; font-weight: bold; } /* 大宋阵营 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">大辽巅峰：圣宗耶律隆绪与澶渊之盟关系图</h1>
+
+    <div class="family-tree">
+        <div class="line-purple" style="left: 230px; top: 80px; width: 60px;"></div>
+        
+        <div class="line" style="left: 360px; top: 110px; width: 1px; height: 50px;"></div>
+        
+        <div class="kill-solid-v" style="left: 160px; top: 230px; height: 60px;"></div>
+        
+        <div class="line-green" style="left: 360px; top: 220px; height: 90px;"></div>
+        
+        <div class="line-h-dashed" style="left: 230px; top: 320px; width: 60px;"></div>
+        
+        <div class="line-blue" style="left: 440px; top: 320px; width: 40px;"></div>
+
+        <div class="label" style="left: 260px; top: 65px; color: #8e24aa; font-weight: bold;">情同夫妻 / 共掌天下</div>
+        <div class="label" style="left: 420px; top: 135px;">母后临朝 / 悉心教导</div>
+        
+        <div class="label" style="left: 160px; top: 260px; color: #c62828; font-weight: bold;">雍熙北伐反杀 (杨业战死)</div>
+        <div class="label" style="left: 420px; top: 265px; color: #2e7d32; font-weight: bold;">澶渊之盟 / 约为兄弟</div>
+        
+        <div class="label" style="left: 260px; top: 305px;">恐辽症遗留</div>
+        <div class="label" style="left: 460px; top: 305px; color: #1565c0;">死谏退敌</div>
+
+        <div class="person" style="left: 160px; top: 80px;" onclick="showInfo('han_derang')">
+            <div class="c-dark">大丞相 / 晋国王</div>
+            <div class="c-minister">韩德让</div>
+        </div>
+
+        <div class="person" style="left: 360px; top: 80px;" onclick="showInfo('xiao_chuo')">
+            <div class="c-dark">承天太后</div>
+            <div class="c-queen" style="font-size: 18px;">萧绰 (萧燕燕)</div>
+        </div>
+
+        <div class="person" style="left: 360px; top: 190px;" onclick="showInfo('yelu_longxu')">
+            <div class="c-dark">辽圣宗</div>
+            <div class="c-emperor" style="font-size: 18px;">耶律隆绪</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 200px;" onclick="showInfo('liao_jun')">
+            <div class="c-dark">大辽军方双璧</div>
+            <div class="c-minister">耶律休哥 / 斜轸</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 320px;" onclick="showInfo('song_taizong')">
+            <div class="c-dark">大宋皇帝</div>
+            <div class="c-song">宋太宗 (赵光义)</div>
+        </div>
+
+        <div class="person" style="left: 360px; top: 320px;" onclick="showInfo('song_zhenzong')">
+            <div class="c-dark">大宋皇帝</div>
+            <div class="c-song" style="font-size: 18px;">宋真宗 (赵恒)</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 320px;" onclick="showInfo('kou_zhun')">
+            <div class="c-dark">大宋宰相</div>
+            <div class="c-minister">寇准</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">辽圣宗与萧太后时期的三大定鼎之战</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('zhushao')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">982年</div>
+                <div class="c-queen" style="font-size: 18px; font-weight: bold;">主少国疑</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yongxi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">986年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">雍熙北伐</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chanyuan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1004年</div>
+                <div class="c-song" style="font-size: 18px; font-weight: bold;">澶渊之盟</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yelu_longxu': { 
+                name: '耶律隆绪 (辽圣宗)', 
+                subtitle: '大辽鼎盛时代的明君，文武双全的汉化推手', 
+                content: '<p>耶律隆绪12岁登基。早年，他将国家大权完全托付给母亲萧太后，自己则跟在母亲身边学习治国理政和统兵作战。1004年，成年的他与母亲一同统帅大军南下，缔结了“澶渊之盟”。</p><p>萧太后去世后，他正式亲政。他全面推行科举制，完善法律（《辽朝条律》），任用汉人官员，甚至自己也精通汉族诗词和音律。在他的统治下，大辽国力达到了最顶峰，不仅压制北宋，还让高丽、西夏等国俯首称臣，史称“圣宗盛世”。</p>' 
+            },
+            'xiao_chuo': { 
+                name: '萧绰 (承天太后)', 
+                subtitle: '中国历史上最强悍的女性政治家之一', 
+                content: '<p>景宗驾崩时，孤儿寡母面对着满朝骄兵悍将。30岁的萧绰哭着问韩德让：“母寡子弱，族属雄强，边防未靖，怎么办？”在得到韩德让的誓死效忠后，她雷厉风行地解除了各路亲王的兵权。</p><p>萧太后不仅在政治上极度成熟，军事上更是剽悍。她经常身披铠甲，亲自骑马在阵前指挥作战。在她的主导下，辽国完成了深度的封建化改革。她与韩德让的深厚感情在辽国几乎是半公开的秘密，甚至在出巡时两人同乘一车，堪称草原上最具传奇色彩的女强人。</p>' 
+            },
+            'han_derang': { 
+                name: '韩德让 (耶律隆运)', 
+                subtitle: '位极人臣的汉人宰相，生同衾死同穴', 
+                content: '<p>韩德让是萧太后最坚实的后盾。在“主少国疑”的危机时刻，他挺身而出掌控了京城局势，确保了政权平稳过渡。</p><p>萧太后对他信任到了无以复加的地步，甚至让圣宗耶律隆绪像对待父亲一样对待他。韩德让总理朝政，统帅禁军，后来更是被赐予国姓（改名耶律隆运），列入皇族谱系。他死后，被破例安葬在景宗和萧太后的陵墓旁边，这也是中国历史上绝无仅有的汉人臣子最高哀荣。</p>' 
+            },
+            'liao_jun': { 
+                name: '耶律休哥 & 耶律斜轸', 
+                subtitle: '大辽双壁，粉碎大宋北伐梦的战神', 
+                content: '<p>在萧太后执政初期，这两位名将是辽国的国防支柱。宋太宗趁辽国新君年幼，发动了声势浩大的“雍熙北伐”。</p><p>耶律休哥在东线（岐沟关）大败宋军主力曹彬；而耶律斜轸在西线更是连战连捷，不仅生擒了宋军名将杨业（杨老令公的悲剧就发生在这里），还一举收复了前期丢失的领土。这两人打得北宋边防军几十年不敢抬头北望。</p>' 
+            },
+            'song_taizong': { 
+                name: '宋太宗 (赵光义)', 
+                subtitle: '偷鸡不成蚀把米的帝国操盘手', 
+                content: '<p>赵光义一生都在试图收复燕云十六州。986年，他以为辽国孤儿寡母好欺负，发动了兵分三路的“雍熙北伐”。</p><p>结果，宋军在战线拉长、指挥混乱的情况下，被萧太后亲率的辽军主力分割包围，惨遭屠杀。这次北伐不仅损失了宋朝开国以来积攒的几乎所有精锐老兵，也让赵光义彻底丧失了进取心，宋朝从此患上了严重的“恐辽症”。</p>' 
+            },
+            'song_zhenzong': { 
+                name: '宋真宗 (赵恒)', 
+                subtitle: '被逼到前线，却签下百年和平的皇帝', 
+                content: '<p>宋真宗是赵光义的儿子。当1004年辽圣宗和萧太后率领数十万大军打到黄河边（澶州/今河南濮阳），距离北宋首都开封仅有咫尺之遥时，宋真宗吓得想要立刻迁都逃跑到南方。</p><p>在宰相寇准的死谏和武力逼迫下，真宗硬着头皮御驾亲征来到了澶州城墙上。宋军看到皇帝来了，士气大振，还用床子弩碰巧射死了辽国前锋大将萧挞凛。最终，真宗以极低的花费（岁币）买来了和平。</p>' 
+            },
+            'kou_zhun': { 
+                name: '寇准', 
+                subtitle: '挽狂澜于既倒的大宋硬骨头宰相', 
+                content: '<p>当辽军兵临城下，满朝文武都在劝皇帝逃跑时，寇准大怒：“谁说要迁都的，直接拉出去砍了！陛下只有御驾亲征，才能稳定军心！”</p><p>他强行把宋真宗推到了前线。在谈判岁币时，宋真宗底线是一百万，寇准却暗中威胁使臣：“你要是敢答应超过三十万，我回来就砍了你！”最终凭借寇准的强硬和辽国见好就收的心态，促成了相对平等的澶渊之盟。</p>' 
+            },
+
+            /* 事件库 */
+            'zhushao': { 
+                name: '主少国疑 (982年)', 
+                subtitle: '孤儿寡母的绝地反击', 
+                content: '<p><strong>【背景起因】</strong><br>辽景宗在焦山行宫病逝，12岁的耶律隆绪继位。当时宗室诸王拥有重兵，蠢蠢欲动，企图欺负孤儿寡母夺取皇位。</p><p><strong>【事变经过】</strong><br>萧太后当机立断，与韩德让、耶律斜轸等人密谋。韩德让立刻接管了京城的禁卫军，萧太后则借口召集诸王议事，趁机解除了他们的兵权，将他们身边的亲信调换，并且颁布法律禁止诸王私自互相走访。</p><p><strong>【最终结果】</strong><br>一场可能引发大辽内战的流血政变，被萧太后在谈笑间化解于无形。大辽的最高权力平稳过渡到了太后手中。</p>' 
+            },
+            'yongxi': { 
+                name: '雍熙北伐 (986年)', 
+                subtitle: '大宋武德的彻底丧失，杨业战死', 
+                content: '<p><strong>【背景起因】</strong><br>宋太宗听信边臣报告，认为辽国“母寡子弱”，是收复燕云十六州的绝佳时机，于是兵分三路大举北伐。</p><p><strong>【事变经过】</strong><br>萧太后丝毫不乱，亲穿戎装，带着小皇帝坐镇幽州指挥。辽军采取“避其锋芒，诱敌深入，切断粮道”的战术。东路宋军主力在岐沟关断粮崩溃，死伤数万；西路军在撤退时，名将杨业被主帅潘美坑害，孤军奋战，最终在陈家谷力竭被俘，绝食而死。</p><p><strong>【最终结果】</strong><br>宋军精锐尽丧，自此彻底转入被动防御。萧太后的军事威望达到了顶峰，大辽在战略上完全压制了北宋。</p>' 
+            },
+            'chanyuan': { 
+                name: '澶渊之盟 (1004年)', 
+                subtitle: '改变东亚历史走向的百年和平契约', 
+                content: '<p><strong>【背景起因】</strong><br>为了彻底解决南方边患，萧太后与辽圣宗率领大军深入宋境，一路打到了黄河边的澶州，直接威胁北宋首都。</p><p><strong>【事变经过】</strong><br>战争进入僵持：辽国前锋大将被宋军神臂弓意外射死，士气受挫，且深入敌国腹地有后路被断的风险；而宋真宗也急于花钱买平安。双方经过多轮谈判，最终达成协议：宋辽结为兄弟之国（宋真宗为兄，辽圣宗为弟，宋称萧太后为叔母），宋每年向辽提供银十万两、绢二十万匹（岁币），双方在边境互市。</p><p><strong>【最终结果】</strong><br>看似大宋送钱很屈辱，但实际上三十万的岁币还不到大宋军费开支的零头。两国通过边境贸易，经济都得到了巨大的发展。此后宋辽之间维持了长达120多年的和平局面，是中国历史上极为罕见的长期和平共处时代。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
