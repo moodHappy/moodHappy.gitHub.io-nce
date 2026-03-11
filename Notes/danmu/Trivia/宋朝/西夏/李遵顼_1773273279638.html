@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>状元误国：西夏神宗李遵顼与甩锅大戏</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 红色对抗/流血/甩锅线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-mongol { color: #f57f17; font-weight: bold; text-shadow: 0 0 1px #000; }
+        .c-jin { color: #d84315; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">状元误国：西夏神宗李遵顼与甩锅大戏</h1>
+
+    <div class="family-tree">
+        <div class="kill-solid-v" style="left: 320px; top: 100px; height: 50px;"></div>
+        
+        <div class="kill-solid-h" style="left: 150px; top: 180px; width: 100px;"></div>
+        
+        <div class="kill-h" style="left: 400px; top: 180px; width: 80px;"></div>
+        <div class="line" style="left: 450px; top: 180px; width: 1px; height: 60px;"></div>
+
+        <div class="kill-solid-h" style="left: 400px; top: 160px; width: 80px;"></div>
+
+        <div class="line-v-dashed" style="left: 320px; top: 220px; height: 80px; border-left: 2px dashed #c62828;"></div>
+
+        <div class="label" style="left: 320px; top: 120px; color: #c62828; font-weight: bold;">兵变篡位 / 废黜襄宗</div>
+        
+        <div class="label" style="left: 200px; top: 165px; color: #c62828; font-weight: bold;">拒绝和谈 / 倾国伐金</div>
+        <div class="label" style="left: 200px; top: 195px; color: #555;">同归于尽的血肉磨盘</div>
+        
+        <div class="label" style="left: 440px; top: 145px; color: #f57f17; font-weight: bold;">拒不出兵 / 嘴炮嘲讽大汗</div>
+        
+        <div class="label" style="left: 320px; top: 260px; color: #c62828; font-weight: bold;">闻风丧胆 / 强行退位甩锅</div>
+
+        <div class="person" style="left: 320px; top: 60px;" onclick="showInfo('li_anquan')">
+            <div class="c-dark">前任皇帝 (被废)</div>
+            <div class="c-emperor" style="color: #999;">西夏襄宗 李安全</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 180px;" onclick="showInfo('li_zunxu')">
+            <div class="c-dark">西夏神宗 (状元皇帝)</div>
+            <div class="c-emperor" style="font-size: 18px;">李遵顼</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 180px;" onclick="showInfo('jin_dynasty')">
+            <div class="c-dark">大金帝国</div>
+            <div class="c-jin" style="font-size: 16px;">金宣宗 (苦求讲和)</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 160px;" onclick="showInfo('tiemuzhen')">
+            <div class="c-dark">大蒙古国</div>
+            <div class="c-mongol" style="font-size: 18px;">成吉思汗 (暴怒)</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 260px;" onclick="showInfo('asha_ganbu')">
+            <div class="c-dark">西夏主战派将领</div>
+            <div class="c-minister">阿沙敢不</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('li_dewang')">
+            <div class="c-dark">西夏献宗 (接盘侠)</div>
+            <div class="c-emperor" style="font-size: 18px;">李德旺</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">状元皇帝的灭国狂飙</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('sikejin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">在位12年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">死磕金朝</div>
+            </div>
+            <div class="event-card" onclick="showInfo('juchu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1219年</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">激怒大汗</div>
+            </div>
+            <div class="event-card" onclick="showInfo('shuaiguo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1223年</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">退位甩锅</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'li_zunxu': { 
+                name: '李遵顼 (西夏神宗)', 
+                subtitle: '中国唯一的状元皇帝，战略为负数的作死大师', 
+                content: '<p>李遵顼早年参加科举考试，以第一名的成绩高中状元，是名副其实的学霸。但他掌权后证明，会做题不代表会治国。</p><p>他篡位后，面对金朝多次低三下四的求和（金宣宗甚至提出“兄弟之国”），他像中了邪一样坚决拒绝，非要当蒙古最忠诚的猎犬，年年发兵攻打金国，甚至御驾亲征。十二年的互砍，把西夏最后一点国力和老将全部消耗殆尽。当他得知成吉思汗要来清算西夏时，他直接吓破了胆，以“星象有变”为由，强行逼迫儿子李德旺接班，自己跑去当太上皇，无耻程度令人发指。</p>' 
+            },
+            'jin_dynasty': { 
+                name: '金宣宗 完颜珣', 
+                subtitle: '被猪队友坑惨的难兄难弟', 
+                content: '<p>金朝此时也在被蒙古按在地上爆锤。金宣宗终于意识到，再和西夏打下去，大家都要完蛋。于是他多次派使节去西夏，低声下气地请求恢复和平，结成抗蒙联盟。</p><p>但面对李遵顼的疯狂拒绝，金国也被逼急了，只能在两线作战的绝境中苦苦支撑。西夏这种“宁可自己死，也要咬掉金国一块肉”的神经病打法，最终让整个北方失去了抵抗蒙古的最后屏障。</p>' 
+            },
+            'tiemuzhen': { 
+                name: '成吉思汗 (铁木真)', 
+                subtitle: '记仇的草原霸主', 
+                content: '<p>成吉思汗在准备西征花剌子模时，征调西夏出兵随行。西夏不仅拒绝，将领还嘲讽成吉思汗。成吉思汗听后勃然大怒，说：“西夏这群狗胆包天的人，竟敢如此侮辱我！我哪怕死，也要先灭了他们！”虽然他当时忍住了怒火先去打花剌子模，但西夏的命运在这一刻就已经被死神写进了生死簿。</p>' 
+            },
+            'asha_ganbu': { 
+                name: '阿沙敢不', 
+                subtitle: '逞一时口舌之快，引来灭顶之灾', 
+                content: '<p>西夏的高级将领。当蒙古使者来要求西夏出兵跟成吉思汗西征时，阿沙敢不极其傲慢地拒绝了，并且说出了一句名言：“成吉思汗既然自称天下无敌的大汗，如果连兵力都不够，还需要我们来帮忙，那他还当什么大汗？”</p><p>这句话虽然硬气，但在国力完全不对等的情况下，无异于给西夏国判了死刑。后来成吉思汗回来灭夏，阿沙敢不在贺兰山与蒙古军血战，最终兵败被俘杀。</p>' 
+            },
+            'li_dewang': { 
+                name: '李德旺 (西夏献宗)', 
+                subtitle: '史上最憋屈的接盘侠', 
+                content: '<p>李遵顼的次子。1223年，当成吉思汗的西征大军即将回师的消息传到西夏，李遵顼吓得肝胆俱裂，立刻下诏禅位给李德旺。李德旺接手的是一个千疮百孔、内无精兵、外无盟友，且即将面临人类最强战争机器碾压的死局。</p><p>李德旺上台后试图补救，他立刻停止伐金，联合金朝，甚至四处联络漠北的部落企图抗蒙，但一切都太晚了。</p>' 
+            },
+
+            /* 事件库 */
+            'sikejin': { 
+                name: '死磕金朝 (在位12年)', 
+                subtitle: '毫无意义的流血', 
+                content: '<p><strong>【背景起因】</strong><br>李遵顼认为只要紧抱蒙古大腿，就能在金国身上捞到好处。</p><p><strong>【事变经过】</strong><br>在位期间，他发动了无数次对金国的战争。虽然偶尔攻占几座城池，但随即就会被金军夺回，西夏不仅没捞到任何实质性好处，反而损失了大量精壮劳动力和战马，导致国内爆发了严重的饥荒和农民起义。</p><p><strong>【最终结果】</strong><br>西夏的战争潜力彻底清零。</p>' 
+            },
+            'juchu': { 
+                name: '激怒大汗 (1219年)', 
+                subtitle: '压死骆驼的最后一根稻草', 
+                content: '<p><strong>【背景起因】</strong><br>成吉思汗准备发动第一次西征，按照属国的义务，要求西夏派兵助战。</p><p><strong>【事变经过】</strong><br>西夏朝野认为蒙古连年征战，自己也疲惫不堪，加上将领阿沙敢不的疯狂嘲讽，西夏正式拒绝出兵。成吉思汗大怒，临行前派兵狠狠揍了西夏一顿作为警告。</p><p><strong>【最终结果】</strong><br>成吉思汗将彻底剿灭西夏定为了西征归来后的首要战略目标，大夏国进入了倒计时。</p>' 
+            },
+            'shuaiguo': { 
+                name: '退位甩锅 (1223年)', 
+                subtitle: '懦夫的极致表演', 
+                content: '<p><strong>【背景起因】</strong><br>蒙古大军西征大获全胜，即将班师回朝，李遵顼深知大难临头。</p><p><strong>【事变经过】</strong><br>李遵顼宣称天象异常，这是上天对他的惩罚，于是宣布传位给次子李德旺，自己自封为“太上皇”，躲进深宫不再过问朝政。</p><p><strong>【最终结果】</strong><br>这种极其不负责任的行为，不仅让新皇帝李德旺接手了一个烂摊子，更让西夏军民彻底寒了心。李遵顼在当了三年太上皇并在恐惧中病死后仅仅几个月，西夏就在蒙古的铁蹄下彻底灭亡。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
