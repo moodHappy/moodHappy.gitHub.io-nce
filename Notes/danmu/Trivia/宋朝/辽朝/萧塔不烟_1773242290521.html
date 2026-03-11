@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>帝国孤星：西辽感天皇后萧塔不烟与大国定力</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 彩色连接线 */
+        .line-blue { position: absolute; background-color: #1565c0; z-index: 1; height: 2px; }
+        .line-blue-v { position: absolute; background-color: #1565c0; z-index: 1; width: 2px; }
+
+        /* 红色对抗/流血/斩杀线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-queen { color: #8e24aa; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-vassal { color: #00838f; font-weight: bold; } 
+        .c-jurchen { color: #d84315; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">帝国孤星：西辽感天皇后萧塔不烟</h1>
+
+    <div class="family-tree">
+        <div class="line-h-dashed" style="left: 200px; top: 100px; width: 140px;"></div>
+        
+        <div class="line" style="left: 400px; top: 120px; width: 1px; height: 100px;"></div>
+
+        <div class="kill-solid-h" style="left: 450px; top: 100px; width: 120px;"></div>
+
+        <div class="line-blue" style="left: 200px; top: 240px; width: 140px;"></div>
+        <div class="line-blue-v" style="left: 340px; top: 120px; height: 120px;"></div>
+
+        <div class="label" style="left: 270px; top: 85px; color: #8e24aa; font-weight: bold;">临终托孤 / 临朝称制</div>
+        
+        <div class="label" style="left: 400px; top: 170px;">抚育幼主 / 平稳交接</div>
+        
+        <div class="label" style="left: 510px; top: 85px; color: #c62828; font-weight: bold;">拒不接旨 / 怒斩金使</div>
+        
+        <div class="label" style="left: 270px; top: 225px; color: #1565c0; font-weight: bold;">威压中亚 / 按时纳贡</div>
+
+        <div class="person" style="left: 140px; top: 100px;" onclick="showInfo('yelu_dashi')">
+            <div class="c-dark">西辽开国皇帝</div>
+            <div class="c-emperor" style="color: #999;">耶律大石 (驾崩)</div>
+        </div>
+
+        <div class="person" style="left: 400px; top: 100px;" onclick="showInfo('xiao_tabuyan')">
+            <div class="c-dark">感天皇后 (摄政)</div>
+            <div class="c-queen" style="font-size: 18px;">萧塔不烟</div>
+        </div>
+
+        <div class="person" style="left: 400px; top: 240px;" onclick="showInfo('yelu_yilie')">
+            <div class="c-dark">太子 / 继任皇帝</div>
+            <div class="c-emperor">耶律夷列 (西辽仁宗)</div>
+        </div>
+
+        <div class="person" style="left: 600px; top: 100px;" onclick="showInfo('niange_hannu')">
+            <div class="c-dark">金国使臣</div>
+            <div class="c-jurchen">粘割韩奴</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 240px;" onclick="showInfo('atsiz')">
+            <div class="c-dark">中亚藩属国</div>
+            <div class="c-vassal">花剌子模沙 / 喀喇汗国</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">萧塔不烟摄政时期的三大高光</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('tuogu')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1143年</div>
+                <div class="c-queen" style="font-size: 18px; font-weight: bold;">大石托孤</div>
+            </div>
+            <div class="event-card" onclick="showInfo('zhanjin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1146年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">怒斩金使</div>
+            </div>
+            <div class="event-card" onclick="showInfo('huanzheng')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1150年</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">还政于子</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'xiao_tabuyan': { 
+                name: '萧塔不烟 (感天皇后)', 
+                subtitle: '大漠孤烟中的铁腕太后', 
+                content: '<p>萧塔不烟是耶律大石的结发妻子，陪着他经历了从燕京大突围到可敦城起兵，再到卡特万封神的所有苦难与辉煌。她绝不是养在深宫的弱女子，而是一位历经黄沙血战的政治家。</p><p>大石死后，留下了“权国事”的遗命。在长达七年的摄政期内，她内平可能出现的宗室隐患，外镇桀骜不驯的中亚穆斯林附庸。她以极其强悍的姿态，向全天下宣告：大石虽然死了，但西辽的刀依然锋利。她不仅保住了大石的基业，还为儿子夷列日后的统治打下了坚实的盘子。</p>' 
+            },
+            'yelu_dashi': { 
+                name: '耶律大石 (西辽德宗)', 
+                subtitle: '奠基者的远见', 
+                content: '<p>耶律大石在1143年驾崩，享年57岁。他在位二十年，把一个亡国残部打造成了中亚超级帝国。</p><p>他在临终前面临接班人太小的问题，但他没有选择设立复杂的辅政大臣班子，而是直接将国家大权交给了与自己同甘共苦的妻子萧塔不烟。事实证明，他看人的眼光极其毒辣，萧塔不烟完美地完成了历史使命。</p>' 
+            },
+            'yelu_yilie': { 
+                name: '耶律夷列 (西辽仁宗)', 
+                subtitle: '在母亲的羽翼下平稳过渡的继承人', 
+                content: '<p>作为大石的嫡长子，父亲去世时他还没有能力掌控这个由不同民族、不同信仰拼凑而成的庞大帝国。</p><p>在母亲萧塔不烟执政的七年里，夷列得到了充分的学习和成长。1150年，母亲和平地将国家大权交还给他。他登基后，继续推行休养生息的政策，并对帝国进行了一次全面的人口普查（查出有84500户适合服役），让西辽的国力进一步夯实。</p>' 
+            },
+            'niange_hannu': { 
+                name: '粘割韩奴 (金国使臣)', 
+                subtitle: '傲慢找死的反面教材', 
+                content: '<p>此时的金国（也就是灭了辽和北宋的大金）在东方如日中天，金熙宗派粘割韩奴作为使者，穿越广袤的大漠来到西辽，目的是为了招降大石的残部。</p><p>这位使臣一路上颐指气使，到了西辽朝廷，他以为对面是个死了丈夫的寡妇，竟然要求萧塔不烟下马跪接金国皇帝的圣旨。结果可想而知，这位使臣用生命诠释了什么叫“看不清形势的代价”。</p>' 
+            },
+            'atsiz': { 
+                name: '阿即思 / 喀喇汗国等藩属', 
+                subtitle: '表面顺从，内心忌惮的西域诸侯', 
+                content: '<p>西辽的统治模式与中原不同，它更像是一个宗主国。像花剌子模沙（阿即思）、东西喀喇汗国等，只要按时缴纳“每户一第纳尔”的贡赋，西辽就允许他们保留自治权。</p><p>耶律大石死后，这些中亚的老油条们本来想试探一下西辽新政权的虚实，但看到萧塔不烟连大金国的使臣都敢当众砍了，纷纷掐灭了反叛的念头，继续老老实实地朝贡。</p>' 
+            },
+
+            /* 事件库 */
+            'tuogu': { 
+                name: '大石托孤 (1143年)', 
+                subtitle: '西辽政权的第一次平稳交接', 
+                content: '<p><strong>【背景起因】</strong><br>1143年，创立了不朽功业的耶律大石病重。由于太子夷列年幼，为了防止主少国疑导致刚刚被征服的中亚各部叛乱，大石留下遗诏。</p><p><strong>【事变经过】</strong><br>大石下令：“太子年幼，皇后可权国事。”萧塔不烟随即临朝称制，改元“咸清”，尊号为“感天皇后”。</p><p><strong>【最终结果】</strong><br>这场权力交接极其顺利。由于萧塔不烟在建国过程中积累了巨大的威望，西辽军队和旧臣对她绝对效忠。这避免了当年大辽帝国那种“老皇帝一死就搞夺权政变”的恶性循环。</p>' 
+            },
+            'zhanjin': { 
+                name: '怒斩金使 (1146年)', 
+                subtitle: '大辽女人的极致硬骨头', 
+                content: '<p><strong>【背景起因】</strong><br>金国一直没有放弃彻底消灭契丹残部的念头。1146年，金熙宗派粘割韩奴出使西辽，要求西辽臣服。</p><p><strong>【事变经过】</strong><br>粘割韩奴见到萧塔不烟时，态度极其傲慢，不仅不按西辽的规矩行礼，反而大声呵斥让萧塔不烟下马跪接金国诏书。萧塔不烟冷冷地看着他，质问：“你们的皇帝本是我们契丹的臣属，如今竟然敢这样对我说话？”粘割韩奴不仅不退缩，还破口大骂。</p><p><strong>【最终结果】</strong><br>萧塔不烟没有废话，直接挥手让禁卫军把粘割韩奴拖出去斩首。这一刀，不仅砍断了金国妄图收服西辽的念头，也彻底震慑了中亚西域的各路藩属。大金国得知后，虽然愤怒，但因为路途遥远且西辽实力强悍，最终只能捏着鼻子认了，再也没敢派人去惹西辽。</p>' 
+            },
+            'huanzheng': { 
+                name: '还政于子 (1150年)', 
+                subtitle: '功成身退的摄政太后', 
+                content: '<p><strong>【背景起因】</strong><br>经过七年的摄政，西辽的内外局势已经彻底稳定。儿子耶律夷列也已经长大成人，具备了处理军国大事的能力。</p><p><strong>【事变经过】</strong><br>1150年，萧塔不烟主动宣布退位，将国家的最高统治权交还给了儿子耶律夷列（即西辽仁宗）。</p><p><strong>【最终结果】</strong><br>这种没有流血、没有权力斗争的和平交接，在中国古代皇权历史上（尤其是在摄政太后还政的历史中）是极为罕见的。萧塔不烟用自己的理智和胸怀，为西辽帝国延续了长达几十年的繁荣稳定期。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
