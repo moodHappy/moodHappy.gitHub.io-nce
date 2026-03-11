@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>成汉(流民绝唱)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/篡位/灭国线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧桓温卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">成汉(流民绝唱)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 40px;"></div>
+
+        <div class="line" style="left: 320px; top: 190px; width: 1px; height: 30px;"></div>
+        <div class="line" style="left: 200px; top: 220px; width: 120px; height: 1px;"></div>
+        <div class="line" style="left: 200px; top: 220px; width: 1px; height: 30px;"></div>
+
+        <div class="line" style="left: 320px; top: 190px; width: 1px; height: 60px;"></div>
+
+        <div class="line" style="left: 480px; top: 290px; width: 1px; height: 50px;"></div>
+
+        <div class="kill-solid-h" style="left: 200px; top: 270px; width: 120px;"></div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 270px; width: 160px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 370px; width: 380px;"></div>
+
+        <div class="label" style="left: 320px; top: 120px;">流民起义 / 奠基巴蜀</div>
+        
+        <div class="label" style="left: 250px; top: 210px;">废子立侄 / 埋下血祸</div>
+        <div class="label" style="left: 320px; top: 215px;">亲生子</div>
+        
+        <div class="label" style="left: 260px; top: 260px; color: #c62828; font-weight: bold;">灵前弑君 / 夺回皇位</div>
+        <div class="label" style="left: 400px; top: 260px; color: #c62828; font-weight: bold;">兵变攻都 / 逼帝自尽</div>
+        
+        <div class="label" style="left: 480px; top: 320px;">父死子继 / 暴政亡国</div>
+
+        <div class="label" style="left: 290px; top: 360px; color: #c62828; font-weight: bold;">越过天险奇袭 / 攻破成都灭亡成汉</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('lite')">
+            <div class="c-dark">大将军 / 益州牧</div>
+            <div class="c-minister">李特</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 170px;" onclick="showInfo('lixiong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">李雄</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 270px;" onclick="showInfo('liban')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">李班</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 270px;" onclick="showInfo('liqi')">
+            <div class="c-dark">皇帝 / 幽公</div>
+            <div class="c-emperor">李期</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 270px;" onclick="showInfo('lishou')">
+            <div class="c-dark">大将军 / 皇帝</div>
+            <div class="c-emperor">李寿</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 370px;" onclick="showInfo('lishi')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">李势</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 370px;" onclick="showInfo('huanwen')">
+            <div class="c-dark">荆州刺史 / 将军</div>
+            <div class="c-minister" style="font-size: 18px;">桓温</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">成汉三大命运界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('liumin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">301-304年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">流民起事</div>
+            </div>
+            <div class="event-card" onclick="showInfo('zongshi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">334-338年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">宗室互屠</div>
+            </div>
+            <div class="event-card" onclick="showInfo('mieguo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">347年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">桓温灭汉</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'lite': { 
+                name: '李特', 
+                subtitle: '巴氐难民的守护神，倒在黎明前的草根枭雄', 
+                content: '<p>西晋末年爆发了严重的饥荒，加上八王之乱，关中数十万难民涌入巴蜀求生。西晋的益州刺史不仅不赈灾，反而下令强行遣返难民，要把他们逼上绝路。李特作为巴氐族的首领，挺身而出，率领难民武装起义抗晋。</p><p>李特作战极其勇猛，连败晋军，几乎打下了整个成都平原。但他犯了轻敌的错误，在围攻成都时被晋军反扑，战死沙场。虽然他没有称帝，但他为这支流民武装打下了坚实的基本盘，他的儿子李雄在此基础上建立了十六国之一的“成汉”。</p>' 
+            },
+            'lixiong': { 
+                name: '李雄', 
+                subtitle: '缔造盛世的仁君，埋下灭国祸根的糊涂父亲', 
+                content: '<p>李雄接过了父亲李特的烂摊子，成功攻克成都，称帝建国（国号成）。在五胡乱华、中原杀成血海的时代，李雄在蜀地轻徭薄赋、宽刑简政，硬生生打造出了一个长达三十年的“世外桃源”。</p><p>但他晚年犯了一个中国古代宗法制中最致命的错误：他觉得自己的儿子们都不如大哥的儿子李班仁厚，为了报答大哥当年的恩情，他竟然硬要越过亲生儿子，把皇位传给侄子。群臣苦苦哀劝说“此举必生内乱”，李雄依然固执己见。他一死，他那几个手握兵权、凶悍无比的亲生儿子立刻翻脸，成汉瞬间沦为宗室屠宰场。</p>' 
+            },
+            'liban': { 
+                name: '李班', 
+                subtitle: '仁义的道德楷模，灵柩前被刺杀的短命皇帝', 
+                content: '<p>李班是李雄的侄子，性格极其仁慈，博览群书，尊师重道。他在李雄病重时日夜侍奉，甚至连衣服都不脱。李雄死后他即位，悲痛欲绝，每天在灵堂前哭得死去活来，完全将国家政务抛在脑后。</p><p>他的弟弟警告他：“你那几个堂兄弟（李雄的儿子们）手握重兵且极度不满，你必须把他们调出京城防备。”但李班因为天性仁厚，不忍心在叔叔刚死时就遣散他的亲儿子。结果，就在他毫无防备地在李雄灵前痛哭时，李雄的儿子李期派刺客冲入灵堂，将这位好人皇帝当场斩杀。</p>' 
+            },
+            'liqi': { 
+                name: '李期 (幽公)', 
+                subtitle: '极度猜忌的篡位者，被逼上吊的废帝', 
+                content: '<p>李期是李雄的第四子，因不满父亲传位给外人，发动兵变在灵堂上砍死了堂哥李班。夺回皇位后，由于名不正言不顺，李期陷入了极度的猜忌和疯狂中。</p><p>他大肆屠杀当年的开国功臣和宗室元老，甚至连毒药都用上了。他尤其忌惮手握重兵的堂叔李寿。李寿为了自保，决定先下手为强，率领一万精兵从外地长途奔袭，直接打进了成都。李期被推翻，被贬为“邛都县公”，并幽禁别宫。他在极度的屈辱中感叹：“天下之主竟然成了一个小县公，我还不如死了！”随后悬梁自尽。</p>' 
+            },
+            'lishou': { 
+                name: '李寿', 
+                subtitle: '改国号的枭雄，效仿暴政的酷君', 
+                content: '<p>李寿是李雄的堂弟，成汉的头号战神，曾打下汉中等地。面对李期的屠刀，他果断率军打回成都夺取皇位。登基后，他觉得“成”这个国号不够霸气，于是改国号为“汉”。</p><p>他原本是个颇有威望的将领，但当皇帝后，听信了北方后赵（石虎建立的残暴政权）使者的吹嘘，竟然觉得皇帝就应该“严刑峻法、杀人立威”。他开始效仿后赵的暴政，大兴土木，滥杀无辜，导致蜀地百姓怨声载道。成汉的国力在他手里被极大地消耗，为灭国埋下了伏笔。</p>' 
+            },
+            'lishi': { 
+                name: '李势', 
+                subtitle: '终极荒唐暴君，成汉的亡国之君', 
+                content: '<p>李势是李寿的儿子，也是成汉的最后一位皇帝。他不仅没有祖辈的才能，反而将暴政和荒淫发挥到了极致。他极其贪财好色，甚至因为怀疑自己的妃子，当面将其开膛破肚，残忍至极。</p><p>当东晋将领桓温率领一万步卒逆江而上、孤军深入蜀地时，李势依然在后宫寻欢作乐。当桓温打到成都城下时，李势组织的反击被桓温彻底击溃。眼看大势已去，李势乘着小船连夜逃出成都，最终在绝望中向桓温投降，成汉宣告灭亡。李势被押送回建康，封为归命侯，几年后病死。</p>' 
+            },
+            'huanwen': { 
+                name: '桓温', 
+                subtitle: '一战封神的东晋权臣，成汉的终结者', 
+                content: '<p>桓温是东晋的荆州刺史。为了建立盖世奇功，他做出了一个让所有人都觉得是“送死”的决定：率领仅仅一万人的军队，在三峡的惊涛骇浪中逆流而上，长途奔袭几千里去攻打成汉。</p><p>他的行动极其冒险，甚至深入敌境后连退路都被切断了。但在成都城外的决战中，桓温的军队在初期受挫、眼看就要全军覆没的极度危险关头，由于传令兵敲错了鼓（退兵鼓敲成了进军鼓），晋军竟然绝地反击，如同疯魔一般冲垮了成汉的大军。桓温一战灭国，威震天下，从此开启了他把持东晋朝政大权的枭雄之路。</p>' 
+            },
+
+            /* 事件库 */
+            'liumin': { 
+                name: '流民起事 (301-304年)', 
+                subtitle: '草根逆袭的血泪史诗', 
+                content: '<p><strong>【背景起因】</strong><br>西晋八王之乱引发天下大饥荒，略阳（今甘肃天水）的六郡流民逃入巴蜀。益州刺史罗尚不仅不救济，反而武力驱赶流民，并设置关卡抢夺流民财物。</p><p><strong>【事变经过】</strong><br>活不下去的流民在巴氐族首领李特的带领下，在绵竹搭建大营，拿起农具武装反抗西晋正规军。流民军展现出了惊人的战斗力，不仅击败了西晋军队，还攻克了巴蜀重镇。</p><p><strong>【最终结果】</strong><br>虽然李特战死，但其子李雄继承遗志，彻底将西晋势力赶出蜀地，建立成汉政权。这是十六国时期极少数由纯粹的底层难民建立的国家。</p>' 
+            },
+            'zongshi': { 
+                name: '宗室互屠 (334-338年)', 
+                subtitle: '泛滥仁慈引发的骨肉地狱', 
+                content: '<p><strong>【背景起因】</strong><br>开国皇帝李雄为了报答兄长的恩情，强行废除了自己十几个亲生儿子，立侄子李班为太子，导致诸子极度愤恨。</p><p><strong>【事变经过】</strong><br>李雄刚死，尸骨未寒，四子李期便发动兵变，将正在灵堂守孝的李班乱刀砍死并篡位。李期上台后疯狂清洗功臣，逼得掌握重兵的堂叔李寿起兵造反。李寿攻破成都，废黜李期，逼其自尽。</p><p><strong>【最终结果】</strong><br>短短四年间，成汉皇室经历了两次极其血腥的政变和连环屠杀。不仅开国功臣被清洗一空，成汉的政治生态也彻底走向了残暴与高压，国力急剧衰退。</p>' 
+            },
+            'mieguo': { 
+                name: '桓温灭汉 (347年)', 
+                subtitle: '绝境狂飙与帝国崩塌', 
+                content: '<p><strong>【背景起因】</strong><br>成汉末代皇帝李势荒淫残暴，内部叛乱不断。东晋将领桓温看准时机，不顾朝廷的反对，率领一万水步军溯江而上，发起灭国奇袭。</p><p><strong>【事变经过】</strong><br>桓温大军抛弃辎重，直扑成都。成汉大军在彭模拦截，晋军初战失利，前锋将领战死。桓温本想下令退兵，但慌乱中的鼓手竟然擂响了冲锋的战鼓。晋军在绝境中爆发出恐怖的战斗力，一举击溃了成汉主力。桓温乘胜追击，大军直抵成都城下，放火烧城。</p><p><strong>【最终结果】</strong><br>李势精神崩溃，弃城逃亡，最终送上降表。立国四十三年、历经五帝的成汉政权宣告灭亡，巴蜀之地重新回归东晋版图。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
