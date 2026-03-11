@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>帝国崩塌：天祚帝耶律延禧与女真崛起</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 彩色连接线 */
+        .line-blue { position: absolute; background-color: #1565c0; z-index: 1; height: 2px; }
+        .line-green-v { position: absolute; border-left: 2px dashed #2e7d32; z-index: 1; width: 0; }
+
+        /* 红色对抗/流血/镇压/逃亡线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-song { color: #e65100; font-weight: bold; } 
+        .c-jurchen { color: #d84315; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">帝国崩塌：天祚帝与女真崛起关系图</h1>
+
+    <div class="family-tree">
+        <div class="line-blue" style="left: 200px; top: 90px; width: 80px;"></div>
+        
+        <div class="kill-solid-h" style="left: 360px; top: 90px; width: 100px;"></div>
+        
+        <div class="line-green-v" style="left: 500px; top: 130px; height: 160px;"></div>
+
+        <div class="kill-v" style="left: 320px; top: 130px; height: 110px;"></div>
+        
+        <div class="line" style="left: 200px; top: 240px; width: 80px; height: 2px;"></div>
+        <div class="line" style="left: 200px; top: 240px; width: 1px; height: 80px;"></div>
+
+        <div class="label" style="left: 240px; top: 75px; color: #1565c0;">排斥异己 / 谗言误国</div>
+        <div class="label" style="left: 410px; top: 75px; color: #c62828; font-weight: bold;">护步答冈 / 2万破70万</div>
+        
+        <div class="label" style="left: 500px; top: 210px; color: #2e7d32; font-weight: bold;">海上之盟 / 夹击大辽</div>
+        
+        <div class="label" style="left: 320px; top: 180px; color: #c62828;">皇帝逃亡 / 燕京自立</div>
+        <div class="label" style="left: 200px; top: 280px; color: #1565c0; font-weight: bold;">出奔西域 / 重建西辽</div>
+
+        <div class="person" style="left: 320px; top: 90px;" onclick="showInfo('yelu_yanxi')">
+            <div class="c-dark">大辽亡国之君</div>
+            <div class="c-emperor" style="font-size: 18px;">天祚帝 (耶律延禧)</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 90px;" onclick="showInfo('xiao_fengxian')">
+            <div class="c-dark">枢密使 (奸臣)</div>
+            <div class="c-minister">萧奉先</div>
+        </div>
+
+        <div class="person" style="left: 500px; top: 90px;" onclick="showInfo('wanyan_aguda')">
+            <div class="c-dark">大金太祖</div>
+            <div class="c-jurchen" style="font-size: 18px;">完颜阿骨打</div>
+        </div>
+
+        <div class="person" style="left: 500px; top: 320px;" onclick="showInfo('song_huizong')">
+            <div class="c-dark">大宋皇帝 (引狼入室)</div>
+            <div class="c-song">宋徽宗 (赵佶)</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 240px;" onclick="showInfo('yelu_chun')">
+            <div class="c-dark">北辽皇帝 (临时接盘)</div>
+            <div class="c-emperor">耶律淳</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 340px;" onclick="showInfo('yelu_dashi')">
+            <div class="c-dark">西辽开国皇帝 / 战神</div>
+            <div class="c-minister" style="font-size: 18px;">耶律大石</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">大辽崩溃的三大丧钟</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('touyuyan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1112年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">头鱼宴之辱</div>
+            </div>
+            <div class="event-card" onclick="showInfo('hubudagang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1115年</div>
+                <div class="c-jurchen" style="font-size: 18px; font-weight: bold;">护步答冈之战</div>
+            </div>
+            <div class="event-card" onclick="showInfo('wangguo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1125年</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">白水泺亡国</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yelu_yanxi': { 
+                name: '天祚帝 (耶律延禧)', 
+                subtitle: '大辽的亡国修理工，越修越烂', 
+                content: '<p>耶律延禧是辽道宗的孙子，昭怀太子的遗孤。他接手的是一个被爷爷败得差不多了的烂摊子，但他本人的治国水平也是灾难级的。</p><p>他极度沉迷于打猎（所谓“捺钵”），对女真部落实施极其残酷的索求（强征海东青）。当女真造反时，他盲目自信，率领七十万大军去镇压，结果却因为听信奸臣萧奉先的谗言，在阵前搞起了内部政治大清洗，导致大军不战自溃。此后十几年，他像丧家之犬一样在草原上到处逃跑，最终在1125年被金军俘虏，受尽屈辱而死，大辽两百年的基业在他手里彻底断送。</p>' 
+            },
+            'wanyan_aguda': { 
+                name: '完颜阿骨打 (金太祖)', 
+                subtitle: '白山黑水走出的战神，大金王朝缔造者', 
+                content: '<p>女真部落首领，一个被大辽的暴政逼出来的绝世悍将。“女真不满万，满万不可敌”的神话就是从他开始的。</p><p>在头鱼宴上，面对大辽皇帝的羞辱，他拒绝跳舞，随后起兵反辽。他凭借区区两三万的简陋骑兵，在宁江州、出河店、护步答冈连战连捷，把大辽几十万正规军打得如同杀鸡。他建立了大金政权，短短十几年时间，不仅灭了庞大的辽国，甚至在死后，他的继承者顺手把北宋也给灭了（靖康之耻）。</p>' 
+            },
+            'xiao_fengxian': { 
+                name: '萧奉先', 
+                subtitle: '压垮大辽的最后一位权奸', 
+                content: '<p>天祚帝的大舅哥，大辽末期第一号大奸臣。他不仅不懂军事，而且极度自私。</p><p>在护步答冈之战的最紧要关头，他因为嫉妒其他宗室（耶律余睹）的功劳，竟然向天祚帝进谗言说军中有人要谋反另立新君。天祚帝吓得当场脱离前线逃命，直接导致七十万大军群龙无首，被女真人全歼。在跟着天祚帝逃跑的路上，天祚帝终于醒悟过来，下令将萧奉先满门抄斩，但为时已晚。</p>' 
+            },
+            'song_huizong': { 
+                name: '宋徽宗 (赵佶)', 
+                subtitle: '引狼入室，联金灭辽的千古笑柄', 
+                content: '<p>当听说大辽被女真人按在地上打时，远在汴京的文艺皇帝宋徽宗和他的宰相童贯觉得：收复燕云十六州的机会终于来了！</p><p>北宋派人从海上秘密联络金国，达成了“海上之盟”：金攻打辽中京，宋攻打辽燕京。结果，宋朝几十万大军竟然被耶律大石带领的几万辽国残兵败将打得满地找牙。金国人一看：原来大宋比大辽还要废物！于是金军顺手接管了燕京，并在灭辽后第二年，直接挥师南下，酿成了惨绝人寰的“靖康之耻”。</p>' 
+            },
+            'yelu_chun': { 
+                name: '耶律淳 (北辽皇帝)', 
+                subtitle: '燕京危局中的接盘侠', 
+                content: '<p>当金兵逼近，天祚帝耶律延禧丢下首都和臣民逃入夹山时，留在燕京（今北京）的辽国大臣们彻底绝望了。</p><p>在耶律大石等人的拥立下，宗室耶律淳在燕京登基，建立“北辽”，尊逃跑的天祚帝为太上皇。但这只是大辽的回光返照，耶律淳当了没几个月皇帝就惊吓病死了。随后燕京被金军攻破，北辽政权土崩瓦解。</p>' 
+            },
+            'yelu_dashi': { 
+                name: '耶律大石 (西辽德宗)', 
+                subtitle: '大辽最后的脊梁，威震中亚的西域霸主', 
+                content: '<p>耶律大石是辽太祖阿保机的八世孙，也是辽国历史上唯一一个考中过状元的皇帝（文武双全）。</p><p>在北辽时期，他带领哀兵死守燕京，把趁火打劫的北宋军队揍得抱头鼠窜。燕京陷落后，他曾短暂逃回天祚帝身边，但看透了天祚帝的昏庸无能，于是带领两百名铁骑趁夜离开。他一路向西，沿途收编草原部落，最终在中亚打下了一片庞大的疆土，建立了“西辽”（喀喇契丹）。多年后，他甚至在卡特万之战中大败十万塞尔柱帝国联军，让“契丹”的威名响彻整个中东和欧洲。</p>' 
+            },
+
+            /* 事件库 */
+            'touyuyan': { 
+                name: '头鱼宴之辱 (1112年)', 
+                subtitle: '一颗火星点燃了东北大地', 
+                content: '<p><strong>【背景起因】</strong><br>按照契丹传统，每年春天皇帝要在松花江畔举行“头鱼宴”，各附属部落的首领都要来朝见。天祚帝喝醉了酒，为了彰显天威，命令女真各部的首领挨个给他跳舞助兴。</p><p><strong>【事变经过】</strong><br>当轮到完颜阿骨打时，他神情冷酷，直挺挺地站着，死活不肯跳。天祚帝大怒，甚至动了杀心，在权臣的劝阻下才作罢。</p><p><strong>【最终结果】</strong><br>这次宴会彻底坚定了完颜阿骨打反辽的决心。回去后，他立刻整顿兵马，统一女真各部，开始对庞大的辽国露出锋利的獠牙。</p>' 
+            },
+            'hubudagang': { 
+                name: '护步答冈之战 (1115年)', 
+                subtitle: '中国历史上最悬殊的以少胜多之一', 
+                content: '<p><strong>【背景起因】</strong><br>完颜阿骨打正式称帝建金。天祚帝感觉颜面扫地，亲率号称七十万的大军御驾亲征，准备一举荡平女真。而阿骨打当时拼凑出的全部家底只有两万人。</p><p><strong>【事变经过】</strong><br>大战在即，辽国后方却发生叛乱。权臣萧奉先向皇帝进谗言，说军中主将耶律余睹有谋反嫌疑。天祚帝竟然在大决战的前夜丢下七十万大军，带着亲信逃跑回京去抓叛徒。阿骨打敏锐地抓住了战机，率领两万女真铁骑趁乱猛冲辽军大营。</p><p><strong>【最终结果】</strong><br>辽国大军瞬间崩溃，互相践踏，死伤无数，“死者蔽野百余里”。这一战彻底打断了大辽的脊梁，从此攻守之势异也，大辽再也无力组织起像样的反击。</p>' 
+            },
+            'wangguo': { 
+                name: '白水泺亡国 (1125年)', 
+                subtitle: '两百年草原帝国的凄凉落幕', 
+                content: '<p><strong>【背景起因】</strong><br>经过十年的摧枯拉朽，金军先后攻克了大辽的东京、上京、中京。天祚帝带着残羹冷炙在夹山、大漠之间四处逃窜。</p><p><strong>【事变经过】</strong><br>公元1125年，天祚帝在逃亡西夏的途中，在应州白水泺（今山西朔州境内）被金国名将完颜娄室的追兵赶上并俘虏。被俘后，金太宗降封他为“海滨王”。</p><p><strong>【最终结果】</strong><br>至此，立国二百一十年的辽帝国在东方的大地上彻底灰飞烟灭。但它的火种并没有熄灭，耶律大石在遥远的中亚延续了契丹的荣光，而大宋则即将为自己的引狼入室付出最惨痛的代价。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
