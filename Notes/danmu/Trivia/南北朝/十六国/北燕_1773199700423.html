@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>北燕(荒诞屠场)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/屠尽/灭绝线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧卡片中心在100px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">北燕(荒诞屠场)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 340px; top: 100px; width: 1px; height: 140px;"></div>
+
+        <div class="line" style="left: 340px; top: 100px; width: 200px; height: 1px;"></div>
+
+        <div class="kill-h" style="left: 340px; top: 240px; width: 200px;"></div>
+
+        <div class="line-v-dashed" style="left: 550px; top: 100px; height: 280px;"></div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 100px; height: 140px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 230px; width: 240px;"></div>
+        <div class="kill-solid-v" style="left: 340px; top: 100px; height: 130px;"></div>
+
+        <div class="kill-solid-h" style="left: 340px; top: 110px; width: 200px;"></div>
+
+        <div class="kill-solid-v" style="left: 520px; top: 100px; height: 150px;"></div>
+        <div class="kill-solid-h" style="left: 340px; top: 250px; width: 180px;"></div>
+
+        <div class="kill-solid-v" style="left: 100px; top: 320px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 320px; width: 380px;"></div>
+        <div class="kill-solid-v" style="left: 480px; top: 100px; height: 220px;"></div>
+
+        <div class="kill-solid-v" style="left: 530px; top: 100px; height: 280px;"></div>
+
+        <div class="label" style="left: 155px; top: 160px; color: #c62828;">内廷反水 / 乱刀弑君</div>
+        <div class="label" style="left: 210px; top: 210px;">入宫平叛 / 夺取帝位</div>
+        
+        <div class="label" style="left: 440px; top: 90px;">兄终弟及</div>
+        <div class="label" style="left: 440px; top: 125px; color: #c62828; font-weight: bold;">强行破门逼宫 / 活活惊吓致死</div>
+        <div class="label" style="left: 440px; top: 230px;">阻绝内外 / 图谋夺位</div>
+        <div class="label" style="left: 440px; top: 260px; color: #c62828; font-weight: bold;">尽斩百位亲侄 / 斩草除根</div>
+        
+        <div class="label" style="left: 280px; top: 310px; color: #c62828; font-weight: bold;">太武帝狂飙 / 碾碎和龙都城</div>
+        <div class="label" style="left: 610px; top: 240px;">厚颜乞窜</div>
+        <div class="label" style="left: 470px; top: 240px; color: #c62828; font-weight: bold;">极度嫌弃 / 乱刀灭门</div>
+
+        <div class="person" style="left: 100px; top: 100px;" onclick="showInfo('gaoyun')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">高云</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 240px;" onclick="showInfo('liban')">
+            <div class="c-dark">禁卫将军</div>
+            <div class="c-rebel">离班 / 桃仁</div>
+        </div>
+
+        <div class="person" style="left: 340px; top: 100px;" onclick="showInfo('fengba')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">冯跋</div>
+        </div>
+
+        <div class="person" style="left: 340px; top: 240px;" onclick="showInfo('fengyi')">
+            <div class="c-dark">皇太子</div>
+            <div class="c-emperor">冯翼</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 240px;" onclick="showInfo('song')">
+            <div class="c-dark">昭仪</div>
+            <div class="c-consort">宋氏</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 100px;" onclick="showInfo('fenghong')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">冯弘</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 380px;" onclick="showInfo('tuobatao')">
+            <div class="c-dark">皇帝 (魏)</div>
+            <div class="c-minister" style="font-size: 18px;">拓跋焘</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 380px;" onclick="showInfo('gaolian')">
+            <div class="c-dark">国王 (高句丽)</div>
+            <div class="c-rebel">高琏</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">北燕三大血色界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('jinyan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">409年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">禁军喋血</div>
+            </div>
+            <div class="event-card" onclick="showInfo('gongmen')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">430年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">宫门之变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('taowang')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">436-438年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">逃亡覆灭</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'gaoyun': { 
+                name: '高云 (慕容云)', 
+                subtitle: '因极度恐惧而养蛊反噬的提线木偶', 
+                content: '<p>高云是后燕皇帝慕容宝的养子。在后燕末代暴君慕容熙被起义军推翻后，冯跋将高云推上了皇位，建立了北燕。但高云深知自己只是个毫无根基的提线木偶，整日生活在极度的恐惧之中。</p><p>为了防备暗杀，他挑选了一大批武艺高强的死士作为贴身保镖，去哪里都带着他们。但他没料到，正是这种草木皆兵的高压氛围，让保镖们（如离班、桃仁）也极度没有安全感，生怕哪天被神经质的皇帝砍头。于是，保镖们决定先下手为强，在宫中直接乱刀砍死了高云。高云因为怕死而招来的保镖，最终成了送他上路的催命符。</p>' 
+            },
+            'liban': { 
+                name: '离班 / 桃仁', 
+                subtitle: '近臣反水，终成权力游戏的炮灰', 
+                content: '<p>作为皇帝的绝对近臣，离班和桃仁本来拥有享不尽的荣华富贵。但在北燕初期极其诡异、互相猜忌的政治高压下，他们因为恐惧皇帝的喜怒无常，做出了极其冒险的弑君举动。</p><p>他们成功杀死了高云，但却根本没有掌控朝局的实力。真正在幕后主导北燕兵权的冯跋，立刻以“平叛诛逆”的名义率军冲入皇宫，将离班和桃仁斩杀。这两个保镖仅仅是权力交接过程中的抛弃物。</p>' 
+            },
+            'fengba': { 
+                name: '冯跋', 
+                subtitle: '北燕的真正掌舵人，死法最滑稽的开国之君', 
+                content: '<p>冯跋在铲除刺客后，名正言顺地登基称帝。在十六国晚期的乱世中，冯跋算得上是一个有作为的君主。他停息战乱、减轻赋税，让北燕在强敌环伺中维持了二十多年的稳定。史载他有超过一百个亲生儿子，可见其后宫规模之庞大。</p><p>但他一世英明，却死得极其黑色幽默。晚年他病重卧床，后宫的宋昭仪为了让自己的儿子继位，竟然把他锁在寝宫里，禁止太子探视。冯跋的亲弟弟冯弘得知后，立刻率领军队去砸门营救。病床上的冯跋在昏睡中突然被巨大的砸门声和喊杀声惊醒，一睁眼看到亲弟弟提着刀带着甲士冲了进来，惊骇过度，当场一口气没喘上来，被活活吓死了。</p>' 
+            },
+            'song': { 
+                name: '宋氏 (宋昭仪)', 
+                subtitle: '一波窒息操作，送走整个皇室', 
+                content: '<p>宋昭仪是冯跋宠爱的妃子。在冯跋病重危在旦夕时，她为了权力的欲望，策划了一场极其拙劣的宫廷阴谋。</p><p>她对前来侍疾的太子冯翼谎称皇帝病情好转，不需要探视，然后关死宫门。她企图拖延时间，暗中运作让自己的儿子上位。但这种愚蠢的封锁直接引发了外部势力的恐慌。冯弘借此机会带兵强行介入，宋昭仪的阴谋不仅没能让儿子当上皇帝，反而害死了老皇帝，并将太子的性命和冯跋的一百多个儿子全部送上了断头台。</p>' 
+            },
+            'fengyi': { 
+                name: '冯翼', 
+                subtitle: '过于老实的太子，惨遭叔叔屠宰', 
+                content: '<p>冯翼作为合法的太子，在宫变中表现得极其软弱和迟钝。当宋昭仪不让他见父皇时，他竟然真的乖乖退了出去，没有采取任何果断的军事措施来掌控禁军。</p><p>当他的亲叔叔冯弘带兵砸开宫门、导致冯跋吓死后，冯弘立刻伪造遗诏登基。冯翼这才反应过来，企图发兵反抗，但大势已去，瞬间被冯弘击败。冯弘毫不留情地将这位亲侄子赐死，绝了后患。</p>' 
+            },
+            'fenghong': { 
+                name: '冯弘', 
+                subtitle: '杀尽百位亲侄的屠夫，寄人篱下依然狂妄的奇葩', 
+                content: '<p>冯弘是十六国时期将“不要脸”发挥到极致的皇帝。他在皇宫兵变中吓死了亲哥哥冯跋，为了确保皇位稳固，他下达了令人发指的命令：将冯跋生下的一百多个儿子（全都是他的亲侄子）全部杀光，一个活口都不留，真正的物理意义上的斩草除根。</p><p>他性格极其刚愎自用。当北魏太武帝拓跋焘率领大军打来时，他拒绝讲和，被北魏军队打得落花流水，只能放弃都城逃亡高句丽。到了高句丽后，作为寻求庇护的流亡者，他竟然还以为自己是大燕天子，对高句丽国王颐指气使，甚至下达“圣旨”。这种极其巨婴、毫无自知之明的操作，最终惹怒了高句丽国王，将他及随从斩尽杀绝。</p>' 
+            },
+            'tuobatao': { 
+                name: '拓跋焘 (北魏太武帝)', 
+                subtitle: '横扫北方的无敌统帅，终结北燕的铁拳', 
+                content: '<p>拓跋焘是北朝历史上最杰出的军事统帅之一。他继位后，立刻开始了一统北方的狂飙突进。</p><p>面对偏安一隅的北燕，拓跋焘亲自率领大军发起灭国之战。北魏精锐的重装骑兵摧枯拉朽般地踏碎了北燕的防线，将北燕都城和龙（今辽宁朝阳）团团包围。拓跋焘的降维打击不仅让北燕亡国，更彻底终结了慕容鲜卑和冯氏在辽东地区的割据统治，为北魏统一北方扫清了最后的障碍。</p>' 
+            },
+            'gaolian': { 
+                name: '高琏 (高句丽长寿王)', 
+                subtitle: '终结北燕闹剧的域外处刑人', 
+                content: '<p>高琏是高句丽的国王。在北燕被北魏打爆时，高琏派人将冯弘及北燕残部接到了高句丽安置。</p><p>高琏本意是想留个政治筹码，结果却发现接回来了一个大爷。冯弘住在高句丽的地盘上吃喝全靠高琏，却摆出宗主国的派头，对高琏百般鄙视和呵斥。高琏忍无可忍，先是停了冯弘的物资供应，把他的随从当奴隶使唤。冯弘竟然还想联络南朝刘宋来接他走。高琏彻底失去耐心，直接派兵冲进冯弘的驻地，将这位杀了一百多个侄子的暴君连同他的家人全部乱刀砍死，结束了北燕这极其荒诞的最后篇章。</p>' 
+            },
+
+            /* 事件库 */
+            'jinyan': { 
+                name: '禁军喋血 (409年)', 
+                subtitle: '过度防备引来的自杀式反噬', 
+                content: '<p><strong>【背景起因】</strong><br>高云在后燕的动乱中被推上皇位，内心极度缺乏安全感，因此选拔了离班、桃仁等一批刺客作为心腹禁卫，日夜不离左右。</p><p><strong>【事变经过】</strong><br>这些禁卫因为皇帝的神经质，也生活在朝不保夕的恐惧中，认为与其等皇帝发疯杀自己，不如先动手。他们在皇宫内暴起，将高云当场弑杀。掌控兵权的冯跋迅速反应，率军入宫将刺客诛灭。</p><p><strong>【最终结果】</strong><br>高云的死彻底终结了后燕慕容氏在名义上的残存，汉人冯跋登基建立北燕政权。北燕在十六国的乱世中，凭借辽东的偏远地理位置，开始了苟延残喘的二十余年。</p>' 
+            },
+            'gongmen': { 
+                name: '宫门之变 (430年)', 
+                subtitle: '最诡异的权力交接与灭门惨案', 
+                content: '<p><strong>【背景起因】</strong><br>北燕天王冯跋病危，后宫宋昭仪企图矫诏立自己的儿子为帝，于是将寝宫大门锁死，隔绝了合法继承人太子冯翼的探视。</p><p><strong>【事变经过】</strong><br>冯跋的弟弟冯弘得知消息，认为这是夺权的天赐良机，立刻率领甲士强行砸开皇宫大门。病榻上的冯跋在昏睡中被巨大的动静惊醒，看到弟弟提刀入内，当场惊吓致死。冯弘顺势伪造遗诏登基，并在随后派兵捕杀了太子冯翼。</p><p><strong>【最终结果】</strong><br>为了永绝后患，冯弘下达了中国历史上罕见的冷血命令：将哥哥冯跋生下的一百多个亲生儿子全部屠杀殆尽。这种丧尽天良的骨肉相残，彻底掏空了北燕的内部凝聚力。</p>' 
+            },
+            'taowang': { 
+                name: '逃亡覆灭 (436-438年)', 
+                subtitle: '亡国巨婴的末路喜剧', 
+                content: '<p><strong>【背景起因】</strong><br>北魏太武帝拓跋焘率军攻破北燕都城。冯弘拒绝死战，放火烧毁了宫殿，带着残余皇族和百姓逃往高句丽。</p><p><strong>【事变经过】</strong><br>到了高句丽后，冯弘不仅不知收敛，反而以天朝上国自居，强硬要求高句丽国王高琏以藩臣之礼侍奉自己。高琏极度反感，将其软禁并切断供给。冯弘竟然还试图联络南朝宋武帝派人来接应。</p><p><strong>【最终结果】</strong><br>高琏得知后，决定不再忍受这个巨婴暴君。他派兵包围了冯弘的住所，将冯弘及其剩下的十几个儿子全部乱刀砍死。立国仅仅二十八年的北燕，以一种极其滑稽、荒谬的方式，在异国他乡彻底断绝了血脉。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
