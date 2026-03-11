@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>西辽喋血：承天太后耶律普速完与情杀政变</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 彩色连接线 */
+        .line-blue { position: absolute; background-color: #1565c0; z-index: 1; height: 2px; }
+        .line-purple-h { position: absolute; border-top: 2px dashed #8e24aa; z-index: 1; width: 0; }
+
+        /* 红色对抗/流血/镇压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-queen { color: #8e24aa; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-vassal { color: #00838f; font-weight: bold; } 
+        .c-rebel { color: #d84315; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">西辽喋血：承天太后耶律普速完与政变</h1>
+
+    <div class="family-tree">
+        <div class="line-v-dashed" style="left: 320px; top: 90px; height: 30px;"></div>
+        
+        <div class="kill-solid-h" style="left: 210px; top: 150px; width: 70px;"></div>
+
+        <div class="line-purple-h" style="left: 360px; top: 150px; width: 70px;"></div>
+        
+        <div class="kill-solid-v" style="left: 320px; top: 200px; height: 40px;"></div>
+        <div class="kill-v" style="left: 480px; top: 200px; height: 40px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 240px; width: 160px;"></div>
+        
+        <div class="line-blue" style="left: 210px; top: 280px; width: 70px;"></div>
+
+        <div class="line-v-dashed" style="left: 320px; top: 300px; height: 40px;"></div>
+
+        <div class="label" style="left: 320px; top: 110px;">皇兄遗命 / 临朝称制</div>
+        
+        <div class="label" style="left: 245px; top: 140px; color: #c62828; font-weight: bold;">罗织罪名 / 赐死</div>
+        <div class="label" style="left: 400px; top: 140px; color: #8e24aa; font-weight: bold;">叔嫂私通</div>
+        
+        <div class="label" style="left: 400px; top: 220px; color: #c62828; font-weight: bold;">公公冲冠一怒 / 射杀二人</div>
+        <div class="label" style="left: 245px; top: 270px; color: #1565c0; font-weight: bold;">率军出征 / 镇压附庸</div>
+        <div class="label" style="left: 320px; top: 320px;">政变后终于登基</div>
+
+        <div class="person" style="left: 320px; top: 60px;" onclick="showInfo('yelu_yilie')">
+            <div class="c-dark">西辽仁宗</div>
+            <div class="c-emperor" style="color: #999;">耶律夷列 (驾崩)</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 150px;" onclick="showInfo('yelu_pusuwan')">
+            <div class="c-dark">承天太后</div>
+            <div class="c-queen" style="font-size: 18px;">耶律普速完</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 150px;" onclick="showInfo('xiao_duolubu')">
+            <div class="c-dark">正牌驸马 (冤死)</div>
+            <div class="c-minister">萧朵鲁不</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 150px;" onclick="showInfo('xiao_fuguzhi')">
+            <div class="c-dark">驸马之弟 (情夫)</div>
+            <div class="c-minister">萧朴古只沙里</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 280px;" onclick="showInfo('xiao_gan')">
+            <div class="c-dark">公公 / 军方头号大佬</div>
+            <div class="c-rebel" style="font-size: 18px;">萧斡里剌</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 280px;" onclick="showInfo('hualazimo')">
+            <div class="c-dark">中亚刺头</div>
+            <div class="c-vassal">花剌子模</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('yelu_zhilugu')">
+            <div class="c-dark">皇侄 (西辽末帝)</div>
+            <div class="c-emperor">耶律直鲁古</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">耶律普速完时期的权力失控</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('linchao')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1163年</div>
+                <div class="c-queen" style="font-size: 18px; font-weight: bold;">承天称制</div>
+            </div>
+            <div class="event-card" onclick="showInfo('pingpan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1172年</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">威震花剌子模</div>
+            </div>
+            <div class="event-card" onclick="showInfo('gongting')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1177年</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">射杀太后政变</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yelu_pusuwan': { 
+                name: '耶律普速完 (承天太后)', 
+                subtitle: '被情欲毁掉的大国女皇', 
+                content: '<p>耶律普速完执政长达十四年，后期甚至改称皇帝（号“承天皇帝”）。在国家大事上，她延续了父兄的政策，并且成功维持了西辽在中亚的绝对霸主地位。</p><p>但在私生活上，她极其任性。她看上了自己的小叔子萧朴古只沙里，为了能和情夫长相厮守，她不仅将正牌驸马贬为东平王，后来甚至罗织罪名将驸马无情赐死。她低估了驸马家族在西辽军方的恐怖影响力，最终因为这场荒唐的情杀，不仅送了自己的命，也把西辽帝国推向了内耗的深渊。</p>' 
+            },
+            'xiao_duolubu': { 
+                name: '萧朵鲁不 (东平王)', 
+                subtitle: '大辽最憋屈的驸马爷', 
+                content: '<p>萧朵鲁不是普速完的结发丈夫。他在外是一员能征善战的将领，但在宫里却毫无地位。</p><p>当老婆和自己的亲弟弟私通时，他不仅戴了绿帽子，还被普速完贬出京城。这还不算完，普速完为了斩草除根，竟然捏造罪名将他处死。他的惨死直接点燃了他父亲（军方大佬）的怒火。</p>' 
+            },
+            'xiao_fuguzhi': { 
+                name: '萧朴古只沙里', 
+                subtitle: '坑死亲哥和嫂子的情夫', 
+                content: '<p>驸马的亲弟弟。他与嫂子普速完长期保持不正当关系，是导致这场惨剧的核心导火索。</p><p>在哥哥被嫂子赐死后，他不仅没有觉得羞愧，反而继续在宫中与普速完厮混。最终，他亲爹率军打进皇宫，把他和普速完像刺猬一样钉死在了大殿上。</p>' 
+            },
+            'xiao_gan': { 
+                name: '萧斡里剌', 
+                subtitle: '冲冠一怒的西辽战神，手刃儿媳的狠人', 
+                content: '<p>萧斡里剌是西辽的三朝元老。当年他跟着耶律大石参加过卡特万之战，立下赫赫战功；在普速完执政期间，也是他亲自带兵去镇压了花剌子模的叛乱，是西辽军方毋庸置疑的“定海神针”。</p><p>当得知大儿媳妇（还是当朝太后）绿了大儿子，甚至还杀了大儿子时，这位手握帝国最精锐重兵的老将军彻底暴走。他毫不犹豫地发动政变，带兵杀入皇宫，亲手诛杀了儿媳妇和小儿子，随后拥立太子直鲁古继位。</p>' 
+            },
+            'hualazimo': { 
+                name: '花剌子模沙 (伊尔·阿尔斯兰 & 塔乞失)', 
+                subtitle: '挨最毒的打，熬最长的夜', 
+                content: '<p>花剌子模国王伊尔·阿尔斯兰趁着西辽新老交替，试图拖欠保护费并造反。</p><p>普速完果断派出萧斡里剌率领大军讨伐。西辽军队在中亚大发神威，不仅打垮了花剌子模的军队，伊尔·阿尔斯兰本人也因惊吓和重病交加而死。随后，他的儿子塔乞失（Tekish）为了争夺王位，竟然主动跑到西辽向普速完俯首称臣，请求西辽出兵帮他夺权。这证明在普速完时期，西辽依然是中亚诸国绝对的“太上皇”。</p>' 
+            },
+            'yelu_zhilugu': { 
+                name: '耶律直鲁古 (西辽末帝)', 
+                subtitle: '在一片血泊中登上皇位的倒霉蛋', 
+                content: '<p>作为耶律夷列的嫡长子，姑姑普速完的被杀让他提前拿回了原本属于自己的皇位。</p><p>但他接手的，是一个因为内部流血政变而开始产生裂痕的朝廷。曾经对耶律家族绝对忠诚的外戚将领（如萧斡里剌家族）已经敢于直接起兵弑君了。直鲁古虽然在位时间很长，但他昏庸无能，爱好打猎游玩，最终不仅丢了中亚霸主的地位，还引狼入室，让西辽在屈辱中走向了灭亡。</p>' 
+            },
+
+            /* 事件库 */
+            'linchao': { 
+                name: '承天称制 (1163年)', 
+                subtitle: '兄终妹及的罕见传承', 
+                content: '<p><strong>【背景起因】</strong><br>仁宗夷列病重，太子直鲁古年幼，为了国家稳定，夷列遗命妹妹普速完临朝称制。</p><p><strong>【事变经过】</strong><br>普速完顺利接过大权，号“承天太后”。她延续了父兄的国策，稳住了西辽的内部局势。但长期的独裁大权让她逐渐变得骄纵，甚至后来更改尊号为“承天皇帝”，在生活作风上也日益放纵，为后来的悲剧埋下了伏笔。</p><p><strong>【最终结果】</strong><br>西辽的高层权力架构由于她的任性开始出现严重的信任危机。</p>' 
+            },
+            'pingpan': { 
+                name: '威震花剌子模 (1172年)', 
+                subtitle: '西辽军威的最后一次华丽绽放', 
+                content: '<p><strong>【背景起因】</strong><br>花剌子模沙（国王）伊尔·阿尔斯兰拒绝缴纳贡赋，公开反叛西辽。</p><p><strong>【事变经过】</strong><br>普速完展现了不亚于历代先王的决断力，迅速任命军方一号人物萧斡里剌为统帅，发大军讨伐。西辽铁骑在中亚势如破竹，花剌子模人企图掘开水坝阻挡西辽军队，但依然无济于事。阿尔斯兰战败后忧愤而死，其子为了夺取王位，甚至亲自跑到西辽大营跪求普速完的支持。</p><p><strong>【最终结果】</strong><br>这是西辽帝国在灭亡前最后一次以绝对优势兵力震慑整个中亚，普速完的声望达到了顶点。</p>' 
+            },
+            'gongting': { 
+                name: '射杀太后政变 (1177年)', 
+                subtitle: '一场由绿帽子引发的血案', 
+                content: '<p><strong>【背景起因】</strong><br>普速完与小叔子私通，并捏造罪名将正牌驸马萧朵鲁不残忍处死。</p><p><strong>【事变经过】</strong><br>驸马的父亲萧斡里剌是刚刚带兵凯旋、立下不世之功的三朝元老。得知大儿子被害后，萧斡里剌怒不可遏，直接调动自己麾下的精锐部队包围了皇宫。士兵冲入大殿，将正在幽会的普速完和萧朴古只沙里当场射成了马蜂窝。</p><p><strong>【最终结果】</strong><br>大石家族的直系血脉因此遭到重创。政变后，萧斡里剌拥立耶律直鲁古为帝。这场内讧打破了西辽皇权不可侵犯的神话，西辽的辉煌时代随着普速完的倒下，正式进入了倒计时。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
