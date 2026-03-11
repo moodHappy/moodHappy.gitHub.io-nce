@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生成真正的原生Word (DOCX)</title>
+    <script src="https://unpkg.com/html-docx-js@0.3.1/dist/html-docx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #2c3e50; font-size: 22px; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #e74c3c; }
+        textarea { width: 100%; height: 250px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 20px; }
+        button { display: block; width: 100%; background-color: #e67e22; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; }
+        button:hover { background-color: #d35400; }
+        .preview-area { margin-top: 30px; border-top: 2px dashed #ecf0f1; padding-top: 20px; }
+        .preview-area table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .preview-area th, .preview-area td { border: 1px solid #bdc3c7; padding: 8px; text-align: left; }
+        .preview-area th { background-color: #ecf0f1; }
+    </style>
+</head>
+<body>
+
+    <h1>HTML 转换为真正的 .docx 格式</h1>
+    
+    <div class="container">
+        <label for="htmlInput">请粘贴源码 (此次将生成原生 .docx 文件，完美兼容手机端):</label>
+        <textarea id="htmlInput" placeholder="输入您的表格代码..."></textarea>
+        
+        <button onclick="exportToRealDocx()">生成原生 Word (.docx) 并下载</button>
+
+        <div class="preview-area" id="previewContainer" style="display: none;">
+            <label style="color:#34495e;">网页预览:</label>
+            <div id="previewBox"></div>
+        </div>
+    </div>
+
+    <script>
+        // 实时预览功能
+        document.getElementById('htmlInput').addEventListener('input', function() {
+            const htmlContent = this.value;
+            const previewContainer = document.getElementById('previewContainer');
+            const previewBox = document.getElementById('previewBox');
+            if (htmlContent.trim().length > 0) {
+                previewContainer.style.display = 'block'; previewBox.innerHTML = htmlContent;
+            } else {
+                previewContainer.style.display = 'none'; previewBox.innerHTML = '';
+            }
+        });
+
+        function exportToRealDocx() {
+            let htmlSource = document.getElementById('htmlInput').value.trim();
+            if (!htmlSource) { alert("请先输入HTML表格源码！"); return; }
+
+            // 1. 创建临时容器
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlSource;
+
+            // 2. 预处理表格：确保边框和空单元格符合库的要求
+            const tables = tempDiv.querySelectorAll('table');
+            tables.forEach(table => {
+                table.style.borderCollapse = 'collapse';
+                table.style.width = '100%';
+                
+                // 给跨行的表格强加结构化边框
+                const cells = table.querySelectorAll('th, td');
+                cells.forEach(cell => {
+                    cell.style.border = '1px solid black';
+                    cell.style.padding = '5px';
+                    // 填补你的源码中空的“负责人”列
+                    if (cell.innerHTML.trim() === '') {
+                        cell.innerHTML = '&nbsp;';
+                    }
+                });
+            });
+
+            // 3. 构建供 html-docx-js 转换的标准 HTML 结构
+            const content = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Document</title>
+                </head>
+                <body>
+                    ${tempDiv.innerHTML}
+                </body>
+                </html>
+            `;
+
+            // 4. 调用 html-docx-js 库，生成原生 docx 的 Blob 数据
+            try {
+                const converted = htmlDocx.asBlob(content);
+                // 5. 调用 FileSaver 库触发下载
+                saveAs(converted, "培训计划表_" + new Date().getTime() + ".docx");
+            } catch (error) {
+                alert("生成失败，请确保网络通畅以加载必要的脚本库。");
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
