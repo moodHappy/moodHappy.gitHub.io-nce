@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>大辽开国：耶律阿保机家族与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色对抗/流血/镇压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 皇帝/掌权者 */
+        .c-minister { color: #1565c0; font-weight: bold; } /* 文臣/太子 */
+        .c-rebel { color: #388e3c; font-weight: bold; } /* 叛军/对立面 */
+        .c-queen { color: #8e24aa; font-weight: bold; } /* 后妃/太后 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">大辽开国：耶律阿保机家族与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 360px; top: 70px; width: 100px; height: 2px;"></div>
+        <div class="kill-h" style="left: 170px; top: 70px; width: 100px;"></div>
+
+        <div class="line" style="left: 410px; top: 70px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 140px; top: 130px; width: 380px; height: 2px;"></div>
+        
+        <div class="line" style="left: 140px; top: 130px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 320px; top: 130px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 520px; top: 130px; width: 1px; height: 60px;"></div>
+
+        <div class="line" style="left: 140px; top: 230px; width: 1px; height: 70px;"></div>
+        <div class="kill-h" style="left: 200px; top: 320px; width: 120px;"></div>
+        <div class="kill-v" style="left: 320px; top: 240px; height: 80px;"></div>
+        
+        <div class="kill-solid-v" style="left: 200px; top: 150px; height: 20px;"></div>
+        <div class="kill-solid-h" style="left: 200px; top: 150px; width: 260px;"></div>
+        <div class="kill-solid-v" style="left: 460px; top: 110px; height: 40px;"></div>
+
+        <div class="label" style="left: 410px; top: 60px;">帝后结盟 / 并立双主</div>
+        <div class="label" style="left: 220px; top: 60px; color: #c62828;">诸弟之乱 / 三次叛乱</div>
+        
+        <div class="label" style="left: 140px; top: 160px;">长子(慕汉)</div>
+        <div class="label" style="left: 320px; top: 160px; color: #c62828; font-weight: bold;">次子(军功)</div>
+        <div class="label" style="left: 520px; top: 160px;">三子(暴虐)</div>
+        
+        <div class="label" style="left: 250px; top: 140px; color: #c62828;">强逼长子让国</div>
+
+        <div class="label" style="left: 140px; top: 270px;">长孙继位</div>
+        <div class="label" style="left: 260px; top: 320px; color: #c62828;">横渡之约 / 夺位冲突</div>
+
+        <div class="person" style="left: 320px; top: 70px;" onclick="showInfo('abaoji')">
+            <div class="c-dark">辽太祖</div>
+            <div class="c-emperor" style="font-size: 18px;">耶律阿保机</div>
+        </div>
+
+        <div class="person" style="left: 510px; top: 70px;" onclick="showInfo('shulv')">
+            <div class="c-dark">应天皇后</div>
+            <div class="c-queen" style="font-size: 18px;">述律平</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 70px;" onclick="showInfo('lage')">
+            <div class="c-dark">太祖之弟</div>
+            <div class="c-rebel">耶律剌葛</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 210px;" onclick="showInfo('yelu_bei')">
+            <div class="c-dark">东丹王 / 皇太子</div>
+            <div class="c-minister">耶律倍</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 210px;" onclick="showInfo('yelu_deguang')">
+            <div class="c-dark">辽太宗 / 天下兵马大元帅</div>
+            <div class="c-emperor">耶律德光</div>
+        </div>
+
+        <div class="person" style="left: 520px; top: 210px;" onclick="showInfo('yelu_lihu')">
+            <div class="c-dark">皇太弟 (废)</div>
+            <div class="c-rebel">耶律李胡</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 320px;" onclick="showInfo('yelu_ruan')">
+            <div class="c-dark">辽世宗</div>
+            <div class="c-emperor">耶律阮</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">大辽初期的三次政治风暴</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('zhudi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">911-913年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">诸弟之乱</div>
+            </div>
+            <div class="event-card" onclick="showInfo('duanwan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">926年</div>
+                <div class="c-queen" style="font-size: 18px; font-weight: bold;">断腕称制</div>
+            </div>
+            <div class="event-card" onclick="showInfo('rangguo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">927年</div>
+                <div class="c-minister" style="font-size: 18px; font-weight: bold;">义宗让国</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'abaoji': { 
+                name: '耶律阿保机 (辽太祖)', 
+                subtitle: '统一契丹的草原雄主，大辽王朝缔造者', 
+                content: '<p>耶律阿保机是契丹迭剌部首领。他打破了契丹八部传统的“可汗三年一选”的禅让制度，依靠强大的武力镇压了贵族与兄弟的叛乱，将部落联盟转化为世袭的封建王朝，于916年正式建国称帝。</p><p>他极具战略眼光，任用汉人韩延徽等人，建立城郭，发展农业，并创制了契丹文字（契丹大字）。他一生东征西讨，灭亡渤海国，为辽朝雄霸北方二百年奠定了坚实的基础。</p>' 
+            },
+            'shulv': { 
+                name: '述律平 (应天皇后)', 
+                subtitle: '杀伐果断的“断腕太后”，契丹政局的幕后铁腕', 
+                content: '<p>述律平不仅是阿保机的妻子，更是他打天下的顶级合伙人。她极具政治谋略，曾在阿保机外出时，亲自率军击溃偷袭的敌军（室韦）。</p><p>她性格极其冷酷狠辣。阿保机死后，为了扫清政治障碍，她借口“为先帝传话”，将数百名功臣将领殉葬。当汉臣赵思温反问她为何不亲自去地下侍奉先帝时，述律平竟挥刀砍下自己的右手腕放入棺内，以此震慑群臣，史称“断腕太后”。她重兵权、轻文化，坚决反对长子耶律倍的汉化路线，亲手主导了废长立幼的政变。</p>' 
+            },
+            'lage': { 
+                name: '耶律剌葛', 
+                subtitle: '为了皇位三次叛乱的亲弟弟', 
+                content: '<p>剌葛是阿保机的亲弟。在契丹传统的兄终弟及和选举制下，剌葛等人认为阿保机称帝并在位过久，侵犯了其他贵族兄弟的继承权。</p><p>他联合其他兄弟（迭剌、寅底石、安端）先后三次发动兵变，试图推翻阿保机。虽然多次被打败，但阿保机念及兄弟之情前两次都选择了宽恕。直到第三次叛乱，剌葛甚至抢走了代表权力的神帐，兵败后才遭到残酷镇压，标志着契丹向世袭皇权过渡的流血阵痛。</p>' 
+            },
+            'yelu_bei': { 
+                name: '耶律倍 (东丹王)', 
+                subtitle: '仰慕汉文化的悲情太子', 
+                content: '<p>耶律倍是阿保机的长子，早年被立为皇太子，并随军灭亡渤海国，被封为东丹王。他精通汉家经典，擅长诗词书画（其画作《射鹿图》流传后世），主张以儒家理念治理国家。</p><p>这种“汉化”倾向引起了保守派母亲述律平的极度厌恶。阿保机死后，在述律平的武力胁迫下，耶律倍被迫让出皇位给二弟德光。此后他备受猜忌和监视，最终无奈渡海投奔后唐。多年后，后唐发生内乱，耶律倍在洛阳被李从珂派人杀害，一生充满悲剧色彩。</p>' 
+            },
+            'yelu_deguang': { 
+                name: '耶律德光 (辽太宗)', 
+                subtitle: '南下中原，入主汴京的马背天子', 
+                content: '<p>耶律德光是阿保机次子，也是天下兵马大元帅。他性格勇猛，深得述律平喜爱。在母亲的支持下挤掉大哥，登基为帝。</p><p>他在位期间，最著名的功绩是援助石敬瑭建立后晋，从而获取了战略意义极高的“燕云十六州”，使辽国的势力深入中原。公元947年，他更是率军攻入后晋首都开封，穿着汉族皇帝的衮冕登基，改国号为“大辽”。但在北返途中病死于杀胡林，遗体被做成“帝羓”（木乃伊）运回北方。</p>' 
+            },
+            'yelu_lihu': { 
+                name: '耶律李胡', 
+                subtitle: '残暴失人心的“废太子”', 
+                content: '<p>耶律李胡是述律平最偏爱的小儿子。述律平晚年甚至想让他继承皇位，立他为“皇太弟”。</p><p>但李胡性格极其残暴，动辄杀人黥面，在契丹贵族中毫无威信。当辽太宗耶律德光死后，李胡在述律平的授意下带兵去镇压侄子耶律阮（世宗），结果在战场上一触即溃。最终在群臣的反对下，述律平被迫放弃让李胡继位的念头，李胡最终因涉嫌谋反被赐死。</p>' 
+            },
+            'yelu_ruan': { 
+                name: '耶律阮 (辽世宗)', 
+                subtitle: '借军威夺回父辈皇位的长孙', 
+                content: '<p>耶律阮是长子耶律倍的儿子。辽太宗在南征途中病逝后，随军的耶律阮在诸将的拥立下，直接在镇阳称帝。</p><p>这引发了留在北方的祖母述律平的震怒。述律平派李胡大军讨伐，结果战败。双方随后在横渡（潢河）隔河对峙。最终在一众贵族的斡旋下达成“横渡之约”，述律平被迫承认了耶律阮的合法性。耶律阮成功夺回了原本属于自己父亲那一脉的皇位，但也因推行汉法和连年征战，最终在火神淀之乱中被叛臣刺杀。</p>' 
+            },
+
+            /* 事件库 */
+            'zhudi': { 
+                name: '诸弟之乱 (911-913年)', 
+                subtitle: '制度转型的流血冲突', 
+                content: '<p><strong>【背景起因】</strong><br>契丹早期实行“世里制”（八部大人三年推举一次可汗）。阿保机当上可汗后，任用汉人，发展农业，试图建立终身制和世袭制的皇权，引起了习惯旧制度的贵族及其亲兄弟的强烈不满。</p><p><strong>【事变经过】</strong><br>911年至913年间，阿保机的弟弟剌葛、迭剌等人三次发动武装叛乱。他们甚至在阿保机带兵在外时，抢走了象征可汗权力的神帐。阿保机回师平叛，经过惨烈的战斗，最终彻底粉碎了叛军。</p><p><strong>【最终结果】</strong><br>虽然阿保机宽恕了部分参与叛乱的兄弟，但这场平叛彻底摧毁了传统的部落选举制。它扫清了阿保机称帝的障碍，是契丹从部落联盟走向封建集权帝国的决定性转折点。</p>' 
+            },
+            'duanwan': { 
+                name: '断腕称制 (926年)', 
+                subtitle: '最血腥残酷的皇权交接', 
+                content: '<p><strong>【背景起因】</strong><br>926年，阿保机在灭亡渤海国还军途中突然病逝。皇后述律平为了掌控政局，确保皇位能按照自己的意愿（传给次子德光而非太子耶律倍）进行交接，开始大开杀戒。</p><p><strong>【事变经过】</strong><br>述律平借口“先帝在地下缺人服侍”，将平时政见不合、或是偏向太子耶律倍的大臣将领统统拉到阿保机墓前殉葬，杀戮数百人。当汉臣赵思温当众质问她为何不亲自殉葬时，述律平毫不犹豫地拔出金刀，砍下自己的右手腕，命人放入棺中代自己从殉。</p><p><strong>【最终结果】</strong><br>这一极其血腥且强悍的举动，彻底震慑了朝野上下。述律平顺利开始了“称制”（临朝听政），掌握了辽国最高实权，为后续逼迫太子让位铺平了道路。</p>' 
+            },
+            'rangguo': { 
+                name: '义宗让国 (927年)', 
+                subtitle: '母子对立下的无奈妥协', 
+                content: '<p><strong>【背景起因】</strong><br>皇太子耶律倍崇尚汉化，主张儒家治国；而述律平与次子耶律德光则代表了契丹传统的游牧保守势力，主张以武力掠夺为主。述律平决意废长立幼。</p><p><strong>【事变经过】</strong><br>阿保机下葬后，述律平在群臣面前演了一出戏，让耶律倍和耶律德光骑马并排而立，让百官牵住自己拥戴者的马缰。由于述律平刚刚进行了大清洗，群臣瑟瑟发抖，全都跑去牵耶律德光的马。耶律倍知道大势已去，如果不退位必然被杀，只好对群臣宣布：“大元帅（德光）功德盖世，我理应退位。”</p><p><strong>【最终结果】</strong><br>耶律德光顺利登基为辽太宗。耶律倍虽然保住了一命，但失去了权力，并遭到长期监视。三年后，他在恐惧和无奈中带着几名随从渡海逃往后唐，大辽的皇位传承从此埋下了长房与二房之间近百年的斗争伏笔。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
