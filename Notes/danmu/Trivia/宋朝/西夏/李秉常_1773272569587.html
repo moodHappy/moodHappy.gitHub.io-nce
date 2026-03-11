@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>提线木偶：西夏惠宗李秉常与梁太后专政</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 彩色连接线 */
+        .line-blue { position: absolute; background-color: #1565c0; z-index: 1; height: 2px; }
+        .line-purple-h { position: absolute; background-color: #8e24aa; z-index: 1; height: 2px; }
+        .line-purple-v-dashed { position: absolute; border-left: 2px dashed #8e24aa; z-index: 1; width: 0; }
+
+        /* 红色对抗/流血/屠杀线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-xia { color: #00838f; font-weight: bold; } 
+        .c-song { color: #e65100; font-weight: bold; } 
+        .c-queen { color: #8e24aa; font-weight: bold; }
+        .c-minister { color: #1565c0; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">提线木偶：西夏惠宗李秉常与梁太后专政</h1>
+
+    <div class="family-tree">
+        <div class="line-purple-h" style="left: 270px; top: 90px; width: 100px;"></div>
+        
+        <div class="kill-solid-h" style="left: 140px; top: 90px; width: 60px;"></div>
+
+        <div class="line-purple-v-dashed" style="left: 320px; top: 120px; height: 60px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 220px; height: 80px;"></div>
+        
+        <div class="kill-solid-v" style="left: 350px; top: 220px; height: 80px;"></div>
+
+        <div class="label" style="left: 320px; top: 75px; color: #8e24aa; font-weight: bold;">梁氏外戚 / 绝对控盘</div>
+        <div class="label" style="left: 165px; top: 75px; color: #c62828; font-weight: bold;">发现密谋 / 满门抄斩</div>
+        
+        <div class="label" style="left: 320px; top: 150px; color: #8e24aa; font-weight: bold;">废帝软禁 / 囚于后宫</div>
+        
+        <div class="label" style="left: 250px; top: 260px; color: #c62828; font-weight: bold;">趁乱出击 / 五路伐夏</div>
+        <div class="label" style="left: 420px; top: 260px; color: #c62828; font-weight: bold;">永乐城之战 / 全歼宋军</div>
+
+        <div class="person" style="left: 220px; top: 90px;" onclick="showInfo('liang_taiho')">
+            <div class="c-dark">西夏太后 / 实际掌权者</div>
+            <div class="c-queen" style="font-size: 18px;">梁太后 (汉人)</div>
+        </div>
+
+        <div class="person" style="left: 420px; top: 90px;" onclick="showInfo('liang_yimai')">
+            <div class="c-dark">国相 / 舅舅</div>
+            <div class="c-minister">梁乙埋</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 90px;" onclick="showInfo('li_qing')">
+            <div class="c-dark">汉臣 (欲助帝夺权)</div>
+            <div class="c-minister">李清 (被斩)</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px;" onclick="showInfo('li_bingchang')">
+            <div class="c-dark">西夏惠宗 (傀儡)</div>
+            <div class="c-emperor" style="font-size: 18px;">李秉常</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('song_shenzong')">
+            <div class="c-dark">大宋皇帝 (王安石变法)</div>
+            <div class="c-song" style="font-size: 18px;">宋神宗 (赵顼)</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 320px;" onclick="showInfo('xu_ping')">
+            <div class="c-dark">大宋统帅 (全军覆没)</div>
+            <div class="c-song">徐禧 / 种谔</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">梁太后时期的铁血岁月</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('zhuanquan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1067年起</div>
+                <div class="c-queen" style="font-size: 18px; font-weight: bold;">梁氏专权</div>
+            </div>
+            <div class="event-card" onclick="showInfo('qiunjin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1081年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">幽禁废帝</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yongle')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1082年</div>
+                <div class="c-song" style="font-size: 18px; font-weight: bold;">永乐城惨败</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'li_bingchang': { 
+                name: '李秉常 (西夏惠宗)', 
+                subtitle: '被亲妈关起来的傀儡皇帝', 
+                content: '<p>李秉常7岁登基，国家大权被母亲梁太后和舅舅梁乙埋牢牢把持。随着年龄增长，他越来越不满自己傀儡的地位。他本想效仿父亲李谅祚，通过汉化改革和亲近大宋来建立自己的势力班底。</p><p>1081年，他与汉臣李清密谋，准备将黄河以南的领土划给宋朝，换取宋朝支持他夺回皇权。结果密谋泄露，亲妈梁太后心狠手辣，直接杀掉李清，并且将李秉常软禁在距都城五里外的兴州木寨中。他一生郁郁不得志，在宋夏战争的烽火中，于26岁抑郁病逝，是个彻底的悲剧角色。</p>' 
+            },
+            'liang_taiho': { 
+                name: '梁太后', 
+                subtitle: '比党项人更党项的汉人太后', 
+                content: '<p>梁太后原本是汉人，靠着给前任国舅爷戴绿帽子和引诱皇帝李谅祚成功上位。李谅祚死后，她临朝称制。</p><p>为了打消党项旧贵族对她这个汉人太后的猜忌，她上台后反其道而行之：废除丈夫推行的汉化政策，下令全国恢复党项蕃礼；同时，她频繁发动对北宋的战争。她的逻辑很简单：只要我带着你们去抢大宋的钱粮，你们就没空管我是汉人还是党项人了。在遭到宋神宗五路伐夏时，她展现了极其恐怖的军事指挥能力，硬生生把大宋的主力坑杀在了西北。</p>' 
+            },
+            'liang_yimai': { 
+                name: '梁乙埋', 
+                subtitle: '梁氏外戚的二把手', 
+                content: '<p>梁太后的亲弟弟。靠着姐姐的裙带关系，被封为西夏的国相，统领全国兵马。姐弟俩一内一外，把西夏变成了梁家的天下。虽然他本人的军事才能一般（经常被宋朝名将种谔按在地上摩擦），但在姐姐的庇护下，他的权位始终屹立不倒，直到病死。</p>' 
+            },
+            'li_qing': { 
+                name: '李清', 
+                subtitle: '想帮皇帝夺权，却丢了脑袋的汉臣', 
+                content: '<p>西夏的高级汉臣。他看出了李秉常想要夺权的渴望，于是向皇帝献计：把黄河以南（西夏防守薄弱的地区）割让给宋朝，以此换取大宋的政治背书，借大宋之手除掉梁太后。</p><p>计策虽然大胆，但保密工作太差。梁太后得知后，以雷霆之势将李清逮捕并斩首。李清的死，标志着李秉常夺权计划的彻底破产。</p>' 
+            },
+            'song_shenzong': { 
+                name: '宋神宗 (赵顼)', 
+                subtitle: '带着王安石的钱袋子，却打了一场烂仗', 
+                content: '<p>宋神宗是一位极其渴望建功立业的皇帝。在王安石变法的支持下，大宋国库充盈。当听闻西夏发生“母后囚禁皇帝”的内乱时，他认为这是彻底消灭西夏的千载难逢之机。</p><p>他倾全国之兵，发动了三十万大军的“五路伐夏”。但在没有统一总指挥（为了防武将造反，宋朝由宦官监军）的情况下，宋军虽然前期高歌猛进，却在深入沙漠后被梁太后的焦土战术拖垮，最终在灵州和永乐城遭遇了毁灭性的惨败。神宗得知战败后，在朝堂上当众痛哭，不久后带着未能平定西北的遗憾病逝。</p>' 
+            },
+            'xu_ping': { 
+                name: '大宋将领 (徐禧/种谔)', 
+                subtitle: '被文官瞎指挥坑死的边防军', 
+                content: '<p>在永乐城之战中，文官出身、纸上谈兵的狂人**徐禧**被宋神宗委以重任。他不顾名将种谔的苦苦劝阻，非要在没有水源的绝地（永乐）修筑城池。</p><p>梁太后抓住战机，亲率三十万西夏铁骑将永乐城团团包围。宋军断水，渴死者无数。最终城破，徐禧战死，大宋两百多名高级将领和数万精锐全军覆没。种谔虽然在外围试图救援，但大势已去，只能仰天长叹。</p>' 
+            },
+
+            /* 事件库 */
+            'zhuanquan': { 
+                name: '梁氏专权 (1067年起)', 
+                subtitle: '西夏的“吕后”时代', 
+                content: '<p><strong>【背景起因】</strong><br>李谅祚英年早逝，7岁的李秉常继位。</p><p><strong>【事变经过】</strong><br>梁太后临朝称制，任命亲弟梁乙埋为国相。为了稳固统治，她不惜牺牲汉族文化，全面迎合党项旧贵族，并挑起宋夏边境冲突以转移国内矛盾。这一时期，西夏的政权完全脱离了李氏皇族的控制。</p>' 
+            },
+            'qiunjin': { 
+                name: '幽禁废帝 (1081年)', 
+                subtitle: '亲妈对儿子的降维打击', 
+                content: '<p><strong>【背景起因】</strong><br>李秉常成年后，试图借助汉臣李清和大宋的力量夺回皇权。</p><p><strong>【事变经过】</strong><br>密谋泄露，梁太后果断出手，不仅杀了李清，还将自己的亲生儿子、堂堂西夏皇帝剥夺了一切权力，软禁在都城外的木寨中。这一极其离谱的举动震惊了整个天下，也给了大宋出兵的绝佳借口（名为“兴师问罪，解救夏主”）。</p>' 
+            },
+            'yongle': { 
+                name: '永乐城惨败 (1082年)', 
+                subtitle: '大宋西北军的至暗时刻', 
+                content: '<p><strong>【背景起因】</strong><br>五路伐夏失败后，宋神宗为了挽回面子，派狂生徐禧在宋夏边境的战略要冲修筑“永乐城”，企图步步为营压缩西夏的生存空间。</p><p><strong>【事变经过】</strong><br>徐禧刚愎自用，选址错误（无水）。西夏梁太后倾全国兵力（三十万）包围了正在修筑的永乐城。宋军在断水的情况下死战数日，最终城墙被攻破。徐禧等两百多名将领战死，数万宋军精锐被屠戮殆尽。</p><p><strong>【最终结果】</strong><br>永乐城之战是大宋自开国以来在西北遭遇的最惨重失败。宋神宗在朝堂上失声痛哭，大宋再也无力对西夏发动大规模进攻，梁太后的威望则在西夏达到了绝对的顶峰。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
