@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>大辽雄主：耶律德光与中原争霸关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色对抗/流血/镇压线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; } 
+        .c-queen { color: #8e24aa; font-weight: bold; } 
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">大辽雄主：耶律德光与中原争霸关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 140px; top: 80px; width: 140px; height: 2px;"></div>
+        <div class="kill-h" style="left: 360px; top: 80px; width: 140px;"></div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 50px;"></div>
+        <div class="line" style="left: 200px; top: 150px; width: 120px; height: 2px;"></div>
+        <div class="line" style="left: 200px; top: 150px; width: 1px; height: 50px;"></div>
+
+        <div class="line" style="left: 200px; top: 240px; width: 1px; height: 100px;"></div>
+
+        <div class="kill-v" style="left: 320px; top: 150px; height: 210px;"></div>
+        <div class="kill-h" style="left: 240px; top: 360px; width: 80px;"></div>
+
+        <div class="line" style="left: 540px; top: 100px; width: 1px; height: 80px;"></div>
+        <div class="line" style="left: 440px; top: 180px; width: 100px; height: 2px;"></div>
+        <div class="line" style="left: 440px; top: 180px; width: 1px; height: 100px;"></div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 300px; width: 80px;"></div>
+
+        <div class="label" style="left: 210px; top: 70px;">铁腕扶持</div>
+        <div class="label" style="left: 430px; top: 70px; color: #c62828;">猜忌逼走</div>
+        
+        <div class="label" style="left: 260px; top: 140px;">儿皇帝 / 割让燕云</div>
+        <div class="label" style="left: 200px; top: 290px; color: #c62828;">违约：“称孙不称臣”</div>
+        
+        <div class="label" style="left: 280px; top: 350px; color: #c62828; font-weight: bold;">倾国南下灭晋</div>
+        <div class="label" style="left: 490px; top: 170px;">长房隐忍血脉</div>
+        
+        <div class="label" style="left: 380px; top: 290px; color: #c62828;">暴毙 / 军中拥立世宗</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('yelu_deguang')">
+            <div class="c-dark">辽太宗</div>
+            <div class="c-emperor" style="font-size: 18px;">耶律德光</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 80px;" onclick="showInfo('shulv')">
+            <div class="c-dark">皇太后 (坐镇北方)</div>
+            <div class="c-queen">述律平</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('yelu_bei')">
+            <div class="c-dark">东丹王 (客死异乡)</div>
+            <div class="c-minister">耶律倍</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 220px;" onclick="showInfo('shi_jingtang')">
+            <div class="c-dark">后晋高祖</div>
+            <div class="c-minister">石敬瑭</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 360px;" onclick="showInfo('shi_chonggui')">
+            <div class="c-dark">后晋出帝</div>
+            <div class="c-rebel">石重贵</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 300px;" onclick="showInfo('yelu_ruan')">
+            <div class="c-dark">辽世宗 (长孙)</div>
+            <div class="c-emperor">耶律阮</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">辽太宗时期三大地缘剧变</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('yanyun')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">936年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">割让燕云</div>
+            </div>
+            <div class="event-card" onclick="showInfo('miejin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">947年</div>
+                <div class="c-rebel" style="font-size: 18px; font-weight: bold;">入主汴京</div>
+            </div>
+            <div class="event-card" onclick="showInfo('diba')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">947年</div>
+                <div class="c-queen" style="font-size: 18px; font-weight: bold;">帝羓之变</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'yelu_deguang': { 
+                name: '耶律德光 (辽太宗)', 
+                subtitle: '将大辽推向中原巅峰的马背天子', 
+                content: '<p>耶律德光是辽太祖阿保机的次子。他在母亲述律平的武力威压下，取代了长兄耶律倍继承皇位。如果说阿保机统一了草原，那耶律德光的野心则完全望向了富庶的南方。</p><p>他通过援助石敬瑭建立后晋，兵不血刃地拿下了具有极高战略价值的“燕云十六州”。随后在面对后晋出帝的反叛时，他倾尽倾国之兵南下，攻破开封，灭亡后晋，甚至换上中原皇帝的衮冕，将国号从“契丹”改为“大辽”。但由于纵容士兵“打草谷”（抢劫），激起中原百姓全民反抗，最终只能狼狈北撤，在途中病逝。</p>' 
+            },
+            'shulv': { 
+                name: '述律平 (皇太后)', 
+                subtitle: '坐镇北方的幕后大统领', 
+                content: '<p>在耶律德光南征北战的岁月中，太后述律平始终坐镇北方大本营（上京），掌控着辽国的根本。</p><p>她虽然支持次子德光，但骨子里极其轻视中原汉文化，认为“汉人如野草，割了又长”，反对将辽国的主力深陷中原泥潭。当耶律德光在南方深陷泥沼甚至病死时，述律平的预言一语成谶。但她没想到的是，德光的死，让她最痛恨的长子一脉（长孙耶律阮）在南征大军中趁机夺取了皇位。</p>' 
+            },
+            'yelu_bei': { 
+                name: '耶律倍 (东丹王)', 
+                subtitle: '客死异乡的悲情长兄', 
+                content: '<p>耶律倍被迫让出皇位后，由于不堪忍受弟弟德光和母亲的长期监视与猜忌，乘船渡海逃往中原的后唐政权。</p><p>他在后唐虽然受到优待，但命运依然悲惨。后来后唐发生内乱，末帝李从珂在自焚前，派人将耶律倍刺杀。耶律倍的惨死，给了耶律德光一个极其完美的借口——“为兄报仇”，从而名正言顺地出兵干涉中原内战，拉开了辽国大规模南下的序幕。</p>' 
+            },
+            'shi_jingtang': { 
+                name: '石敬瑭 (后晋高祖)', 
+                subtitle: '遗臭万年的“儿皇帝”', 
+                content: '<p>石敬瑭原是后唐的河东节度使，在被后唐末帝大军围困于晋阳（太原）的绝境下，向契丹求援。</p><p>为了换取耶律德光的出兵，比德光大10岁的石敬瑭，竟然认德光为“父皇帝”，自称“儿皇帝”，并许诺割让长城以南的幽云十六州（燕云十六州），每年进贡帛三十万匹。耶律德光大喜，亲率铁骑南下击溃后唐军。石敬瑭的这一举动，让中原王朝在之后的四百多年里失去了北方天然的地理屏障，彻底改变了中国历史的走向。</p>' 
+            },
+            'shi_chonggui': { 
+                name: '石重贵 (后晋出帝)', 
+                subtitle: '硬气却无能的亡国之君', 
+                content: '<p>石敬瑭死后，养子石重贵继位。在主战派大臣景延广的怂恿下，石重贵决定对契丹强硬，向耶律德光上表时“称孙不称臣”，直接惹怒了辽太宗。</p><p>面对耶律德光的大军，石重贵虽然前期依靠中原将领的拼死抵抗打赢了几场防御战，但他本人荒淫腐败，任用小人。最终，后晋主力大将杜重威在滹沱河之战中临阵倒戈，带领十万中原主力向契丹投降。开封城门洞开，石重贵全家被俘虏，押往北方荒漠，后晋灭亡。</p>' 
+            },
+            'yelu_ruan': { 
+                name: '耶律阮 (辽世宗)', 
+                subtitle: '在乱局中逆袭的长孙', 
+                content: '<p>耶律阮是长子耶律倍的儿子，随叔叔耶律德光南下伐晋。德光病逝于杀胡林时，局势千钧一发。</p><p>南征大军不愿意听从北方太后述律平的调遣（太后想立小儿子李胡），于是将领们在军营中直接拥立随军的长孙耶律阮为帝。耶律阮凭借南征主力的军威，顶住了祖母的讨伐，成功夺回了本该属于自己父亲的皇位。大辽的内部权力，也因此从“二房”重新转回了“长房”。</p>' 
+            },
+
+            /* 事件库 */
+            'yanyun': { 
+                name: '割让燕云 (936年)', 
+                subtitle: '改变中国历史四百年的黑暗交易', 
+                content: '<p><strong>【背景起因】</strong><br>后唐内乱，河东节度使石敬瑭被围困，为求自保，以割地和称臣为条件，向辽太宗耶律德光求援。</p><p><strong>【事变经过】</strong><br>耶律德光亲率五万铁骑从雁门关南下，大败后唐军队。随后，耶律德光在晋阳城亲自册封石敬瑭为大晋皇帝。作为回报，石敬瑭将幽州、蓟州、云州等十六个州（今北京、天津北部、河北北部及山西北部）正式割让给辽国。</p><p><strong>【最终结果】</strong><br>燕云十六州是中原农耕文明抵御北方游牧民族的最后一道高山长城防线。它的丧失，让中原腹地（黄淮海平原）彻底暴露在契丹铁骑的马蹄之下，直接导致了北宋几百年的战略被动“积弱”局面。</p>' 
+            },
+            'miejin': { 
+                name: '入主汴京 (947年)', 
+                subtitle: '大辽最辉煌的顶点与中原的反噬', 
+                content: '<p><strong>【背景起因】</strong><br>后晋出帝石重贵试图摆脱“儿皇帝”的屈辱地位，拒绝向辽国称臣。耶律德光决定彻底消灭这个不听话的附庸。</p><p><strong>【事变经过】</strong><br>耶律德光发动了倾国之战。在后晋主将杜重威无耻投降后，辽军兵不血刃进入后晋首都汴京（开封）。耶律德光穿着汉族皇帝的礼服登基，宣布后晋灭亡，建立“大辽”。但他纵容契丹兵四处劫掠（称为“打草谷”），导致中原饿殍遍野。</p><p><strong>【最终结果】</strong><br>极度的残暴激起了中原军民的全民起义。各路反抗军让辽军疲于奔命，耶律德光感叹“不知中国之人难制如此”，被迫下令全军带着掠夺的财富撤退，大辽统一天下的梦想彻底破灭。</p>' 
+            },
+            'diba': { 
+                name: '帝羓之变 (947年)', 
+                subtitle: '最荒诞的帝王终局', 
+                content: '<p><strong>【背景起因】</strong><br>在撤退途中，耶律德光在中原感染了热疾（也有说是纵欲过度）。四月，当大军走到栾城杀胡林时，耶律德光病情恶化，口吐鲜血而死，年仅46岁。</p><p><strong>【事变经过】</strong><br>远在北方的述律太后传来懿旨：“生要见人，死要见尸”。但此时正值初夏，尸体无法长途跋涉运回北方。随军的御厨提出了一个骇人听闻的建议：按照草原上把牛羊肉做成肉干的方法处理皇帝的遗体。于是，太医和御厨将耶律德光的内脏全部掏空，用盐卤腌制，做成了中国历史上唯一的“木乃伊皇帝”，史称“帝羓”（把皇帝做成了风干肉）。</p><p><strong>【最终结果】</strong><br>这具荒诞的遗体被运回了北方。而更重要的是，耶律德光的突然死亡导致权力真空，随军将领为了自保，拥立了长孙耶律阮继位，大辽内部长达数十年的皇位争夺血腥大幕，再次被拉开。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
