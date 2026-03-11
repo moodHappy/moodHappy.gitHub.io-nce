@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>前秦(圣君与毒蛇)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/背刺/战争大败线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-jin { color: #d81b60; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧王猛卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">前秦(圣君与毒蛇)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 140px; top: 200px; width: 140px; height: 1px;"></div>
+
+        <div class="line-v-dashed" style="left: 320px; top: 220px; height: 40px;"></div>
+        <div class="line-h-dashed" style="left: 180px; top: 260px; width: 140px;"></div>
+        <div class="line-v-dashed" style="left: 180px; top: 260px; height: 80px;"></div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 260px; width: 140px;"></div>
+        <div class="line-v-dashed" style="left: 460px; top: 260px; height: 80px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 120px; height: 60px;"></div>
+
+        <div class="kill-solid-h" style="left: 360px; top: 200px; width: 140px;"></div>
+
+        <div class="kill-solid-v" style="left: 210px; top: 280px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 210px; top: 280px; width: 80px;"></div>
+        <div class="kill-solid-v" style="left: 290px; top: 220px; height: 60px;"></div>
+
+        <div class="kill-solid-v" style="left: 430px; top: 280px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 350px; top: 280px; width: 80px;"></div>
+        <div class="kill-solid-v" style="left: 350px; top: 220px; height: 60px;"></div>
+
+        <div class="label" style="left: 210px; top: 190px;">拊心之托 / 功盖诸葛</div>
+        <div class="label" style="left: 370px; top: 150px; color: #c62828; font-weight: bold;">兵变弑君 / 夺位</div>
+        <div class="label" style="left: 430px; top: 190px; color: #c62828; font-weight: bold;">淝水惨败 / 帝国崩盘</div>
+        
+        <div class="label" style="left: 250px; top: 250px;">盲目宽仁</div>
+        <div class="label" style="left: 390px; top: 250px;">纵虎归山</div>
+        
+        <div class="label" style="left: 200px; top: 310px; color: #c62828; font-weight: bold;">忘恩负义 / 缢杀天子</div>
+        <div class="label" style="left: 440px; top: 310px; color: #c62828; font-weight: bold;">趁火打劫 / 叛秦复燕</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('fusheng')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">苻生</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('wangmeng')">
+            <div class="c-dark">丞相 / 司徒</div>
+            <div class="c-minister">王猛</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px;" onclick="showInfo('fujian')">
+            <div class="c-dark">大秦天王</div>
+            <div class="c-emperor" style="font-size: 18px;">苻坚</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('xiexuan')">
+            <div class="c-dark">建武将军 (晋)</div>
+            <div class="c-jin">谢玄</div>
+        </div>
+
+        <div class="person" style="left: 180px; top: 360px;" onclick="showInfo('yaochang')">
+            <div class="c-dark">龙骧将军 (叛)</div>
+            <div class="c-rebel">姚苌</div>
+        </div>
+
+        <div class="person" style="left: 460px; top: 360px;" onclick="showInfo('murongchui')">
+            <div class="c-dark">冠军将军 (叛)</div>
+            <div class="c-rebel">慕容垂</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">前秦三大命运界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('duowei')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">357年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">诛杀暴君</div>
+            </div>
+            <div class="event-card" onclick="showInfo('feishui')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">383年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">淝水之战</div>
+            </div>
+            <div class="event-card" onclick="showInfo('xinping')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">385年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">新平弑帝</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'fusheng': { 
+                name: '苻生', 
+                subtitle: '生剥人皮的独眼暴君', 
+                content: '<p>苻生是前秦的第二任皇帝，天生独眼。他是个心理极度扭曲的恐怖分子，极其忌讳别人说“缺”、“少”、“单”等字眼，一旦听到就立刻杀人。他在宫殿里摆满锤子、锯子、钳子等刑具，每天都要杀人取乐，甚至活生生剥下宫女的脸皮让人跳舞。</p><p>满朝文武每天上朝都如同过鬼门关，生怕回不了家。当苻生喝醉酒，准备向自己的堂弟苻坚开刀时，苻坚忍无可忍，连夜带兵冲入皇宫。苻生还没醒酒，就被士兵按在床上活活勒死。这一场兵变，把前秦从地狱的边缘拉了回来，交到了十六国最伟大的天王手里。</p>' 
+            },
+            'wangmeng': { 
+                name: '王猛', 
+                subtitle: '前秦的诸葛亮，算无遗策的神级丞相', 
+                content: '<p>王猛出身贫寒，曾在华山隐居，直到遇见苻坚，两人“语及废兴大事，异符同契”，犹如刘备遇见诸葛亮。在王猛的辅佐下，前秦厉行法治，诛杀不法贵族，迅速统一了整个中国北方。</p><p>王猛拥有极度毒辣的战略眼光。他深知鲜卑人慕容垂和羌人姚苌是永远养不熟的狼，曾用“金刀计”试图除掉慕容垂，却被苻坚的心软破坏。王猛临终前，用尽最后一口气告诫苻坚：“东晋虽然偏安，但那是华夏正统，千万不要去讨伐。我们真正的敌人是内部的鲜卑和羌人首领，必须把他们除掉！”可惜，这句泣血的遗言，被苻坚当成了耳旁风。</p>' 
+            },
+            'fujian': { 
+                name: '苻坚 (大秦天王)', 
+                subtitle: '十六国最伟大的仁君，死于善良的理想主义者', 
+                content: '<p>苻坚堪称五胡十六国中的一股清流。他深受儒家文化熏陶，极度宽厚仁慈。在他眼里，没有民族之分，所有人只要投降，都是他的子民。他击败前燕，不仅不杀燕国皇族慕容垂，反而给他高官厚禄；他击败羌人，也将姚苌收为心腹。</p><p>但他把政治想得太天真了。在王猛死后，他为了完成“天下一统”的伟大梦想，不顾举国上下的反对，强行发动淝水之战。战败后，他的帝国威望瞬间清零。那些他曾经宽恕、提拔、甚至同床共枕的异族将领，立刻露出毒牙，在全国各地掀起叛乱。最终，他被自己最信任的部下姚苌逼入绝境，在佛寺中被一根绳子勒死。他的死，让短暂统一的北方再次陷入了数十年的血海深渊。</p>' 
+            },
+            'xiexuan': { 
+                name: '谢玄 (晋)', 
+                subtitle: '北府兵的统帅，打碎前秦美梦的南朝军神', 
+                content: '<p>谢玄是东晋名相谢安的侄子。面对苻坚号称“投鞭断流”的八十万大军，东晋朝野震动。谢玄临危受命，率领仅有八万人的“北府兵”迎敌。</p><p>在淝水前线，谢玄极其大胆地要求前秦军队稍微后退，腾出战场好让晋军渡河决战。骄傲的苻坚答应了，企图在晋军渡河一半时发动突袭。但前秦军队内部成分极其复杂，很多人本就是被强征来的。军队一后退，晋军内应（降将朱序）在阵后大喊“秦军败了！”，导致前秦八十万大军发生灾难性的踩踏和全线大崩溃。谢玄一战封神，不仅保住了汉人的南方半壁江山，更直接将前秦帝国打回了原形。</p>' 
+            },
+            'yaochang': { 
+                name: '姚苌', 
+                subtitle: '农夫怀里的毒蛇，逼死主君的极恶叛贼', 
+                content: '<p>姚苌是羌族首领。苻坚统一北方时，姚苌兵败投降，苻坚不仅没有杀他，反而极其重用他，封他为龙骧将军——这正是苻坚自己当年起家时的头衔，可见对其信任之深。</p><p>淝水之战后，姚苌在一次平叛失败后，因为害怕苻坚责罚，直接宣布造反。他趁着苻坚被各路叛军打得焦头烂额时，包围了苻坚逃亡的队伍。将恩人俘虏后，姚苌竟然厚颜无耻地向苻坚索要传国玉玺，并要求苻坚把皇位禅让给他。遭到苻坚的严词痛骂后，姚苌恼羞成怒，派人将苻坚勒死在新平的佛寺里，随后建立了后秦政权。</p>' 
+            },
+            'murongchui': { 
+                name: '慕容垂', 
+                subtitle: '隐忍的战神，扯下前秦第一块血肉的复仇者', 
+                content: '<p>慕容垂本是前燕的绝世战神，因遭国内权臣迫害，无奈逃奔前秦。王猛看出他是一条不可能久居人下的真龙，极力主张杀掉他，但苻坚为了千金市骨，坚持保护慕容垂，甚至让他统领旧部。</p><p>慕容垂在苻坚麾下极其低调隐忍。淝水之战中，前秦全军覆没，唯独慕容垂的三万军队建制完整。苻坚极其狼狈地逃到慕容垂的大营里，慕容垂的部下纷纷劝他趁机杀掉苻坚复国。但慕容垂守住了最后的底线，护送苻坚返回长安。随后，他借口去河北安抚民心，脱离了苻坚的控制，一到河北立刻拉起大旗宣布独立，建立后燕，成为了压垮前秦帝国的第一根致命稻草。</p>' 
+            },
+
+            /* 事件库 */
+            'duowei': { 
+                name: '诛杀暴君 (357年)', 
+                subtitle: '终结恐怖统治，开启天王霸业', 
+                content: '<p><strong>【背景起因】</strong><br>前秦皇帝苻生残暴不仁，动辄以残忍手段虐杀王公大臣，整个长安城笼罩在死亡的恐怖中。苻生酒后对侍女说准备杀掉堂弟苻坚。</p><p><strong>【事变经过】</strong><br>侍女将消息密报给苻坚。苻坚与亲信连夜率领几百名士兵冲入皇宫。禁军不仅没有阻拦，反而倒戈加入。苻坚的军队冲进寝宫时，苻生还在宿醉中。士兵将苻生拖下床，囚禁后勒死。</p><p><strong>【最终结果】</strong><br>苻坚登基，自降帝号称“大秦天王”。他一改前朝的暴政，重用汉人王猛，前秦由此迎来了历史上最辉煌的飞跃，迅速崛起为北方霸主。</p>' 
+            },
+            'feishui': { 
+                name: '淝水之战 (383年)', 
+                subtitle: '一场微操失误导致的帝国总崩盘', 
+                content: '<p><strong>【背景起因】</strong><br>前秦统一北方后，苻坚志得意满，不顾所有大臣的反对，强行征发八十余万大军南下，企图一举消灭东晋，完成大一统。</p><p><strong>【事变经过】</strong><br>在淝水（今安徽寿县）前线，苻坚为了让东晋军队渡河以便半渡而击，下令前秦军队后撤。但这支由被征服的各族人民临时拼凑的大军根本没有军纪可言，一听到“秦军败了”的喊声，立刻演变成不可逆转的大溃逃。苻坚在逃跑途中甚至把风声和鹤叫声都当成晋军的追兵（风声鹤唳、草木皆兵）。</p><p><strong>【最终结果】</strong><br>前秦的精锐主力一朝丧尽。这场惨败彻底打碎了苻坚的战神光环，北方被压制的各族首领立刻撕破脸皮纷纷独立，强盛的前秦帝国在一年之内土崩瓦解。</p>' 
+            },
+            'xinping': { 
+                name: '新平弑帝 (385年)', 
+                subtitle: '理想主义者的绝望落幕', 
+                content: '<p><strong>【背景起因】</strong><br>淝水战败后，慕容氏和姚苌先后起兵。长安被叛军围困，苻坚在缺粮的绝境下，带领少数亲信突围，试图前往陇西招募军队，结果在新平（今陕西彬县）被姚苌的军队包围。</p><p><strong>【事变经过】</strong><br>姚苌将苻坚囚禁在佛寺中，派人索要传国玉玺，并要求苻坚将皇位禅让给自己。苻坚大怒，痛骂：“小小的羌人敢逼迫天子，玉玺我已经送到晋朝去了，你这种叛贼怎配得到！”姚苌见无法得到合法外衣，恼羞成怒，派士兵进入佛寺，用弓弦将苻坚活活勒死。</p><p><strong>【最终结果】</strong><br>苻坚的死，标志着十六国时期一次极其珍贵的民族融合尝试彻底宣告失败。善良没能感化野心，北方重新回到了无休止的军阀混战与种族屠杀之中。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
