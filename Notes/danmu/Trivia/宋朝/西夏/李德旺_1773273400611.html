@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>绝地补天：西夏献宗李德旺与终极接盘</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        
+        /* 绿线/结盟线 */
+        .line-green-h { position: absolute; background-color: #2e7d32; z-index: 1; height: 2px; }
+
+        /* 红色对抗/流血/死亡线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-mongol { color: #f57f17; font-weight: bold; text-shadow: 0 0 1px #000; }
+        .c-jin { color: #d84315; font-weight: bold; } 
+        .c-rebel { color: #8e24aa; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 10px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">绝地补天：西夏献宗李德旺与终极接盘</h1>
+
+    <div class="family-tree">
+        <div class="line-v-dashed" style="left: 320px; top: 100px; height: 60px;"></div>
+        
+        <div class="line-green-h" style="left: 400px; top: 180px; width: 80px;"></div>
+        
+        <div class="line-h-dashed" style="left: 200px; top: 260px; width: 120px;"></div>
+        <div class="line-v-dashed" style="left: 320px; top: 210px; height: 50px;"></div>
+
+        <div class="kill-solid-h" style="left: 170px; top: 180px; width: 70px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 210px; height: 110px;"></div>
+
+        <div class="label" style="left: 320px; top: 130px; color: #555;">强行禅位 / 留个烂摊子</div>
+        
+        <div class="label" style="left: 440px; top: 165px; color: #2e7d32; font-weight: bold;">夏金同盟</div>
+        <div class="label" style="left: 440px; top: 195px; color: #555;">抱团取暖(太晚了)</div>
+        
+        <div class="label" style="left: 205px; top: 165px; color: #f57f17; font-weight: bold;">终极一战 / 物理抹除</div>
+        
+        <div class="label" style="left: 260px; top: 245px; color: #1565c0;">策反漠北部落(败露)</div>
+        
+        <div class="label" style="left: 320px; top: 280px; color: #c62828; font-weight: bold;">惊惧病死 / 传位侄儿</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('li_zunxu')">
+            <div class="c-dark">太上皇 (躲过一劫)</div>
+            <div class="c-emperor" style="color: #999;">西夏神宗 李遵顼</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 180px;" onclick="showInfo('li_dewang')">
+            <div class="c-dark">西夏献宗 (背锅侠)</div>
+            <div class="c-emperor" style="font-size: 18px;">李德旺</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 180px;" onclick="showInfo('tiemuzhen')">
+            <div class="c-dark">大蒙古国</div>
+            <div class="c-mongol" style="font-size: 18px;">成吉思汗</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 180px;" onclick="showInfo('jin_dynasty')">
+            <div class="c-dark">大金帝国</div>
+            <div class="c-jin" style="font-size: 16px;">金哀宗 完颜守绪</div>
+        </div>
+
+        <div class="person" style="left: 140px; top: 260px;" onclick="showInfo('mobei')">
+            <div class="c-dark">漠北诸部</div>
+            <div class="c-rebel">反蒙残余势力</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 340px;" onclick="showInfo('li_xian')">
+            <div class="c-dark">末代皇帝 (最后守夜人)</div>
+            <div class="c-emperor" style="font-size: 18px;">西夏末帝 李睍</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">李德旺的绝命反击与崩盘</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('lianmeng')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1225年</div>
+                <div class="c-jin" style="font-size: 18px; font-weight: bold;">夏金合好</div>
+            </div>
+            <div class="event-card" onclick="showInfo('miejue')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1226年</div>
+                <div class="c-mongol" style="font-size: 18px; font-weight: bold;">铁骑降临</div>
+            </div>
+            <div class="event-card" onclick="showInfo('bingsi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1226年秋</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">惊惧而亡</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'li_dewang': { 
+                name: '李德旺 (西夏献宗)', 
+                subtitle: '试图拉住一列坠崖火车的悲情司机', 
+                content: '<p>李德旺其实是个有战略眼光的明白人。他上台后立刻意识到了前两任皇帝“附蒙伐金”是何等的愚蠢。他迅速纠正路线，主动与金国结盟，并策划“反蒙统一战线”。</p><p>可惜，西夏的国力早在前十几年就被他爹折腾光了。当成吉思汗亲率十万大军再次杀来时，李德旺发现自己根本调不出像样的军队来抵抗。随着战略重镇黑水城、沙州、肃州、甘州等被蒙古军队摧枯拉朽般地踏平，巨大的恐惧压垮了这个中年人的神经。他在蒙古大军合围中兴府的前夕，急火攻心，一命呜呼。</p>' 
+            },
+            'li_zunxu': { 
+                name: '李遵顼 (西夏神宗)', 
+                subtitle: '躲得过蒙古人，躲不过老天爷', 
+                content: '<p>这位把国家推向深渊的状元皇帝，在把皇位甩锅给儿子后，躲在深宫里瑟瑟发抖了三年。讽刺的是，1226年春天，就在蒙古大军即将发动最终攻击的时候，他病死了，居然成了西夏末期极少数得了善终的皇帝。但他留下的无尽业障，全都要由他的子孙和西夏百姓用鲜血来偿还。</p>' 
+            },
+            'tiemuzhen': { 
+                name: '成吉思汗 (铁木真)', 
+                subtitle: '带着雷霆之怒归来的杀神', 
+                content: '<p>成吉思汗一生最恨背叛。当他在西征途中得知西夏不仅不派兵，将领阿沙敢不还出言嘲讽，甚至暗中联络漠北诸部企图造反时，他对西夏的容忍度彻底降为了零。</p><p>1226年，成吉思汗带着消灭花剌子模的百战之师，发动了第六次伐夏。这一次的战略目标不再是抢劫或者逼迫称臣，而是**“族灭”**。蒙古军队所过之处，尽遭屠城，西夏文明迎来了毁灭性的至暗时刻。</p>' 
+            },
+            'jin_dynasty': { 
+                name: '金哀宗 完颜守绪', 
+                subtitle: '迟来的握手', 
+                content: '<p>金国此时也已经换上了最后一位试图补天的皇帝——金哀宗。收到西夏的结盟请求后，金国上下激动万分，双方立刻定下兄弟之国，发誓共同抵抗蒙古。</p><p>但残酷的现实是，两个加起来都打不过蒙古的残血国家，抱在一起依然改变不了什么。金国自己都被蒙古人按着打，根本派不出一兵一卒去救援西夏，这份结盟最终只是一张毫无用处的废纸。</p>' 
+            },
+            'mobei': { 
+                name: '漠北诸部', 
+                subtitle: '胎死腹中的反蒙联盟', 
+                content: '<p>李德旺试图利用成吉思汗西征导致蒙古大本营空虚的机会，联络漠北那些被迫臣服蒙古的部落首领起义。结果保密工作太差，密谋被蒙古驻守后方的将领孛鲁察觉并迅速扑灭。这不仅让西夏失去了外援，更给了成吉思汗提前灭夏的完美借口。</p>' 
+            },
+            'li_xian': { 
+                name: '李睍 (西夏末帝)', 
+                subtitle: '大夏帝国的守墓人', 
+                content: '<p>李德旺死后，西夏朝臣拥立了李遵顼的孙子（李德旺的侄儿）李睍为帝。他接手时，西夏已经只剩下首都中兴府这一座孤城了。他将要面对长达半年的惨烈围城，以及最终极其悲壮的亡国血难。</p>' 
+            },
+
+            /* 事件库 */
+            'lianmeng': { 
+                name: '夏金合好 (1225年)', 
+                subtitle: '迟到了十年的战略纠错', 
+                content: '<p><strong>【背景起因】</strong><br>李德旺深知单打独斗必死无疑，必须联合一切可以联合的力量。</p><p><strong>【事变经过】</strong><br>西夏主动派出使臣前往金国，两国达成协议，改金夏“叔侄”关系为“兄弟”之国，金国称兄，西夏称弟，停止一切边境冲突，共同应对蒙古。</p><p><strong>【最终结果】</strong><br>虽然在政治上这是极其正确的决定，但在军事上，金国泥菩萨过江自身难保，这场同盟没有为西夏带来任何实质性的军事援助。</p>' 
+            },
+            'miejue': { 
+                name: '铁骑降临 (1226年)', 
+                subtitle: '不留活口的推土机', 
+                content: '<p><strong>【背景起因】</strong><br>成吉思汗以西夏庇护仇敌、暗中结盟反蒙为由，亲率十万大军南下。</p><p><strong>【事变经过】</strong><br>这一次蒙古军没有直扑首都，而是采取了极其毒辣的“剪除羽翼”战术。从黑水城（今内蒙古额济纳旗）开始，肃州、甘州、凉州、灵州等西夏西线重镇被逐一拔除。尤其是肃州城，由于遭到顽强抵抗，城破后蒙古军进行了惨绝人寰的大屠杀，全城仅留106家活口。</p><p><strong>【最终结果】</strong><br>西夏外围防御全部崩溃，首都中兴府彻底沦为死地中的孤岛。</p>' 
+            },
+            'bingsi': { 
+                name: '惊惧而亡 (1226年秋)', 
+                subtitle: '被绝望压垮的帝王', 
+                content: '<p>随着前线城池接连陷落、守将战死或投降的消息不断传回中兴府，李德旺的心理防线彻底崩溃。他知道祖宗留下的两百年基业将在自己手里灰飞烟灭，在极度的忧虑、恐惧和羞愤中，他一病不起，在蒙古大军包围首都前夕撒手人寰。他将亡国之君的千古悲名，留给了他无辜的侄子李睍。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
