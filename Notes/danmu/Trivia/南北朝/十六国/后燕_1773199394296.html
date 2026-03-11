@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>后燕(战神与毁棺)核心人物与事件关系图</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片：只有冰冷的官方头衔 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #a0a0a0;
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+
+        /* 红色杀戮/屠族/兵变线 */
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #777;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } 
+        .c-consort { color: #d81b60; font-weight: bold; } 
+        .c-minister { color: #1565c0; font-weight: bold; } 
+        .c-rebel { color: #388e3c; font-weight: bold; }
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            /* 左侧慕容宝/慕容盛卡片中心在100px，半宽约34px，左边缘为66px，绝对垂直对齐 */
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 16px;
+            border-left: 4px solid #c62828;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #c62828; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 40px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 22px; color: #c62828; font-weight: 500; display: block; }
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 28px; color: #222; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">后燕(战神与毁棺)核心人物与事件关系图</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 50px;"></div>
+        <div class="line" style="left: 100px; top: 130px; width: 220px; height: 1px;"></div>
+        <div class="line" style="left: 100px; top: 130px; width: 1px; height: 50px;"></div>
+
+        <div class="line" style="left: 100px; top: 280px; width: 1px; height: 100px;"></div>
+
+        <div class="line-h-dashed" style="left: 100px; top: 380px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 180px; width: 440px;"></div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 220px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 100px; top: 220px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 280px; width: 220px;"></div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 380px; width: 440px;"></div>
+
+        <div class="label" style="left: 210px; top: 120px;">父死子继 / 错付国运</div>
+        
+        <div class="label" style="left: 320px; top: 170px; color: #c62828; font-weight: bold;">参合陂惨败 / 坑杀四万燕军精锐</div>
+        <div class="label" style="left: 210px; top: 210px; color: #c62828;">趁乱篡位 / 尽灭慕容血脉</div>
+        <div class="label" style="left: 210px; top: 270px; color: #c62828; font-weight: bold;">诛杀逆贼 / 夺回皇权</div>
+        
+        <div class="label" style="left: 140px; top: 330px;">叔接侄位</div>
+        
+        <div class="label" style="left: 210px; top: 370px;">破棺交媾 / 极度荒淫</div>
+        <div class="label" style="left: 430px; top: 370px; color: #c62828; font-weight: bold;">趁丧起兵 / 灭燕建国</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('murongchui')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">慕容垂</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 180px;" onclick="showInfo('murongbao')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">慕容宝</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 180px;" onclick="showInfo('tuobagui')">
+            <div class="c-dark">皇帝 (魏)</div>
+            <div class="c-rebel" style="font-size: 18px;">拓跋珪</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 280px;" onclick="showInfo('lanhan')">
+            <div class="c-dark">尚书令 / 大都督</div>
+            <div class="c-rebel">兰汗</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 280px;" onclick="showInfo('murongsheng')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor">慕容盛</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 380px;" onclick="showInfo('murongxi')">
+            <div class="c-dark">皇帝</div>
+            <div class="c-emperor" style="font-size: 18px;">慕容熙</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 380px;" onclick="showInfo('fuxunying')">
+            <div class="c-dark">昭仪 / 皇后</div>
+            <div class="c-consort">苻训英</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 380px;" onclick="showInfo('fengba')">
+            <div class="c-dark">将军</div>
+            <div class="c-minister">冯跋</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">后燕三大血色界碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('jianji')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">384年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">建国复燕</div>
+            </div>
+            <div class="event-card" onclick="showInfo('canhe')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">395年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">参合之变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('huiguan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">407年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">毁棺灭国</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'murongchui': { 
+                name: '慕容垂', 
+                subtitle: '一生不败的绝世战神，被不肖子气得呕血而亡', 
+                content: '<p>慕容垂是十六国时期武力值最顶级的统帅。他曾在前燕被逼出逃，蛰伏前秦多年。淝水之战后，他敏锐抓住时机起兵，以摧枯拉朽之势重建了燕国（后燕），打下了庞大的疆域。</p><p>但他一生最致命的败笔是立了极其无能的慕容宝为太子。为了给太子立威，他让慕容宝率领帝国八万精锐去讨伐正在崛起的北魏，结果在参合陂被北魏大军全歼。第二年，七十岁的慕容垂为了挽回局面，亲自挂帅出征。当大军路过参合陂时，看到漫山遍野的四万多具燕军骷髅，士兵们放声大哭。慕容垂看着自己一生心血被儿子毁于一旦，当场气得口吐鲜血，不久病逝。战神陨落，后燕的脊梁彻底断裂。</p>' 
+            },
+            'murongbao': { 
+                name: '慕容宝', 
+                subtitle: '志大才疏的坑爹专业户，丧权辱国的庸主', 
+                content: '<p>慕容宝接手了父亲留下的强大帝国，却在军事上蠢得令人发指。在参合陂之战中，他被北魏的拓跋珪用简单的计谋骗得军心涣散，撤退时又不设防备，导致八万精锐被北魏骑兵一波带走。</p><p>慕容垂死后，慕容宝登基，面对北魏的追击只能疯狂逃跑，甚至连都城都丢了。在流亡途中，他的儿子们互相残杀，最终他被权臣兰汗用计诱骗，在进城时被兰汗派去的刺客乱刀砍死，结束了极其屈辱的一生。</p>' 
+            },
+            'tuobagui': { 
+                name: '拓跋珪', 
+                subtitle: '北魏的奠基人，踏碎后燕主力的草原饿狼', 
+                content: '<p>拓跋珪是北魏的开国皇帝，也是慕容氏一生的宿敌。他敏锐地察觉到后燕太子慕容宝的无能，在参合陂之战中，他派人截断了燕军的信使，散布慕容垂已死的假消息，导致燕军军心崩溃。</p><p>在击溃燕军后，拓跋珪为了彻底解除后燕的战争潜力，下令将俘虏的四五万名燕军将士全部活埋（坑杀）。这一战不仅直接气死了老战神慕容垂，更让北魏踩着后燕的尸骨，成为了北方最强大的霸主。</p>' 
+            },
+            'lanhan': { 
+                name: '兰汗', 
+                subtitle: '趁火打劫的无耻叛贼，篡位灭族的屠夫', 
+                content: '<p>兰汗是慕容垂的亲家，也是后燕的高级将领。在慕容宝被北魏打得抱头鼠窜时，兰汗表面上表示忠心，迎接皇帝，暗地里却在城门设下埋伏。</p><p>慕容宝刚入城就被兰汗杀害。随后，兰汗为了斩草除根，将慕容宝的儿子们以及留在城内的慕容氏宗亲全部屠杀殆尽，自己篡位称大将军、大单于。但他低估了慕容家幸存者的复仇决心，仅仅几个月后，就被慕容宝的儿子慕容盛用计反杀。</p>' 
+            },
+            'murongsheng': { 
+                name: '慕容盛', 
+                subtitle: '忍辱负重的复仇者，手段严酷的短命天子', 
+                content: '<p>慕容盛是慕容宝的儿子，在兰汗大屠杀中，因为他是兰汗的女婿而侥幸保住一命。他表面上对岳父兰汗极度恭顺，暗中却挑拨兰汗兄弟之间的关系。</p><p>在一次祭祀大典上，慕容盛趁兰汗喝醉，率领死士暴起，将兰汗及其党羽全部诛杀，夺回了后燕政权。虽然他颇有谋略，但因为在位期间用法极其严酷，杀人太多，导致将领们人人自危。最终在一次叛乱中，他在暗处被刺客砍伤，伤重不治而亡。</p>' 
+            },
+            'murongxi': { 
+                name: '慕容熙', 
+                subtitle: '毁棺交媾的变态暴君，葬送帝国的终极疯子', 
+                content: '<p>慕容熙是慕容垂的小儿子。他登基后，不仅不恤国力，反而大兴土木修建极其奢华的龙腾苑。他一生最大的特点是极度荒淫且病态。</p><p>他疯狂宠爱皇后苻训英。苻训英死后，慕容熙如丧考妣，强迫百官必须哭出眼泪，否则论罪。更震碎三观的是，在棺材即将下葬前，慕容熙因为思念成疾，竟然命人重新撬开棺材，钻进去与已经开始腐败的尸体进行交媾。随后，他逼迫军队光脚步行为皇后送葬。这支受尽屈辱和折磨的军队在半路上爆发了，彻底抛弃了这个疯子皇帝。</p>' 
+            },
+            'fuxunying': { 
+                name: '苻训英', 
+                subtitle: '倾国倾城的红颜，后燕灭亡的催化剂', 
+                content: '<p>苻训英是前秦皇族后裔，深受慕容熙的变态迷恋。她喜欢夏天吃冻鱼、冬天吃生地黄，慕容熙为了满足她，找不到就直接把负责的大臣砍头。她喜欢游玩，慕容熙就带着她动用大军四处出巡，导致大量士兵饿死冻死。</p><p>她的死，直接摧毁了慕容熙最后的一丝理智，引发了“毁棺交媾”的旷古丑闻。她庞大而奢华的陵墓工程，压断了后燕军队的最后一根紧绷的神经，点燃了亡国的兵变之火。</p>' 
+            },
+            'fengba': { 
+                name: '冯跋', 
+                subtitle: '终结疯狂的起义者，北燕的缔造者', 
+                content: '<p>冯跋是后燕的将军。在慕容熙为了安葬苻训英而大肆折腾军队、导致民怨沸腾时，冯跋由于犯错害怕被暴君处死，决定铤而走险。</p><p>趁着慕容熙离开国都去为皇后送葬的机会，冯跋与亲信在都城内发动兵变，关闭城门，拥立高云（慕容云）为帝。慕容熙闻讯后仓皇带兵反攻都城，结果发现军队根本不听他的指挥。兵败后，慕容熙换上便服逃跑，被冯跋抓获并斩首。冯跋后来取代高云自己称帝，建立了北燕，极度荒唐残暴的后燕政权彻底落幕。</p>' 
+            },
+
+            /* 事件库 */
+            'jianji': { 
+                name: '建国复燕 (384年)', 
+                subtitle: '战神的崛起与前秦的崩溃', 
+                content: '<p><strong>【背景起因】</strong><br>前秦天王苻坚在淝水之战中全军覆没。随军出征的前燕宗室慕容垂手握唯一一支建制完整的军队，他护送苻坚回关中后，借口安抚河北脱离了控制。</p><p><strong>【事变经过】</strong><br>慕容垂一到河北，立刻撕下伪装，联络旧部起兵，恢复燕国国号。他展现出了无与伦比的军事天才，迅速击溃了前秦在北方的残余势力，一统关东地区，后燕帝国达到了实力的最巅峰。</p><p><strong>【最终结果】</strong><br>慕容垂复国成功，成为了北方无可争议的霸主。但他年事已高，强盛的后燕帝国其实只是靠他一个人的绝世武功在苦苦支撑。</p>' 
+            },
+            'canhe': { 
+                name: '参合之变 (395年)', 
+                subtitle: '四万大军坑杀，帝国脊梁被彻底打断', 
+                content: '<p><strong>【背景起因】</strong><br>北魏拓跋珪崛起，频繁骚扰后燕边境。慕容垂为了替太子慕容宝立威，命其率领八万大军征讨北魏。</p><p><strong>【事变经过】</strong><br>慕容宝极其无能，在黄河边与北魏对峙时，被拓跋珪截断了通信，误以为父亲慕容垂已死，军心大乱，急忙撤军。拓跋珪率领骑兵日夜追击，在参合陂（今内蒙古凉城）趁燕军毫无防备时发动突袭。燕军全线崩溃，太子单骑逃跑，四五万燕军精锐集体投降，随后被拓跋珪极其残忍地全部活埋。</p><p><strong>【最终结果】</strong><br>这场灾难性的惨败，不仅葬送了后燕最精锐的国防力量，更直接把老皇帝慕容垂气得吐血身亡。后燕从此一蹶不振，成了北魏案板上的鱼肉。</p>' 
+            },
+            'huiguan': { 
+                name: '毁棺灭国 (407年)', 
+                subtitle: '惊世骇俗的变态送葬与覆灭兵变', 
+                content: '<p><strong>【背景起因】</strong><br>后燕末代皇帝慕容熙荒淫残暴。宠后的离世让他彻底陷入了癫狂状态，他下令修建极其宏大的陵墓，并逼迫百官和军队全体披麻戴孝服苦役。</p><p><strong>【事变经过】</strong><br>在送葬队伍即将出发前，慕容熙竟然命人打开棺材，钻进去与死去的皇后交媾。随后，他让军队不穿铠甲、光脚徒步护送灵柩。将领冯跋等人忍无可忍，趁其出城，在都城内发动叛乱，关闭城门，切断了慕容熙的后路。</p><p><strong>【最终结果】</strong><br>慕容熙在众叛亲离中被斩首，立国短短二十四年的后燕在一种极其荒诞、变态的氛围中彻底宣告灭亡。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
