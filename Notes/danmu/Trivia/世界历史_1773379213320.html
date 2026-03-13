@@ -2,79 +2,76 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>世界历史系列条目 (至二战前后)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>世界历史 (交互弹窗版)</title>
     <style>
         body {
             font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 8px;
             display: flex;
             justify-content: center;
-            background-color: #f4f4f4;
-            padding: 20px;
+            /* 防止点击时文字被选中 */
+            user-select: none; 
+            -webkit-user-select: none;
         }
+        
         .history-table {
             width: 100%;
-            max-width: 500px;
+            table-layout: fixed; 
             border-collapse: collapse;
             text-align: center;
             background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .history-table td, .history-table th {
-            border: 2px solid #ffffff;
-            padding: 6px 2px;
-            font-size: 14px;
-            line-height: 1.3;
-        }
-        .date {
-            font-size: 11px;
-            color: #666;
-            display: block;
-            margin-top: 2px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            word-wrap: break-word;
         }
         
-        /* 顶部标题区样式 */
+        .history-table td, .history-table th {
+            border: 1px solid #ffffff;
+            padding: 8px 2px; /* 移除了时间，可以适当增加上下边距让触控区域更大 */
+            font-size: 12px; 
+            line-height: 1.3;
+        }
+        
+        /* 顶部标题区 */
         .header-cell {
             background-color: #f0f0f0;
-            padding: 15px !important;
+            padding: 12px 2px !important;
         }
         .header-title {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            margin-bottom: 5px;
+            gap: 8px;
+            margin-bottom: 3px;
         }
         .seal {
-            border: 2px solid #2b579a;
+            border: 1px solid #2b579a;
             color: #2b579a;
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             font-family: "KaiTi", "楷体", serif;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: bold;
             display: flex;
             flex-wrap: wrap;
-            line-height: 18px;
+            line-height: 14px;
             box-sizing: border-box;
-            padding: 0 2px;
+            padding: 0 1px;
         }
         .calligraphy {
             font-family: "KaiTi", "楷体", serif;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
         .subtitle {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
         }
-        .subtitle span {
-            color: #c33;
-            font-size: 15px;
-        }
-
-        /* 颜色类（马卡龙色系） */
+        
+        /* 颜色类 */
         .bg-green { background-color: #e0f8e0; }
         .bg-blue { background-color: #d0f0f8; }
         .bg-pink { background-color: #f8e0f8; }
@@ -82,154 +79,251 @@
         .bg-orange { background-color: #faebd7; }
         .bg-purple { background-color: #eeddff; }
         .bg-red { background-color: #ffe4e1; }
-        .bg-gray-dark { background-color: #eeeeee; color: #555; }
+        .bg-gray { background-color: #eeeeee; color: #555; }
+        
+        .col-header { 
+            background-color: #ddd; 
+            font-weight: bold; 
+            font-size: 11px; 
+            color: #333; 
+            padding: 6px 0 !important;
+        }
 
-        /* 文字颜色 */
-        .text-blue { color: #2b579a; font-weight: bold; text-decoration: none;}
+        /* 交互样式 */
+        .clickable {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .clickable:active {
+            opacity: 0.7; /* 点击时的按压反馈 */
+        }
+        .text-blue { color: #2b579a; font-weight: bold; }
         .text-black { color: #000; font-weight: bold; }
         .text-red { color: #b22222; font-weight: bold; }
+
+        /* 弹窗样式 (Modal) */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background-color: #fff;
+            width: 80%;
+            max-width: 320px;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+            animation: popIn 0.3s ease-out;
+            text-align: left;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .close-btn:hover { color: #333; }
+        
+        #modalTitle { margin: 0 0 5px 0; font-size: 18px; color: #2b579a; }
+        #modalTime { margin: 0 0 12px 0; font-size: 13px; color: #c33; font-weight: bold; }
+        #modalDesc { margin: 0; font-size: 14px; color: #444; line-height: 1.5; }
+
     </style>
 </head>
 <body>
 
     <table class="history-table">
         <tr>
-            <th colspan="12" class="header-cell">
+            <th colspan="6" class="header-cell">
                 <div class="header-title">
                     <div class="seal">界世<br>史历</div>
                     <div class="calligraphy">地中海与中东</div>
                 </div>
-                <div class="subtitle"><span>世界历史</span>系列条目 (至二战前后)</div>
+                <div class="subtitle"><span style="color:#c33;">世界历史</span> (点击区块查看简介)</div>
             </th>
         </tr>
 
         <tr>
-            <td rowspan="3" colspan="2" class="bg-orange text-blue" style="font-size: 15px;">早期<br>文明</td>
-            <td colspan="3" class="bg-yellow">
-                <span class="text-blue">古埃及</span><br><span class="date">前3100—前2181</span>
-            </td>
-            <td colspan="4" class="bg-blue">
-                <span class="text-blue">美索不达米亚</span><br><span class="date">苏美尔/阿卡德</span>
-            </td>
-            <td colspan="3" class="bg-green">
-                <span class="text-blue">爱琴文明</span><br><span class="date">前2700起</span>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3" class="bg-yellow"><span class="text-blue">埃及中/新王国</span><br><span class="date">前2055—前1069</span></td>
-            <td colspan="4" class="bg-blue"><span class="text-blue">古巴比伦</span><br><span class="date">前1894—前1595</span></td>
-            <td colspan="3" class="bg-purple"><span class="text-blue">赫梯帝国</span><br><span class="date">前1600—前1178</span></td>
-        </tr>
-        <tr>
-            <td colspan="10" class="bg-gray-dark" style="font-size: 12px;">—— 晚期青铜时代崩溃 (约前1200年) ——</td>
+            <td class="col-header" style="width: 10%;">时代</td>
+            <td class="col-header" style="width: 18%;">意大利</td>
+            <td class="col-header" style="width: 18%;">希腊/巴尔干</td>
+            <td class="col-header" style="width: 18%;">小亚/黎凡特</td>
+            <td class="col-header" style="width: 18%;">埃及/北非</td>
+            <td class="col-header" style="width: 18%;">波斯/两河</td>
         </tr>
 
         <tr>
-            <td rowspan="2" colspan="2" class="bg-green text-blue" style="font-size: 15px;">铁器<br>时代</td>
-            <td colspan="10" class="bg-green"><span class="text-blue">新亚述帝国</span> <span class="date" style="display:inline">前911—前609</span></td>
+            <td rowspan="2" class="bg-orange text-blue">青铜</td>
+            <td class="bg-gray clickable" data-title="印欧人迁徙" data-time="史前时期" data-desc="印欧语系人群开始向欧洲和近东地区迁徙，奠定了后来希腊、罗马、波斯等民族的基础。">印欧人<br>史前</td>
+            <td class="bg-green clickable" data-title="爱琴文明 (米诺斯与迈锡尼)" data-time="约前2700—前1100年" data-desc="欧洲最早的青铜文明。米诺斯文明以克里特岛为中心，迈锡尼文明随后在希腊本土兴起并发生特洛伊战争。"><span class="text-blue">米诺斯<br>迈锡尼</span></td>
+            <td class="bg-purple clickable" data-title="赫梯帝国 & 迦南" data-time="约前1600—前1178年" data-desc="赫梯是最早掌握冶铁技术的帝国之一，曾与埃及争夺黎凡特霸权。迦南地区则是犹太教和腓尼基文明的摇篮。"><span class="text-blue">赫梯帝国<br>迦南</span></td>
+            <td class="bg-yellow clickable" data-title="古埃及 (古王国与中王国)" data-time="约前2686—前1650年" data-desc="法老统治的确立时期，古王国时期建造了宏伟的金字塔群，中王国时期文学与艺术高度发展。"><span class="text-blue">古/中王国</span></td>
+            <td class="bg-blue clickable" data-title="美索不达米亚文明" data-time="前3500—前1595年" data-desc="人类文明的摇篮。苏美尔人发明了楔形文字，随后阿卡德帝国和古巴比伦王国（汉谟拉比时期）相继称霸两河流域。"><span class="text-blue">苏美尔<br>古巴比伦</span></td>
         </tr>
         <tr>
-            <td colspan="5" class="bg-pink"><span class="text-blue">新巴比伦帝国</span><br><span class="date">前626—前539</span></td>
-            <td colspan="5" class="bg-orange"><span class="text-blue">米底王国</span><br><span class="date">前678—前549</span></td>
-        </tr>
-
-        <tr>
-            <td rowspan="2" colspan="2" class="bg-purple text-blue" style="font-size: 15px;">古典<br>时代</td>
-            <td colspan="10" class="bg-purple"><span class="text-blue" style="font-size: 15px;">波斯帝国 (阿契美尼德王朝)</span><br><span class="date">前550—前330</span></td>
-        </tr>
-        <tr>
-            <td colspan="5" class="bg-blue"><span class="text-blue">古希腊城邦</span><br><span class="date">前8世纪—前322</span></td>
-            <td colspan="5" class="bg-red"><span class="text-red">罗马共和国 (早期)</span><br><span class="date">前509—前264</span></td>
+            <td colspan="2" class="bg-gray clickable" data-title="晚期青铜时代崩溃" data-time="约前1200年" data-desc="由于“海之民”入侵、气候变迁等复杂原因，地中海东部和近东的多个大型帝国（如赫梯、迈锡尼）突然崩溃，进入大动荡时期。">青铜崩溃<br>(海之民)</td>
+            <td class="bg-purple clickable" data-title="腓尼基城邦" data-time="前1200年后兴盛" data-desc="著名的航海和商业民族，发明了腓尼基字母（后世希腊和拉丁字母的祖先），在北非建立了迦太基。"><span class="text-blue">腓尼基</span></td>
+            <td class="bg-yellow clickable" data-title="古埃及 (新王国时期)" data-time="前1550—前1069年" data-desc="埃及最强盛的帝国时代，版图扩张至叙利亚。著名法老包括图特摩斯三世、拉美西斯二世。"><span class="text-blue">新王国</span></td>
+            <td class="bg-blue clickable" data-title="中亚述与喀西特巴比伦" data-time="前1365—前1055年" data-desc="亚述开始在两河流域北部崛起为军事强国；南部的巴比伦则被外族喀西特人长期统治。"><span class="text-blue">中亚述<br>喀西特</span></td>
         </tr>
 
         <tr>
-            <td rowspan="2" colspan="2" class="bg-yellow text-blue" style="font-size: 15px;">希腊化<br>时代</td>
-            <td colspan="10" class="bg-yellow"><span class="text-black" style="font-size: 16px;">亚历山大帝国</span> <span class="date" style="display:inline">前336—前323</span></td>
-        </tr>
-        <tr>
-            <td colspan="4" class="bg-orange"><span class="text-blue">托勒密王国</span><br><span class="date">埃及 前305—前30</span></td>
-            <td colspan="3" class="bg-green"><span class="text-blue">塞琉古帝国</span><br><span class="date">西亚 前312—前63</span></td>
-            <td colspan="3" class="bg-blue"><span class="text-blue">安提柯王朝</span><br><span class="date">希腊 前306—前168</span></td>
-        </tr>
-
-        <tr>
-            <td rowspan="3" colspan="2" class="bg-red" style="color:#b22222; font-weight:bold; font-size: 15px;">罗马<br>时代</td>
-            <td colspan="6" class="bg-red"><span class="text-red">罗马共和国 (扩张)</span><br><span class="date">前264—前27</span></td>
-            <td colspan="4" class="bg-pink"><span class="text-blue">迦太基共和国</span><br><span class="date">前814—前146</span></td>
-        </tr>
-        <tr>
-            <td colspan="6" class="bg-red" style="padding: 10px;">
-                <span class="text-red" style="font-size: 16px;">罗马帝国</span><br>
-                <span class="date">前27—395 (地中海为内湖)</span>
-            </td>
-            <td colspan="4" class="bg-purple">
-                <span class="text-blue" style="font-size: 15px;">安息帝国</span><br>
-                <span class="date">前247—224 (帕提亚)</span>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3" class="bg-orange"><span class="text-blue">西罗马</span><br><span class="date">395—476</span></td>
-            <td colspan="4" class="bg-blue"><span class="text-blue">东罗马 (拜占庭)</span><br><span class="date">395—1453</span></td>
-            <td colspan="3" class="bg-yellow"><span class="text-blue">萨珊波斯</span><br><span class="date">224—651</span></td>
+            <td class="bg-green text-blue">铁器</td>
+            <td class="bg-pink clickable" data-title="伊特鲁里亚与罗马王政" data-time="前8世纪起" data-desc="伊特鲁里亚人在意大利半岛北部建立了发达的城邦；同时期，罗马城邦建立并经历了七代国王的统治。"><span class="text-blue">伊特鲁里亚<br>罗马王政</span></td>
+            <td class="bg-gray clickable" data-title="希腊黑暗时代" data-time="前1100—前800年" data-desc="迈锡尼文明崩溃后，希腊人口锐减，文字失传，但在这一时期孕育了荷马史诗和后来的城邦制度。">希腊<br>黑暗时代</td>
+            <td class="bg-green clickable" data-title="以色列联合王国与亚兰" data-time="前1050—前720年" data-desc="大卫和所罗门统治下的以色列王国达到鼎盛，后分裂为南北两国；大马士革的亚兰人也是该地区的重要势力。"><span class="text-blue">以色列<br>亚兰</span></td>
+            <td class="bg-yellow clickable" data-title="埃及第三中间期" data-time="前1069—前332年" data-desc="埃及陷入长期的分裂与衰落，先后被利比亚人、努比亚人、亚述人和波斯人征服统治。"><span class="text-blue">第三中间期</span></td>
+            <td class="bg-purple clickable" data-title="新亚述 / 新巴比伦 / 米底" data-time="前911—前539年" data-desc="新亚述帝国以残暴和强大的军事征服了整个近东；其衰落后，新巴比伦（尼布甲尼撒二世）和米底王国瓜分了其领土。"><span class="text-blue">新亚述<br>新巴比伦<br>米底</span></td>
         </tr>
 
         <tr>
-            <td rowspan="2" colspan="2" class="bg-blue text-blue" style="font-size: 15px;">中世纪</td>
-            <td rowspan="2" colspan="3" class="bg-yellow">
-                <span class="text-blue">法兰克王国</span><br>
-                <span class="date">481—843</span><br>
-                <span class="text-blue">神圣罗马帝国</span><br>
-                <span class="date">962—1806</span>
-            </td>
-            <td colspan="3" class="bg-blue">
-                <span class="text-blue">拜占庭帝国</span><br><span class="date">持续至1453</span>
-            </td>
-            <td colspan="4" class="bg-green" style="padding: 10px;">
-                <span class="text-blue" style="font-size: 15px;">阿拉伯帝国</span><br>
-                <span class="date">632—1258 (横跨欧亚非)</span>
-                <span class="date">四大哈里发/倭马亚/阿拔斯</span>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3" class="bg-blue"><span class="text-blue">拜占庭残存</span><br><span class="date">1204后衰落</span></td>
-            <td colspan="2" class="bg-orange"><span class="text-blue">马穆鲁克</span><br><span class="date">埃及/拉凡特<br>1250—1517</span></td>
-            <td colspan="2" class="bg-pink"><span class="text-blue">伊尔汗国</span><br><span class="date">波斯/两河<br>1256—1335</span></td>
+            <td class="bg-purple text-blue">古典</td>
+            <td class="bg-red clickable" data-title="罗马共和国 (早期)" data-time="前509—前264年" data-desc="罗马驱逐国王建立共和国，设立执政官和元老院，并通过长期的战争逐步统一了整个意大利半岛。"><span class="text-red">罗马共和国</span></td>
+            <td class="bg-blue clickable" data-title="古希腊城邦" data-time="前8世纪—前322年" data-desc="雅典（民主制与文化中心）和斯巴达（军国主义）等数百个城邦并立。在波希战争中击败波斯，后因伯罗奔尼撒战争而衰落。"><span class="text-blue">希腊城邦</span></td>
+            <td colspan="3" class="bg-purple clickable" data-title="波斯帝国 (阿契美尼德王朝)" data-time="前550—前330年" data-desc="居鲁士大帝建立的人类历史上第一个横跨亚欧非的大帝国，行省制度完善，对异教宽容，最终被亚历山大所灭。"><span class="text-black">波斯帝国<br>(阿契美尼德)</span></td>
         </tr>
 
         <tr>
-            <td rowspan="2" colspan="2" class="bg-pink text-blue" style="font-size: 15px;">近现代</td>
-            <td rowspan="2" colspan="3" class="bg-purple">
-                <span class="text-blue">欧洲列强</span><br>
-                <span class="date">16世纪—20世纪</span>
-                <span class="date" style="line-height:1.4;">西/葡/法/英/意等<br>殖民帝国扩张</span>
-            </td>
-            <td colspan="4" class="bg-green" style="padding: 10px;">
-                <span class="text-blue" style="font-size: 16px;">奥斯曼帝国</span><br>
-                <span class="date">1299—1922</span>
-                <span class="date">统一巴尔干、小亚细亚与中东</span>
-            </td>
-            <td colspan="3" class="bg-yellow">
-                <span class="text-blue">波斯帝国</span><br>
-                <span class="date">1501—1925</span>
-                <span class="date">萨非/阿夫沙尔/恺加</span>
-            </td>
+            <td rowspan="2" class="bg-yellow text-blue">希腊化</td>
+            <td class="bg-red clickable" data-title="罗马扩张与布匿战争" data-time="前264—前146年" data-desc="罗马与北非强国迦太基进行了三次惨烈的布匿战争（汉尼拔翻越阿尔卑斯山），最终毁灭迦太基，称霸西地中海。"><span class="text-red">罗马扩张<br>布匿战争</span></td>
+            <td colspan="4" class="bg-yellow clickable" data-title="马其顿王国 / 亚历山大帝国" data-time="前336—前323年" data-desc="亚历山大大帝在短暂的13年内征服了希腊、埃及、黎凡特和整个波斯帝国，打到印度边境，开启了东西方文化交融的希腊化时代。"><span class="text-black">亚历山大帝国 (马其顿)</span></td>
         </tr>
         <tr>
-            <td colspan="2" class="bg-red">
-                <span class="text-red">土耳其</span><br>
-                <span class="date">1923至今</span>
-            </td>
-            <td colspan="2" class="bg-blue">
-                <span class="text-blue">英法委任统治</span><br>
-                <span class="date">20世纪初—中叶</span>
-                <span class="date">叙/黎/伊/巴及埃及</span>
-            </td>
-            <td colspan="3" class="bg-orange">
-                <span class="text-blue">伊朗</span><br>
-                <span class="date">巴列维王朝<br>1925—1979</span>
-            </td>
+            <td colspan="2" class="bg-red clickable" data-title="罗马征服希腊" data-time="前146年" data-desc="罗马军团向东扩张，击败了马其顿方阵，将希腊变为罗马的一个行省，但罗马在文化上反被希腊“征服”。"><span class="text-red">罗马征服希腊</span></td>
+            <td class="bg-green clickable" data-title="塞琉古帝国" data-time="前312—前63年" data-desc="亚历山大部将塞琉古建立的希腊化帝国，统治着庞大的亚洲领土（从小亚细亚到两河流域），后被罗马吞并。"><span class="text-blue">塞琉古</span></td>
+            <td class="bg-orange clickable" data-title="托勒密王国" data-time="前305—前30年" data-desc="亚历山大部将托勒密在埃及建立的王朝，首都亚历山大港是当时的学术和贸易中心。末代女王是著名的“埃及艳后”。"><span class="text-blue">托勒密</span></td>
+            <td class="bg-pink clickable" data-title="安息帝国 (帕提亚)" data-time="前247—224年" data-desc="由游牧民族建立的波斯帝国复兴，以轻骑兵和“帕提亚回马箭”闻名，是罗马帝国在东方的长期劲敌。"><span class="text-blue">安息帝国</span></td>
+        </tr>
+
+        <tr>
+            <td class="bg-red text-red">罗马</td>
+            <td colspan="4" class="bg-red clickable" data-title="罗马帝国" data-time="前27—395年" data-desc="屋大维终结共和国建立帝国。极盛时期版图环绕地中海，使其成为“内湖”。经历了五贤帝时期的繁荣与三世纪危机。"><span class="text-red" style="font-size: 13px;">罗马帝国</span></td>
+            <td class="bg-pink clickable" data-title="安息帝国" data-time="持续至 224年" data-desc="继续与罗马帝国在美索不达米亚和亚美尼亚地区进行反复拉锯战，后因内乱被萨珊波斯取代。"><span class="text-blue">安息帝国</span></td>
+        </tr>
+        <tr>
+            <td class="bg-pink text-blue">晚期<br>古典</td>
+            <td class="bg-orange clickable" data-title="西罗马帝国" data-time="395—476年" data-desc="罗马帝国分裂后的西部，因经济衰退和日耳曼蛮族的大规模入侵而走向灭亡，标志着欧洲古典时代的终结。"><span class="text-blue">西罗马</span></td>
+            <td colspan="3" class="bg-blue clickable" data-title="东罗马帝国 (早期拜占庭)" data-time="395—641年" data-desc="以君士坦丁堡为核心的东半部。查士丁尼皇帝时期曾短暂收复意大利和北非，并编纂了《查士丁尼法典》。"><span class="text-blue">东罗马帝国 (拜占庭)</span></td>
+            <td class="bg-yellow clickable" data-title="萨珊波斯" data-time="224—651年" data-desc="取代安息的波斯本土帝国，确立琐罗亚斯德教为国教，与拜占庭帝国进行了数百年的消耗战，最终双双被阿拉伯人击溃。"><span class="text-blue">萨珊波斯</span></td>
+        </tr>
+
+        <tr>
+            <td rowspan="2" class="bg-blue text-blue">中世<br>早期</td>
+            <td class="bg-gray clickable" data-title="伦巴第王国与教宗国" data-time="6世纪—8世纪" data-desc="日耳曼民族伦巴第人入侵意大利；同时，罗马主教借助法兰克人的“丕平献土”建立了教宗国，掌握了世俗权力。">伦巴第<br>教宗国</td>
+            <td rowspan="2" class="bg-blue clickable" data-title="拜占庭帝国 (马其顿复兴)" data-time="9世纪—11世纪" data-desc="挺过了阿拉伯人的猛烈围攻后，帝国在马其顿王朝治下迎来了军事和文化的全面复兴，重创保加利亚。"><span class="text-blue">拜占庭复兴</span></td>
+            <td colspan="3" class="bg-green clickable" data-title="阿拉伯帝国 (哈里发与倭马亚)" data-time="632—750年" data-desc="伊斯兰教先知穆罕默德之后，阿拉伯人如风暴般冲出半岛，迅速消灭萨珊波斯并重创拜占庭，建立横跨三大洲的超级大帝国。"><span class="text-black">阿拉伯帝国<br>(哈里发/倭马亚)</span></td>
+        </tr>
+        <tr>
+            <td class="bg-purple clickable" data-title="神圣罗马帝国" data-time="962—1806年" data-desc="奥托大帝加冕建立，名义上继承了罗马帝国的法统，核心区域在德国和北意大利，内部长期处于诸侯割据状态。"><span class="text-blue">神圣罗马</span></td>
+            <td class="bg-green clickable" data-title="阿拔斯王朝 (黑衣大食)" data-time="750—1258年" data-desc="推翻倭马亚后建立，以巴格达为首都。前期经济文化高度繁荣，开启“伊斯兰黄金时代”，后期大权旁落。"><span class="text-blue">阿拔斯</span></td>
+            <td class="bg-yellow clickable" data-title="法蒂玛王朝 (绿衣大食)" data-time="909—1171年" data-desc="什叶派在北非建立的哈里发国，定都开罗，成为与巴格达分庭抗礼的伊斯兰政治和文化中心。"><span class="text-blue">法蒂玛</span></td>
+            <td class="bg-pink clickable" data-title="波斯分裂 (白益/萨曼)" data-time="9世纪—11世纪" data-desc="阿拔斯王朝衰落后，波斯和中亚地区涌现出多个本土王朝（如萨曼、白益），标志着波斯文化的复兴。"><span class="text-blue">波斯分裂<br>(白益/萨曼)</span></td>
+        </tr>
+
+        <tr>
+            <td class="bg-orange text-blue">中世<br>盛期</td>
+            <td class="bg-gray clickable" data-title="商业城邦与诺曼征服" data-time="11世纪起" data-desc="威尼斯、热那亚等海洋城邦垄断地中海贸易；诺曼人则在南意大利和西西里岛建立了强悍的王国。">威尼斯<br>诺曼南意</td>
+            <td class="bg-blue clickable" data-title="拜占庭 (科穆宁与1204沦陷)" data-time="1081—1204年" data-desc="科穆宁王朝短暂中兴。但在1204年，威尼斯人引导第四次十字军攻陷并洗劫了君士坦丁堡，帝国遭受致命打击。"><span class="text-blue">拜占庭<br>1204沦陷</span></td>
+            <td class="bg-purple clickable" data-title="十字军国家 & 罗姆苏丹国" data-time="1098—1291年" data-desc="西欧基督徒响应教宗号召东征，在黎凡特建立了几个十字军国家；同时突厥人在小亚细亚建立了罗姆苏丹国。"><span class="text-blue">罗姆苏丹<br>十字军</span></td>
+            <td class="bg-yellow clickable" data-title="阿尤布王朝" data-time="1171—1260年" data-desc="库尔德英雄萨拉丁推翻法蒂玛王朝后建立。他在哈丁战役中大败十字军，成功收复了圣城耶路撒冷。"><span class="text-blue">阿尤布</span></td>
+            <td class="bg-green clickable" data-title="塞尔柱帝国 & 花剌子模" data-time="1037—1231年" data-desc="突厥人塞尔柱部建立的庞大逊尼派帝国，控制了波斯和中东；其衰落后被花剌子模取代，后者最终引来了蒙古西征。"><span class="text-blue">塞尔柱<br>花剌子模</span></td>
+        </tr>
+        <tr>
+            <td class="bg-pink text-blue">中世<br>晚期</td>
+            <td class="bg-purple clickable" data-title="文艺复兴" data-time="14世纪—16世纪" data-desc="佛罗伦萨、米兰等北意城邦因贸易致富，成为赞助艺术的中心，掀起了复兴古典希腊罗马文化的思想解放运动。"><span class="text-blue">文艺复兴<br>城邦</span></td>
+            <td class="bg-blue clickable" data-title="拜占庭帝国灭亡" data-time="1453年" data-desc="苟延残喘的拜占庭帝国最终被奥斯曼土耳其苏丹穆罕默德二世攻克君士坦丁堡，千年帝国落幕。"><span class="text-blue">拜占庭<br>灭亡</span></td>
+            <td colspan="2" class="bg-yellow clickable" data-title="马穆鲁克苏丹国" data-time="1250—1517年" data-desc="由军事奴隶（马穆鲁克）在埃及建立的政权。他们在阿音札鲁特战役中历史性地击败了蒙古骑兵，保卫了伊斯兰世界。"><span class="text-blue">马穆鲁克苏丹国</span></td>
+            <td class="bg-orange clickable" data-title="伊尔汗国与帖木儿帝国" data-time="1256—1507年" data-desc="蒙古大军摧毁巴格达后建立伊尔汗国；其解体后，突厥-蒙古血统的瘸子帖木儿横空出世，再次以血腥征服席卷中东。"><span class="text-blue">伊尔汗国<br>帖木儿</span></td>
+        </tr>
+
+        <tr>
+            <td rowspan="2" class="bg-yellow text-blue">近世</td>
+            <td class="bg-gray clickable" data-title="意大利战争与外敌控制" data-time="1494—1559年" data-desc="法国、西班牙和神圣罗马帝国为了争夺富庶的意大利沦为战场，最终西班牙哈布斯堡王朝确立了对意大利半岛的霸权。">外敌干涉<br>意大利战争</td>
+            <td colspan="3" rowspan="2" class="bg-green clickable" data-title="奥斯曼帝国" data-time="1299—1922年" data-desc="突厥人建立的伊斯兰超级帝国。苏莱曼大帝时期达到鼎盛，横跨欧亚非，黑海和东地中海几乎成为其内湖，令全欧洲战栗。"><span class="text-black" style="font-size: 13px;">奥斯曼帝国</span></td>
+            <td class="bg-blue clickable" data-title="萨非王朝 (波斯)" data-time="1501—1736年" data-desc="重新统一了波斯，并确立十二伊玛目什叶派为国教（深刻影响至今），是奥斯曼帝国在东方的死敌。"><span class="text-blue">萨非王朝</span></td>
+        </tr>
+        <tr>
+            <td class="bg-purple clickable" data-title="萨伏依与教宗国" data-time="18世纪" data-desc="北部萨伏依公国逐渐崛起成为撒丁王国，为后来的意大利统一积蓄力量；中部仍由教宗国控制。"><span class="text-blue">萨伏依<br>教宗国</span></td>
+            <td class="bg-pink clickable" data-title="阿夫沙尔与赞德王朝" data-time="1736—1794年" data-desc="军事天才纳迪尔沙建立阿夫沙尔王朝，曾短暂洗劫印度德里；随后被温和的赞德王朝取代。"><span class="text-blue">阿夫沙尔<br>赞德</span></td>
+        </tr>
+
+        <tr>
+            <td class="bg-blue text-blue">19<br>世纪</td>
+            <td class="bg-red clickable" data-title="意大利统一" data-time="1861年" data-desc="在加里波第和加富尔的努力下，撒丁王国成功驱逐外国势力，统一了四分五裂的意大利半岛。"><span class="text-blue">意大利统一</span></td>
+            <td class="bg-blue clickable" data-title="希腊独立" data-time="1821—1832年" data-desc="在英法俄等列强的干涉和拜伦等人的支持下，希腊成功脱离奥斯曼帝国长达数百年的统治，获得独立。"><span class="text-blue">希腊独立</span></td>
+            <td class="bg-green clickable" data-title="奥斯曼帝国的衰落" data-time="19世纪" data-desc="被称为“欧洲病夫”。虽进行了“坦志麦特”等近代化改革，但仍无法阻止领土被西方列强蚕食和巴尔干民族的独立浪潮。"><span class="text-blue">奥斯曼衰落</span></td>
+            <td class="bg-yellow clickable" data-title="穆罕默德·阿里王朝" data-time="1805—1953年" data-desc="阿里帕夏在埃及进行近代化改革，使其名义上属奥斯曼，实则为独立强国，甚至一度派兵威胁伊斯坦布尔。"><span class="text-blue">阿里王朝</span></td>
+            <td class="bg-orange clickable" data-title="恺加王朝" data-time="1789—1925年" data-desc="统治波斯的王朝。在19世纪沦为英国和俄罗斯帝国进行“大博弈”的缓冲地带，丧失大量领土和主权。"><span class="text-blue">恺加王朝</span></td>
+        </tr>
+        <tr>
+            <td class="bg-purple text-blue">20<br>世纪</td>
+            <td class="bg-gray clickable" data-title="法西斯意大利" data-time="1922—1943年" data-desc="墨索里尼建立法西斯独裁统治，企图重建“罗马帝国”，卷入二战并最终战败崩溃，意大利转为共和国。"><span class="text-black">法西斯</span></td>
+            <td class="bg-blue clickable" data-title="现代希腊" data-time="20世纪" data-desc="经历了巴尔干战争、一二战和残酷的内战，政体在君主制与共和国之间多次摇摆，最终确立为民主共和国。"><span class="text-blue">现代希腊</span></td>
+            <td class="bg-red clickable" data-title="土耳其 & 委任统治" data-time="一战后" data-desc="一战后奥斯曼解体，凯末尔建立世俗的土耳其共和国；而叙利亚、伊拉克、巴勒斯坦等地则被英法以“委任统治”名义瓜分。"><span class="text-red">土耳其<br>英法委任</span></td>
+            <td class="bg-green clickable" data-title="埃及独立" data-time="1922年独立" data-desc="一战后摆脱英国的保护国地位获得名义独立；1952年纳赛尔发动革命推翻君主制，建立共和国。"><span class="text-blue">埃及独立</span></td>
+            <td class="bg-pink clickable" data-title="巴列维王朝 (伊朗)" data-time="1925—1979年" data-desc="推行激进的世俗化和西化改革（白色革命），国名改为伊朗。最终因社会矛盾激化，在1979年伊斯兰革命中被推翻。"><span class="text-blue">巴列维王朝</span></td>
         </tr>
     </table>
 
+    <div id="infoModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" id="closeBtn">&times;</span>
+            <h2 id="modalTitle">标题</h2>
+            <p id="modalTime">🕒 时间不详</p>
+            <p id="modalDesc">暂无简介</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('infoModal');
+            const closeBtn = document.getElementById('closeBtn');
+            const cells = document.querySelectorAll('.clickable');
+
+            // 为每个包含 data-* 的单元格绑定点击事件
+            cells.forEach(cell => {
+                cell.addEventListener('click', function() {
+                    // 获取数据，如果没有则提供默认值
+                    const title = this.getAttribute('data-title') || this.innerText.replace(/\n/g, ' ');
+                    const time = this.getAttribute('data-time') || "无具体时间段";
+                    const desc = this.getAttribute('data-desc') || "暂无相关历史简介。";
+
+                    // 填充弹窗内容
+                    document.getElementById('modalTitle').textContent = title;
+                    document.getElementById('modalTime').textContent = "🕒 " + time;
+                    document.getElementById('modalDesc').textContent = desc;
+
+                    // 显示弹窗
+                    modal.style.display = "flex";
+                });
+            });
+
+            // 点击关闭按钮隐藏弹窗
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = "none";
+            });
+
+            // 点击弹窗外部区域也能关闭弹窗
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            });
+        });
+    </script>
 </body>
 </html>
