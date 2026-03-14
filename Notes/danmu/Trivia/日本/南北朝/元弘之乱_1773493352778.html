@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>日本镰仓时代末期：元弘之乱关系图</title>
+    <style>
+        body {
+            background-color: #f5f5f7; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #b8860b;
+        }
+
+        /* 阵营标题 */
+        .faction-title {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+        .faction-emperor { color: #b8860b; background: rgba(184, 134, 11, 0.1); }
+        .faction-bakufu { color: #424242; background: rgba(66, 66, 66, 0.1); }
+
+        /* 基础线条与分裂线 */
+        .line { position: absolute; background-color: #a0a0a0; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; width: 0; }
+        .divide-line { position: absolute; border-left: 3px solid #e0e0e0; z-index: 0; width: 0; }
+
+        /* 红色杀戮/敌对/战争线 */
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+        .kill-dashed-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .kill-dashed-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f5f5f7;
+            font-size: 12px;
+            color: #555;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #b8860b; font-weight: bold; } /* 倒幕派/皇室 */
+        .c-bakufu { color: #424242; font-weight: bold; } /* 镰仓幕府 */
+        .c-hero { color: #0d47a1; font-weight: bold; } /* 倒幕武将/三杰 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 106px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #444;
+            margin-bottom: 16px;
+            border-left: 4px solid #b8860b;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(184, 134, 11, 0.15);
+            border-color: #b8860b; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(10, 10, 10, 0.7); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #aaa; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 38px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #b8860b; font-weight: 500; display: block; }
+        .modal-content { padding: 25px 35px 40px 35px; flex: 1; overflow-y: auto; font-size: 24px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+        .modal-quote { font-style: italic; color: #b8860b; border-left: 4px solid #b8860b; padding-left: 15px; margin: 15px 0; background: #fcfaf5; padding-top: 10px; padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">日本镰仓末期：元弘之乱与幕府覆灭</h1>
+
+    <div class="family-tree">
+        <div class="divide-line" style="left: 320px; top: 20px; height: 440px;"></div>
+        <div class="faction-title faction-emperor" style="left: 160px; top: 20px;">倒幕派 / 天皇军 (胜)</div>
+        <div class="faction-title faction-bakufu" style="left: 480px; top: 20px;">镰仓幕府 / 北条氏 (败)</div>
+
+        <div class="kill-dashed-h" style="left: 160px; top: 100px; width: 320px;"></div>
+        <div class="label" style="left: 320px; top: 100px; color: #c62828; font-weight: bold;">密谋倒幕 / 废黜与流放</div>
+
+        <div class="line" style="left: 160px; top: 100px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 160px; top: 160px;">父子 / 颁布令旨</div>
+
+        <div class="line" style="left: 160px; top: 220px; width: 1px; height: 140px;"></div>
+        <div class="label" style="left: 160px; top: 290px;">举兵响应 / 死守千早城</div>
+
+        <div class="line-v-dashed" style="left: 480px; top: 100px; height: 120px;"></div>
+        <div class="line-h-dashed" style="left: 320px; top: 220px; width: 160px;"></div>
+        <div class="line-v-dashed" style="left: 320px; top: 220px; height: 60px;"></div>
+        <div class="label" style="left: 410px; top: 220px;">奉命上京镇压叛乱</div>
+
+        <div class="kill-solid-h" style="left: 160px; top: 280px; width: 160px;"></div>
+        <div class="label" style="left: 240px; top: 280px; color: #c62828; font-weight: bold;">阵前倒戈 (攻陷京都)</div>
+
+        <div class="kill-solid-v" style="left: 480px; top: 100px; height: 260px;"></div>
+        <div class="label" style="left: 480px; top: 230px; color: #c62828; font-weight: bold;">攻入镰仓 / 逼迫灭族</div>
+
+
+        <div class="person" style="left: 160px; top: 100px;" onclick="showInfo('godaigo')">
+            <div class="c-dark">第96代天皇</div>
+            <div class="c-emperor" style="font-size: 18px;">后醍醐天皇</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 220px;" onclick="showInfo('morinaga')">
+            <div class="c-dark">大塔宫 / 征夷大将军</div>
+            <div class="c-emperor">护良亲王</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 360px;" onclick="showInfo('kusunoki')">
+            <div class="c-dark">河内国恶党 / 军神</div>
+            <div class="c-hero" style="font-size: 18px;">楠木正成</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 280px;" onclick="showInfo('ashikaga')">
+            <div class="c-dark">幕府大将 (后室町幕府初代)</div>
+            <div class="c-hero" style="font-size: 18px;">足利高氏</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 100px;" onclick="showInfo('takatoki')">
+            <div class="c-dark">镰仓幕府 第14代执权</div>
+            <div class="c-bakufu" style="font-size: 18px;">北条高时</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 360px;" onclick="showInfo('nitta')">
+            <div class="c-dark">关东源氏名门</div>
+            <div class="c-hero" style="font-size: 18px;">新田义贞</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">元弘之乱：摧毁幕府的三大转折点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('kasagi')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1331年</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">笠置山之战与流放</div>
+            </div>
+            <div class="event-card" onclick="showInfo('chihaya')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1333年2月</div>
+                <div class="c-hero" style="font-size: 18px; font-weight: bold;">血战千早城</div>
+            </div>
+            <div class="event-card" onclick="showInfo('kamakura')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1333年5月</div>
+                <div class="c-hero" style="font-size: 18px; font-weight: bold;">镰仓大陷落</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 人物库 */
+            'godaigo': { 
+                name: '后醍醐天皇', 
+                subtitle: '执念焚身的复仇帝王，终结镰仓幕府之人', 
+                content: '<p>面对幕府强加的“皇位轮换制”，后醍醐天皇立志要彻底摧毁武家政权，恢复古代天皇的绝对独裁。</p><p>他在元弘元年（1331年）的起事失败，被夺走象征正统的“三神器”，并流放至环境恶劣的隐岐岛。然而，这位天皇拥有常人难以企及的韧性。在流放期间，他不仅没有屈服，反而策反了看守他的武士，藏在渔船的木盆里奇迹般越狱，重返本土再次高举倒幕大旗，最终奇迹般地推翻了统治日本150年的镰仓幕府。</p>' 
+            },
+            'morinaga': { 
+                name: '护良亲王', 
+                subtitle: '活跃在暗影中的皇子，倒幕的隐秘推手', 
+                content: '<p>后醍醐天皇的皇子，曾出家担任天台座主。在父亲被流放期间，他成为了倒幕派实际的组织者。</p><p>他放弃了高僧的身份，潜入吉野等地的深山，四处向各地的“恶党”（反体制的独立武士/土豪）下达讨伐幕府的令旨。正是他在暗中的四处游走与联络，促成了楠木正成等基层武力的崛起。然而在建武新政后，他因为敏锐地察觉到足利高氏的野心并与其发生冲突，最终被父亲抛弃并惨死于幽禁之中。</p>' 
+            },
+            'kusunoki': { 
+                name: '楠木正成', 
+                subtitle: '日本武士忠诚的最高象征，游击战大师', 
+                content: '<p>出身河内国（今大阪）的土豪（被称为“恶党”）。在后醍醐天皇最绝望、身边没有一个大名敢站出来支持他的时候，楠木正成挺身而出。</p><div class="modal-quote">“只要正成尚在人世，陛下的圣运便绝不会断绝！”</div><p>他极其擅长山地战和心理战。在千早城之战中，他仅以千余人的兵力，依靠滚木礌石、沸水热粪、甚至用假人骗箭等奇谋，死死拖住了幕府号称十万的大军。他的顽强抵抗打破了幕府不可战胜的神话，直接点燃了全日本武士反叛的导火索。</p>' 
+            },
+            'ashikaga': { 
+                name: '足利高氏 (后改名尊氏)', 
+                subtitle: '改变天下归属的致命一击', 
+                content: '<p>关东名门源氏的代表人物。镰仓幕府为了扑灭西国的叛乱，派他作为总大将率领大军上京镇压。</p><p>然而，足利高氏早已看透幕府气数已尽。在行军途中，他突然宣布响应天皇的号召，率领大军直接掉头，攻陷了幕府设在京都的统治机构（六波罗探题），将幕府在西日本的势力连根拔起。他的倒戈是元弘之乱中最关键的转折点，但也为日后他与天皇决裂、建立室町幕府埋下了伏笔。</p>' 
+            },
+            'takatoki': { 
+                name: '北条高时', 
+                subtitle: '沉迷斗狗与田乐舞的末代执权', 
+                content: '<p>镰仓幕府的第14代执权，北条氏的当主。此时的幕府已经腐朽不堪，内部矛盾重重，底层武士因为御家人制度的崩溃而穷困潦倒，而高时却整日沉迷于斗狗和观赏“田乐舞”。</p><p>面对全日本爆发的叛乱，幕府的指挥系统彻底失灵。当新田义贞的大军攻破镰仓的最后防线时，北条高时与北条一族的数百名核心成员在东胜寺集体切腹自杀，这标志着镰仓幕府的悲惨终结。</p>' 
+            },
+            'nitta': { 
+                name: '新田义贞', 
+                subtitle: '终结幕府的关东猛将', 
+                content: '<p>与足利高氏同属源氏名门，但长期被北条氏打压。受到护良亲王的令旨后，他在上野国（群马县）举兵。</p><p>关东对幕府不满的武士迅速向他汇集。他率领大军直捣黄龙，兵临镰仓城下。面对镰仓坚固的防御和易守难攻的悬崖，传说他将黄金太刀投入海中祈求海神退潮。海水果然退去，新田军趁机从海滩突入镰仓市内，展开惨烈的巷战，最终彻底摧毁了北条氏。</p>' 
+            },
+
+            /* 事件库 */
+            'kasagi': { 
+                name: '笠置山之战与流放 (1331年)', 
+                subtitle: '看似闹剧的开端与皇权的陨落', 
+                content: '<p><strong>【事败出逃】</strong><br>1331年，后醍醐天皇的倒幕密谋败露。他带着象征正统的“三神器”连夜逃出京都，躲入笠置山中呼吁天下武士勤王。但响应者寥寥无几。</p><p><strong>【被俘流放】</strong><br>幕府大军迅速攻破了笠置山。后醍醐天皇在逃亡途中被俘，幕府强行拥立了新的天皇（光严天皇），并将后醍醐流放至偏远荒凉的隐岐岛。到此为止，所有人都以为天皇的复仇大业已经彻底失败。</p>' 
+            },
+            'chihaya': { 
+                name: '血战千早城 (1333年2月)', 
+                subtitle: '一千抗十万！撕碎幕府无敌的遮羞布', 
+                content: '<p><strong>【绝境孤城】</strong><br>幕府调集了全日本的精锐（号称十万大军）包围了楠木正成驻守的千早城，企图杀鸡儆猴。</p><p><strong>【战争奇迹】</strong><br>楠木正成展现了惊人的战术天赋。当幕府军架起长梯强攻时，他倾倒沸水和燃烧的火油；他制作了大量穿戴铠甲的假草人，吸引幕府军将数百万支箭矢射入城中“草船借箭”；他还暗中派人切断了幕府军的粮道。幕府大军在城下死伤惨重，围攻百日却寸步难行。这让全天下的武士看清了幕府外强中干的虚弱本质，各地倒幕起义如雨后春笋般爆发。</p>' 
+            },
+            'kamakura': { 
+                name: '镰仓大陷落 (1333年5月)', 
+                subtitle: '一百五十年武家霸权的灰飞烟灭', 
+                content: '<p><strong>【双线崩盘】</strong><br>在西面，足利高氏反水攻陷了京都六波罗；在东面，新田义贞的大军逼近了幕府的心脏——镰仓。</p><p><strong>【东胜寺合战】</strong><br>1333年5月22日，新田军从退潮的稻村崎海岸突破防线，突入镰仓。城市化为火海，幕府军节节败退。最终，失去希望的北条高时与一门亲族、家臣共计八百余人，在东胜寺点燃大火，集体切腹殉死。统治日本一个半世纪的镰仓幕府，就此画上了血腥的句号。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
