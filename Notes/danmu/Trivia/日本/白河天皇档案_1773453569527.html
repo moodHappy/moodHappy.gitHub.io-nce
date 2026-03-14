@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>日本平安时代：白河法皇与院政关系图</title>
+    <style>
+        body {
+            background-color: #f4f1ea; /* 带有古典和纸质感的背景色 */
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #c0b298; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 76px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -55%); 
+            box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+            border-color: #8b7355;
+        }
+
+        /* 强调白河法皇的特殊卡片 */
+        .person.core {
+            border: 2px solid #b8860b;
+            box-shadow: 0 0 15px rgba(184, 134, 11, 0.3);
+            background: linear-gradient(to bottom, #fffcf5, #fff);
+        }
+
+        /* 基础线条 */
+        .line { position: absolute; background-color: #a09582; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #a09582; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #a09582; z-index: 1; width: 0; }
+
+        /* 红色乱伦/仇恨/禁忌线 */
+        .scandal-solid { position: absolute; background-color: #c62828; z-index: 1; }
+        .scandal-dashed-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; width: 0; }
+        .scandal-dashed-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f4f1ea;
+            font-size: 12px;
+            color: #665c49;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+            border: 1px solid #dcd5c6;
+        }
+        
+        .label-scandal {
+            color: #c62828;
+            font-weight: bold;
+            border-color: #ffcdd2;
+            background-color: #fff;
+        }
+
+        /* 颜色分类 */
+        .c-insei { color: #b8860b; font-weight: bold; } /* 院政/法皇 (暗金色) */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 现任天皇/悲剧皇室 */
+        .c-female { color: #8e24aa; font-weight: bold; } /* 后宫/女院 */
+        .c-warrior { color: #00695c; font-weight: bold; } /* 北面武士 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 106px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #4a4131;
+            margin-bottom: 16px;
+            border-left: 4px solid #b8860b;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #dcd5c6; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(184, 134, 11, 0.15);
+            border-color: #b8860b; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(20, 15, 10, 0.7); 
+            backdrop-filter: blur(5px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fdfbf7; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eaddc4; position: relative; background-color: #fff; border-radius: 0 0 0 0; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #bcaaa4; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #5d4037; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #2c241b; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #b8860b; font-weight: 500; display: block; }
+        .modal-content { padding: 25px 35px 40px 35px; flex: 1; overflow-y: auto; font-size: 24px; color: #3e3629; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1ebd9; }
+        .modal-content::-webkit-scrollbar-thumb { background: #c2b59b; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #8b0000; }
+        .modal-quote { font-style: italic; color: #5c6bc0; border-left: 4px solid #5c6bc0; padding-left: 15px; margin: 15px 0; background: #f0f2f5; padding-top: 10px; padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">平安朝的提线木偶师：白河法皇关系网</h1>
+
+    <div class="family-tree">
+
+        <div class="line" style="left: 200px; top: 120px; width: 120px; height: 1px;"></div>
+        <div class="line" style="left: 200px; top: 120px; width: 1px; height: 100px;"></div>
+        
+        <div class="line" style="left: 320px; top: 120px; width: 120px; height: 1px;"></div>
+        <div class="line" style="left: 440px; top: 120px; width: 1px; height: 100px;"></div>
+
+        <div class="line-h-dashed" style="left: 200px; top: 220px; width: 240px;"></div>
+
+        <div class="line" style="left: 200px; top: 220px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 200px; top: 280px; width: 120px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 280px; width: 1px; height: 80px;"></div>
+
+        <div class="line" style="left: 440px; top: 220px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 320px; top: 280px; width: 120px; height: 1px;"></div>
+
+        <div class="line-v-dashed" style="left: 100px; top: 80px; height: 40px;"></div>
+        <div class="line-h-dashed" style="left: 100px; top: 80px; width: 170px;"></div>
+        
+        <div class="line-v-dashed" style="left: 540px; top: 80px; height: 40px;"></div>
+        <div class="line-h-dashed" style="left: 370px; top: 80px; width: 170px;"></div>
+
+
+        <div class="scandal-dashed-h" style="left: 320px; top: 150px; width: 120px;"></div>
+        <div class="scandal-dashed-v" style="left: 440px; top: 150px; height: 50px;"></div>
+        
+        <div class="scandal-dashed-v" style="left: 320px; top: 100px; height: 260px;"></div>
+
+
+        <div class="label" style="left: 180px; top: 80px;">提拔 (北面武士)</div>
+        <div class="label" style="left: 460px; top: 80px;">提拔 (破格重用)</div>
+        
+        <div class="label" style="left: 260px; top: 120px;">祖孙 (极度压制)</div>
+        <div class="label" style="left: 380px; top: 120px;">养父女</div>
+        
+        <div class="label" style="left: 320px; top: 220px;">包办婚姻 / 貌合神离</div>
+        
+        <div class="label" style="left: 260px; top: 280px;">名义父子</div>
+        <div class="label" style="left: 380px; top: 280px;">母子</div>
+
+        <div class="label label-scandal" style="left: 380px; top: 150px;">私通暗结</div>
+        <div class="label label-scandal" style="left: 320px; top: 180px;">"叔父子" (真实生父疑云)</div>
+
+
+        <div class="person core" style="left: 320px; top: 80px;" onclick="showInfo('shirakawa')">
+            <div class="c-dark">第72代天皇 / 首位治天之君</div>
+            <div class="c-insei" style="font-size: 20px;">白河法皇</div>
+        </div>
+
+        <div class="person" style="left: 200px; top: 220px;" onclick="showInfo('toba')">
+            <div class="c-dark">第74代天皇 (孙)</div>
+            <div class="c-emperor" style="font-size: 16px;">鸟羽天皇</div>
+        </div>
+
+        <div class="person" style="left: 440px; top: 220px;" onclick="showInfo('shoshi')">
+            <div class="c-dark">中宫 / 待贤门院</div>
+            <div class="c-female" style="font-size: 16px;">藤原璋子</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 360px;" onclick="showInfo('sutoku')">
+            <div class="c-dark">第75代天皇 (保元之乱主角)</div>
+            <div class="c-emperor" style="font-size: 18px;">崇德天皇</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 120px;" onclick="showInfo('yoshiie')">
+            <div class="c-dark">河内源氏 (八幡太郎)</div>
+            <div class="c-warrior">源义家</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 120px;" onclick="showInfo('masamori')">
+            <div class="c-dark">伊势平氏 崛起始祖</div>
+            <div class="c-warrior">平正盛</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">白河法皇留下的三大“政治遗产”</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('insei_system')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1086年开启</div>
+                <div class="c-insei" style="font-size: 18px; font-weight: bold;">创立“院政”</div>
+            </div>
+            <div class="event-card" onclick="showInfo('hokumen')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">约1095年</div>
+                <div class="c-warrior" style="font-size: 18px; font-weight: bold;">设立北面武士</div>
+            </div>
+            <div class="event-card" onclick="showInfo('uncle_son')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">家族诅咒</div>
+                <div class="c-emperor" style="font-size: 18px; font-weight: bold;">“叔父子”降生</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 人物库 */
+            'shirakawa': { 
+                name: '白河法皇 (尊仁亲王)', 
+                subtitle: '平安时代的独裁魔王，权力与欲望的化身', 
+                content: '<p>为了摆脱藤原氏（外戚）对皇权的控制，白河天皇在33岁时果断将皇位传给年仅8岁的儿子（堀河天皇），自己退居“院（上皇的居所）”中发号施令。他出家后被称为“法皇”，实际统治日本长达43年。</p><div class="modal-quote">“贺茂川之水、双六之武功、山法师，此三者皆不如我意，除此之外，天下万物皆在我掌握之中。” ——《平家物语》中记载的白河法皇名言。</div><p>他专制傲慢，随心所欲。在政治上，他打破了贵族的垄断，提拔中下层贵族和武士；在私生活上更是毫无顾忌，他将自己宠爱的养女藤原璋子强行嫁给自己的孙子鸟羽天皇，并在暗中与之保持着不伦关系。他那压倒性的权威，让当时的朝廷无人敢言，但也为天皇家埋下了毁天灭地的伦理炸弹。</p>' 
+            },
+            'toba': { 
+                name: '鸟羽天皇 (宗仁亲王)', 
+                subtitle: '活在祖父阴影下的绿帽皇帝', 
+                content: '<p>白河法皇的孙子。在他5岁时，父亲堀河天皇早逝，白河法皇立刻将他推上皇位，继续作为傀儡操纵。</p><p>鸟羽天皇一生最大的屈辱，是祖父强迫他迎娶了比自己大两岁的养女藤原璋子。尽管璋子为他生下了长子崇德天皇，但宫中人人都知道，那个孩子长得酷似白河法皇。白河法皇死后，压抑了数十年的鸟羽天皇终于开始了自己的“院政”复仇。他疏远璋子，极度宠爱另一位妃子（美福门院），并对“叔父子”崇德天皇百般打压，最终迫使崇德退位，这直接导向了后来的保元之乱。</p>' 
+            },
+            'shoshi': { 
+                name: '藤原璋子 (待贤门院)', 
+                subtitle: '倾国倾城的祸水，还是政治操弄的牺牲品？', 
+                content: '<p>出身最高贵的藤原氏，自幼被白河法皇收养入宫。她天生丽质，性格天真烂漫，深受白河法皇的极度溺爱。即便在嫁给鸟羽天皇成为中宫（皇后）后，白河法皇依然频繁出入她的寝宫。</p><p>关于她与白河法皇的不伦之恋，在当时的贵族日记（如《古事谈》）中被传得沸沸扬扬。她一生共生下五男二女，其中包括崇德天皇和后白河天皇（日后源平合战时的大天狗）。白河法皇死后，失去了靠山的她遭到了丈夫鸟羽天皇的冷落与报复，最终在孤独中出家，结束了戏剧性的一生。</p>' 
+            },
+            'sutoku': { 
+                name: '崇德天皇 (显仁亲王)', 
+                subtitle: '带着原罪出生的“大魔王”', 
+                content: '<p>名义上是鸟羽天皇的长子，实际上被公认为是白河法皇与藤原璋子乱伦产下的私生子。因为白河法皇是鸟羽的祖父，这就导致崇德在名义上是鸟羽的儿子，血缘上却是鸟羽的叔叔，因此被鸟羽天皇厌恶地称为<strong>“叔父子”</strong>。</p><p>由于白河法皇的强力干预，他在5岁时就登基为帝。但当保护伞白河法皇去世后，他的噩梦开始了。名义上的父亲鸟羽上皇强迫他退位，并将皇位传给了他的异母弟（甚至连皇太弟的名分都不给他，彻底断绝了他开创院政的希望）。在极度的绝望与愤恨中，他发动了保元之乱，战败后化身为日本史上最令人战栗的“三大怨灵”之一。</p>' 
+            },
+            'yoshiie': { 
+                name: '源义家 (八幡太郎)', 
+                subtitle: '天下第一武勇之士，被法皇忌惮的猛虎', 
+                content: '<p>河内源氏的传奇武将，源赖朝与源义经的先祖。他在平定东北地区的“后三年之役”中威名远扬，由于朝廷拒绝发给军费，他散尽家财赏赐部下，引得东国武士纷纷归心，源氏的威望达到了顶峰。</p><p>这引起了白河法皇的极大警惕。法皇深知武士力量的可怕，因此在晚年下令禁止各地武士向源义家捐献土地（寄进）。虽然源义家本人对朝廷忠心耿耿，但白河法皇的打压导致源氏在很长一段时间内陷入低谷，直到平治之乱才重新抬头。</p>' 
+            },
+            'masamori': { 
+                name: '平正盛', 
+                subtitle: '曲意逢迎的实干家，平家繁华的奠基人', 
+                content: '<p>伊势平氏的首领，平清盛的祖父。与名震天下的源义家不同，平正盛出身较低，但他极具政治眼光。他将自己名下的领地大量捐献（寄进）给白河法皇，以此换取了法皇的欢心。</p><p>白河法皇为了制衡源氏一家独大，刻意提拔平正盛。平正盛不仅成为了“北面武士”的核心力量，还奉命讨伐了源义家的儿子（源义亲），从而一战成名。他紧紧抱住法皇的大腿，为日后平清盛建立“平氏政权”打下了坚实的政治与经济基础。</p>' 
+            },
+
+            /* 事件库 */
+            'insei_system': { 
+                name: '创立“院政” (1086年)', 
+                subtitle: '退一步海阔天空，真正的皇权复辟', 
+                content: '<p><strong>【为何退位？】</strong><br>平安时代中期，藤原氏通过将女儿嫁给天皇生下皇子，以外公的身份出任“摄政”和“关白”，完全架空了天皇。白河天皇为了打破这种“摄关政治”，在壮年时主动让位给年幼的儿子。</p><p><strong>【权力的游戏】</strong><br>退位后的他被称为“上皇”（出家后称“法皇”）。因为他不再是天皇，就不受繁琐宫廷礼仪和摄政大臣的约束。他利用自己是“天皇亲爹”的身份，在自己的住所（院）组建私人政府（院厅），直接发号施令（院宣）。</p><p><strong>【深远影响】</strong><br>院政成功夺回了权力，但也导致了政治中心的二元化（天皇的朝廷 vs 上皇的院厅）。这种体制不仅造成了决策混乱，当未来出现两个上皇或天皇交替时，极易引发内战（如保元之乱）。</p>' 
+            },
+            'hokumen': { 
+                name: '设立北面武士 (约1095年)', 
+                subtitle: '引狼入室：武士正式踏入国家权力中心', 
+                content: '<p><strong>【建立初衷】</strong><br>白河法皇实施独裁统治，不仅得罪了旧贵族，还因为没收庄园激怒了各大寺庙。比叡山延历寺的“僧兵”经常抬着神轿冲入京城游行示威（强诉）。面对这种局面，朝廷的软弱卫队根本无能为力。</p><p><strong>【御用保镖】</strong><br>为了镇压僧兵和保护自己的安全，白河法皇在自己的住所（院）北面的房间里，招募了一批骁勇善战的基层武士，这便是“北面武士”。平正盛、源义家等源平两家的武将纷纷入选。</p><p><strong>【命运的齿轮】</strong><br>这是武士作为一个阶层，首次大规模、合法地进入国家最高政治中枢。法皇本以为武士只是好用的看门狗，但他没有预料到，这些手握刀剑的武士一旦尝到了权力的滋味，很快就会把腐朽的贵族一脚踢开，成为日本的新主人。</p>' 
+            },
+            'uncle_son': { 
+                name: '“叔父子”降生与保元之乱的宿命', 
+                subtitle: '老皇爷的荒唐，换来京城的大火', 
+                content: '<p><strong>【宫闱丑闻】</strong><br>1119年，鸟羽天皇的皇后藤原璋子生下了长子显仁亲王（即后来的崇德天皇）。但整个京都的贵族圈都在窃窃私语：这个孩子不是鸟羽的，而是白河法皇的骨肉。</p><p><strong>【权力的强加】</strong><br>白河法皇对这个可能属于自己的儿子/曾孙爱如珍宝，在他5岁时就强迫鸟羽天皇让位，让他登基。这让鸟羽天皇感受到了奇耻大辱。鸟羽在日记中冷酷地将这个儿子称为“叔父子”。</p><p><strong>【引爆火药桶】</strong><br>1129年，活了76岁的一代枭雄白河法皇终于病逝。压抑已久的鸟羽上皇立刻展开清算，他逼迫崇德退位，并断绝了其后代的继位可能。正是这种源自乱伦的极度憎恨，将崇德逼上了绝路，最终在1156年引爆了毁天灭地的“保元之乱”。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
