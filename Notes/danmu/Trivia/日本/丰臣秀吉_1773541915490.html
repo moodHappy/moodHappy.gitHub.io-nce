@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>日本战国时代：丰臣秀吉与丰臣政权的崩坏</title>
+    <style>
+        body {
+            background-color: #fdfaf3; /* 太阁的暗金奢华背景 */
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #d32f2f;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(251, 192, 45, 0.5);
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -55%); 
+            box-shadow: 0 10px 24px rgba(211, 47, 47, 0.2);
+            border-color: #d32f2f;
+        }
+
+        /* 太阁专属金红卡片 */
+        .person.taiko {
+            border: 2px solid #fbc02d;
+            background: linear-gradient(to bottom, #fffde7, #fff);
+            box-shadow: 0 0 15px rgba(251, 192, 45, 0.4);
+        }
+
+        /* 阵营标题 */
+        .faction-title {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        /* 基础线条与分裂线 */
+        .line { position: absolute; background-color: #bcaaa4; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #bcaaa4; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #bcaaa4; z-index: 1; width: 0; }
+
+        /* 红色杀戮/敌对线 */
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 3px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 3px; }
+        .kill-dashed-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #fdfaf3;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+            border: 1px solid #e0e0e0;
+        }
+
+        /* 颜色分类 */
+        .c-toyotomi { color: #d32f2f; font-weight: bold; } /* 丰臣本家 */
+        .c-wife { color: #8e24aa; font-weight: bold; } /* 妻妾 */
+        .c-bureaucrat { color: #1565c0; font-weight: bold; } /* 文治派 (石田) */
+        .c-martial { color: #e65100; font-weight: bold; } /* 武断派 (加藤) */
+        .c-tokugawa { color: #2e7d32; font-weight: bold; } /* 德川 (深绿) */
+        .c-dark { color: #757575; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 10px;
+            padding-left: 106px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #4a4131;
+            margin-bottom: 16px;
+            border-left: 4px solid #fbc02d;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #e0e0e0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(211, 47, 47, 0.15);
+            border-color: #d32f2f; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(20, 15, 10, 0.8); 
+            backdrop-filter: blur(5px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fdfbf7; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eaddc4; position: relative; background-color: #fff; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #bcaaa4; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #5d4037; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #2c241b; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #d32f2f; font-weight: 500; display: block; }
+        .modal-content { padding: 25px 35px 40px 35px; flex: 1; overflow-y: auto; font-size: 24px; color: #3e3629; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1ebd9; }
+        .modal-content::-webkit-scrollbar-thumb { background: #c2b59b; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+        .modal-quote { font-style: italic; color: #d32f2f; border-left: 4px solid #fbc02d; padding-left: 15px; margin: 15px 0; background: #fffde7; padding-top: 10px; padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">太阁之梦：丰臣政权内部的撕裂</h1>
+
+    <div class="family-tree">
+
+        <div class="line" style="left: 160px; top: 100px; width: 320px; height: 1px;"></div>
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 20px;"></div>
+        <div class="label" style="left: 240px; top: 100px;">老来得子 / 极度溺爱</div>
+        <div class="label" style="left: 400px; top: 100px;">结发夫妻 (无子)</div>
+        <div class="kill-dashed-h" style="left: 240px; top: 130px; width: 160px;"></div>
+        <div class="label" style="left: 320px; top: 130px;">内宫争宠对立</div>
+
+        <div class="kill-solid-v" style="left: 480px; top: 200px; height: 60px;"></div>
+        <div class="line-h-dashed" style="left: 320px; top: 200px; width: 160px;"></div>
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 480px; top: 230px; color: #c62828; font-weight: bold;">为给幼子铺路，逼其切腹</div>
+
+        <div class="kill-solid-h" style="left: 160px; top: 380px; width: 320px;"></div>
+        <div class="label" style="left: 320px; top: 380px; color: #c62828; font-weight: bold;">朝鲜战场的仇恨 / 文武决裂</div>
+
+        <div class="line-v-dashed" style="left: 480px; top: 180px; height: 160px;"></div>
+        <div class="label" style="left: 480px; top: 280px;">视如己出 / 暗中支持</div>
+
+        <div class="line-v-dashed" style="left: 320px; top: 200px; height: 240px;"></div>
+        <div class="label" style="left: 320px; top: 280px;">托孤重臣 (五大老笔头)</div>
+        <div class="label" style="left: 320px; top: 410px; color: #2e7d32; font-weight: bold;">伺机夺取天下</div>
+
+
+        <div class="person taiko" style="left: 320px; top: 60px;" onclick="showInfo('hideyoshi')">
+            <div class="c-dark">天下人 / 太阁殿下</div>
+            <div class="c-toyotomi" style="font-size: 20px;">丰臣秀吉</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 160px;" onclick="showInfo('yododono')">
+            <div class="c-dark">侧室 (织田信长之侄女)</div>
+            <div class="c-wife" style="font-size: 18px;">淀殿 (茶茶)</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 260px;" onclick="showInfo('hideyori')">
+            <div class="c-dark">秀吉晚年得子 (继承人)</div>
+            <div class="c-toyotomi" style="font-size: 18px;">丰臣秀赖</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 380px;" onclick="showInfo('mitsunari')">
+            <div class="c-dark">五奉行 (文治派官僚)</div>
+            <div class="c-bureaucrat" style="font-size: 18px;">石田三成</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 160px;" onclick="showInfo('nene')">
+            <div class="c-dark">正室 (北政所)</div>
+            <div class="c-wife" style="font-size: 18px;">宁宁</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 280px;" onclick="showInfo('hidetsugu')">
+            <div class="c-dark">原关白 / 秀吉外甥</div>
+            <div class="c-toyotomi">丰臣秀次</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 380px;" onclick="showInfo('kiyomasa')">
+            <div class="c-dark">丰臣家猛将 (武断派)</div>
+            <div class="c-martial" style="font-size: 18px;">加藤清正</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 460px;" onclick="showInfo('ieyasu')">
+            <div class="c-dark">蛰伏的猛虎 (五大老)</div>
+            <div class="c-tokugawa" style="font-size: 20px;">德川家康</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">埋下亡国祸根的三大昏招</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('swordhunt')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1588年</div>
+                <div class="c-bureaucrat" style="font-size: 18px; font-weight: bold;">刀狩令与兵农分离</div>
+            </div>
+            <div class="event-card" onclick="showInfo('imjin')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1592年 - 1598年</div>
+                <div class="c-martial" style="font-size: 18px; font-weight: bold;">万历朝鲜战争</div>
+            </div>
+            <div class="event-card" onclick="showInfo('purge')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1595年</div>
+                <div class="c-toyotomi" style="font-size: 18px; font-weight: bold;">秀次切腹事件</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 人物库 */
+            'hideyoshi': { 
+                name: '丰臣秀吉 (太阁)', 
+                subtitle: '统一天下的“猴子”，晚年陷入癫狂的独裁者', 
+                content: '<p>从织田信长的提鞋奴仆，逆袭成为统一日本的“天下人”。他极其聪明，通过怀柔与武力并用，降服了毛利、长宗我部、岛津、北条等不可一世的大名。为了巩固统治，他推行了“太阁检地”和“刀狩令”，彻底改变了日本的封建结构。</p><div class="modal-quote">“如露水般降临，如露水般消散，此即吾生。大阪的繁华，亦如梦中之梦。” ——秀吉辞世诗</div><p>然而，权力让他晚年变得极度膨胀和偏执。他妄图征服大明（中国），发动了灾难性的侵朝战争；为了给老来得子（秀赖）铺路，他大肆屠杀亲族。临终前，他自知危机四伏，在病榻上流着泪拉着德川家康的手，苦苦哀求他要辅佐秀赖，但他一闭眼，丰臣家的江山便立刻分崩离析。</p>' 
+            },
+            'yododono': { 
+                name: '淀殿 (茶茶)', 
+                subtitle: '骄纵的太阁宠妾，带着丰臣家走向毁灭的女人', 
+                content: '<p>织田信长的亲侄女（浅井三姐妹之长）。她的父母皆因秀吉而死，但她却成了秀吉最宠爱的侧室。因为正妻宁宁无法生育，当她生下秀吉唯一的男嗣“秀赖”后，母凭子贵，掌握了丰臣家后宫（大奥）的极大权力。</p><p>秀吉死后，她作为秀赖的生母，实际掌控了大阪城。她极度缺乏政治眼光，拒绝承认德川家康已经夺取天下的现实，依然摆出“天下人之母”的高傲姿态。在后来的“大阪冬之阵”和“夏之阵”中，她的盲目指挥直接导致了丰臣家最后的灭亡，最终与儿子秀赖一同在大阪城的大火中自尽。</p>' 
+            },
+            'nene': { 
+                name: '宁宁 (北政所)', 
+                subtitle: '太阁背后的支柱，被尊重的“国母”', 
+                content: '<p>秀吉的结发妻子。在秀吉还是个穷小兵时就下嫁给他，两人是战国时期极其罕见的“恋爱结婚”。虽然没有生育，但她为人宽厚，抚养了加藤清正、福岛正则等一大批丰臣家从小培养的猛将（这批人后来被称为武断派）。</p><p>她与娇纵的淀殿关系冷淡。秀吉死后，面对石田三成（文治派代表，支持淀殿）与德川家康的对立，她暗中纵容自己抚养长大的武将们倒向德川家康，这成为了决定关原合战胜负的关键因素之一。她死后被安葬在京都高台寺，德川家康对她始终保持着极高的礼遇。</p>' 
+            },
+            'hideyori': { 
+                name: '丰臣秀赖', 
+                subtitle: '生不逢时的悲剧王子', 
+                content: '<p>秀吉在57岁时老来得子。秀吉死时他才6岁。尽管名义上是全日本的主人，但实际上天下早已易主。他在母亲淀殿的过度保护下在大阪城中长大，长成了一位身高一米九、气宇轩昂的青年，这让德川家康感到了极大的忌惮。</p><p>1615年大阪夏之阵，他拒绝了德川家康让他离开大阪城的最后通牒，与母亲一同在烈火中切腹自尽，丰臣本家绝嗣。</p>' 
+            },
+            'hidetsugu': { 
+                name: '丰臣秀次', 
+                subtitle: '被亲舅舅逼死的替死鬼，丰臣家的一场自残', 
+                content: '<p>秀吉的外甥。因为秀吉早年无子，便将他收为养子，不仅把“关白”（丞相）的位子让给了他，还把丰臣家的金银财宝和权力都交给了他，作为接班人培养。</p><p>可是悲剧就在于，秀吉突然生了亲生儿子（秀赖）。为了不让秀次以后威胁到秀赖的地位，秀吉捏造了“秀次谋反”的罪名，强令其切腹自尽。更残忍的是，秀吉将秀次的妻妾、儿女共计三十九人，全部押到京都的三条河原公开斩首。这场血腥大屠杀让全日本的大名感到不寒而栗，丰臣政权的人心彻底涣散。</p>' 
+            },
+            'mitsunari': { 
+                name: '石田三成', 
+                subtitle: '愚忠的理想主义官僚，为丰臣家流尽最后一滴血', 
+                content: '<p>秀吉提拔的文职官员代表（五奉行之一）。他极具行政管理天赋，是“太阁检地”等重大政策的具体执行者。但他性格死板、傲慢，得罪了所有在前线流血拼杀的武将。</p><p>秀吉死后，德川家康野心暴露。所有人都顺从或畏惧家康，只有石田三成站了出来，以“丰臣家臣”的身份集结了西军，在关原与家康展开决战。尽管他谋略出众，但因为人际关系极差，导致手下的大将（小早川秀秋）在战场上叛变。兵败被俘后，在京都六条河原被斩首。</p>' 
+            },
+            'kiyomasa': { 
+                name: '加藤清正', 
+                subtitle: '勇猛却短视的忠臣，被家康利用的武将派', 
+                content: '<p>从小被宁宁抚养长大的丰臣家猛将（贱岳七本枪之一）。在入侵朝鲜的战争中，他身先士卒，但也因此与在后方负责后勤和监军的石田三成结下了血海深仇。</p><p>秀吉死后，加藤清正等武将为了报复石田三成，竟然天真地倒向了德川家康，成了家康在关原合战中打头阵的先锋。等他们帮家康打赢了天下，才如梦初醒地发现，丰臣家已经被家康彻底架空了。他晚年拼命试图保护丰臣秀赖，却突然神秘暴毙（很多人怀疑是被家康毒杀）。</p>' 
+            },
+            'ieyasu': { 
+                name: '德川家康', 
+                subtitle: '五大老之首，耐心等待“杜鹃啼”的黄雀', 
+                content: '<p>拥有关东两百五十万石庞大领地的大名。在丰臣政权中，他被封为“五大老”之首。秀吉临终前，他对着神明起誓会永远效忠秀赖。</p><p>但秀吉一死，家康立刻撕毁誓言，大肆与其他大名私下联姻，拉拢武断派将领，挑起丰臣家内部的矛盾。最终在1600年的关原合战中击溃了石田三成，夺取了天下大权，并在15年后亲自发兵踏平了大阪城，将丰臣家斩草除根。</p>' 
+            },
+
+            /* 事件库 */
+            'swordhunt': { 
+                name: '刀狩令与兵农分离 (1588年)', 
+                subtitle: '固化阶级，剥夺农民的武力', 
+                content: '<p><strong>【背景】</strong><br>秀吉自己就是农民出身，他太清楚农民手里有武器（一揆）有多可怕。为了防止再有像他一样的农民造反，他以“融化铁器打造大佛”为借口，没收了全国农民的武士刀、长枪和火绳枪。</p><p><strong>【深远影响】</strong><br>这一政策确立了“兵农分离”：武士专门打仗，农民专门种地。日本社会的阶级彻底固化，同时也为秀吉建立全国统一的税收制度（太阁检地）扫清了障碍。</p>' 
+            },
+            'imjin': { 
+                name: '万历朝鲜战争 (1592-1598)', 
+                subtitle: '极其疯狂的远征，掏空了丰臣家的底子', 
+                content: '<p><strong>【狂妄的野心】</strong><br>统一日本后，秀吉竟然幻想征服大明王朝，甚至规划好了把北京作为自己未来的首都。他集结了十几万大军跨海入侵朝鲜。</p><p><strong>【惨败与消耗】</strong><br>在遭到朝鲜水军（李舜臣）的截击和大明援军的痛击后，日军陷入了惨烈的拉锯战。这场战争不仅毫无收益，还让加藤清正、小西行长等丰臣家的嫡系武将损失惨重，并且导致了前线武将与后方监军（石田三成）的彻底决裂。而德川家康因为以“守卫关东”为由没有派一兵一卒，实力毫发无损。</p>' 
+            },
+            'purge': { 
+                name: '秀次切腹事件 (1595年)', 
+                subtitle: '自断双臂，杀光了能保护幼主的亲族', 
+                content: '<p><strong>【残忍的清洗】</strong><br>为了确保幼子秀赖的绝对继承权，秀吉残忍地逼迫当时已经是“关白”的外甥丰臣秀次切腹，并屠杀了其全家39口。</p><p><strong>【丰臣家的孤立】</strong><br>这一举动极其愚蠢。不仅让天下大名看到了秀吉的冷酷无情，更致命的是，丰臣家本来就人丁单薄，秀次一死，丰臣家在成年男性中再也没有可以统领大局的亲族。当德川家康发难时，年幼的秀赖身边连一个能出来主持公道的叔叔伯伯都没有，只能任人宰割。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
