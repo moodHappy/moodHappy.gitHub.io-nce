@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>日本昭和时代：二·二六事件核心关系图</title>
+    <style>
+        body {
+            background-color: #f5f5f5; /* 肃杀的雪夜灰白背景 */
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #212121;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #b0bec5; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -55%); 
+            box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+            border-color: #424242;
+        }
+
+        /* 天皇专属卡片 */
+        .person.emperor {
+            border: 2px solid #fbc02d;
+            background: linear-gradient(to bottom, #fffde7, #fff);
+            box-shadow: 0 0 15px rgba(251, 192, 45, 0.3);
+        }
+
+        /* 阵营标题 */
+        .faction-title {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+        .faction-kodo { color: #b71c1c; background: rgba(183, 28, 28, 0.08); }
+        .faction-tosei { color: #1a237e; background: rgba(26, 35, 126, 0.08); }
+
+        /* 基础线条与分裂线 */
+        .line { position: absolute; background-color: #9e9e9e; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #9e9e9e; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #9e9e9e; z-index: 1; width: 0; }
+        .divide-line { position: absolute; border-left: 3px solid #eeeeee; z-index: 0; width: 0; }
+
+        /* 特殊关系线 */
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 3px; }
+        .kill-dashed-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; height: 0; }
+        .suppress-dashed-v { position: absolute; border-left: 3px dashed #1a237e; z-index: 1; width: 0; }
+        .fury-solid-v { position: absolute; background-color: #f57f17; z-index: 1; width: 3px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            font-size: 12px;
+            color: #424242;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+            border: 1px solid #cfd8dc;
+        }
+
+        /* 颜色分类 */
+        .c-kodo { color: #b71c1c; font-weight: bold; } /* 皇道派/暴兵 */
+        .c-tosei { color: #1a237e; font-weight: bold; } /* 统制派/平叛军 */
+        .c-target { color: #424242; font-weight: bold; } /* 被暗杀的重臣 */
+        .c-ideology { color: #00695c; font-weight: bold; } /* 思想家 */
+        .c-dark { color: #757575; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 15px;
+            padding-left: 106px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #212121;
+            margin-bottom: 16px;
+            border-left: 4px solid #b71c1c;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #cfd8dc; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(183, 28, 28, 0.15);
+            border-color: #b71c1c; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(20, 20, 20, 0.85); 
+            backdrop-filter: blur(5px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #e0e0e0; position: relative; background-color: #fafafa; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #111; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #b71c1c; font-weight: 500; display: block; }
+        .modal-content { padding: 25px 35px 40px 35px; flex: 1; overflow-y: auto; font-size: 24px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0bec5; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #b71c1c; }
+        .modal-quote { font-style: italic; color: #212121; border-left: 4px solid #b71c1c; padding-left: 15px; margin: 15px 0; background: #f5f5f5; padding-top: 10px; padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">昭和雪夜的狂飙：二·二六事件</h1>
+
+    <div class="family-tree">
+        <div class="divide-line" style="left: 320px; top: 120px; height: 340px;"></div>
+        <div class="faction-title faction-kodo" style="left: 160px; top: 120px;">皇道派 (叛军 / 激进少壮派)</div>
+        <div class="faction-title faction-tosei" style="left: 480px; top: 120px;">内阁与统制派 (遇刺者与平叛军)</div>
+
+        <div class="line" style="left: 160px; top: 100px; width: 1px; height: 160px;"></div>
+        <div class="label" style="left: 160px; top: 180px;">《日本改造法案大纲》洗脑</div>
+
+        <div class="kill-solid-h" style="left: 160px; top: 260px; width: 320px;"></div>
+        <div class="line" style="left: 480px; top: 160px; width: 1px; height: 100px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #c62828; font-weight: bold;">“尊皇讨奸” / 凌晨破门乱枪扫射</div>
+        <div class="label" style="left: 480px; top: 210px; color: #c62828;">当场惨死</div>
+
+        <div class="kill-dashed-h" style="left: 160px; top: 340px; width: 320px;"></div>
+        <div class="label" style="left: 320px; top: 340px; color: #c62828;">错杀内弟 / 奇迹生还</div>
+
+        <div class="line" style="left: 160px; top: 80px; width: 160px; height: 1px;"></div>
+        <div class="fury-solid-v" style="left: 160px; top: 80px; height: 180px;"></div>
+        <div class="label" style="left: 240px; top: 80px; color: #f57f17; font-weight: bold;">“朕亲自率近卫师团平叛！”</div>
+
+        <div class="suppress-dashed-v" style="left: 240px; top: 260px; height: 160px;"></div>
+        <div class="line-h-dashed" style="left: 240px; top: 420px; width: 240px;"></div>
+        <div class="label" style="left: 240px; top: 340px; color: #1a237e; font-weight: bold;">奉敕讨伐 / 趁机独揽大权</div>
+
+
+        <div class="person emperor" style="left: 320px; top: 80px;" onclick="showInfo('showa')">
+            <div class="c-dark">第124代天皇 / 神圣不可侵犯</div>
+            <div class="c-target" style="font-size: 18px;">昭和天皇 (裕仁)</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 100px;" onclick="showInfo('kita')">
+            <div class="c-dark">右翼思想家 / 精神导师</div>
+            <div class="c-ideology" style="font-size: 18px;">北一辉</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 260px;" onclick="showInfo('officers')">
+            <div class="c-dark">1483名起事士兵</div>
+            <div class="c-kodo" style="font-size: 18px;">皇道派青年军官</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 160px;" onclick="showInfo('takahashi')">
+            <div class="c-dark">大藏大臣 (财政部长)</div>
+            <div class="c-target" style="font-size: 18px;">高桥是清</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 340px;" onclick="showInfo('okada')">
+            <div class="c-dark">内阁总理大臣 (首相)</div>
+            <div class="c-target" style="font-size: 18px;">冈田启介</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 420px;" onclick="showInfo('ishiwara')">
+            <div class="c-dark">统制派核心 / 镇压总指挥</div>
+            <div class="c-tosei" style="font-size: 18px;">石原莞尔</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">法西斯化的不归路</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('night')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1936年2月26日凌晨</div>
+                <div class="c-kodo" style="font-size: 18px; font-weight: bold;">雪夜大屠杀</div>
+            </div>
+            <div class="event-card" onclick="showInfo('emperor_reaction')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">政变的幻灭</div>
+                <div class="c-target" style="font-size: 18px; font-weight: bold;">天皇的暴怒</div>
+            </div>
+            <div class="event-card" onclick="showInfo('aftermath')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">战火的序曲</div>
+                <div class="c-tosei" style="font-size: 18px; font-weight: bold;">军部彻底独裁</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 人物库 */
+            'showa': { 
+                name: '昭和天皇 (裕仁)', 
+                subtitle: '面对打着自己旗号的政变，罕见展现强硬手腕', 
+                content: '<p>青年军官们天真地认为，他们杀掉重臣是“替天行道”，天皇一定会支持他们，实行“昭和维新”。</p><p>然而，当得知自己的肱骨重臣（如内大臣、教育总监）惨遭屠戮时，平时表现得像个橡皮图章的昭和天皇勃然大怒。他不仅拒绝承认叛军的合法性，还极其罕见地对犹豫不决的军部高层下达了死命令：“如果陆军不愿镇压这些叛贼，朕就亲自带领近卫师团去讨伐他们！” 天皇的坚决表态，瞬间抽干了叛军“尊皇”的政治合法性，注定了政变的失败。</p>' 
+            },
+            'kita': { 
+                name: '北一辉', 
+                subtitle: '用笔杀人的极端思想家，皇道派的精神图腾', 
+                content: '<p>日本法西斯主义的理论鼻祖。他写下的《日本改造法案大纲》在青年军官中被奉为《圣经》。他主张废除宪法，由天皇绝对独裁，没收财阀财产，并向外扩张（甚至预言了要与美国一战）。</p><p>在二·二六事件中，虽然他本人并没有直接拿着枪参与暗杀，但他一直在幕后为叛军提供资金和精神支持。叛乱平息后，尽管缺乏直接参与策划的证据，愤怒的军部还是以“思想煽动罪”将他送上了断头台（枪决）。</p>' 
+            },
+            'officers': { 
+                name: '皇道派青年军官', 
+                subtitle: '满腔热血的杀人魔，迷信暴力的悲剧棋子', 
+                content: '<p>这些中下层军官大多出身贫寒。在经历了20年代的经济大萧条后，他们看到农村饿殍遍野，而城市的财阀和政客却依然穷奢极欲。他们愤怒地认为，天皇是被这群“君侧之奸”蒙蔽了。</p><div class="modal-quote">“七生报国！尊皇讨奸！”</div><p>带着这种极端的正义感，他们在凌晨带着士兵冲进重臣的宅邸疯狂扫射和劈砍。当得知天皇称他们为“叛军”时，他们精神崩溃了。最终，包括安藤辉三、野中四郎在内的核心军官要么自杀，要么被军法审判后不公开枪决。他们成了军阀夺权的政治牺牲品。</p>' 
+            },
+            'takahashi': { 
+                name: '高桥是清', 
+                subtitle: '日本的“凯恩斯”，死于暴徒乱刀下的财政天才', 
+                content: '<p>这位被称为“达摩”的胖老头是日本近代极其罕见的财政天才。他通过脱离金本位和赤字财政，将日本从大萧条中硬生生拉了出来。</p><p>但他深知，无底洞般的军费开支迟早会压垮国家财政，因此他坚决主张削减陆海军的预算，这让他成为了军方的眼中钉。在2月26日的凌晨，叛军冲进他的卧室，高喊着“天诛！”，对着正在睡觉的82岁高桥连开数枪，随后乱刀将其砍死。他的死，意味着日本再也没有人能踩住军部疯狂扩张的刹车了。</p>' 
+            },
+            'okada': { 
+                name: '冈田启介 (首相)', 
+                subtitle: '躲在壁橱里的首相，充满魔幻色彩的生还者', 
+                content: '<p>叛军的头号目标就是当朝首相冈田启介。当叛军冲入首相官邸时，首相的妹夫（松尾传藏）为了保护他，主动冲出来大喊“我就是首相”。因为两人长得有些像，叛军立刻将其击毙，并兴奋地宣布“天诛完成”。</p><p>真正的冈田启介被女佣藏在了洗澡间的壁橱里，在里面躲了整整两天。后来，在警卫的安排下，他化装成戴着大口罩的吊唁者，混在给“首相”奔丧的人群中，大摇大摆地走出了被叛军重重包围的官邸，奇迹般地捡回了一条命。</p>' 
+            },
+            'ishiwara': { 
+                name: '石原莞尔', 
+                subtitle: '策划了九一八事变的狂人，镇压了皇道派的指挥官', 
+                content: '<p>统制派的灵魂人物。他虽然也是个极度扩张主义者（九一八事变的策划者），但他主张的是“理性侵略”：通过建立满洲国来积蓄力量，由国家官僚统一指挥，最后再与美国进行总体战。他极其反感皇道派这种无组织无纪律的“下克上”暗杀。</p><p>在二·二六事件中，石原莞尔被任命为戒严司令部参谋。面对拿着枪指着他的叛军军官，他怒吼：“我也是天皇的军人！有种你就开枪！” 凭借极其强硬的手段，他主导了对叛乱的镇压，并将皇道派势力彻底清洗出了陆军。</p>' 
+            },
+
+            /* 事件库 */
+            'night': { 
+                name: '雪夜大屠杀 (1936年2月26日)', 
+                subtitle: '日本历史上最大的军事政变', 
+                content: '<p><strong>【凌晨的枪声】</strong><br>1936年2月26日，东京降下了三十年未遇的鹅毛大雪。凌晨5点，1483名全副武装的士兵在青年军官的带领下，分兵多路，冲向了首相官邸、内大臣私邸、大藏大臣私邸等地。</p><p><strong>【血染雪地】</strong><br>大藏大臣高桥是清、内大臣斋藤实、教育总监渡边锭太郎被残忍杀害；侍从长铃木贯太郎身中数枪重伤（后来奇迹生还，并在二战末期担任首相宣布投降）。叛军迅速占领了警视厅和陆军省，东京中心地带陷入瘫痪，震惊了整个世界。</p>' 
+            },
+            'emperor_reaction': { 
+                name: '天皇的震怒与幻灭', 
+                subtitle: '忠诚的错付与神明的抛弃', 
+                content: '<p><strong>【尴尬的对峙】</strong><br>事发后的前三天，陆军高层态度极其暧昧。许多高级将领（甚至包括陆军大臣）暗中同情叛军，试图通过谈判让他们撤军，甚至称他们为“起义部队”。</p><p><strong>【一锤定音】</strong><br>但昭和天皇被彻底激怒了。他无法容忍这些下级军官打着自己的名义，杀害自己最信任的臣子。在天皇连续施加的高压下，陆军高层终于放弃了幻想。2月28日，天皇正式下达了“奉敕命令”，将他们定性为叛军。军方开始空投传单：“马上归营！不要成为朝敌！” 士兵们军心涣散，政变宣告破产。</p>' 
+            },
+            'aftermath': { 
+                name: '军部彻底独裁 (战火序曲)', 
+                subtitle: '杀死了文官，绑架了国家', 
+                content: '<p><strong>【统制派的胜利】</strong><br>虽然政变被镇压，皇道派军官被清洗，但事件的**真正赢家却是军部的高层（统制派）**。他们借此机会，不仅清除了军内的异己，更可怕的是，他们彻底驯服了文官政府。</p><p><strong>【走向毁灭】</strong><br>从此以后，只要内阁不听军方的话，军方就会威胁说：“如果你不给军费，下面那群年轻人又要搞‘二·二六’了，我们可压不住。” 在这种赤裸裸的武力恐吓下，政党政治在日本彻底死亡。仅仅一年后的1937年，日本挑起卢沟桥事变，全面侵华战争爆发。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
