@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>日本战国时代：织田信长与本能寺之变</title>
+    <style>
+        body {
+            background-color: #1a1a1a; /* 黑暗战国风背景 */
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #fbc02d; /* 暗金色标题 */
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+            background-color: #242424;
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #555; 
+            background-color: #eceff1; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -55%); 
+            box-shadow: 0 10px 24px rgba(251, 192, 45, 0.3);
+            border-color: #fbc02d;
+        }
+
+        /* 魔王专属卡片 */
+        .person.demon-king {
+            border: 2px solid #b71c1c;
+            background: linear-gradient(to bottom, #3e2723, #212121);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(183, 28, 28, 0.6);
+        }
+        .person.demon-king .c-oda { color: #fbc02d; }
+
+        /* 基础线条与分裂线 */
+        .line { position: absolute; background-color: #757575; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #757575; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #757575; z-index: 1; width: 0; }
+
+        /* 红色杀戮/背叛线 */
+        .kill-solid-h { position: absolute; background-color: #d32f2f; z-index: 1; height: 3px; }
+        .kill-solid-v { position: absolute; background-color: #d32f2f; z-index: 1; width: 3px; box-shadow: 0 0 5px red;}
+        .kill-dashed-h { position: absolute; border-top: 2px dashed #d32f2f; z-index: 1; height: 0; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #2c2c2c;
+            font-size: 12px;
+            color: #ddd;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+            border: 1px solid #555;
+        }
+
+        /* 颜色分类 */
+        .c-oda { color: #b71c1c; font-weight: bold; } /* 织田家 (血红) */
+        .c-traitor { color: #5c6bc0; font-weight: bold; } /* 叛军/明智 (冷蓝) */
+        .c-ally { color: #2e7d32; font-weight: bold; } /* 盟友/德川 (深绿) */
+        .c-monkey { color: #e65100; font-weight: bold; } /* 秀吉 (橙色) */
+        .c-dark { color: #757575; font-size: 12px;} 
+        .demon-king .c-dark { color: #aaa; }
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 15px;
+            padding-left: 106px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #fbc02d;
+            margin-bottom: 16px;
+            border-left: 4px solid #b71c1c;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #555; 
+            background-color: #242424; 
+            color: #eee;
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(183, 28, 28, 0.4);
+            border-color: #b71c1c; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.85); 
+            backdrop-filter: blur(5px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #eceff1; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #ccc; position: relative; background-color: #fff; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #b71c1c; font-weight: 500; display: block; }
+        .modal-content { padding: 25px 35px 40px 35px; flex: 1; overflow-y: auto; font-size: 24px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #e0e0e0; }
+        .modal-content::-webkit-scrollbar-thumb { background: #9e9e9e; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #b71c1c; }
+        .modal-quote { font-style: italic; color: #fff; border-left: 4px solid #b71c1c; padding-left: 15px; margin: 15px 0; background: #212121; padding-top: 10px; padding-bottom: 10px; font-size: 22px;}
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">第六天魔王：本能寺之变</h1>
+
+    <div class="family-tree">
+
+        <div class="kill-solid-v" style="left: 160px; top: 100px; height: 160px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 100px; width: 160px;"></div>
+        <div class="label" style="left: 240px; top: 100px; color: #d32f2f; font-weight: bold; background-color: #fff;">敌在本能寺！(包围斩杀)</div>
+
+        <div class="kill-solid-v" style="left: 160px; top: 260px; height: 160px;"></div>
+        <div class="label" style="left: 160px; top: 340px; color: #d32f2f; font-weight: bold; background-color: #fff;">山崎合战 (光秀溃败)</div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 160px; height: 1px;"></div>
+        <div class="line" style="left: 480px; top: 100px; width: 1px; height: 160px;"></div>
+        <div class="label" style="left: 420px; top: 100px;">童年盟友 (清洲同盟)</div>
+        <div class="label" style="left: 480px; top: 160px;">神君伊贺穿越 (狼狈逃命)</div>
+
+        <div class="line" style="left: 320px; top: 100px; width: 1px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 160px;">父子 (二条御所切腹)</div>
+
+        <div class="line-h-dashed" style="left: 320px; top: 220px; width: 160px;"></div>
+        <div class="label" style="left: 400px; top: 220px;">主仆 (拼死护卫)</div>
+
+        <div class="line-h-dashed" style="left: 160px; top: 420px; width: 160px;"></div>
+        <div class="line-v-dashed" style="left: 320px; top: 220px; height: 200px;"></div>
+        <div class="label" style="left: 320px; top: 320px;">提拔之恩 / 篡夺天下果实</div>
+
+        <div class="person demon-king" style="left: 320px; top: 100px;" onclick="showInfo('nobunaga')">
+            <div class="c-dark">天下布武 / 霸王</div>
+            <div class="c-oda" style="font-size: 22px;">织田信长</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 220px;" onclick="showInfo('nobutada')">
+            <div class="c-dark">织田家当主 (嫡长子)</div>
+            <div class="c-oda" style="font-size: 16px;">织田信忠</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 220px;" onclick="showInfo('ranmaru')">
+            <div class="c-dark">信长近侍 (小姓)</div>
+            <div class="c-oda">森兰丸</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 260px;" onclick="showInfo('mitsuhide')">
+            <div class="c-dark">织田军 第一军团长</div>
+            <div class="c-traitor" style="font-size: 18px;">明智光秀</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 420px;" onclick="showInfo('hideyoshi')">
+            <div class="c-dark">织田家臣 (原名木下藤吉郎)</div>
+            <div class="c-monkey" style="font-size: 18px;">羽柴秀吉</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 260px;" onclick="showInfo('ieyasu')">
+            <div class="c-dark">三河大名 (战国最终赢家)</div>
+            <div class="c-ally" style="font-size: 18px;">德川家康</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">改变日本的三大合战</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('okehazama')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1560年</div>
+                <div class="c-oda" style="font-size: 18px; font-weight: bold;">桶狭间奇袭</div>
+            </div>
+            <div class="event-card" onclick="showInfo('honnoji')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1582年6月21日</div>
+                <div class="c-traitor" style="font-size: 18px; font-weight: bold;">本能寺之变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('yamazaki')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1582年7月2日</div>
+                <div class="c-monkey" style="font-size: 18px; font-weight: bold;">中国大返还</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 人物库 */
+            'nobunaga': { 
+                name: '织田信长', 
+                subtitle: '距离统一日本只差一步的“第六天魔王”', 
+                content: '<p>从被称为“尾张的大傻瓜”，到震惊天下的战国霸主。他废除了腐朽的关卡，推行“乐市乐座”鼓励商业；他大量装备火绳枪，在长筱之战中用“三段击”将号称无敌的武田骑兵打成筛子；为了立威，他甚至火烧了佛教圣地比叡山，自称“第六天魔王”。</p><div class="modal-quote">“人生五十年，如梦亦如幻。有生斯有死，壮士复何憾！” ——信长绝唱《敦盛》</div><p>1582年，天下大定在即。他只带了不到一百名随从在京都的本能寺歇息，准备去支援秀吉。却不想被自己最器重的将领明智光秀率领一万三千大军重重包围。深知无路可逃的信长，亲自放火烧毁了本堂，在烈火中切腹自尽，尸骨无存。他的死，让日本的历史车轮剧烈地拐了一个大弯。</p>' 
+            },
+            'mitsuhide': { 
+                name: '明智光秀', 
+                subtitle: '终结了魔王的叛将，战国最大的未解之谜', 
+                content: '<p>他是织田军中最有文化、最精通火器和朝廷礼仪的统帅。但就在奉命支援前线的途中，他突然拔出太刀大喊：“敌在本能寺！” 率领大军掉头杀向了自己的主君。</p><p>关于他为何谋反，史学界有无数猜测：是因为信长经常当众侮辱殴打他（怨恨说）？是因为他害怕信长废掉天皇（朝廷黑幕说）？还是单纯的野心？<br>可悲的是，他虽然杀死了信长，却没有得到其他大名的响应（被称为“三日天下”）。仅仅十一天后，他就在山崎合战中被赶回来的秀吉击溃，逃亡途中被落武者狩（抢劫落败武士的农民）用竹枪刺死。</p>' 
+            },
+            'hideyoshi': { 
+                name: '羽柴秀吉 (丰臣秀吉)', 
+                subtitle: '从拿鞋的“猴子”到天下人', 
+                content: '<p>农民出身，早年给信长提鞋取暖，因为长得丑被信长称为“猴子”或“秃鼠”。但他情商极高，极具战术眼光，一步步爬上了织田家军团长的位置。</p><p>本能寺之变发生时，他正在前线攻打毛利家。得知噩耗后，他展现了惊人的决断力：立刻隐瞒消息与敌人议和，然后率领大军在暴雨中强行军（史称“中国大返还”），以不可思议的速度赶回京都击杀了明智光秀。打着“为主君复仇”的大旗，他成功篡夺了织田家的遗产，最终完成了信长未竟的霸业，统一了日本。</p>' 
+            },
+            'ieyasu': { 
+                name: '德川家康', 
+                subtitle: '最能忍的乌龟，战国时代的终极赢家', 
+                content: '<p>从小给信长当人质，后来与信长结为“清洲同盟”，在东边替信长挡了二十多年的刀枪。为了向信长表忠心，他甚至下令逼死了自己的正妻和长子。</p><p>本能寺之变时，他正带着几个少数随从在大阪（堺市）旅游观光。得知信长横死、光秀可能追杀自己的消息后，他吓得一度想切腹。在家臣的拼死护卫下，他翻越了险恶的伊贺群山（神君伊贺穿越），一路吃尽苦头才逃回自己的领地三河。他熬死了信长，熬死了秀吉，最终在关原合战中夺取天下，建立了统治日本两百多年的江户幕府。</p>' 
+            },
+            'nobutada': { 
+                name: '织田信忠', 
+                subtitle: '被低估的优秀继承人，父子同赴黄泉', 
+                content: '<p>信长的嫡长子，此时已经正式接过了织田家的家督之位，是一位战功卓著、非常优秀的统帅。本能寺之变时，他驻扎在距离本能寺不远的妙觉寺。</p><p>得知父亲遇袭，他本有机会逃出京都重整旗鼓。但他认为“光秀既然敢谋反，必定已经封锁了所有退路”，于是放弃了逃跑，退守到防御较好的二条御所。在经过极其惨烈的抵抗后，他最终切腹自尽。织田家最优秀的两代领导人在一夜之间全灭，导致了织田家后来的迅速解体。</p>' 
+            },
+            'ranmaru': { 
+                name: '森兰丸', 
+                subtitle: '至死追随魔王的俊美少年', 
+                content: '<p>信长最宠爱的近侍（小姓），长相俊美且极其聪明机警。在本能寺之变的那个夜晚，他是最先察觉到外面有军队包围的人。</p><p>面对上万叛军，他与几个兄弟紧握长枪，死死守在本能寺的走廊上，为信长切腹争取了最后的时间。最终被明智光秀的部下安田国继斩杀，年仅18岁。</p>' 
+            },
+
+            /* 事件库 */
+            'okehazama': { 
+                name: '桶狭间奇袭 (1560年)', 
+                subtitle: '两千破两万！魔王崛起的成名战', 
+                content: '<p><strong>【绝境】</strong><br>当时号称“东海道第一弓取”的今川义元率领两万五千大军上京，途径信长的领地尾张。信长只有区区两千兵力，所有家臣都绝望地建议投降或死守。</p><p><strong>【奇迹】</strong><br>信长在深夜跳了一曲《敦盛》后，冒着暴雨率领骑兵狂奔。趁着今川大军在桶狭间山谷里避雨松懈之际，信长如神兵天降般直捣敌军本阵，当场斩下了今川义元的首级！这场日本历史上最著名的以少胜多的战役，让织田信长一战成名，开启了天下布武的霸业。</p>' 
+            },
+            'honnoji': { 
+                name: '本能寺之变 (1582年6月)', 
+                subtitle: '野望燃尽的夏夜', 
+                content: '<p><strong>【毫无防备】</strong><br>1582年，信长的势力如日中天，天下大半已落入他手。他来到京都的本能寺，身边只带了森兰丸等几十个随从。</p><p><strong>【敌在本能寺】</strong><br>6月21日凌晨，明智光秀率军包围了本能寺。信长听到铁炮声，问兰丸是谁谋反，得知是桔梗印（光秀的家徽）后，只淡淡说了一句：“是非に及ばず（无可奈何）”。他拿起弓箭和长枪亲自杀敌，受伤后退入内室，放火烧毁了房间切腹。一代霸主，就此陨落，且尸骨至今未被找到。</p>' 
+            },
+            'yamazaki': { 
+                name: '山崎合战与大返还', 
+                subtitle: '秀吉封神：奔跑出来的天下', 
+                content: '<p><strong>【中国大返还】</strong><br>羽柴秀吉得知信长死讯后，立刻与毛利军讲和，随后率领大军在七天内狂奔了200公里（这在穿着沉重具足的古代简直是神迹），突然出现在京都附近，把以为秀吉还在千里之外的明智光秀吓得魂飞魄散。</p><p><strong>【复仇之战】</strong><br>秀吉打着“为主君报仇”的绝对大义名分，在山崎（天王山）击溃了军心不稳的光秀军。凭借这份泼天大功，秀吉在随后的清洲会议上压倒了织田家的旧臣，成功偷走了信长奋斗了一辈子的“天下”。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
