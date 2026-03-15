@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>日本幕末与明治：西乡隆盛与最后的武士</title>
+    <style>
+        body {
+            background-color: #f0f4f8; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #1a237e;
+            margin: 10px 0 30px 0;
+            font-size: 30px;
+            letter-spacing: 2px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #cfd8dc;
+        }
+
+        /* 纯净的人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #b0bec5; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -55%); 
+            box-shadow: 0 10px 24px rgba(26, 35, 126, 0.15);
+            border-color: #1a237e;
+        }
+
+        /* 西乡隆盛专属卡片 (最后的武士) */
+        .person.saigo {
+            border: 2px solid #b71c1c;
+            background: linear-gradient(to bottom, #ffebee, #fff);
+            box-shadow: 0 0 15px rgba(183, 28, 28, 0.3);
+        }
+
+        /* 大久保利通专属卡片 (冷酷的现代化推手) */
+        .person.okubo {
+            border: 2px solid #1a237e;
+            background: linear-gradient(to bottom, #e8eaf6, #fff);
+            box-shadow: 0 0 15px rgba(26, 35, 126, 0.3);
+        }
+
+        /* 阵营标题 */
+        .faction-title {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+        .faction-samurai { color: #b71c1c; background: rgba(183, 28, 28, 0.08); }
+        .faction-modern { color: #1a237e; background: rgba(26, 35, 126, 0.08); }
+
+        /* 基础线条与分裂线 */
+        .line { position: absolute; background-color: #90a4ae; z-index: 1; }
+        .line-h-dashed { position: absolute; border-top: 2px dashed #90a4ae; z-index: 1; height: 0; }
+        .line-v-dashed { position: absolute; border-left: 2px dashed #90a4ae; z-index: 1; width: 0; }
+        .divide-line { position: absolute; border-left: 3px solid #eceff1; z-index: 0; width: 0; }
+
+        /* 特殊关系线 */
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 3px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 3px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            font-size: 12px;
+            color: #555;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+            border: 1px solid #cfd8dc;
+        }
+
+        /* 颜色分类 */
+        .c-saigo { color: #b71c1c; font-weight: bold; } /* 西乡/旧武士 */
+        .c-okubo { color: #1a237e; font-weight: bold; } /* 大久保/明治政府 */
+        .c-emperor { color: #f57f17; font-weight: bold; } /* 天皇 */
+        .c-shogun { color: #424242; font-weight: bold; } /* 幕府 */
+        .c-dark { color: #757575; font-size: 12px;} 
+
+        /* ================= 严格对齐的事件区块 ================= */
+        .events-section {
+            width: 640px;
+            margin-top: 15px;
+            padding-left: 106px; 
+            box-sizing: border-box; 
+        }
+
+        .events-title {
+            font-size: 20px;
+            color: #1a237e;
+            margin-bottom: 16px;
+            border-left: 4px solid #b71c1c;
+            padding-left: 10px;
+            margin-left: 0; 
+        }
+
+        .event-cards-container {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+        }
+
+        .event-card {
+            border: 1px solid #b0bec5; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 14px 10px;
+            line-height: 1.6;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            flex: 1; 
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(183, 28, 28, 0.15);
+            border-color: #b71c1c; 
+        }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 20, 30, 0.85); 
+            backdrop-filter: blur(5px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #e0e0e0; position: relative; background-color: #f8f9fa; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #111; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #b71c1c; font-weight: 500; display: block; }
+        .modal-content { padding: 25px 35px 40px 35px; flex: 1; overflow-y: auto; font-size: 24px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0bec5; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #b71c1c; }
+        .modal-quote { font-style: italic; color: #b71c1c; border-left: 4px solid #b71c1c; padding-left: 15px; margin: 15px 0; background: #ffebee; padding-top: 10px; padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">明治维新：最后的武士与新时代</h1>
+
+    <div class="family-tree">
+        <div class="divide-line" style="left: 320px; top: 120px; height: 340px;"></div>
+        <div class="faction-title faction-samurai" style="left: 160px; top: 140px;">武士之魂 (传统 / 萨摩军)</div>
+        <div class="faction-title faction-modern" style="left: 480px; top: 140px;">铁血国家 (现代 / 明治政府)</div>
+
+        <div class="line" style="left: 320px; top: 80px; width: 1px; height: 80px;"></div>
+        <div class="line" style="left: 160px; top: 160px; width: 320px; height: 1px;"></div>
+        <div class="line" style="left: 160px; top: 160px; width: 1px; height: 60px;"></div>
+        <div class="line" style="left: 480px; top: 160px; width: 1px; height: 60px;"></div>
+        <div class="label" style="left: 240px; top: 160px;">极度信赖与惋惜</div>
+        <div class="label" style="left: 400px; top: 160px;">推行西化 / 君主立宪</div>
+
+        <div class="line-v-dashed" style="left: 160px; top: 80px; height: 140px;"></div>
+        <div class="label" style="left: 160px; top: 130px; background: #fff;">惺惺相惜 (江户无血开城)</div>
+
+        <div class="line-h-dashed" style="left: 160px; top: 60px; width: 320px;"></div>
+        <div class="line-v-dashed" style="left: 480px; top: 60px; height: 40px;"></div>
+        <div class="label" style="left: 320px; top: 60px;">萨长同盟 (终结幕府)</div>
+
+        <div class="kill-solid-h" style="left: 160px; top: 220px; width: 320px;"></div>
+        <div class="label" style="left: 320px; top: 220px; color: #c62828; font-weight: bold;">发小挚友 → 政见决裂 (征韩论)</div>
+
+        <div class="line" style="left: 160px; top: 220px; width: 1px; height: 140px;"></div>
+        <div class="line" style="left: 480px; top: 220px; width: 1px; height: 140px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 380px; width: 320px;"></div>
+        
+        <div class="label" style="left: 160px; top: 300px;">誓死追随 (私学校)</div>
+        <div class="label" style="left: 480px; top: 300px;">建立现代征兵制 (平叛)</div>
+        <div class="label" style="left: 320px; top: 380px; color: #c62828; font-weight: bold;">西南战争 (城山之战)</div>
+
+
+        <div class="person" style="left: 160px; top: 60px;" onclick="showInfo('katsu')">
+            <div class="c-dark">旧幕府 陆军总裁</div>
+            <div class="c-shogun">胜海舟</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('meiji')">
+            <div class="c-dark">第122代天皇</div>
+            <div class="c-emperor" style="font-size: 18px;">明治天皇</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 80px;" onclick="showInfo('kido')">
+            <div class="c-dark">长州藩 维新三杰之一</div>
+            <div class="c-okubo">木户孝允 (桂小五郎)</div>
+        </div>
+
+        <div class="person saigo" style="left: 160px; top: 220px;" onclick="showInfo('saigo')">
+            <div class="c-dark">萨摩藩 / 最后的武士</div>
+            <div class="c-saigo" style="font-size: 22px;">西乡隆盛</div>
+        </div>
+
+        <div class="person okubo" style="left: 480px; top: 220px;" onclick="showInfo('okubo')">
+            <div class="c-dark">明治政府 铁血宰相</div>
+            <div class="c-okubo" style="font-size: 22px;">大久保利通</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 380px;" onclick="showInfo('kirino')">
+            <div class="c-dark">萨摩军 总司令 (旧武士)</div>
+            <div class="c-saigo" style="font-size: 16px;">桐野利秋</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 380px;" onclick="showInfo('yamagata')">
+            <div class="c-dark">政府军 总司令 (新式陆军)</div>
+            <div class="c-okubo">山县有朋</div>
+        </div>
+
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">近代日本的浴火重生与撕裂</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('satcho')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1866年</div>
+                <div class="c-saigo" style="font-size: 18px; font-weight: bold;">萨长同盟与倒幕</div>
+            </div>
+            <div class="event-card" onclick="showInfo('edo')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1868年</div>
+                <div class="c-shogun" style="font-size: 18px; font-weight: bold;">江户无血开城</div>
+            </div>
+            <div class="event-card" onclick="showInfo('seinan')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 13px;">1877年</div>
+                <div class="c-saigo" style="font-size: 18px; font-weight: bold;">西南战争 (武士绝唱)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            /* 人物库 */
+            'saigo': { 
+                name: '西乡隆盛', 
+                subtitle: '亲手葬送了武士阶级，又为武士阶级殉葬的伟人', 
+                content: '<p>他拥有熊一般的体魄和极其宽广的胸怀，是维新三杰中最具人格魅力的一位。他促成了萨长同盟，指挥了倒幕战争，不战而屈人之兵拿下了江户城，是明治维新当之无愧的第一功臣。</p><div class="modal-quote">“敬天爱人” ——西乡隆盛的座右铭</div><p>但当明治政府成立后，为了国家现代化，政府颁布了废刀令、取消了武士的俸禄。西乡痛苦地发现，自己亲手建立的新国家，让跟随自己流血牺牲的旧武士们失去了活路。他提出“征韩论”试图将武士的矛盾转移到国外，被发小大久保利通否决后，他愤而辞职回到萨摩家乡。</p><p>1877年，在被逼上绝路的旧武士子弟的拥簇下，他无奈地举起了反叛的大旗。在城山之战中，面对政府军的加特林机枪和开花弹，身中数弹的西乡隆盛跪向皇宫的方向，由部下介错（斩首）自尽。武士的时代，随着他的死彻底终结。</p>' 
+            },
+            'okubo': { 
+                name: '大久保利通', 
+                subtitle: '冷血而伟大的国家设计师，杀死了自己最好朋友的人', 
+                content: '<p>与西乡隆盛同为萨摩藩出身，两人从小在同一个街区长大，亲如兄弟。但与感情丰富的西乡不同，大久保是一个极度理智、冷酷的现实主义者。</p><p>在欧洲考察一圈后，大久保深刻认识到日本与西方的巨大差距。为了将日本强行拖入现代化，他不惜背负千古骂名：他强力推行地税改革、废藩置县，毫不留情地碾碎了旧武士阶级的利益。当西南战争爆发时，他冷酷地下令调集倾国之兵，用现代化的火器将自己最好的朋友西乡隆盛逼入死角。西乡死后不到一年，被旧武士视为“国贼”的大久保利通在去上班的路上遭遇暗杀，身中数十刀而死。人们在清理他的遗物时，发现他随身携带着西乡隆盛早年写给他的信。</p>' 
+            },
+            'meiji': { 
+                name: '明治天皇', 
+                subtitle: '开启现代日本的新神，西乡最敬仰的君主', 
+                content: '<p>在漫长的幕府时代结束后，他重新成为了掌握国家最高权力的君主。西乡隆盛对他有着绝对的、近乎狂热的忠诚，甚至亲自担任过天皇的近卫都督。</p><p>天皇对西乡也充满了信任和依赖。当西南战争爆发、西乡被政府定性为“朝敌”时，明治天皇极度悲痛。即便西乡以叛贼的身份死去，天皇仍在私下里深深怀念他。十几年后，在天皇的默许下，西乡隆盛被平反并恢复了名誉，上野公园也立起了他那座著名的牵着狗的铜像。</p>' 
+            },
+            'katsu': { 
+                name: '胜海舟', 
+                subtitle: '超越阵营的智者，拯救了百万江户百姓', 
+                content: '<p>幕府海军的创立者，早年曾驾驶“咸临丸”横渡太平洋前往美国。他虽然身在幕府阵营，但深知幕府气数已尽，极力主张和平交权以保全国家实力。</p><p>当西乡隆盛率领大军兵临江户城下时，胜海舟单枪匹马与西乡进行了历史性的会谈。两人抛弃了敌我阵营的偏见，达成共识：绝对不能让江户这座拥有百万人口的城市化为火海，更不能让外国势力趁虚而入。在胜海舟的斡旋下，江户城不发一枪一弹和平开城。</p>' 
+            },
+            'kido': { 
+                name: '木户孝允 (桂小五郎)', 
+                subtitle: '长州藩的灵魂，忧国忧民的改革先驱', 
+                content: '<p>幕末时期著名的“逃跑的小五郎”，擅长剑术但更擅长政治斡旋。他代表长州藩与西乡隆盛握手，结成了推翻幕府的“萨长同盟”。</p><p>明治政府成立后，他与大久保利通一样主张向西方学习，但在节奏上更加稳健，极其反对西乡的“征韩论”。在西南战争期间，病重的木户孝允在病榻上陷入了谵妄，他在昏迷中大喊：“西乡！你也差不多该适可而止了吧！” 随后抱憾离世。</p>' 
+            },
+            'kirino': { 
+                name: '桐野利秋', 
+                subtitle: '人斩半次郎，至死追随西乡的狂热武士', 
+                content: '<p>幕末时期著名的剑客，以“人斩半次郎”的威名震慑京都。他对西乡隆盛有着近乎宗教般的崇拜和绝对忠诚。</p><p>在西乡下野回到萨摩后，桐野利秋等少壮派武士无法忍受明治政府对旧武士的剥削。当政府派人试图暗杀西乡的传闻爆发后，桐野利秋带头洗劫了政府的军火库，强行将西乡隆盛推上了叛军总帅的位置。在最后的城山决战中，他在西乡自尽后，拔出太刀冲向政府军的枪林弹雨，壮烈战死。</p>' 
+            },
+            'yamagata': { 
+                name: '山县有朋', 
+                subtitle: '日本现代陆军之父，终结武士神话的人', 
+                content: '<p>长州藩出身，在倒幕战争中曾是西乡的并肩战友。明治维新后，他主导建立了全民皆兵的现代征兵制（建军），彻底剥夺了武士阶级打仗的特权。</p><p>在西南战争中，他担任政府军的总司令。旧武士们原本极其鄙视这些由平民和农民组成的现代新军，认为他们不堪一击。但山县有朋指挥着这支装备着现代步枪和大炮的军队，用庞大的后勤和无情的火力覆盖，硬生生碾碎了萨摩武士的冲锋。这不仅是一场平叛，更是“现代国家机器”对“中世纪封建武士”的降维打击。</p>' 
+            },
+
+            /* 事件库 */
+            'satcho': { 
+                name: '萨长同盟 (1866年)', 
+                subtitle: '世仇和解，敲响幕府的丧钟', 
+                content: '<p><strong>【不可能的联盟】</strong><br>萨摩藩（鹿儿岛）和长州藩（山口）是当时日本最强大的两个藩，但因为之前在京都的流血冲突，双方有着血海深仇。</p><p><strong>【坂本龙马的奔走】</strong><br>在脱藩浪人坂本龙马的拼死斡旋下，西乡隆盛展现出了非凡的政治气量。他主动向长州藩伸出援手，提供武器。1866年，西乡隆盛与木户孝允在京都秘密结盟。两大强藩的联手，瞬间打破了政治平衡，德川幕府的覆灭进入倒计时。</p>' 
+            },
+            'edo': { 
+                name: '江户无血开城 (1868年)', 
+                subtitle: '奇迹般的和平交接，保全了未来的东京', 
+                content: '<p><strong>【兵临城下】</strong><br>戊辰战争爆发后，西乡隆盛率领的新政府军势如破竹，直逼德川幕府的大本营——江户城。江户城内主战派叫嚣着要放火烧城、玉石俱焚。</p><p><strong>【历史性的会谈】</strong><br>在总攻前夕，西乡隆盛与幕府代表胜海舟在江户的萨摩藩邸进行了密谈。出于对胜海舟的信任，也是为了国家不被内战摧毁，西乡隆盛力排众议，下令取消总攻。德川庆喜（末代将军）交出江户城，和平退隐。这一伟大的妥协，不仅保全了百万江户百姓，也为日后东京成为现代化首都奠定了基础。</p>' 
+            },
+            'seinan': { 
+                name: '西南战争与城山之战 (1877年)', 
+                subtitle: '最后的武士，在枪炮声中落幕', 
+                content: '<p><strong>【被迫造反】</strong><br>废藩置县和废刀令让武士阶级陷入绝境。1877年，萨摩藩的旧武士为了“清君侧、问罪政府”，推举西乡隆盛为大将，发动了日本历史上最后、也是最大规模的内战。</p><p><strong>【时代的碾压】</strong><br>尽管萨摩武士在白刃战中极其悍勇（著名的拔刀队），但终究敌不过政府军源源不断的兵源、大炮和电报系统。9月，西乡军被压缩在鹿儿岛的城山。面对几万政府军的包围，仅剩数百人的西乡军发动了最后的冲锋。西乡隆盛中弹后，对身边的别府晋介说：“晋介，就在这里吧。” 随后从容切腹。武士长达七百年的统治历史，在此画上了句号。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
