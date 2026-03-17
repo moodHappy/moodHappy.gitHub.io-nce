@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>爱德华一世核心关系网</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .line-dashed-h { position: absolute; border-top: 2px dashed #a0a0a0; z-index: 1; }
+        .line-dashed-v { position: absolute; border-left: 2px dashed #a0a0a0; z-index: 1; }
+        
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 英王 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 王后 */
+        .c-rebel { color: #555555; font-weight: bold; } /* 国内叛军 */
+        .c-scot { color: #0277bd; font-weight: bold; } /* 苏格兰 */
+        .c-wales { color: #e65100; font-weight: bold; } /* 威尔士 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 严格锁定 30px 巨无霸字体 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">爱德华一世：长腿暴君与不列颠征服者</h1>
+
+    <div class="family-tree">
+        <div class="line-dashed-v" style="left: 320px; top: 80px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 140px;">父子 / 替父收拾烂摊子</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #555;">击杀恩师 / 平定内乱</div>
+
+        <div class="line" style="left: 320px; top: 200px; width: 220px; height: 2px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #d81b60;">结发真爱 / 艾莉诺十字架</div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 200px; height: 60px;"></div>
+        
+        <div class="kill-solid-h" style="left: 100px; top: 260px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 100px; top: 260px; height: 60px;"></div>
+        <div class="label" style="left: 210px; top: 260px; color: #e65100;">灭国 / 斩首挂城墙</div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 260px; height: 60px;"></div>
+        <div class="label" style="left: 320px; top: 290px; color: #c62828; font-weight: bold;">残酷极刑 / 车裂</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 260px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 540px; top: 260px; height: 60px;"></div>
+        <div class="label" style="left: 430px; top: 260px; color: #0277bd;">晚年宿敌 / 至死不休</div>
+
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('henry3')">
+            <div class="c-dark">父亲 / 前任英王</div>
+            <div class="c-emperor">亨利三世</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('simon')">
+            <div class="c-dark">姑父 / 议会之父</div>
+            <div class="c-rebel">西蒙·德·孟福尔</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('edward')">
+            <div class="c-dark">英格兰国王</div>
+            <div class="c-emperor" style="font-size: 20px;">“长腿”爱德华一世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('eleanor')">
+            <div class="c-dark">王后</div>
+            <div class="c-consort">卡斯蒂利亚的埃莉诺</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 320px;" onclick="showInfo('llywelyn')">
+            <div class="c-dark">威尔士末代亲王</div>
+            <div class="c-wales">卢埃林</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('wallace')">
+            <div class="c-dark">苏格兰护国公</div>
+            <div class="c-scot">威廉·华莱士</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 320px;" onclick="showInfo('bruce')">
+            <div class="c-dark">苏格兰国王</div>
+            <div class="c-scot">罗伯特·布鲁斯</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">不列颠征服者的三大血火淬炼</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('wales')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1277 - 1283年</div>
+                <div class="c-wales" style="font-size: 16px; font-weight: bold;">铁环锁喉威尔士</div>
+            </div>
+            <div class="event-card" onclick="showInfo('parliament')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1295年</div>
+                <div class="c-rebel" style="font-size: 16px; font-weight: bold;">召开“模范议会”</div>
+            </div>
+            <div class="event-card" onclick="showInfo('scots')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1296 - 1307年</div>
+                <div class="c-scot" style="font-size: 16px; font-weight: bold;">化身“苏格兰之锤”</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'edward': { 
+                name: '爱德华一世 (Edward I)', 
+                subtitle: '长腿暴君、英国查士丁尼、苏格兰之锤', 
+                content: '<p>爱德华一世是金雀花王朝最令人生畏的君主。他身高1米88（在当时是绝对的巨人），因此得名“长腿”。他脾气极其暴躁，甚至曾亲手扯下儿子的头发。与荒唐的祖父约翰和软弱的父亲亨利三世不同，爱德华不仅是个顶级的重骑兵统帅，还是个极其敏锐的政治家。</p><p>在国内，他完善了英国的普通法，确立了议会制度，被称为<strong>“英国的查士丁尼”</strong>。但在对外战争中，他是纯粹的残酷暴君。他彻底覆灭了威尔士公国，并对苏格兰进行了长达十几年的血腥镇压，几乎凭借一己之力，把整个不列颠岛打成了一座巨大的绞肉机。</p>' 
+            },
+            'henry3': { 
+                name: '亨利三世 (Henry III)', 
+                subtitle: '留下百年烂摊子的软弱老爹', 
+                content: '<p>亨利三世在位长达56年，但他性格软弱，极度偏袒妻子带来的法国亲戚，导致英格兰本土贵族彻底离心离德。他在位期间爆发了“第二次男爵战争”，甚至一度被贵族叛军生擒，成了傀儡。</p><p>幸运的是，他生了一个如狼似虎的好儿子。年轻的爱德华挺身而出，在战场上击碎了叛军，不仅把老爹从囚禁中救了出来，还替他彻底荡平了国内的反对势力。亨利三世一生最大的贡献，除了重修威斯敏斯特大教堂，就是把江山安稳地交到了爱德华手里。</p>' 
+            },
+            'simon': { 
+                name: '西蒙·德·孟福尔', 
+                subtitle: '议会之父，被徒弟反杀的悲剧英雄', 
+                content: '<p>孟福尔是爱德华的姑父，也是爱德华早年的军事导师和偶像。因为受不了亨利三世的无能，他带头造反，囚禁了国王。为了获得广泛支持，孟福尔首次召集了不仅有贵族、还有平民骑士和市民代表参加的议会，被称为<strong>“英国议会之父”</strong>。</p><p>爱德华敏锐地从恩师那里学到了所有战争与政治的精髓。在逃出软禁后，爱德华率领保王党军队在伊夫舍姆战役中突袭了孟福尔。孟福尔看到爱德华完美的战术阵型，叹息道：“他们的战术是我教的。”孟福尔战死后，爱德华纵容士兵将这位昔日恩师的遗体极其残忍地肢解。</p>' 
+            },
+            'eleanor': { 
+                name: '卡斯蒂利亚的埃莉诺', 
+                subtitle: '铁血暴君一生唯一的柔情', 
+                content: '<p>在中世纪充满算计的政治联姻中，爱德华与埃莉诺是极其罕见的“真爱”。埃莉诺甚至不顾生命危险，陪同爱德华远赴中东参加十字军东征（传说爱德华遇刺中了毒刃，是埃莉诺亲自为他吸出毒血）。</p><p>1290年，埃莉诺病逝，这让暴躁的爱德华陷入了无尽的悲痛。在运送妻子遗体返回伦敦的长途跋涉中，爱德华下令在灵柩停歇过的每一个十字路口，都修建一座华丽的石雕纪念碑。这12座名垂千古的<strong>“艾莉诺十字架”</strong>，成了这位冷血暴君留给世界最浪漫的印记。</p>' 
+            },
+            'llywelyn': { 
+                name: '卢埃林 (Llywelyn ap Gruffudd)', 
+                subtitle: '威尔士的末代骄傲，身首异处的亲王', 
+                content: '<p>卢埃林是最后一位拥有独立主权的威尔士亲王。当爱德华一世登基时，卢埃林连续五次拒绝前往伦敦向爱德华宣誓效忠。这给了爱德华一世发动灭国战争的完美借口。</p><p>爱德华调集大军，配合庞大的舰队对威尔士进行了海陆双重封锁。卢埃林在一次小规模冲突中被英军长矛兵刺死。爱德华立刻命人砍下他的头颅，戴上嘲弄性的常春藤王冠，一路送回伦敦，高高挂在伦敦塔的尖顶上。长达数百年的威尔士独立史，就此被爱德华一刀斩断。</p>' 
+            },
+            'wallace': { 
+                name: '威廉·华莱士 (William Wallace)', 
+                subtitle: '宁死不屈的苏格兰平民战神', 
+                content: '<p>当苏格兰的贵族们面对爱德华的强权纷纷下跪时，平民出身的华莱士站了出来（电影《勇敢的心》原型）。他在斯特灵桥战役中巧妙利用地形，将不可一世的英格兰重骑兵打得全军覆没。</p><p>这彻底激怒了爱德华。老国王亲自率兵北上，在福尔柯克战役中用威尔士长弓手射爆了苏格兰的长矛阵。华莱士逃亡数年后被同胞出卖。被押解到伦敦后，爱德华为了杀一儆百，对华莱士施以了英国历史上针对叛国罪最残忍的极刑：<strong>绞刑、剖腹、断头和车裂</strong>。他的头颅被挂在伦敦桥上，四肢被送往不列颠四个角落示众。</p>' 
+            },
+            'bruce': { 
+                name: '罗伯特·布鲁斯 (Robert the Bruce)', 
+                subtitle: '熬死老国王的苏格兰绝地武士', 
+                content: '<p>在华莱士死后，苏格兰大贵族罗伯特·布鲁斯接过了反抗的大旗，甚至直接在苏格兰自立为王。爱德华听闻后勃然大怒，下达了“绝不留情”的残暴军令。</p><p>布鲁斯在初期被英军打得如同丧家之犬，甚至被迫躲进山洞里。但他像那只著名的蜘蛛一样屡败屡战。而此时的爱德华一世已经68岁，重病缠身。1307年，这位征服者拖着病躯，坐在担架上坚持要御驾亲征，最终在苏格兰边境病逝。他一死，布鲁斯终于迎来了转机，并在几年后的班诺克本战役中击败了爱德华二世，赢得了苏格兰的独立。</p>' 
+            },
+
+            /* 事件库 */
+            'wales': { 
+                name: '征服威尔士与“铁环城堡”', 
+                subtitle: '用金钱和石头砸出来的绝对统治', 
+                content: '<p><strong>【核心事件】</strong><br>在斩杀卢埃林、彻底吞并威尔士后，爱德华一世为了防止威尔士人再次叛乱，投入了极其恐怖的财力（几乎占英格兰年收入的一大半），在威尔士修建了一系列固若金汤的顶级城堡（如卡纳冯城堡、康威城堡等），这被称为“铁环”。</p><p><strong>【深远影响】</strong><br>爱德华的城堡战略从物理上彻底掐断了威尔士叛乱的可能。为了彻底摧毁威尔士人的心理防线，爱德华将自己刚刚在威尔士出生的儿子（后来的爱德华二世）册封为<strong>“威尔士亲王”</strong>。从此以后，英国君主的男性王储都会被授予这一头衔，直至今日的威廉王子。</p>' 
+            },
+            'parliament': { 
+                name: '召开“模范议会” (1295年)', 
+                subtitle: '为了搞钱打仗，意外催生了现代议会', 
+                content: '<p><strong>【核心事件】</strong><br>爱德华一世常年三线开战（打威尔士、打苏格兰、跟法国争夺领地），国库根本撑不住。为了更顺利地征税，他在1295年召开了一次规模空前的大议会，他在召集令上写下了一句著名的法理格言：<strong>“关乎所有人命运之事，必须得到所有人的同意。”</strong></p><p><strong>【深远影响】</strong><br>这次议会不仅召集了高级教士和贵族，还要求每个郡选举两名骑士、每个大城市选举两名市民代表参加。这种由“贵族+平民代表”组成的结构，直接奠定了英国上下两院的雏形，因此在历史上被称为“模范议会（Model Parliament）”。</p>' 
+            },
+            'scots': { 
+                name: '化身“苏格兰之锤”', 
+                subtitle: '拔走斯昆石，打断苏格兰的脊梁', 
+                content: '<p><strong>【核心事件】</strong><br>爱德华一世以仲裁苏格兰王位继承纠纷为由，强行将苏格兰变成了英格兰的附庸。当苏格兰人试图反抗时，爱德华率大军北上，毫不留情地血洗了苏格兰重镇贝里克。</p><p><strong>【深远影响】</strong><br>为了彻底摧毁苏格兰的王权象征，爱德华派人将历代苏格兰国王加冕时必须坐的圣物——<strong>“斯昆石（命运之石）”</strong>直接抢回了伦敦，并把它嵌在了威斯敏斯特大教堂的英王加冕椅下面。他的残暴统治引发了长达数十年的苏格兰独立战争。当爱德华临终时，他命令将自己的骨头剔出来，带在军队前方，直到苏格兰被彻底征服为止（可惜他儿子没敢执行这个硬核遗言）。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
