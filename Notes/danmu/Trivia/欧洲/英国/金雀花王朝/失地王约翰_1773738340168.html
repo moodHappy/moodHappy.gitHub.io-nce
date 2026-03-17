@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>失地王约翰核心关系网</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 400px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; border-top: 2px solid #c62828; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 英王 */
+        .c-france { color: #1565c0; font-weight: bold; } /* 法王 */
+        .c-rebel { color: #388e3c; font-weight: bold; } /* 贵族 */
+        .c-pope { color: #8e24aa; font-weight: bold; } /* 教皇 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* 弹窗样式 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 【关键修改】：这里将弹窗字体严格锁定为 30px */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">失地王约翰：从帝国败家子到宪政催生者</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 160px; top: 80px; width: 320px; height: 2px;"></div>
+        <div class="kill-v" style="left: 320px; top: 80px; height: 120px;"></div>
+        
+        <div class="label" style="left: 230px; top: 70px;">数次背叛 / 宽恕传位</div>
+        <div class="label" style="left: 410px; top: 70px; color: #c62828;">争夺王位 / 沉尸塞纳河</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #388e3c;">横征暴敛 / 刀架脖子逼宫</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #1565c0;">外交碾压 / 剥夺全部领地</div>
+
+        <div class="kill-v" style="left: 320px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #8e24aa;">开除教籍 / 屈辱认做干爹</div>
+
+        <div class="person" style="left: 160px; top: 80px;" onclick="showInfo('richard')">
+            <div class="c-dark">哥哥</div>
+            <div class="c-emperor">理查一世</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 80px;" onclick="showInfo('arthur')">
+            <div class="c-dark">第一顺位继承人/侄子</div>
+            <div class="c-emperor">阿尔蒂尔</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('barons')">
+            <div class="c-dark">大金主 / 债主</div>
+            <div class="c-rebel">英格兰反叛贵族</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('john')">
+            <div class="c-dark">英格兰国王</div>
+            <div class="c-emperor" style="font-size: 20px;">失地王约翰</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('philip')">
+            <div class="c-dark">法兰西国王</div>
+            <div class="c-france">腓力二世</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('pope')">
+            <div class="c-dark">罗马教皇</div>
+            <div class="c-pope">英诺森三世</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">败家子人生崩盘的三大里程碑</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('normandy')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1204年</div>
+                <div class="c-france" style="font-size: 16px; font-weight: bold;">丧失诺曼底</div>
+            </div>
+            <div class="event-card" onclick="showInfo('excommunication')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1209年</div>
+                <div class="c-pope" style="font-size: 16px; font-weight: bold;">被开除教籍</div>
+            </div>
+            <div class="event-card" onclick="showInfo('magnacarta')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1215年</div>
+                <div class="c-rebel" style="font-size: 16px; font-weight: bold;">签署《大宪章》</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'john': { 
+                name: '无地王 / 失地王约翰', 
+                subtitle: '干啥啥不行，搞钱第一名的英格兰CEO', 
+                content: '<p>约翰是亨利二世最小的儿子。早年因为哥哥们分光了领土，他得名“无地王”。后来他继承了王位，却在短短几年内把老爹辛辛苦苦攒下的法国领地全输给了法王，喜提“失地王”称号（还有个外号叫“软剑约翰”，讽刺他打仗太菜）。</p><p>其实约翰并非常人想象中的纯粹白痴。他非常勤奋，常年巡视全国法庭，是个极其优秀的<strong>封建行政官和查账天才</strong>。他极度贪婪，发明了无数种巧立名目的税收来榨干贵族的钱包。可惜他的性格充满多疑、刻薄和背信弃义，一遇到危机就腿软，这导致他在军事外交上屡战屡败，最终把所有人都逼成了仇人。</p>' 
+            },
+            'richard': { 
+                name: '理查一世 (Richard I)', 
+                subtitle: '被弟弟气死但依然大度的战神哥哥', 
+                content: '<p>理查去打十字军时，好心地给弟弟约翰留下了大片封地。但约翰趁着哥哥在东方苦战并被绑架时，立刻勾结法王试图篡位，甚至暗中<strong>给绑匪塞钱求他们别放理查回来</strong>。</p><p>理查被老妈重金赎回杀回英国时，约翰吓得下跪痛哭。理查非但没杀他，还像哄小孩一样原谅了他。理查临终前，由于自己没有合法子嗣，在病榻上正式指定这唯一的亲弟弟约翰为英格兰王位的继承人。</p>' 
+            },
+            'arthur': { 
+                name: '布列塔尼的阿尔蒂尔', 
+                subtitle: '比约翰更合法的继承人，悲惨的牺牲品', 
+                content: '<p>阿尔蒂尔是约翰二哥（已故的杰弗里）的儿子。按照宗法制，他的继承顺位其实排在叔叔约翰前面。理查一死，法国贵族们立刻拥立阿尔蒂尔对抗约翰。</p><p>但在米拉博战役中，这小子不走运被约翰生擒。被关在鲁昂城堡期间，阿尔蒂尔神秘失踪。中世纪的史书普遍记载，是约翰在喝得酩酊大醉后，<strong>亲手将这个亲侄子残杀，并在尸体上绑上重重的石头，将其沉入了滚滚塞纳河中</strong>。这起极其恶劣的杀亲丑闻，让约翰在全欧洲彻底名誉扫地。</p>' 
+            },
+            'philip': { 
+                name: '法王腓力二世 (Philip II)', 
+                subtitle: '终结安茹帝国神话的法兰西战略大师', 
+                content: '<p>如果说理查在世时，腓力二世还只能搞搞阴谋诡计，那等到约翰登基后，腓力二世简直就是把约翰按在地上单方面暴打。</p><p>腓力二世借着阿尔蒂尔被杀的丑闻，以封建领主的身份合法宣布剥夺约翰在法国境内的所有采邑。他发动闪电战，势如破竹地攻克了被认为坚不可摧的“盖拉德城堡”，把诺曼底、安茹等金雀花家族的祖传领地全部吞并。约翰一败涂地逃回英格兰，成了彻底的“失地王”。</p>' 
+            },
+            'barons': { 
+                name: '英格兰反叛贵族', 
+                subtitle: '被逼急了的提款机，宪政革命的物理推手', 
+                content: '<p>为了筹钱打回法国夺回领土，约翰对英格兰贵族进行了极其残忍的压榨。他滥收封建盾牌钱，肆意没收财产，强迫贵族寡妇交钱才能不再婚，甚至把抗税贵族的妻儿活活饿死在地牢里。</p><p>1214年，约翰在布汶战役中惨败，彻底失去了夺回法国领土的希望。英格兰的贵族们忍无可忍，集体起兵造反，直接把军队开进了伦敦。面对刀架在脖子上的局面，孤立无援的约翰只能乖乖坐下谈判。</p>' 
+            },
+            'pope': { 
+                name: '教皇英诺森三世', 
+                subtitle: '把英格兰逼停摆的史上最强教皇', 
+                content: '<p>约翰因为坎特伯雷大主教的人选问题，和教皇英诺森三世硬刚了起来。这位教皇可不是吃素的，他直接对整个英格兰下达了<strong>“禁行圣事令”</strong>——教堂关门，死人不能按仪式下葬，婴儿不能洗礼。随后更是直接把约翰开除了教籍。</p><p>硬抗了几年后，面对国内外双重造反的压力，约翰光速滑跪。他不仅接受了教皇指定的大主教，甚至极其屈辱地把整个英格兰和爱尔兰作为封地“捐”给了教皇，然后每年给教皇交保护费，名正言顺地认了教皇做“干爹”以求自保。</p>' 
+            },
+
+            /* 事件库 */
+            'normandy': { 
+                name: '丧失诺曼底 (1204年)', 
+                subtitle: '金雀花王朝最耻辱的溃败', 
+                content: '<p><strong>【核心事件】</strong><br>法王腓力二世以约翰杀害侄子、不尽封臣义务为由没收其领地。约翰在防御战中表现得极其无能，他四处猜忌手下的将领，甚至在关键时刻抛下军队独自逃回英格兰。</p><p><strong>【深远影响】</strong><br>1204年，诺曼底陷落。自1066年征服者威廉以来，英格兰国王首次失去了这块富饶的龙兴之地。失去法国领土迫使约翰和后来的英格兰君主们，只能把全部精力转向英格兰本土的治理，这也意外加速了英格兰民族国家意识的觉醒。</p>' 
+            },
+            'excommunication': { 
+                name: '绝罚与屈服 (1209-1213年)', 
+                subtitle: '连死人都不能正常下葬的黑暗岁月', 
+                content: '<p><strong>【核心事件】</strong><br>因为拒绝接受教皇任命的斯蒂芬·朗顿为大主教，约翰被教皇开除教籍。教皇甚至公开号召法国国王去讨伐并推翻这个“异教徒”。</p><p><strong>【深远影响】</strong><br>面临法国入侵的绝境，约翰展现出了惊人的“能屈能伸”。他彻底向教廷投降，将国家献给教皇。这一操作虽然极其屈辱，但极其鸡贼：他瞬间从“教皇的敌人”变成了“教皇的受保护人”，教皇转头就命令法国国王取消入侵，约翰用面子保住了江山。</p>' 
+            },
+            'magnacarta': { 
+                name: '签署《大宪章》 (1215年)', 
+                subtitle: '人类把权力关进笼子的第一步', 
+                content: '<p><strong>【核心事件】</strong><br>在兰尼米德（Runnymede）的草地上，被反叛贵族大军包围的约翰王，极不情愿地在一个盖满印章的羊皮卷上签了字。这就是著名的《大宪章》（Magna Carta）。</p><p><strong>【深远影响】</strong><br>虽然约翰签完字一回宫廷就开始撒泼打滚宣布作废，并引发了第一次诸侯战争，但潘多拉的魔盒已经打开。《大宪章》首次用法律的形式确立了一个颠扑不破的真理：<strong>王在法下，国王不能凌驾于法律之上，且不能未经协商随意征税。</strong>这份被逼出来的不平等条约，意外成为了现代西方宪政法治的基石所在。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
