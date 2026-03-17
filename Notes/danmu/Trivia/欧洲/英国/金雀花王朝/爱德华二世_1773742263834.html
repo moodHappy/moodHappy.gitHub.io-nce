@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>爱德华二世核心关系网：宠臣与母狼</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊关系线：男宠/出轨 */
+        .love-dashed-h { position: absolute; border-top: 2px dashed #8e24aa; z-index: 1; }
+        .love-dashed-v { position: absolute; border-left: 2px dashed #8e24aa; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 英王 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 王后 */
+        .c-favorite { color: #8e24aa; font-weight: bold; } /* 宠臣 */
+        .c-rebel { color: #1565c0; font-weight: bold; } /* 叛逃贵族/情夫 */
+        .c-scot { color: #0277bd; font-weight: bold; } /* 苏格兰 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #8e24aa; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #8e24aa; }
+
+        /* ================= 护眼大字弹窗 ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #8e24aa; font-weight: 500; display: block; }
+        /* 【极其严格的死命令】：弹窗字体锁定为 30px */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">爱德华二世：男宠、母狼与王权崩塌</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 140px;">虎父犬子 / 遗恨九泉</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #c62828;">忍无可忍 / 跨国逼宫</div>
+
+        <div class="love-dashed-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #8e24aa;">灵魂伴侣 / 引发兵变</div>
+
+        <div class="love-dashed-v" style="left: 320px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #8e24aa;">极度纵容 / 亡国催化剂</div>
+
+        <div class="love-dashed-v" style="left: 100px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 100px; top: 260px; color: #d81b60;">出轨结盟 / 夺取王权</div>
+
+        <div class="kill-solid-h" style="left: 100px; top: 320px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 310px; color: #c62828;">活捉 / 阉割与车裂</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 80px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 140px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 130px; color: #0277bd; font-weight: bold;">班诺克本暴打 / 丧失苏格兰</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('edward1')">
+            <div class="c-dark">父亲 / 前任英王</div>
+            <div class="c-emperor">爱德华一世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('bruce')">
+            <div class="c-dark">苏格兰国王</div>
+            <div class="c-scot">罗伯特·布鲁斯</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('isabella')">
+            <div class="c-dark">王后 / 法兰西公主</div>
+            <div class="c-consort" style="font-size: 16px;">“母狼”伊莎贝拉</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('edward2')">
+            <div class="c-dark">英格兰国王</div>
+            <div class="c-emperor" style="font-size: 20px;">爱德华二世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('gaveston')">
+            <div class="c-dark">初代皇家宠臣</div>
+            <div class="c-favorite">皮尔斯·加韦斯顿</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 320px;" onclick="showInfo('mortimer')">
+            <div class="c-dark">流亡边境贵族 / 情夫</div>
+            <div class="c-rebel">罗杰·莫蒂默</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('despenser')">
+            <div class="c-dark">第二任皇家宠臣</div>
+            <div class="c-favorite">小休·德斯潘塞</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">无能君主的三大崩盘时刻</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('bannockburn')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1314年</div>
+                <div class="c-scot" style="font-size: 16px; font-weight: bold;">班诺克本惨败</div>
+            </div>
+            <div class="event-card" onclick="showInfo('invasion')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1326年</div>
+                <div class="c-consort" style="font-size: 16px; font-weight: bold;">母狼跨海复仇</div>
+            </div>
+            <div class="event-card" onclick="showInfo('death')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1327年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">废黜与红热铁条</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'edward2': { 
+                name: '爱德华二世 (Edward II)', 
+                subtitle: '沉迷男色与木工的史上最惨国王', 
+                content: '<p>爱德华二世可能是金雀花王朝最不适合当国王的人。他长相英俊、体格健壮，但他对打仗和治国毫无兴趣，反而热衷于划船、挖沟、甚至是做木匠活。他一生最大的致命弱点，就是对他的<strong>男性宠臣</strong>表现出了病态的依赖和迷恋。</p><p>他把父亲留下的铁血帝国搞得一团糟。在战场上被苏格兰人按在地上摩擦，在朝廷里纵容宠臣疯狂敛财，在后宫里冷落出身高贵的法国公主妻子。最终，他把所有人都逼成了仇人，成为了英国历史上<strong>第一位被议会正式罢免废黜的国王</strong>，在囚禁中迎来了极其凄惨的终局。</p>' 
+            },
+            'edward1': { 
+                name: '爱德华一世 (Edward I)', 
+                subtitle: '九泉之下被活活气死的老爹', 
+                content: '<p>作为横扫不列颠的“长腿暴君”，爱德华一世晚年最大的心病就是这个不成器的儿子。他发现儿子跟那个傲慢的加韦斯顿“走得太近”，气得曾在朝廷上当众扯下儿子的头发，并在临终前下令将加韦斯顿永远驱逐出境。</p><p>老国王临死前留下硬核遗言：<strong>不准下葬，要把自己的骨头带在军队前面去打苏格兰</strong>。结果爱德华二世刚继位，就把老爹草草埋了，转头就把被流放的男宠召了回来，老爹的棺材板可以说是彻底按不住了。</p>' 
+            },
+            'isabella': { 
+                name: '法兰西的伊莎贝拉', 
+                subtitle: '被逼入绝境的“法兰西母狼”', 
+                content: '<p>伊莎贝拉是法国国王的女儿，带着天价嫁妆嫁入英国。但她惊恐地发现，自己的新婚丈夫竟然把本该属于她的珠宝和王室礼遇，全都送给了一个叫加韦斯顿的男人。在隐忍了十几年后，第二任贪婪的宠臣小德斯潘塞更是彻底架空了她，甚至没收了她的封地。</p><p>忍无可忍的伊莎贝拉借着回法国进行外交谈判的机会，果断带着小王储留在法国死活不回去。她穿上黑衣扮演怨妇博取同情，随后与流亡的英国贵族莫蒂默结成情人。1326年，她率领一支雇佣军登陆英格兰。由于爱德华二世太招人恨，全国贵族纷纷倒戈，伊莎贝拉兵不血刃地拿下了伦敦，生擒了丈夫。</p>' 
+            },
+            'gaveston': { 
+                name: '皮尔斯·加韦斯顿', 
+                subtitle: '恃宠而骄的初代皇家小鲜肉', 
+                content: '<p>加韦斯顿是爱德华二世的“灵魂伴侣”。爱德华刚一登基，就赐予他极高的爵位，甚至在自己的加冕典礼上让加韦斯顿走在最前面，彻底激怒了全英国的贵族。</p><p>加韦斯顿不仅贪婪，还嘴贱。他仗着国王的宠爱，给那些手握重兵的大贵族起各种侮辱性的外号（比如叫兰开斯特伯爵为“老戏子”）。最终，忍无可忍的贵族们发动兵变，抓住了加韦斯顿。虽然国王拼命求情，但贵族们还是直接在荒野上<strong>一剑刺穿了他的身体，并砍下了他的头颅</strong>。</p>' 
+            },
+            'despenser': { 
+                name: '小休·德斯潘塞', 
+                subtitle: '引发国人公愤的终极敛财狂魔', 
+                content: '<p>如果说加韦斯顿只是个傲慢的男宠，那小德斯潘塞就是个危害国家的毒瘤。在加韦斯顿死后，他填补了国王的情感空白。他利用国王的宠爱，在全英国疯狂掠夺土地、敲诈勒索，其贪婪程度令人发指。</p><p>当伊莎贝拉王后带着军队打回英国时，小德斯潘塞陪着国王逃亡，最终在威尔士被活捉。伊莎贝拉对他恨之入骨，下令对他施以中世纪最严酷的刑罚：他被绑在梯子上，<strong>当众割下生殖器烧毁，随后被开膛破肚掏出内脏，最后被切成四块送往全国各地示众</strong>。</p>' 
+            },
+            'mortimer': { 
+                name: '罗杰·莫蒂默', 
+                subtitle: '从流亡死囚到窃国大盗', 
+                content: '<p>莫蒂默原本是威尔士边境的强权贵族，因为反抗小德斯潘塞被关进伦敦塔。他通过给看守下药成功越狱逃往法国，并在那里与同样充满怨气的伊莎贝拉王后天雷勾动地火。</p><p>这对“地下情人”组成联盟杀回英国，成功推翻了爱德华二世。在随后的三年里，莫蒂默成了英格兰的实际独裁者。但他犯了和前任宠臣一样的毛病：太贪婪且僭越。最终，年轻的爱德华三世发动突袭，把这个杀父仇人兼母亲的情夫抓了起来，直接送上了绞刑架。</p>' 
+            },
+            'bruce': { 
+                name: '罗伯特·布鲁斯', 
+                subtitle: '单向殴打爱德华二世的苏格兰军神', 
+                content: '<p>爱德华一世死后，布鲁斯敏锐地察觉到了新国王的软弱。他逐步收复苏格兰失地。1314年，爱德华二世终于凑齐了一支号称十万人的庞大大军北上，试图一战定乾坤。</p><p>在班诺克本战役中，布鲁斯利用泥沼地形和密集的苏格兰长矛阵，将英格兰引以为傲的重装骑士打得全军覆没。爱德华二世丢下大军落荒而逃。这场惨败不仅让苏格兰彻底赢得了独立，也让爱德华二世在国内的威望跌到了谷底，为后来的叛乱埋下了伏笔。</p>' 
+            },
+
+            /* 事件库 */
+            'bannockburn': { 
+                name: '班诺克本惨败 (1314年)', 
+                subtitle: '把英格兰的底裤都输光的战役', 
+                content: '<p><strong>【核心事件】</strong><br>爱德华二世率领欧洲当时最庞大、装备最精良的封建骑士大军远征苏格兰。但在排兵布阵上，他表现出了极其惊人的无能。英格兰骑士在狭窄的泥沼地带挤成一团，被苏格兰的步兵方阵如同串糖葫芦一样屠杀。</p><p><strong>【深远影响】</strong><br>这是英格兰历史上最屈辱的军事惨败之一。不仅损失了整整一代的精锐贵族骑士，连国王的私人印章和盾牌都被缴获了。爱德华二世在威望彻底扫地的同时，也彻底失去了对北方边境的控制。</p>' 
+            },
+            'invasion': { 
+                name: '母狼跨海复仇 (1326年)', 
+                subtitle: '老公，我带着军队和情夫回来了', 
+                content: '<p><strong>【核心事件】</strong><br>伊莎贝拉王后以在法国为丈夫进行外交斡旋为借口，带走了王位继承人（后来的爱德华三世）。在巴黎，她公然与流亡的贵族莫蒂默同居，并用儿子的婚姻做筹码换取了一支雇佣军，在英格兰东海岸登陆。</p><p><strong>【深远影响】</strong><br>由于爱德华二世和小德斯潘塞的统治实在太不得人心，王后的大军所到之处，英格兰守军不仅不抵抗，反而夹道欢迎。爱德华二世众叛亲离，只能带着宠臣逃亡威尔士，最终被彻底生擒，金雀花王朝迎来了史上最戏剧性的政权更迭。</p>' 
+            },
+            'death': { 
+                name: '废黜与“红热铁条”传说 (1327年)', 
+                subtitle: '史上死法最猎奇的国王', 
+                content: '<p><strong>【核心事件】</strong><br>1327年1月，议会正式宣布废黜爱德华二世，逼迫他将王位传给儿子爱德华三世。同年9月，被囚禁在伯克利城堡的废王神秘死亡。官方宣布是“自然死亡”。</p><p><strong>【深远影响】</strong><br>民间和后世的史书普遍流传着一个极其惊悚的说法：莫蒂默为了杀人灭口且不留下体表伤痕，指使刺客将一根<strong>烧得通红的铁条，通过牛角管直接从爱德华二世的直肠捅入，烧毁了他的内脏</strong>。虽然现代历史学家对这个传说的真实性存疑（认为更多是对他同性恋倾向的恶毒政治隐喻），但这个死法已经成了爱德华二世身上永远洗不掉的历史标签。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
