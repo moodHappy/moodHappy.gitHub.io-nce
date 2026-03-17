@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>爱德华三世核心关系网：百年战争与爽文男主</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊关系线：情妇 */
+        .love-dashed-h { position: absolute; border-top: 2px dashed #8e24aa; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 英王/黑太子 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 母后 */
+        .c-favorite { color: #8e24aa; font-weight: bold; } /* 情妇 */
+        .c-france { color: #1565c0; font-weight: bold; } /* 法王 */
+        .c-rebel { color: #555555; font-weight: bold; } /* 逆贼 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对锁定30px) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">爱德华三世：逆袭、长弓与百年霸业</h1>
+
+    <div class="family-tree">
+        <div class="kill-v" style="left: 210px; top: 80px; height: 60px;"></div>
+        <div class="kill-h" style="left: 210px; top: 140px; width: 110px;"></div>
+        <div class="label" style="left: 210px; top: 140px; color: #c62828;">软禁母亲</div>
+
+        <div class="kill-solid-v" style="left: 430px; top: 80px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 140px; width: 110px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 140px; height: 60px;"></div>
+        <div class="label" style="left: 430px; top: 140px; color: #c62828; font-weight: bold;">绞死杀父仇人</div>
+
+        <div class="love-dashed-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #8e24aa;">晚年专宠 / 临终剥削</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #1565c0; font-weight: bold;">百年战争爆发 / 争夺王位</div>
+
+        <div class="line" style="left: 320px; top: 200px; width: 2px; height: 60px;"></div>
+        <div class="line" style="left: 210px; top: 260px; width: 110px; height: 2px;"></div>
+        <div class="line" style="left: 210px; top: 260px; width: 2px; height: 60px;"></div>
+        <div class="label" style="left: 210px; top: 260px;">父子同心 / 欧洲最强统帅</div>
+
+        <div class="kill-solid-h" style="left: 210px; top: 320px; width: 220px;"></div>
+        <div class="label" style="left: 320px; top: 310px; color: #1565c0; font-weight: bold;">普瓦捷大捷 / 活捉敌国君主</div>
+
+
+        <div class="person" style="left: 210px; top: 80px;" onclick="showInfo('isabella')">
+            <div class="c-dark">母后 / 前摄政</div>
+            <div class="c-consort">“母狼”伊莎贝拉</div>
+        </div>
+
+        <div class="person" style="left: 430px; top: 80px;" onclick="showInfo('mortimer')">
+            <div class="c-dark">母亲情夫 / 前独裁者</div>
+            <div class="c-rebel">罗杰·莫蒂默</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('alice')">
+            <div class="c-dark">晚年第一宠妇</div>
+            <div class="c-favorite">爱丽丝·佩雷斯</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('edward3')">
+            <div class="c-dark">英格兰国王</div>
+            <div class="c-emperor" style="font-size: 20px;">爱德华三世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('philip6')">
+            <div class="c-dark">法兰西国王</div>
+            <div class="c-france">腓力六世</div>
+        </div>
+
+        <div class="person" style="left: 210px; top: 320px;" onclick="showInfo('blackprince')">
+            <div class="c-dark">王储 / 欧洲军神</div>
+            <div class="c-emperor">黑太子爱德华</div>
+        </div>
+
+        <div class="person" style="left: 430px; top: 320px;" onclick="showInfo('john2')">
+            <div class="c-dark">法兰西国王</div>
+            <div class="c-france">“好人”约翰二世</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">战神三部曲：夺权、血战与骑士精神</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('coup')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1330年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">诺丁汉喋血政变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('crecy')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1346年</div>
+                <div class="c-france" style="font-size: 16px; font-weight: bold;">克雷西长弓洗地</div>
+            </div>
+            <div class="event-card" onclick="showInfo('garter')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1348年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">创立嘉德骑士团</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'edward3': { 
+                name: '爱德华三世 (Edward III)', 
+                subtitle: '拿了爽文剧本的战争狂魔，百年战争的缔造者', 
+                content: '<p>爱德华三世完美继承了祖父（爱德华一世）的军事基因，彻底洗刷了父亲（爱德华二世）留下的亡国耻辱。他14岁被母亲推上王位当傀儡，17岁就敢发动兵变干掉权臣自己当家。为了报复法国国王没收他的领地，他干脆一不做二不休，凭借自己是上任法国国王外甥的身份，<strong>直接宣布自己才是合法的法兰西国王</strong>，拉开了长达百年的英法血战。</p><p>他是英国历史上最崇尚骑士精神的君主之一。在他的带领下，英格兰从一个经常被别人按在地上打的二流岛国，一跃成为整个欧洲最恐怖的军事机器。遗憾的是，这位盖世英雄晚年因脑中风陷入痴呆，在最倚重的儿子黑太子死后，大权旁落，在贪婪情妇的冷落中孤独死去。</p>' 
+            },
+            'isabella': { 
+                name: '“母狼”伊莎贝拉', 
+                subtitle: '被亲儿子赶下政治舞台的太后', 
+                content: '<p>伊莎贝拉和情夫莫蒂默在推翻爱德华二世后，把小爱德华三世当成了橡皮图章。他们不仅在国内外疯狂搜刮财富，还逼迫英格兰向苏格兰割地求和，这让年轻气盛的爱德华三世深感屈辱。</p><p>在诺丁汉政变中，爱德华三世的亲信冲进太后卧室抓捕莫蒂默。伊莎贝拉哭喊着：“好儿子，求你对温和的莫蒂默发发慈悲！”但爱德华铁了心肠。莫蒂默被绞死后，爱德华并没有杀母亲，而是将她软禁在一座豪华城堡里，让她在念经和回忆中度过了余生。</p>' 
+            },
+            'mortimer': { 
+                name: '罗杰·莫蒂默', 
+                subtitle: '嚣张跋扈的窃国大盗，死于绞刑架', 
+                content: '<p>作为王后的情夫和英格兰的实际独裁者，莫蒂默晚年飘到了极点。他出入的排场甚至比国王还要大，还经常对年轻的爱德华三世呼来喝去。</p><p>他忘了，这个小国王的血管里流淌着金雀花家族的暴躁血液。1330年一个伸手不见五指的夜晚，爱德华三世带着一队死士通过诺丁汉城堡的地下密道摸了进去，将莫蒂默直接从王后的床上拖了下来。莫蒂默未经过任何正规审判，就被拖到泰伯恩刑场<strong>直接挂上了绞刑架</strong>，这是对他杀害先王最直接的清算。</p>' 
+            },
+            'blackprince': { 
+                name: '黑太子爱德华', 
+                subtitle: '欧洲最强军神，死于痢疾的天才', 
+                content: '<p>爱德华三世的长子，因为据说常穿黑色铠甲而被称为“黑太子”。他不仅是整个中世纪欧洲最耀眼的骑士，更是个冷酷无情的战术天才。16岁就在克雷西战役中独当一面，后来更是指挥了普瓦捷大捷。</p><p>黑太子是法国人的噩梦，他在法国南部推行残酷的“骑行劫掠（Chevauchée）”战术，烧杀抢掠无恶不作，以此摧毁法国的经济。可惜天妒英才，这位从未在战场上尝过败绩的战神，在西班牙染上了严重的痢疾，在病痛折磨数年后，<strong>先于他父亲离世</strong>，直接导致了英格兰晚期战局的全面崩盘。</p>' 
+            },
+            'philip6': { 
+                name: '法王腓力六世 (Philip VI)', 
+                subtitle: '开启瓦卢瓦王朝，却踢到了钢板', 
+                content: '<p>腓力六世是法国瓦卢瓦王朝的第一任国王。按照法国的《萨利克法》（禁止女性或母系继承王位），他挤掉了爱德华三世的继承资格当上了法国国王。起初，爱德华三世也认怂向他宣誓效忠了。</p><p>但腓力六世不知好歹，为了支持苏格兰，他宣布没收爱德华在法国的最后一块领地（阿基坦）。这下彻底把爱德华三世惹毛了，爱德华直接撕毁誓言，跨海打进法国。在克雷西战役中，腓力六世的数万重装骑士被英国长弓手当成了活靶子，腓力本人也被射中脸部，狼狈逃窜，可谓是丢尽了颜面。</p>' 
+            },
+            'john2': { 
+                name: '法王“好人”约翰二世', 
+                subtitle: '打仗不行，当俘虏倒是很有契约精神', 
+                content: '<p>腓力六世的儿子。在普瓦捷战役中，他带着绝对优势的兵力包围了黑太子，结果不仅打输了，连自己和最小的儿子都<strong>被英国人当场活捉</strong>，被押解回伦敦游街示众。</p><p>英国开出了极其离谱的300万金币天价赎金。约翰二世先交了一部分定金回国筹钱，并留下几个贵族儿子当人质。结果他儿子嫌英国太无聊竟然跑回了法国。为了维护所谓“神圣的骑士荣誉”，约翰二世觉得颜面无存，竟然<strong>主动坐船跑回伦敦继续当俘虏</strong>，并在几个月后病死在英国，堪称中世纪最实诚的冤大头。</p>' 
+            },
+            'alice': { 
+                name: '爱丽丝·佩雷斯 (Alice Perrers)', 
+                subtitle: '吸干老国王最后一滴血的极品情妇', 
+                content: '<p>在贤惠的菲莉帕王后死后，年迈痴呆的爱德华三世彻底沦陷在了这位比他小几十岁的情妇手里。爱丽丝极其贪婪，不仅把持朝政、公然干预司法，还疯狂侵吞皇家财产，惹得满朝文武天怒人怨。</p><p>最令人唏嘘的是，当昔日不可一世的爱德华三世在病榻上咽下最后一口气时，宫里的仆人都跑光了。而这位受尽恩宠的爱丽丝做的最后一件事，竟然是<strong>残忍地从老国王僵硬的手指上把红宝石戒指硬生生扒了下来，然后卷铺盖逃跑</strong>。一代战神的葬礼，凄凉得令人发指。</p>' 
+            },
+
+            /* 事件库 */
+            'coup': { 
+                name: '诺丁汉喋血政变 (1330年)', 
+                subtitle: '17岁少年的绝地反杀', 
+                content: '<p><strong>【核心事件】</strong><br>爱德华三世不满母亲和莫蒂默的专权，利用诺丁汉城堡复杂的地下密道网络，带人深夜潜入，将正准备睡觉的权臣莫蒂默生擒。整个过程干净利落，没有引发大规模内战。</p><p><strong>【深远影响】</strong><br>这场政变标志着爱德华三世真正掌握了王权。他通过迅速处决莫蒂默，向全欧洲宣告：金雀花王朝那个软弱的时代结束了，一头真正的嗜血雄狮已经觉醒。</p>' 
+            },
+            'crecy': { 
+                name: '克雷西大捷 (1346年)', 
+                subtitle: '长弓手淘汰重装骑士的划时代血战', 
+                content: '<p><strong>【核心事件】</strong><br>在法国北部的克雷西，爱德华三世以一万多兵力，迎战法王腓力六世的三万多大军。爱德华将英格兰长弓手部署在两侧高地。当法国那些自诩高贵的重装骑士在泥泞中发起冲锋时，遭到了长弓手每分钟十箭的恐怖“暴雨打击”。</p><p><strong>【深远影响】</strong><br>法军阵亡了上万名精锐骑士，而英军损失微乎其微。这场战役彻底终结了重骑兵在中世纪战场的绝对统治地位。英国长弓手一战封神，成为了此后一百年里法国人最深的梦魇。</p>' 
+            },
+            'garter': { 
+                name: '创立嘉德骑士团 (1348年)', 
+                subtitle: '一个掉落的吊袜带引发的最高荣誉', 
+                content: '<p><strong>【核心事件】</strong><br>相传在一次宫廷舞会上，爱德华的舞伴（一位伯爵夫人）腿上的蓝色天鹅绒吊袜带不慎滑落，引起了旁人的哄笑。爱德华三世捡起袜带绑在自己的腿上，大声斥责道：“心怀邪念者蒙羞（Honi soit qui mal y pense）！”</p><p><strong>【深远影响】</strong><br>他以此为契机，效仿亚瑟王与圆桌骑士的传说，创立了<strong>嘉德骑士团（Order of the Garter）</strong>。这不仅是英国，也是全世界至今历史最悠久、级别最高的骑士勋章体系。爱德华通过这种骑士精神的包装，成功地将全英国的好战贵族团结在了自己的王旗之下。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
