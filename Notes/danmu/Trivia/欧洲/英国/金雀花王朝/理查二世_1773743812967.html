@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>理查二世核心关系网：暴君、宠臣与王权倾覆</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊关系线：男宠/出轨 */
+        .love-dashed-h { position: absolute; border-top: 2px dashed #8e24aa; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 国王/王储 */
+        .c-noble { color: #1565c0; font-weight: bold; } /* 兰开斯特家族/篡位者 */
+        .c-favorite { color: #8e24aa; font-weight: bold; } /* 宠臣 */
+        .c-rebel { color: #555555; font-weight: bold; } /* 叛军/上诉贵族 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对死命令锁定30px) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">理查二世：自恋、复仇与金雀花的绝唱</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 160px; top: 80px; width: 2px; height: 40px;"></div>
+        <div class="line" style="left: 160px; top: 120px; width: 160px; height: 2px;"></div>
+        <div class="line" style="left: 320px; top: 120px; width: 2px; height: 80px;"></div>
+        <div class="label" style="left: 240px; top: 120px;">战神之子 / 十岁继位</div>
+
+        <div class="line" style="left: 480px; top: 80px; width: 2px; height: 240px;"></div>
+        <div class="label" style="left: 480px; top: 150px;">父子 / 兰开斯特家族</div>
+
+        <div class="love-dashed-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #8e24aa;">骄奢宠臣 / 赐封惹众怒</div>
+
+        <div class="kill-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #555; font-weight: bold;">无情议会 / 屠戮王党</div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 200px; height: 50px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 250px; width: 160px;"></div>
+        <div class="kill-solid-v" style="left: 160px; top: 250px; height: 70px;"></div>
+        <div class="label" style="left: 240px; top: 250px; color: #c62828;">背信弃义 / 残酷镇压</div>
+
+        <div class="kill-solid-v" style="left: 480px; top: 280px; height: 40px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 280px; width: 160px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 200px; height: 80px;"></div>
+        <div class="label" style="left: 400px; top: 280px; color: #1565c0; font-weight: bold;">武装夺权 / 地牢饿死</div>
+
+        <div class="person" style="left: 160px; top: 80px;" onclick="showInfo('blackprince')">
+            <div class="c-dark">父亲 / 未能继位的战神</div>
+            <div class="c-emperor">黑太子爱德华</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 80px;" onclick="showInfo('gaunt')">
+            <div class="c-dark">亲王叔叔 / 英格兰首富</div>
+            <div class="c-noble">冈特的约翰</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('devere')">
+            <div class="c-dark">首席男宠 / 权臣</div>
+            <div class="c-favorite">罗伯特·德·维尔</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('richard2')">
+            <div class="c-dark">英格兰国王</div>
+            <div class="c-emperor" style="font-size: 20px;">理查二世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('appellants')">
+            <div class="c-dark">格洛斯特公爵等</div>
+            <div class="c-rebel">上诉贵族</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 320px;" onclick="showInfo('tyler')">
+            <div class="c-dark">平民起义领袖</div>
+            <div class="c-rebel">瓦特·泰勒</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 320px;" onclick="showInfo('henry4')">
+            <div class="c-dark">堂兄 / 兰开斯特公爵</div>
+            <div class="c-noble">亨利·博林布鲁克</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">从少年英雄到暴君的坠落路线</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('peasant')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1381年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">直面农民起义</div>
+            </div>
+            <div class="event-card" onclick="showInfo('merciless')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1388年</div>
+                <div class="c-rebel" style="font-size: 16px; font-weight: bold;">无情议会逼宫</div>
+            </div>
+            <div class="event-card" onclick="showInfo('deposition')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1399年</div>
+                <div class="c-noble" style="font-size: 16px; font-weight: bold;">废黜与饿殍</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'richard2': { 
+                name: '理查二世 (Richard II)', 
+                subtitle: '自恋到病态的君权神授拥护者', 
+                content: '<p>理查二世是一个极具悲剧色彩的自恋狂。因为父亲黑太子是全民偶像，他从小就在阿谀奉承中长大，坚信自己的权力直接来自上帝，任何人反对他就是反对神。他首创了让廷臣在见他时必须<strong>低下头不准直视</strong>的规矩，并在壁画里把自己画成被天使围绕的圣人。</p><p>他在执政前期被叔叔们压制，执政中期靠宠臣耀武扬威，执政晚期则陷入了疯狂的报复模式，到处抄家流放。他极度缺乏祖父爱德华三世的政治手腕和军事才能，却拥有比祖父更膨胀的独裁野心。最终，他把整个英格兰的贵族都逼到了对立面，活生生把一手好牌打得稀烂。</p>' 
+            },
+            'blackprince': { 
+                name: '黑太子爱德华', 
+                subtitle: '留下无敌光环却死得太早的爹', 
+                content: '<p>作为百年战争初期的绝对战神，黑太子如果能活着继位，英格兰的历史可能要改写。可惜他因痢疾早逝，导致年仅10岁的理查被直接推上了王位。</p><p>黑太子的威名对理查二世来说既是保护伞，也是沉重的包袱。理查一生都生活在“战神之子”的阴影下，但他本人又极其讨厌打仗，更喜欢艺术、建筑和穿着华丽的衣服举办宴会，这让那些崇尚武力、跟着黑太子打天下的老将军们极其看不起他。</p>' 
+            },
+            'gaunt': { 
+                name: '冈特的约翰 (John of Gaunt)', 
+                subtitle: '权倾朝野的英格兰首富叔叔', 
+                content: '<p>爱德华三世的第三个儿子，理查二世的亲叔叔。在理查未成年期间，冈特是英格兰真正的掌权者。他拥有极其庞大的领地（兰开斯特公国），富可敌国。莎士比亚后来在剧本里把他描写成了大公无私的长者。</p><p>其实理查二世极其忌惮这位势力庞大的叔叔，生怕他夺权。虽然冈特终其一生都对理查保持了表面上的忠诚，但当冈特一死，理查二世干的最蠢的一件事，就是<strong>直接没收了兰开斯特公国的所有财产，并永远流放了冈特的儿子亨利</strong>。这一举动直接逼反了亨利，给自己挖了坟。</p>' 
+            },
+            'devere': { 
+                name: '罗伯特·德·维尔 (Robert de Vere)', 
+                subtitle: '被封为“爱尔兰公爵”的傲慢男宠', 
+                content: '<p>德·维尔是理查二世最宠爱的臣子，甚至有当时的编年史家暗指两人有“超越友谊的关系”。理查对他的赏赐到了令人发指的地步，甚至为了他，首创了非王室成员封公爵的先例（封他为爱尔兰公爵）。</p><p>这种毫无底线的偏袒激怒了老牌贵族。在逼宫危机中，德·维尔试图率领保王军抵抗，结果在拉德科特桥战役中被打得大败，只能脱掉盔甲跳进泰晤士河里狼狈游走，流亡欧洲，最后在国外的一次打猎中被野猪咬死。</p>' 
+            },
+            'appellants': { 
+                name: '上诉贵族 (Lords Appellant)', 
+                subtitle: '差点把国王直接罢免的硬核叔伯', 
+                content: '<p>以上诉贵族（包括国王的亲叔叔格洛斯特公爵、后来的亨利四世等人）为首的反对派，受够了理查的倒行逆施和宠臣当道。1387年，他们发动武装起义，以“叛国罪”起诉了国王身边的所有亲信。</p><p>在所谓的<strong>“无情议会”</strong>上，他们毫不留情地绞死或流放了理查的所有宠臣。虽然理查当时保住了王位，但他被迫在长达十年的时间里装孙子。这十年的隐忍不仅没有让他学会妥协，反而让他变成了一条毒蛇，在1397年发动了疯狂的清洗报复，把当年逼宫的叔叔直接派人暗杀了。</p>' 
+            },
+            'tyler': { 
+                name: '瓦特·泰勒 (Wat Tyler)', 
+                subtitle: '被14岁少年国王骗惨的起义者', 
+                content: '<p>由于连年征战和沉重的人头税，1381年英格兰爆发了声势浩大的农民起义。瓦特·泰勒带领数万人攻入伦敦，甚至杀死了坎特伯雷大主教。</p><p>年仅14岁的理查二世展现出了他一生中唯一一次惊人的胆识。他亲自骑马来到伦敦城外与起义军谈判。在泰勒被伦敦市长刺杀的混乱时刻，理查大喊：“你们的领袖死了，从今天起，<strong>我就是你们的领袖！</strong>”他用花言巧语承诺免除农奴制，把农民骗回了家。随后立刻翻脸不认人，派军队进行了极其残酷的血腥镇压，起义者被成批挂上了绞刑架。</p>' 
+            },
+            'henry4': { 
+                name: '亨利·博林布鲁克 (Henry IV)', 
+                subtitle: '开启兰开斯特王朝的篡位堂兄', 
+                content: '<p>亨利是冈特之子，也是理查二世的堂兄。他本是上诉贵族之一，后来被理查二世找借口流放。当他得知父亲病死、自家庞大的祖产被理查全部侵吞后，终于忍无可忍。</p><p>趁着理查二世去爱尔兰打仗的空档，亨利带着少数随从在英格兰登陆。因为理查二世实在太招人恨，全国贵族瞬间倒戈支持亨利。亨利轻而易举地俘虏了理查，逼迫他签署了退位诏书，自己戴上王冠成为了<strong>亨利四世</strong>，从此英格兰进入了兰开斯特王朝时代。</p>' 
+            },
+
+            /* 事件库 */
+            'peasant': { 
+                name: '瓦特·泰勒农民起义 (1381年)', 
+                subtitle: '14岁少年的高光时刻与无耻背叛', 
+                content: '<p><strong>【核心事件】</strong><br>因不堪忍受重税，农民大军攻占伦敦。14岁的理查二世在谈判时临危不乱，趁着起义军领袖被杀的空档，用极具煽动性的演讲稳住了数万愤怒的农民，并承诺给他们自由。</p><p><strong>【深远影响】</strong><br>当农民解散回家后，理查立刻废除了所有承诺，派遣法官和刽子手在全国进行血洗。当农民质问他为何背信弃义时，理查傲慢地回答：<strong>“你们过去是农奴，现在依然是农奴，并且将受到比以前更严酷的对待！”</strong>这种两面三刀的性格贯穿了他的一生。</p>' 
+            },
+            'merciless': { 
+                name: '无情议会逼宫 (1388年)', 
+                subtitle: '国王沦为孤家寡人的至暗时刻', 
+                content: '<p><strong>【核心事件】</strong><br>以国王亲叔叔为首的“上诉贵族”带兵包围了伦敦，强行召开议会。他们罗列了理查二世宠臣的数十条罪状，将国王身边最亲密的顾问、朋友和内侍全部判处死刑或流放。</p><p><strong>【深远影响】</strong><br>理查二世被迫眼睁睁看着自己的心腹被拖上绞刑架。这次屈辱极大地扭曲了他的心理，他表面上妥协，暗地里却在策划长达十年的复仇。当他后来羽翼丰满时，对这些贵族的清洗同样极其残忍，直接导致了王室内耗的加剧。</p>' 
+            },
+            'deposition': { 
+                name: '废黜与饿死地牢 (1399年)', 
+                subtitle: '金雀花王朝主脉的凄惨绝唱', 
+                content: '<p><strong>【核心事件】</strong><br>亨利·博林布鲁克回国夺权，众叛亲离的理查二世只能束手就擒。在伦敦塔里，理查被迫宣读了极其屈辱的退位声明，承认自己“无能且不配统治”。</p><p><strong>【深远影响】</strong><br>退位后，理查被秘密转移到约克郡的庞特弗雷特堡。几个月后，为了防止保王党以此为借口造反，新国王亨利四世下达了密令。1400年初，这位曾经不可一世、自诩为“神之代理人”的理查二世，<strong>在阴冷的地牢里被活活饿死</strong>。他的死不仅终结了金雀花家族的主支血脉，也为后世漫长而血腥的“玫瑰战争”埋下了第一颗仇恨的种子。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
