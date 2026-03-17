@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>玫瑰战争核心关系网：红白玫瑰与造王者</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊联姻线 */
+        .marry-dashed-v { position: absolute; border-left: 2px dashed #d81b60; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-lancaster { color: #c62828; font-weight: bold; } /* 兰开斯特(红) */
+        .c-york { color: #1565c0; font-weight: bold; } /* 约克(白) */
+        .c-tudor { color: #8e24aa; font-weight: bold; } /* 都铎(紫) */
+        .c-warwick { color: #e65100; font-weight: bold; } /* 造王者(橙) */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对死命令锁定30px) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">玫瑰战争：红白玫瑰的血腥“吃鸡”大赛</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 120px; top: 100px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 120px; top: 160px;">代夫出征</div>
+
+        <div class="line" style="left: 520px; top: 100px; width: 2px; height: 240px;"></div>
+        <div class="label" style="left: 520px; top: 160px;">父子 / 继承遗志</div>
+        <div class="label" style="left: 520px; top: 280px;">兄弟 / 篡夺侄子王位</div>
+
+        <div class="kill-solid-h" style="left: 120px; top: 100px; width: 400px;"></div>
+        <div class="label" style="left: 320px; top: 90px; color: #c62828;">纸王冠 / 斩首悬城门</div>
+
+        <div class="kill-h" style="left: 120px; top: 220px; width: 400px;"></div>
+        <div class="label" style="left: 320px; top: 210px; color: #555;">两朝废立 / 伦敦塔暗杀</div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 120px; height: 100px;"></div>
+        <div class="label" style="left: 320px; top: 160px; color: #e65100; font-weight: bold;">扶植上位 / 倒戈战死</div>
+
+        <div class="kill-solid-h" style="left: 120px; top: 340px; width: 400px;"></div>
+        <div class="label" style="left: 320px; top: 330px; color: #8e24aa;">博斯沃思决战 / 终结乱世</div>
+
+        <div class="person" style="left: 120px; top: 100px; border: 2px solid #c62828;" onclick="showInfo('margaret')">
+            <div class="c-dark">兰开斯特实际领袖</div>
+            <div class="c-lancaster">安茹的玛格丽特</div>
+        </div>
+
+        <div class="person" style="left: 520px; top: 100px; border: 2px solid #1565c0;" onclick="showInfo('york')">
+            <div class="c-dark">约克家族领袖</div>
+            <div class="c-york">约克公爵理查</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 120px;" onclick="showInfo('warwick')">
+            <div class="c-dark">英格兰第一权臣</div>
+            <div class="c-warwick">“造王者”沃里克</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 220px; border: 2px solid #c62828;" onclick="showInfo('henry6')">
+            <div class="c-dark">红玫瑰 / 英格兰国王</div>
+            <div class="c-lancaster">亨利六世</div>
+        </div>
+
+        <div class="person" style="left: 520px; top: 220px; border: 2px solid #1565c0;" onclick="showInfo('edward4')">
+            <div class="c-dark">白玫瑰 / 英格兰国王</div>
+            <div class="c-york">爱德华四世</div>
+        </div>
+
+        <div class="person" style="left: 120px; top: 340px; border: 2px solid #8e24aa; padding: 14px 18px;" onclick="showInfo('henry7')">
+            <div class="c-dark">都铎王朝开创者</div>
+            <div class="c-tudor" style="font-size: 20px;">亨利七世 (都铎)</div>
+        </div>
+
+        <div class="person" style="left: 520px; top: 340px; border: 2px solid #1565c0;" onclick="showInfo('richard3')">
+            <div class="c-dark">末代金雀花国王</div>
+            <div class="c-york">理查三世</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">权力游戏的三个大结局</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('wakefield')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1460年</div>
+                <div class="c-lancaster" style="font-size: 16px; font-weight: bold;">韦克菲尔德之战</div>
+            </div>
+            <div class="event-card" onclick="showInfo('barnet')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1471年</div>
+                <div class="c-york" style="font-size: 16px; font-weight: bold;">巴内特与蒂克斯伯里</div>
+            </div>
+            <div class="event-card" onclick="showInfo('bosworth')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1485年</div>
+                <div class="c-tudor" style="font-size: 16px; font-weight: bold;">博斯沃思原野战役</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'henry6': { 
+                name: '亨利六世 (Henry VI)', 
+                subtitle: '丢掉法国、精神失常的悲剧发电机', 
+                content: '<p>亨利六世是兰开斯特家族的国王（红玫瑰）。他是个极其虔诚、善良但极度软弱的人，根本不适合当国王。他不仅把先祖在法国打下的江山丢了个精光（除了加来），还患上了严重的精神分裂症，经常一发呆就是好几个月，连自己的儿子都不认识。</p><p>正因为他的无能和发疯，导致手下的大贵族们开始结党营私，最终给了约克公爵夺权的完美借口。在漫长的战争中，他被约克家族像战利品一样抢来抢去，两次被废黜，最终在伦敦塔里<strong>被秘密处死（大概率是爱德华四世下令暗杀）</strong>，可悲地结束了一生。</p>' 
+            },
+            'margaret': { 
+                name: '安茹的玛格丽特', 
+                subtitle: '兰开斯特的真汉子，“红玫瑰”的灵魂', 
+                content: '<p>玛格丽特王后是《冰与火之歌》中瑟曦·兰尼斯特的重要原型之一。面对丈夫亨利六世的精神失常，这位强悍的法国公主直接扛起了兰开斯特家族的大旗。她为了保护儿子的继承权，与约克公爵展开了不死不休的血战。</p><p>在韦克菲尔德战役中，她击杀了约克公爵，并极具侮辱性地<strong>给他的头颅戴上纸糊的王冠，挂在城门上示众</strong>。她一生屡败屡战，流亡国外又杀回国内，直到在蒂克斯伯里战役中亲眼看到独生子阵亡，才彻底精神崩溃，最终在软禁和凄凉中病死于法国。</p>' 
+            },
+            'york': { 
+                name: '约克公爵理查 (Richard of York)', 
+                subtitle: '开启乱世的挑战者，倒在黎明前的枭雄', 
+                content: '<p>作为约克家族（白玫瑰）的领袖，他拥有比亨利六世更正统的王位继承权。在国王发疯期间，他曾担任护国公，但被玛格丽特王后排挤。为了自保并夺取最高权力，他挑起了圣奥尔本斯战役，正式打响了玫瑰战争。</p><p>他一度逼迫议会承认他为王位继承人，但在1460年的韦克菲尔德战役中，他被玛格丽特的军队诱敌深入并击杀。虽然他没能戴上真正的王冠，但他的基因极其强大——<strong>他的两个儿子（爱德华四世、理查三世）后来都成为了英格兰国王。</strong></p>' 
+            },
+            'warwick': { 
+                name: '“造王者”沃里克 (Warwick the Kingmaker)', 
+                subtitle: '中世纪的顶级风投，最终玩砸了的权臣', 
+                content: '<p>理查·内维尔，沃里克伯爵，英格兰最富有的贵族。他拥有最强悍的私军，谁能当国王，基本取决于他支持谁。他先是帮约克家族打天下，把年轻的爱德华四世扶上了王位。</p><p>但后来爱德华四世不仅背着他私自娶了平民寡妇，还提拔女方亲戚，彻底架空了沃里克。愤怒的沃里克直接<strong>造反倒戈，跑到法国与死敌玛格丽特王后结盟</strong>，杀回英国把废帝亨利六世又扶上了王位。然而，在决定命运的巴内特战役中，因为大雾导致自家军队误杀，沃里克兵败被杀，结束了翻云覆雨的一生。</p>' 
+            },
+            'edward4': { 
+                name: '爱德华四世 (Edward IV)', 
+                subtitle: '白玫瑰的颜值担当，死于纵欲的军事天才', 
+                content: '<p>约克公爵之子。他身高惊人（约1米93），长相极其英俊，而且在战场上是个从未有过败绩的天才指挥官。他19岁就替父报仇，在暴风雪中的陶顿战役（英国本土最血腥的战役）中全歼红玫瑰主力，登基称王。</p><p>他最大的黑点是是个超级“颜控”和“海王”。他为了爱情秘密迎娶了平民寡妇伊丽莎白·伍德维尔，直接气反了“造王者”沃里克。虽然他后来强势反杀稳固了王位，但晚年极度贪图享乐、暴饮暴食，40岁出头就猝死了，<strong>留下了一对孤儿（塔中王子）被弟弟理查三世残忍篡位。</strong></p>' 
+            },
+            'richard3': { 
+                name: '理查三世 (Richard III)', 
+                subtitle: '杀侄篡位的驼背暴君，还是被抹黑的明君？', 
+                content: '<p>爱德华四世的亲弟弟。哥哥死后，他作为摄政王护国公，却以哥哥婚姻不合法为由，直接废除了两个亲侄子的继承权自己称王，并将两个小王子关进伦敦塔。<strong>随后两名王子离奇失踪，史称“塔中王子”之谜（普遍认为是理查三世暗下毒手）。</strong></p><p>这一暴行让他失去了全英国贵族的支持。在博斯沃思原野战役中，遭到手下大将临阵倒戈的背叛。理查三世表现出了惊人的悍勇，亲自率领骑士发起决死冲锋，试图直接砍死亨利·都铎，最终力战而死。莎士比亚后来给他加了一句名言：“一匹马！一匹马！我的王国换一匹马！”</p>' 
+            },
+            'henry7': { 
+                name: '亨利七世 (Henry Tudor)', 
+                subtitle: '苟到最后的伏地魔，缝合红白玫瑰的赢家', 
+                content: '<p>亨利·都铎原本只是个有着极其微弱兰开斯特血统的流亡贵族，在法国苟延残喘了14年。但因为理查三世“杀侄篡位”太招人恨，全国反对派全跑来支持这个原本名不见经传的小伙子。</p><p>在博斯沃思战役捡漏击杀理查三世后，亨利在战场上直接戴上了王冠，建立<strong>都铎王朝</strong>。他极其聪明地迎娶了爱德华四世的女儿（约克的伊丽莎白），<strong>将代表兰开斯特的红玫瑰与代表约克的白玫瑰合并，设计出了著名的“都铎玫瑰”徽章</strong>，彻底终结了长达三十年的家族血战。</p>' 
+            },
+
+            /* 事件库 */
+            'wakefield': { 
+                name: '韦克菲尔德之战 (1460年)', 
+                subtitle: '约克公爵的陨落与纸王冠的羞辱', 
+                content: '<p><strong>【核心事件】</strong><br>约克公爵理查率领少数兵力在韦克菲尔德城堡过圣诞节，遭到兰开斯特大军的突袭。约克公爵战死，他的次子（年仅17岁）在逃跑桥上被残忍斩首。</p><p><strong>【深远影响】</strong><br>玛格丽特王后下令砍下约克公爵父子的头颅，戴上纸糊的王冠挂在约克城的城门上。这种极其残忍和侮辱性的举动，彻底摧毁了双方和谈的最后希望，直接刺激了约克公爵的长子（爱德华四世）开启了灭绝人性的疯狂报复。</p>' 
+            },
+            'barnet': { 
+                name: '巴内特与蒂克斯伯里 (1471年)', 
+                subtitle: '造王者陨落，红玫瑰的彻底凋零', 
+                content: '<p><strong>【核心事件】</strong><br>这两场战役是玫瑰战争的分水岭。在巴内特战役的大雾中，造王者沃里克的军队发生混乱互相残杀，沃里克本人在逃跑时被砍死。几周后的蒂克斯伯里战役中，爱德华四世又将玛格丽特王后率领的残军彻底包围。</p><p><strong>【深远影响】</strong><br>在蒂克斯伯里，玛格丽特的独生子（兰开斯特的王位继承人）被当场击杀。随后，被关押在伦敦塔里的老国王亨利六世也被暗杀。<strong>兰开斯特家族的直系血脉被彻底物理切断</strong>，白玫瑰约克家族迎来了全面胜利。</p>' 
+            },
+            'bosworth': { 
+                name: '博斯沃思原野战役 (1485年)', 
+                subtitle: '旧时代的终结，都铎王朝的崛起', 
+                content: '<p><strong>【核心事件】</strong><br>理查三世因为杀害塔中王子而众叛亲离。流亡国外的亨利·都铎率领雇佣军登陆。在博斯沃思战场上，理查三世手握重兵的贵族（斯坦利家族）一直在旁边看戏。理查三世见状，绝望地发起猪突猛进，在距离亨利·都铎仅几步之遥的地方被长戟兵砍倒。</p><p><strong>【深远影响】</strong><br>理查三世是英国历史上最后一位战死沙场的国王。他的王冠从头盔上滚落到灌木丛中，被斯坦利爵士捡起来，直接戴在了亨利·都铎的头上。<strong>长达30多年的玫瑰战争至此落下帷幕，英格兰正式步入辉煌的都铎时代。</strong></p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
