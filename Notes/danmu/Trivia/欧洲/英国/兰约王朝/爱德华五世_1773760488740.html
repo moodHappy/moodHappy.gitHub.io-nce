@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>爱德华五世核心关系网：塔中王子的千古悬案</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊保护线 */
+        .protect-h { position: absolute; border-top: 2px solid #1565c0; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 国王/小王子 */
+        .c-villain { color: #555555; font-weight: bold; } /* 理查三世 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 母亲/外戚 */
+        .c-brother { color: #1565c0; font-weight: bold; } /* 弟弟 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #555; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #555; }
+
+        /* ================= 护眼大字弹窗 (死命令执行：绝对锁定30px) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">爱德华五世：塔中王子的至暗时刻</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 140px;">暴亡 / 留下致命烂摊子</div>
+
+        <div class="line" style="left: 100px; top: 200px; width: 220px; height: 2px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #d81b60;">无力回天 / 躲入庇护所</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #555; font-weight: bold;">篡位 / 囚禁暗杀？</div>
+
+        <div class="kill-solid-v" style="left: 540px; top: 200px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 260px; width: 380px;"></div>
+        <div class="kill-solid-v" style="left: 160px; top: 260px; height: 60px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #c62828; font-weight: bold;">半路拦截 / 斩首清洗</div>
+
+        <div class="protect-h" style="left: 320px; top: 320px; width: 160px;"></div>
+        <div class="line" style="left: 320px; top: 200px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 400px; top: 310px; color: #1565c0;">骗入塔内 / 共同遇害</div>
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('edward4')">
+            <div class="c-dark">父亲 / 前任英王</div>
+            <div class="c-emperor">爱德华四世</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('elizabeth')">
+            <div class="c-dark">母亲 / 绝望王后</div>
+            <div class="c-consort">伊丽莎白·伍德维尔</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('edward5')">
+            <div class="c-dark">12岁无冕之王</div>
+            <div class="c-emperor" style="font-size: 20px;">爱德华五世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('richard3')">
+            <div class="c-dark">叔叔 / 摄政王与篡位者</div>
+            <div class="c-villain">理查（后来的理查三世）</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 320px;" onclick="showInfo('rivers')">
+            <div class="c-dark">亲舅舅 / 小国王太傅</div>
+            <div class="c-consort">安东尼·伍德维尔</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 320px;" onclick="showInfo('york_richard')">
+            <div class="c-dark">9岁的同胞亲弟弟</div>
+            <div class="c-brother">约克公爵理查</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">一场长达两百年的皇家密室悬案</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('interception')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1483年4月</div>
+                <div class="c-villain" style="font-size: 16px; font-weight: bold;">斯托尼斯特拉特福惊变</div>
+            </div>
+            <div class="event-card" onclick="showInfo('titulus')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1483年6月</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">《王权法案》剥夺王位</div>
+            </div>
+            <div class="event-card" onclick="showInfo('disappearance')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1483年夏末</div>
+                <div class="c-villain" style="font-size: 16px; font-weight: bold;">伦敦塔的至暗失踪</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'edward5': { 
+                name: '爱德华五世 (Edward V)', 
+                subtitle: '没活到自己加冕礼的无辜少年', 
+                content: '<p>作为爱德华四世的长子，小爱德华从小在威尔士边界被舅舅安东尼精心抚养，受过极好的骑士和贵族教育。但父亲在1483年的暴病猝死，将这个12岁的少年直接推入了权力的绞肉机。</p><p>在前往伦敦加冕的路上，他的车队被亲叔叔理查拦截，所有忠于他的舅舅和护卫被就地处决。他被迫孤身一人以“等待加冕”为由住进了伦敦塔。随后，他的弟弟也被以“作伴”为由骗了进来。在得知自己的王位被叔叔废除后，有记载称小国王每天都在绝望地祈祷和哭泣，直到同年夏末，兄弟俩在塔内<strong>彻底人间蒸发</strong>。</p>' 
+            },
+            'edward4': { 
+                name: '爱德华四世 (Edward IV)', 
+                subtitle: '暴食猝死的父亲，坑惨了老婆孩子', 
+                content: '<p>爱德华四世虽然是个打仗没输过的天才，但在政治遗产的安排上极其糟糕。他生前为了制衡权臣，过度提拔了妻子伊丽莎白平民出身的娘家人（伍德维尔家族），导致英格兰的老牌贵族对王后一家恨之入骨。</p><p>40岁出头时，他因为纵欲和暴饮暴食突然病死。他一死，他留下的“王后外戚派”和他亲弟弟理查代表的“老贵族派”立刻撕破脸皮，直接导致了他的两个亲生骨肉羊入虎口，惨死塔中。</p>' 
+            },
+            'elizabeth': { 
+                name: '伊丽莎白·伍德维尔', 
+                subtitle: '眼看孩子被恶魔吞噬的绝望母亲', 
+                content: '<p>当得知丈夫突然暴毙、儿子在半路上被小叔子（理查）劫持后，这位曾经权倾朝野的王后立刻意识到了灭顶之灾。她带着小儿子（约克公爵理查）和女儿们连夜逃入威斯敏斯特大教堂寻求政治庇护。</p><p>然而，在理查三世的武装包围和所谓大主教的“安全担保”下，她做出了人生中最悔恨的决定：<strong>流着泪将9岁的小儿子交了出去，送去伦敦塔和哥哥作伴。</strong>此后她再也没见过她的两个儿子。为了复仇，她暗中与敌人（兰开斯特家族的亨利·都铎）结盟，把女儿嫁给他，成为了终结玫瑰战争的关键推手。</p>' 
+            },
+            'richard3': { 
+                name: '叔叔理查 (Richard III)', 
+                subtitle: '杀侄篡位的冷血暴君，或是背锅侠？', 
+                content: '<p>在爱德华四世活着的时候，理查是对哥哥最忠心耿耿的猛将。但哥哥一死，面对王后家族的威胁，理查展现出了极其狠辣的政治手腕。他先发制人，以“清君侧”的名义干掉了小国王身边的所有人，随后自封为摄政王。</p><p>仅仅两个月后，他更是授意议会宣布哥哥的婚姻无效，直接把两个亲侄子打成“私生子”，自己名正言顺地戴上了王冠。虽然历史上一直有为他翻案的声音（认为是后来的都铎王朝故意抹黑他），但作为当时伦敦塔的最高控制者和最大受益人，<strong>他下令谋杀两位亲侄子的嫌疑，在历史上永远也洗不掉。</strong></p>' 
+            },
+            'rivers': { 
+                name: '安东尼·伍德维尔 (Earl Rivers)', 
+                subtitle: '小国王最忠诚的保护伞，惨遭清洗', 
+                content: '<p>伊丽莎白王后的亲兄弟，也是小国王爱德华五世的太傅。他是一位极具教养的骑士和学者。在护送12岁的外甥进京加冕的路上，他完全没有预料到理查的恶毒计划。</p><p>在斯托尼斯特拉特福，他和理查共进晚餐后，第二天一早就被理查以“图谋控制国王”的莫须有罪名逮捕。不久后，他在没有经过任何审判的情况下，被<strong>直接斩首示众</strong>。他的死，意味着小国王被剥夺了最后一道物理防线。</p>' 
+            },
+            'york_richard': { 
+                name: '约克公爵理查 (Richard of Shrewsbury)', 
+                subtitle: '被骗进地狱的9岁陪葬品', 
+                content: '<p>爱德华五世的亲弟弟。在哥哥被劫持后，他原本被母亲紧紧护在威斯敏斯特大教堂的圣地里。但理查三世深知，只要这个小侄子在外面，就随时可能被反对派立为新王。</p><p>理查三世以“小国王在塔里太孤单，需要弟弟陪着玩”为借口，派坎特伯雷大主教去给王后做思想工作。天真的小理查就这样被带出了庇护所，送进了伦敦塔那扇再也没有打开过的大门。兄弟俩最后一次被目击，是在夏末的塔楼花园里玩耍，随后便永久隐入了黑暗。</p>' 
+            },
+
+            /* 事件库 */
+            'interception': { 
+                name: '惊变斯托尼斯特拉特福 (1483.4)', 
+                subtitle: '权力游戏中最致命的半路拦截', 
+                content: '<p><strong>【核心事件】</strong><br>1483年4月底，12岁的爱德华五世在舅舅的护送下前往伦敦准备加冕。叔叔理查半路带兵赶来，假意汇合。在晚宴后的第二天清晨，理查突然翻脸，逮捕了小国王所有的随从，并直接控制了国王本人。</p><p><strong>【深远影响】</strong><br>小国王当场吓得哭了出来，但他没有任何权力反抗。这一事件是整个篡位阴谋的起点。理查通过控制国王的人身自由，直接瘫痪了王后家族的所有反击计划，顺理成章地以“保护国王”的名义进入了伦敦。</p>' 
+            },
+            'titulus': { 
+                name: '《王权法案》剥夺王位 (1483.6)', 
+                subtitle: '用法律的武器杀人诛心', 
+                content: '<p><strong>【核心事件】</strong><br>在把两个侄子都关进伦敦塔后，理查抛出了一个极其恶毒的政治炸弹：他指使神职人员公开宣称，先王爱德华四世在娶伊丽莎白王后之前，曾与另一个女人有过秘密婚约。因此，先王的婚姻是非法的，<strong>爱德华五世和他的弟弟都是非婚生的“私生子”，没有资格继承王位！</strong></p><p><strong>【深远影响】</strong><br>1483年6月25日，议会通过了《王权法案》（Titulus Regius），正式废黜了爱德华五世。第二天，理查堂而皇之地戴上王冠，成为了理查三世。两个曾经尊贵的小王子，瞬间沦为了随时可以被处理掉的政治弃儿。</p>' 
+            },
+            'disappearance': { 
+                name: '伦敦塔的至暗失踪 (1483夏末)', 
+                subtitle: '白骨沉冤将近两百年的密室谋杀案', 
+                content: '<p><strong>【核心事件】</strong><br>自从理查三世加冕后，伦敦塔里的两个小男孩露面的次数越来越少。最后几次有人看到他们时，他们紧紧地待在铁窗后向外看。到了夏末秋初，他们再也没有出现过。当时伦敦的街头巷尾甚至欧洲大陆，都纷纷传言两个孩子已经被叔叔杀害了。</p><p><strong>【深远影响】</strong><br>这桩谋杀案成了理查三世失去民心的致命伤。1674年，工人在重修伦敦塔的白塔阶梯时，在两层楼梯下挖出了一个装有两具儿童骸骨的木箱。当时的英王查理二世认定这就是两位可怜的小王子，并将他们安葬在威斯敏斯特大教堂。直到今天，由于英国王室拒绝开棺进行现代DNA测序，<strong>这桩跨越五百年的中世纪第一悬案，在法理上仍未完全结案。</strong></p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
