@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>亨利六世核心关系网：疯王与帝国的崩塌</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊关系线：保护/操纵 */
+        .protect-h { position: absolute; border-top: 2px solid #d81b60; z-index: 1; }
+        .manipulate-v { position: absolute; border-left: 2px dashed #e65100; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 兰开斯特英王 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 王后 */
+        .c-france { color: #1565c0; font-weight: bold; } /* 法国/贞德 */
+        .c-york { color: #555555; font-weight: bold; } /* 约克家族 */
+        .c-warwick { color: #e65100; font-weight: bold; } /* 造王者 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对死命令锁定30px) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">亨利六世：百年战争的终结与疯王之悲</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 160px; top: 80px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 160px; top: 140px;">战神之子 / 9个月即位</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 80px; width: 220px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 80px; height: 120px;"></div>
+        <div class="label" style="left: 430px; top: 80px; color: #1565c0;">神迹降临 / 夺回法兰西</div>
+
+        <div class="protect-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #d81b60;">母狼护崽 / 强势代政</div>
+
+        <div class="kill-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #555; font-weight: bold;">篡位废立 / 伦敦塔暗杀</div>
+
+        <div class="line" style="left: 100px; top: 200px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 100px; top: 260px;">唯一骨血 / 绝望希望</div>
+
+        <div class="manipulate-v" style="left: 320px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #e65100;">短暂复位 / 沦为傀儡</div>
+
+        <div class="line" style="left: 540px; top: 200px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 540px; top: 260px;">父子 / 白玫瑰崛起</div>
+
+
+        <div class="person" style="left: 160px; top: 80px;" onclick="showInfo('henry5')">
+            <div class="c-dark">父亲 / 英格兰战神</div>
+            <div class="c-emperor">亨利五世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 80px;" onclick="showInfo('joan')">
+            <div class="c-dark">法兰西救国圣女</div>
+            <div class="c-france">圣女贞德</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('margaret')">
+            <div class="c-dark">强悍的法国公主</div>
+            <div class="c-consort">安茹的玛格丽特</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('henry6')">
+            <div class="c-dark">丢失双王冠的疯王</div>
+            <div class="c-emperor" style="font-size: 20px;">亨利六世</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('york_edward')">
+            <div class="c-dark">约克家族 (白玫瑰)</div>
+            <div class="c-york">约克公爵 / 爱德华四世</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 320px;" onclick="showInfo('prince_edward')">
+            <div class="c-dark">兰开斯特末代王储</div>
+            <div class="c-emperor">威斯敏斯特的爱德华</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('warwick')">
+            <div class="c-dark">反复横跳的权臣</div>
+            <div class="c-warwick">“造王者”沃里克</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">帝国崩塌的三个致命节点</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('hundredyears')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1453年</div>
+                <div class="c-france" style="font-size: 16px; font-weight: bold;">输掉百年战争</div>
+            </div>
+            <div class="event-card" onclick="showInfo('madness')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1453-1454年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">陷入极度疯狂</div>
+            </div>
+            <div class="event-card" onclick="showInfo('murder')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1471年</div>
+                <div class="c-york" style="font-size: 16px; font-weight: bold;">伦敦塔喋血</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'henry6': { 
+                name: '亨利六世 (Henry VI)', 
+                subtitle: '被诅咒的血脉，最无辜的暴风眼', 
+                content: '<p>亨利六世九个月大就继承了英格兰王位，随后外公去世，他又名义上继承了法兰西王位。但这顶双重王冠不仅太重，还带着外公（法国疯王查理六世）的<strong>遗传精神病基因</strong>。</p><p>他性格善良、极度虔诚（甚至创办了伊顿公学和剑桥大学国王学院），但他极度厌恶流血，甚至在战场上都会发呆。1453年，在得知英国彻底输掉百年战争后，他的精神防线彻底崩溃，陷入了长达一年多的“紧张性木僵”状态——<strong>不能说话，不能移动，连自己刚出生的儿子都不认识</strong>。这种权力的真空，直接引爆了英格兰贵族内战，也就是玫瑰战争。</p>' 
+            },
+            'margaret': { 
+                name: '安茹的玛格丽特', 
+                subtitle: '被迫成为“战神”的护崽狂魔', 
+                content: '<p>作为亨利六世的王后，当丈夫发疯、大权旁落时，这位法国公主展现出了惊人的铁血手腕。为了保护刚出生的儿子（唯一的王位继承人）不被约克家族废黜，她亲自披挂上阵，满欧洲借兵借钱。</p><p>在长达二十多年的玫瑰战争中，她甚至在韦克菲尔德战役中<strong>砍下了约克公爵的头，并给他戴上纸糊的王冠以示羞辱</strong>。直到1471年蒂克斯伯里战役中，她亲眼看着自己唯一的儿子战死，这位强悍了一辈子的女强人终于精神崩溃，被生擒后卖回了法国，在孤独中凄凉离世。</p>' 
+            },
+            'henry5': { 
+                name: '亨利五世 (Henry V)', 
+                subtitle: '棺材板根本按不住的传奇老爹', 
+                content: '<p>如果亨利五世在天有灵，看到自己辛辛苦苦在阿金库尔泥坑里打下的法兰西江山，被自己这个唯唯诺诺的儿子在短短几十年内败得只剩下一个加来港，估计能活活气活过来。</p><p>亨利六世一辈子都生活在战神老爹的巨大阴影下。英格兰的贵族们总是拿他们父子作比较，这让原本就脆弱的亨利六世产生了极大的心理压力，最终成了压垮他精神的稻草之一。</p>' 
+            },
+            'joan': { 
+                name: '圣女贞德 (Joan of Arc)', 
+                subtitle: '终结英格兰美梦的村姑神将', 
+                content: '<p>在亨利六世的童年时期，法国出现了一个声称听到上帝旨意的农村少女——贞德。她不仅解了奥尔良之围，还一路护送法国王太子加冕为查理七世，直接摧毁了英国人“名正言顺占领法国”的法理基础。</p><p>虽然英国人后来抓住了贞德，并以极其卑劣的“异端”罪名将她<strong>绑在火刑柱上活活烧死</strong>，但这已经无法阻挡法国人觉醒的民族狂潮。贞德的出现，成了亨利六世丢掉法兰西王冠的第一记重锤。</p>' 
+            },
+            'york_edward': { 
+                name: '约克家族 (白玫瑰)', 
+                subtitle: '趁你病要你命的死敌', 
+                content: '<p>约克公爵理查本是亨利六世发疯时的“护国公”，因为受不了玛格丽特王后的排挤而起兵造反。虽然他战死了，但他的儿子<strong>爱德华四世</strong>是个不折不扣的军事天才。</p><p>爱德华四世在血流成河的陶顿战役中彻底击溃了红玫瑰大军，把发疯的亨利六世赶下王座并关进了伦敦塔。亨利六世就像个战利品，在两派势力的争夺中被废立了两次，受尽了屈辱。</p>' 
+            },
+            'warwick': { 
+                name: '“造王者”沃里克', 
+                subtitle: '把国王当橡皮图章的野心家', 
+                content: '<p>沃里克原本是约克家族的铁杆盟友，帮爱德华四世夺了天下。但因为爱德华四世不听话（私自娶了平民寡妇），愤怒的沃里克竟然倒戈投靠了昔日死敌玛格丽特王后。</p><p>1470年，沃里克攻入伦敦，把在伦敦塔里关得浑身脏兮兮、精神恍惚的亨利六世拖了出来，给他换上干净衣服，<strong>强行把他再次扶上了王位</strong>（史称“亨利六世复辟”）。可惜不到半年，沃里克战死，亨利六世再次沦为阶下囚。</p>' 
+            },
+            'prince_edward': { 
+                name: '威斯敏斯特的爱德华', 
+                subtitle: '红玫瑰最后的血脉，死于乱军', 
+                content: '<p>他是亨利六世和玛格丽特的独生子。在他出生时，父亲亨利正处于严重的精神分裂中，连看都不看他一眼。</p><p>这个从小跟着母亲在战场和流亡中长大的王子，脾气极其暴躁嗜血（七岁就敢下令砍敌人的头）。1471年的蒂克斯伯里战役中，年仅17岁的王子率兵突围失败，<strong>被约克家族的军队当场斩杀（也有说是被俘虏后当着爱德华四世的面被处决的）</strong>。他的死，宣告了兰开斯特家族主干血脉的彻底断绝。</p>' 
+            },
+
+            /* 事件库 */
+            'hundredyears': { 
+                name: '输掉百年战争 (1453年)', 
+                subtitle: '卡斯蒂隆战役，火炮时代的降临', 
+                content: '<p><strong>【核心事件】</strong><br>1453年，英国名将塔尔博特率军在卡斯蒂隆迎战法军。法国人首次大规模使用了野战火炮，将曾经不可一世的英国长弓手和骑士轰成了肉泥。塔尔博特战死。</p><p><strong>【深远影响】</strong><br>这标志着英格兰彻底失去了除加来港之外的所有法国领土，长达116年的百年战争以法国的胜利告终。这个极其惨痛的战败消息传回伦敦，<strong>直接导致了原本就脆弱的亨利六世精神彻底崩溃，成了引发玫瑰战争的导火索。</strong></p>' 
+            },
+            'madness': { 
+                name: '陷入极度疯狂 (1453-1454年)', 
+                subtitle: '国王变成了活死人', 
+                content: '<p><strong>【核心事件】</strong><br>在得知战败后，亨利六世突然失去了所有感官反应。他无法说话，无法理解别人，连大小便都无法自理，需要仆人像搬运家具一样搬运他。当王后把刚出生的儿子抱到他面前时，他毫无反应。</p><p><strong>【深远影响】</strong><br>国王长达一年多的“植物人”状态，让整个英格兰的权力中心出现了巨大的黑洞。约克公爵趁机夺取了护国公的职位，而玛格丽特王后则为了保住儿子的王位拼死反击。当亨利六世奇迹般地在1454年底突然清醒过来时，英格兰已经处于全面内战的边缘，一切都太迟了。</p>' 
+            },
+            'murder': { 
+                name: '伦敦塔喋血 (1471年)', 
+                subtitle: '疯王的凄凉结局', 
+                content: '<p><strong>【核心事件】</strong><br>1471年5月，爱德华四世在蒂克斯伯里战役中彻底消灭了玛格丽特王后的军队，并杀死了兰开斯特王储。当晚，爱德华四世凯旋返回伦敦。第二天早上，官方宣布被关押在伦敦塔内的亨利六世死于“纯粹的悲伤和忧郁”。</p><p><strong>【深远影响】</strong><br>几乎所有历史学家都确信：<strong>亨利六世是被爱德华四世下令秘密处死的（很大可能是理查三世亲自动手或监工），死因大概率是钝器击打头部。</strong>因为只要他的儿子死了，亨利六世就失去了作为傀儡或人质的价值，必须被物理消除以绝后患。这位历经磨难的疯王，终于在血泊中获得了解脱。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
