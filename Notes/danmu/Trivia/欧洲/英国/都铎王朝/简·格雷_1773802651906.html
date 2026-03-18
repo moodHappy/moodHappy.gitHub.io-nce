@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>简·格雷核心关系网：无辜的九日女王</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+
+        /* 特殊关系线：操纵/联姻 */
+        .marry-h { position: absolute; border-top: 2px solid #d81b60; z-index: 1; }
+        .manipulate-v { position: absolute; border-left: 2px dashed #e65100; z-index: 1; }
+        .manipulate-h { position: absolute; border-top: 2px dashed #e65100; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 国王/女王 */
+        .c-villain { color: #e65100; font-weight: bold; } /* 权臣/达德利 */
+        .c-mary { color: #8e24aa; font-weight: bold; } /* 血腥玛丽 */
+        .c-consort { color: #1565c0; font-weight: bold; } /* 丈夫 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对死命令锁定30px，零星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">简·格雷：政治祭坛上的九日女王</h1>
+
+    <div class="family-tree">
+        <div class="manipulate-h" style="left: 160px; top: 100px; width: 320px;"></div>
+        <div class="label" style="left: 320px; top: 90px; color: #e65100;">蛊惑篡改遗嘱 / 掌控朝政</div>
+
+        <div class="line" style="left: 160px; top: 100px; width: 2px; height: 60px;"></div>
+        <div class="line" style="left: 160px; top: 160px; width: 160px; height: 2px;"></div>
+        <div class="line" style="left: 320px; top: 160px; width: 2px; height: 60px;"></div>
+        <div class="label" style="left: 240px; top: 150px; color: #c62828;">临终托孤 / 越过亲姐传位</div>
+
+        <div class="line" style="left: 480px; top: 100px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 480px; top: 160px;">父子 / 政治工具</div>
+
+        <div class="marry-h" style="left: 320px; top: 220px; width: 160px;"></div>
+        <div class="label" style="left: 400px; top: 210px; color: #d81b60;">强迫成婚 / 企图共治</div>
+
+        <div class="kill-solid-v" style="left: 160px; top: 280px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 280px; width: 160px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 220px; height: 60px;"></div>
+        <div class="label" style="left: 240px; top: 270px; color: #c62828; font-weight: bold;">武装反杀 / 斩首清洗</div>
+
+        <div class="kill-solid-h" style="left: 160px; top: 340px; width: 320px;"></div>
+        <div class="kill-solid-v" style="left: 480px; top: 220px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 330px; color: #8e24aa; font-weight: bold;">兵败如山倒 / 绞死权臣一家</div>
+
+        <div class="person" style="left: 160px; top: 100px;" onclick="showInfo('edward6')">
+            <div class="c-dark">前任英王 / 表弟</div>
+            <div class="c-emperor">爱德华六世</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 100px;" onclick="showInfo('dudley')">
+            <div class="c-dark">权臣 / 简的公公</div>
+            <div class="c-villain">诺森伯兰公爵</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 220px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('jane')">
+            <div class="c-dark">无辜的政治祭品</div>
+            <div class="c-emperor" style="font-size: 20px;">“九日女王”简·格雷</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 220px;" onclick="showInfo('guilford')">
+            <div class="c-dark">简的丈夫 / 纨绔子弟</div>
+            <div class="c-consort">吉尔福德·达德利</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 340px; border: 2px solid #8e24aa; padding: 14px 18px;" onclick="showInfo('mary')">
+            <div class="c-dark">合法继承人 / 复仇者</div>
+            <div class="c-mary" style="font-size: 20px;">玛丽一世 (血腥玛丽)</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">少女命丧断头台的三日剧</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('will')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1553年6月</div>
+                <div class="c-villain" style="font-size: 16px; font-weight: bold;">篡改继承法案</div>
+            </div>
+            <div class="event-card" onclick="showInfo('ninedays')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1553年7月</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">被迫登基与闹剧</div>
+            </div>
+            <div class="event-card" onclick="showInfo('execution')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1554年2月</div>
+                <div class="c-mary" style="font-size: 16px; font-weight: bold;">伦敦塔断头悲歌</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'jane': { 
+                name: '简·格雷 (Lady Jane Grey)', 
+                subtitle: '只想看书的15岁学霸，被迫戴上泣血王冠', 
+                content: '<p>简·格雷是亨利八世妹妹的外孙女，从小就是个精通拉丁语、希腊语和希伯来语的顶级学霸少女。她对权力毫无兴趣，最大的爱好是安静地读书。但因为她拥有都铎王室的血统，且是个虔诚的新教徒，不幸成了权臣公公（诺森伯兰公爵）窃取国家的完美提线木偶。</p><p>当公公带人冲进房间，跪在她面前大喊“女王陛下”时，15岁的简直接<strong>吓得当场晕倒，醒来后哭着拒绝这顶王冠</strong>。但胳膊拧不过大腿，她被强行架上王座。短短九天后，玛丽一世反杀成功。其实玛丽一开始可怜这个表侄女不想杀她，但因为简的亲爹后来又参与了叛乱，玛丽为了绝后患，只能狠心将这个无辜的少女送上了断头台。</p>' 
+            },
+            'edward6': { 
+                name: '爱德华六世 (Edward VI)', 
+                subtitle: '亨利八世的独苗，留下致命遗嘱的病弱少年', 
+                content: '<p>亨利八世为了生他，砍了两个老婆的头，甚至改变了英国的宗教。爱德华六世是个极其狂热的新教徒，但他身体太弱，15岁就染上了严重的肺结核病入膏肓。</p><p>由于他死后，王位将合法传给信奉天主教的同父异母姐姐玛丽（亨利八世的第一任老婆生的女儿），爱德华极度恐惧英国会重返天主教的怀抱。在权臣诺森伯兰公爵的怂恿下，他在病榻上<strong>强行修改了《继承法案》</strong>，直接剥夺了玛丽和伊丽莎白的继承权，把王位传给了同为新教徒的表姐简·格雷，亲手点燃了这场政变的火药桶。</p>' 
+            },
+            'dudley': { 
+                name: '诺森伯兰公爵 (John Dudley)', 
+                subtitle: '利欲熏心的总导演，玩火自焚的权臣', 
+                content: '<p>这老哥是当时英国实际上的“摄政王”。眼看小国王要病死了，如果玛丽继位，他这个极度迫害天主教徒的权臣绝对死无葬身之地。</p><p>为了保住自己家族的荣华富贵，他下了一盘大棋：先是强迫简·格雷嫁给自己的儿子，然后忽悠病危的国王把王位传给简。这样一来，<strong>他自己的儿子就能当上英国国王，他就是太上皇。</strong>可惜他严重低估了玛丽在民间的巨大威望和合法性。当玛丽起兵时，他手下的军队竟然全部阵前倒戈。这位野心家最后在断头台上哭着请求宽恕，依然被干净利落地砍了脑袋。</p>' 
+            },
+            'guilford': { 
+                name: '吉尔福德·达德利 (Guilford Dudley)', 
+                subtitle: '干啥啥不行的娇生惯养官二代', 
+                content: '<p>诺森伯兰公爵的儿子，简·格雷的丈夫。这场包办婚姻对简来说简直是折磨，因为吉尔福德是个极其傲慢且被宠坏的纨绔子弟。</p><p>在简被迫当上女王后，这小子竟然极其嚣张地要求简立刻封他为“国王”。简虽然柔弱，但关键时刻极度清醒，严词拒绝，只肯封他为公爵。<strong>吉尔福德竟然气得像个三岁小孩一样跑去找他妈哭诉，并在接下来的几天里拒绝和女王同房。</strong>后来玛丽反杀成功，这个蠢货和简一起被关进伦敦塔，并在简被处决的同一天，先一步被送上了断头台。</p>' 
+            },
+            'mary': { 
+                name: '玛丽一世 (Mary I)', 
+                subtitle: '绝地反击的合法女王，后来化身“血腥玛丽”', 
+                content: '<p>作为亨利八世的长女，玛丽前半生受尽了父亲的冷落和屈辱（被骂作私生女，甚至不准见亲生母亲）。当弟弟死后，权臣企图越过她拥立简·格雷，这彻底激怒了这位骨子里流淌着西班牙铁血基因的公主。</p><p>面对诺森伯兰公爵的追捕，玛丽果断逃往乡下，振臂一呼。由于老百姓极其痛恨专权的公爵，且坚定认为玛丽才是真命天子，全英国的贵族和百姓瞬间倒戈支持她。<strong>玛丽兵不血刃地骑马开进伦敦，夺回了属于自己的王冠。</strong>后来她为了恢复天主教，在全国烧死了近三百名新教徒，因此喜提“血腥玛丽”的恐怖称号。</p>' 
+            },
+
+            /* 事件库 */
+            'will': { 
+                name: '篡改继承法案 (1553年6月)', 
+                subtitle: '用国王的最后一口气绑架国家', 
+                content: '<p><strong>【核心事件】</strong><br>病入膏肓的爱德华六世在诺森伯兰公爵的指导下，写下了一份名为《关于继承的设想》的遗嘱。遗嘱直接宣布自己的两个亲姐姐（玛丽和伊丽莎白）为私生女，将王位传给刚刚和公爵儿子结婚的简·格雷。</p><p><strong>【深远影响】</strong><br>这份遗嘱彻底违背了亨利八世生前由议会通过的法定继承顺序，是一场极其恶劣的违宪政变。它将无辜的简推到了火山口，也成了诺森伯兰公爵家族覆灭的催命符。</p>' 
+            },
+            'ninedays': { 
+                name: '被迫登基与九日闹剧 (1553年7月)', 
+                subtitle: '史上最短命的女王', 
+                content: '<p><strong>【核心事件】</strong><br>爱德华死后，简被强行带到伦敦塔，在极其冷清和压抑的氛围中被宣布为女王。她甚至拒绝戴上王冠。与此同时，真正的合法继承人玛丽在东盎格利亚迅速集结了庞大的军队，开始向伦敦进军。</p><p><strong>【深远影响】</strong><br>简的女王生涯仅仅维持了九天。当玛丽的军队逼近时，原本支持简的枢密院大臣们见风使舵，立刻冲出伦敦塔，在大街上高呼“玛丽女王万岁”。简的父亲（萨福克公爵）甚至亲自走进女儿的房间，<strong>亲手扯下了简头上的华盖，告诉她：“你已经不是女王了。”</strong></p>' 
+            },
+            'execution': { 
+                name: '伦敦塔断头悲歌 (1554年2月)', 
+                subtitle: '“我该怎么做？它在哪里？”', 
+                content: '<p><strong>【核心事件】</strong><br>起初玛丽女王念及亲情，只把简关在伦敦塔里，并不打算杀她。但几个月后，简的亲生父亲极其作死地参加了反对玛丽的“怀亚特叛乱”。玛丽为了彻底掐断新教徒造反的念想，被迫签发了简的死刑执行令。</p><p><strong>【深远影响】</strong><br>1554年2月12日，年仅16岁的简在处决了丈夫之后，平静地走上断头台。在眼睛被蒙上布条后，她突然找不到垫头的木块，恐慌地在空气中摸索并哭喊：<strong>“我该怎么做？它在哪里？”</strong>（What shall I do? Where is it?）。在旁人的引导下，她将头放在了木块上，刽子手手起斧落。这悲惨的一幕，成了英国历史上最令人心碎的画面。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
