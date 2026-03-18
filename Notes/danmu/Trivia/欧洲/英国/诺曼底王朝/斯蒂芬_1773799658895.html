@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>诺曼底王朝：斯蒂芬与无政府时期</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与特殊线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+        .marry-h { position: absolute; border-top: 2px solid #d81b60; z-index: 1; }
+        .ally-dashed-v { position: absolute; border-left: 2px dashed #1565c0; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-stephen { color: #c62828; font-weight: bold; } /* 斯蒂芬阵营 */
+        .c-matilda { color: #1565c0; font-weight: bold; } /* 皇女阵营 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 布洛涅的马蒂尔达 */
+        .c-henry { color: #8e24aa; font-weight: bold; } /* 亨利二世/亨利一世 */
+        .c-bishop { color: #e65100; font-weight: bold; } /* 亨利主教 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对执行死命令锁定30px，全面清剿星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">斯蒂芬与无政府时期：基督沉睡的19年</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 80px; width: 2px; height: 60px;"></div>
+        <div class="line" style="left: 160px; top: 140px; width: 160px; height: 2px;"></div>
+        <div class="line" style="left: 160px; top: 140px; width: 2px; height: 60px;"></div>
+        <div class="label" style="left: 240px; top: 130px; color: #1565c0;">合法宣称 / 钦定继承人</div>
+
+        <div class="line" style="left: 320px; top: 140px; width: 160px; height: 2px;"></div>
+        <div class="line" style="left: 480px; top: 140px; width: 2px; height: 60px;"></div>
+        <div class="label" style="left: 400px; top: 130px; color: #c62828;">外甥 / 趁乱窃国</div>
+
+        <div class="kill-solid-h" style="left: 160px; top: 200px; width: 320px;"></div>
+        <div class="label" style="left: 320px; top: 190px; color: #555; font-weight: bold;">19年血腥互撕 / 无政府时期</div>
+
+        <div class="marry-h" style="left: 480px; top: 200px; width: 120px;"></div>
+        <div class="label" style="left: 540px; top: 190px; color: #d81b60;">铁血救夫</div>
+
+        <div class="ally-dashed-v" style="left: 480px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 480px; top: 260px; color: #e65100;">反复横跳 / 核心金主</div>
+
+        <div class="ally-dashed-v" style="left: 160px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 160px; top: 260px; color: #1565c0;">最强辅助 / 军团长</div>
+
+        <div class="line" style="left: 160px; top: 200px; width: 160px; height: 2px;"></div>
+        <div class="line" style="left: 320px; top: 200px; width: 2px; height: 120px;"></div>
+        
+        <div class="kill-h" style="left: 320px; top: 320px; width: 160px;"></div>
+        <div class="label" style="left: 400px; top: 310px; color: #8e24aa; font-weight: bold;">妥协 / 指定为继承人</div>
+
+
+        <div class="person" style="left: 320px; top: 80px;" onclick="showInfo('henry1')">
+            <div class="c-dark">前任国王</div>
+            <div class="c-henry">亨利一世</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 200px; border: 2px solid #1565c0; padding: 14px 18px;" onclick="showInfo('empress')">
+            <div class="c-dark">合法继承人</div>
+            <div class="c-matilda" style="font-size: 18px;">“皇女”马蒂尔达</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('stephen')">
+            <div class="c-dark">篡位者 / 英王</div>
+            <div class="c-stephen" style="font-size: 18px;">斯蒂芬</div>
+        </div>
+
+        <div class="person" style="left: 600px; top: 200px;" onclick="showInfo('queen_matilda')">
+            <div class="c-dark">斯蒂芬王后</div>
+            <div class="c-consort">布洛涅的马蒂尔达</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 320px;" onclick="showInfo('robert')">
+            <div class="c-dark">皇女的私生子哥哥</div>
+            <div class="c-matilda">格洛斯特的罗伯特</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px; border: 2px solid #8e24aa;" onclick="showInfo('henry2')">
+            <div class="c-dark">皇女之子 / 终极赢家</div>
+            <div class="c-henry">亨利二世 (金雀花)</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 320px;" onclick="showInfo('bishop_henry')">
+            <div class="c-dark">斯蒂芬的亲弟弟</div>
+            <div class="c-bishop">温彻斯特主教亨利</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">无政府时期的三大名场面</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('usurpation')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1135年</div>
+                <div class="c-stephen" style="font-size: 16px; font-weight: bold;">白船惨案与窃国</div>
+            </div>
+            <div class="event-card" onclick="showInfo('lincoln')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1141年</div>
+                <div class="c-matilda" style="font-size: 16px; font-weight: bold;">林肯战役换俘</div>
+            </div>
+            <div class="event-card" onclick="showInfo('wallingford')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1153年</div>
+                <div class="c-henry" style="font-size: 16px; font-weight: bold;">沃林福德条约</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'stephen': { 
+                name: '国王斯蒂芬 (King Stephen)', 
+                subtitle: '性格太好，反倒成了最烂的国王', 
+                content: '<p>斯蒂芬是征服者威廉的外孙。在舅舅亨利一世死后，他以百米冲刺的速度跑回伦敦，在弟弟（温彻斯特主教）的砸钱开路下，抢先戴上了王冠。但他性格极其优柔寡断，对贵族出奇的宽容。<strong>他连叛乱的贵族都舍不得杀，导致所有人都觉得他软弱可欺。</strong></p><p>在他的统治下，英格兰陷入了彻底的无政府状态。各路男爵疯狂私建城堡，互相火拼，在自己的地盘上滥发货币、疯狂压榨百姓。斯蒂芬虽然在战场上是个极其勇猛的骑士（在林肯战役中战斧砍断了、剑也折断了才被俘虏），但他完全没有作为君主的政治手腕，最终把国家拖入了长达19年的炼狱。</p>' 
+            },
+            'empress': { 
+                name: '“皇女”马蒂尔达 (Empress Matilda)', 
+                subtitle: '差一点就成了英国第一位女王的傲娇公主', 
+                content: '<p>她是亨利一世唯一的合法婚生女，因为第一任丈夫是神圣罗马帝国皇帝，所以终生被称为“皇女”。她本来是名正言顺的继承人，且所有贵族都发过誓要效忠她，结果却被表哥斯蒂芬截了胡。</p><p>她气急败坏地率军打回英国。在1141年，她甚至生擒了斯蒂芬，眼看就要在伦敦加冕为女王了。但在最关键的时刻，她<strong>极其傲慢地拒绝了伦敦市民减税的请求，甚至辱骂了前来求情的斯蒂芬王后</strong>。这直接激怒了全伦敦的市民，导致她在加冕前夕被愤怒的暴民手持菜刀木棍赶出了首都，彻底错失了登基的唯一机会。</p>' 
+            },
+            'queen_matilda': { 
+                name: '布洛涅的马蒂尔达 (Matilda of Boulogne)', 
+                subtitle: '斯蒂芬的最强外挂，真正的铁血娇妻', 
+                content: '<p>在斯蒂芬被“皇女”俘虏、即将丢掉江山的绝境下，这位同样名叫马蒂尔达的王后站了出来。她没有选择哭泣，而是直接回到娘家封地（布洛涅）招兵买马，并亲自率领一支庞大的雇佣军杀回英格兰。</p><p>她不仅在战场上大败了皇女的军队，还极其干脆利落地<strong>生擒了皇女的军队主帅兼亲哥哥（罗伯特）</strong>。正是靠着她打下的筹码，斯蒂芬阵营才能用罗伯特换回了被俘的斯蒂芬国王。如果没有这位铁血娇妻，斯蒂芬早就凉透了。</p>' 
+            },
+            'robert': { 
+                name: '格洛斯特的罗伯特 (Robert of Gloucester)', 
+                subtitle: '皇女同父异母的私生子哥哥，绝对的战力担当', 
+                content: '<p>罗伯特是亨利一世众多私生子中最有才华的一个。因为是私生子，他无权继承王位，但他把所有的忠诚和军事才华都献给了自己同父异母的妹妹（皇女马蒂尔达）。</p><p>在整个19年的内战中，他几乎凭一己之力撑起了皇女阵营的全部军事行动。在温彻斯特溃败时，他为了掩护妹妹逃跑，亲自断后导致自己被俘。当他后来因病去世后，皇女马蒂尔达彻底失去了主心骨，再也无力与斯蒂芬抗衡，只能黯然退回欧洲大陆。</p>' 
+            },
+            'bishop_henry': { 
+                name: '温彻斯特主教亨利 (Henry of Blois)', 
+                subtitle: '全英格兰最富有的弟弟，反复横跳的大金主', 
+                content: '<p>亨利是斯蒂芬国王的亲弟弟。作为主教，他手里掌握着惊人的财富和教会的巨大影响力。斯蒂芬能顺利抢到王位，全靠这个弟弟拿钱砸开了国库的门。</p><p>但这哥们是个极其现实的政客。当哥哥斯蒂芬被俘虏、眼看要完蛋时，他立刻<strong>宣布上帝抛弃了斯蒂芬，转头去给皇女马蒂尔达当小弟</strong>。但当皇女马蒂尔达因为傲慢得罪了他之后，他又立刻反水，重新组织军队对抗皇女，并帮助嫂子（斯蒂芬的王后）翻了盘。他就是这场大乱斗里的终极墙头草。</p>' 
+            },
+            'henry2': { 
+                name: '亨利二世 (Henry II)', 
+                subtitle: '金雀花的雏鹰，熬死所有人的终极赢家', 
+                content: '<p>他是皇女马蒂尔达的儿子。当他长大成人、接过母亲的接力棒率军杀入英格兰时，他发现这片土地上的贵族们已经厌倦了长达19年的杀戮，连斯蒂芬国王也老了、打不动了。</p><p>他展现了远超年龄的政治成熟。在双方大军对峙时，他接受了贵族们的调停，与斯蒂芬达成了和解。斯蒂芬死后，他顺理成章地登基，开创了英国历史上最辉煌的<strong>金雀花王朝</strong>，并迎娶了全欧洲最富有的女人——阿基坦的埃莉诺（没错，就是我们前面故事里的那位大女主）。</p>' 
+            },
+            'henry1': { 
+                name: '亨利一世 (Henry I)', 
+                subtitle: '白船惨案的受害者，留下定时炸弹的老爹', 
+                content: '<p>亨利一世原本有个极其优秀的合法儿子（威廉·艾德林）。但在1120年，这个儿子在穿越海峡时，因为船长和水手喝得酩酊大醉，导致著名的<strong>“白船惨案”</strong>，船只触礁沉没，唯一合法的男嗣命丧海底。</p><p>绝望的亨利一世只能强迫全英国的贵族发誓，在他死后拥立他的女儿马蒂尔达为王。但他一死，贵族们立刻翻脸，理由是“英格兰绝对不能被一个女人，尤其是她那个讨厌的安茹丈夫统治”。这直接导致了灾难的爆发。</p>' 
+            },
+
+            /* 事件库 */
+            'usurpation': { 
+                name: '白船惨案与窃国 (1135年)', 
+                subtitle: '誓言在权力面前一文不值', 
+                content: '<p><strong>【核心事件】</strong><br>亨利一世驾崩的消息刚刚传出，斯蒂芬就违背了曾经向皇女马蒂尔达效忠的誓言，抢先一步渡海赶到伦敦。在伦敦市民和亲弟弟（温彻斯特主教）的支持下，他火速加冕，生米煮成熟饭。</p><p><strong>【深远影响】</strong><br>这不仅是一场简单的宫廷政变，更打破了封建社会赖以生存的“誓言体系”。既然国王都是靠违背誓言抢来的，那底下的贵族自然也就不把法律和忠诚当回事了。整个英格兰彻底滑向了法纪崩坏的深渊。</p>' 
+            },
+            'lincoln': { 
+                name: '林肯战役与奇葩换俘 (1141年)', 
+                subtitle: '中世纪最抓马的互相被绑架', 
+                content: '<p><strong>【核心事件】</strong><br>在林肯战役中，斯蒂芬国王作战极其勇猛，但在长矛和战斧相继折断后被皇女阵营生擒，扔进了地牢。眼看皇女就要胜利加冕，斯蒂芬的铁血王后却在“温彻斯特溃退”中，<strong>生擒了皇女阵营的最高统帅罗伯特</strong>。</p><p><strong>【深远影响】</strong><br>皇女虽然抓了国王，但失去了主帅就等于失去了军队；王后虽然抓了敌军主帅，但自己老公还在地牢里。最终，双方只能极其无奈地在桥上完成了<strong>“一物换一物”</strong>的最高级别战俘交换。这出闹剧让内战又硬生生拖了十几年。</p>' 
+            },
+            'wallingford': { 
+                name: '沃林福德条约 (1153年)', 
+                subtitle: '认贼作父的和平，金雀花的开端', 
+                content: '<p><strong>【核心事件】</strong><br>随着斯蒂芬最钟爱的长子（尤斯塔斯）突然暴病身亡，斯蒂芬彻底失去了继续战斗的动力。面对皇女的儿子（年轻的亨利二世）步步紧逼，双方在沃林福德签订了和平条约：<strong>斯蒂芬继续当国王直到去世，但他必须收养亨利二世为儿子，并指定他为王位继承人。</strong></p><p><strong>【深远影响】</strong><br>次年，斯蒂芬因肠胃病去世（也有说是心碎而死）。亨利二世兵不血刃地接管了英格兰，结束了长达19年“基督沉睡”的无政府时期。诺曼底王朝正式落幕，开启了金雀花王朝长达三百年的统治狂潮。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
