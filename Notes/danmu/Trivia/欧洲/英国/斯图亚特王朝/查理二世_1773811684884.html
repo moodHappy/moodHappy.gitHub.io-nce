@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>查理二世核心关系网：快活王的复辟与后宫</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与各种关系线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+        
+        .marry-h { position: absolute; border-top: 2px solid #d81b60; z-index: 1; }
+        .love-dashed-v { position: absolute; border-left: 2px dashed #8e24aa; z-index: 1; }
+        .money-dashed-h { position: absolute; border-top: 2px dashed #e65100; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 国王 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 凯瑟琳 */
+        .c-mistress { color: #8e24aa; font-weight: bold; } /* 情妇团 */
+        .c-bastard { color: #1565c0; font-weight: bold; } /* 私生子 */
+        .c-louis { color: #e65100; font-weight: bold; } /* 路易十四 */
+        .c-enemy { color: #555555; font-weight: bold; } /* 克伦威尔 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (死命令锁定30px，零星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">查理二世：快活王的复辟与风流人生</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 160px; top: 80px; width: 2px; height: 140px;"></div>
+        <div class="label" style="left: 160px; top: 150px;">目睹父亲被砍头</div>
+
+        <div class="marry-h" style="left: 160px; top: 220px; width: 160px;"></div>
+        <div class="label" style="left: 240px; top: 210px; color: #d81b60; font-weight: bold;">终身无嗣 / 顶住废后压力</div>
+
+        <div class="kill-solid-h" style="left: 320px; top: 80px; width: 160px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 80px; height: 140px;"></div>
+        <div class="label" style="left: 400px; top: 70px; color: #555;">青年被追杀 / 躲进橡树</div>
+        <div class="label" style="left: 320px; top: 150px; color: #c62828; font-weight: bold;">登基后掘墓鞭尸</div>
+
+        <div class="money-dashed-h" style="left: 160px; top: 340px; width: 160px;"></div>
+        <div class="kill-solid-v" style="left: 160px; top: 220px; height: 120px;"></div>
+        <div class="label" style="left: 240px; top: 330px; color: #e65100;">多佛密约 / 拿钱办事</div>
+
+        <div class="love-dashed-v" style="left: 480px; top: 220px; height: 120px;"></div>
+        <div class="line" style="left: 160px; top: 220px; width: 320px; height: 2px;"></div>
+        <div class="label" style="left: 480px; top: 280px; color: #8e24aa;">夜夜笙歌 / 皇家后宫团</div>
+
+        <div class="line" style="left: 480px; top: 340px; width: 2px; height: 60px;"></div>
+        <div class="line" style="left: 320px; top: 400px; width: 160px; height: 2px;"></div>
+        <div class="label" style="left: 400px; top: 390px; color: #1565c0;">极度宠溺 / 埋下叛乱祸根</div>
+
+
+        <div class="person" style="left: 160px; top: 80px;" onclick="showInfo('charles1')">
+            <div class="c-dark">断头老爹</div>
+            <div class="c-emperor">查理一世</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 80px;" onclick="showInfo('cromwell')">
+            <div class="c-dark">杀父仇人</div>
+            <div class="c-enemy">克伦威尔</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 220px;" onclick="showInfo('catherine')">
+            <div class="c-dark">葡萄牙公主 / 正牌王后</div>
+            <div class="c-consort">布拉干萨的凯瑟琳</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 220px; border: 3px solid #c62828; padding: 14px 20px; box-shadow: 0 0 15px rgba(198,40,40,0.3);" onclick="showInfo('charles2')">
+            <div class="c-dark">复辟君主 / 快活王</div>
+            <div class="c-emperor" style="font-size: 22px;">查理二世</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 340px;" onclick="showInfo('louis14')">
+            <div class="c-dark">法国太阳王 / 幕后金主</div>
+            <div class="c-louis">路易十四</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 340px; border: 2px dashed #8e24aa;" onclick="showInfo('mistresses')">
+            <div class="c-dark">卖橘女 / 贵族名媛</div>
+            <div class="c-mistress">皇家情妇团</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 400px;" onclick="showInfo('monmouth')">
+            <div class="c-dark">最受宠的私生子</div>
+            <div class="c-bastard">蒙茅斯公爵</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">荒诞与灾难并存的复辟时代</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('restoration')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1660年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">王政复辟大赦天下</div>
+            </div>
+            <div class="event-card" onclick="showInfo('disasters')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1665-1666年</div>
+                <div class="c-enemy" style="font-size: 16px; font-weight: bold;">大瘟疫与伦敦大火</div>
+            </div>
+            <div class="event-card" onclick="showInfo('dover')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1670年</div>
+                <div class="c-louis" style="font-size: 16px; font-weight: bold;">签下丧权辱国的多佛密约</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'charles2': { 
+                name: '查理二世 (Charles II)', 
+                subtitle: '只要不断头，怎么都好说的“快活王”', 
+                content: '<p>查理二世早年被克伦威尔的军队追杀，最惨的时候曾在博斯科贝尔的橡树上躲了整整一天一夜，看着树下的士兵搜捕自己。这九死一生的经历让他彻底看透了政治的残酷。1660年被迎回伦敦复辟时，他受到极其狂热的欢迎，因为英国人实在受够了清教徒那种连酒都不让喝的枯燥生活。</p><p>登基后，他把朝廷变成了欧洲最大的享乐场，纵情声色，养了一堆情妇。但他骨子里是个极其狡猾的政治家。当议会逼迫他时，他从不硬刚，总是笑嘻嘻地妥协；但背地里，他出卖英国的利益换取法国的资金，以此摆脱对议会的依赖。他临死前在病榻上还跟周围的大臣开玩笑说：<strong>“很抱歉，我花了这么长时间才死掉，给你们添麻烦了。”</strong>并在咽气前秘密皈依了天主教。</p>' 
+            },
+            'charles1': { 
+                name: '查理一世 (Charles I)', 
+                subtitle: '反面教材：千万别学我爹', 
+                content: '<p>查理二世一辈子都在努力避免重蹈父亲的覆辙。他爹为了“君权神授”的面子丢了脑袋，而他为了保住脑袋和王位，什么面子都可以不要。</p><p>他唯一一次展现出像他爹一样的残暴，就是复辟之初对那些曾经签署过他爹死刑判决书的“弑君者”进行清算。无论是活着的（处以极其残酷的绞刑、剖腹和分尸），还是死了的（把克伦威尔挖出来鞭尸），他都没有放过，算是尽了最后一点孝心。</p>' 
+            },
+            'catherine': { 
+                name: '布拉干萨的凯瑟琳', 
+                subtitle: '带来天价嫁妆，却一生无嗣的正牌王后', 
+                content: '<p>这位葡萄牙公主嫁给查理二世时，不仅带来了极其丰厚的嫁妆，还把<strong>孟买和丹吉尔</strong>作为陪嫁送给了英国，直接开启了英国在印度的殖民霸权。她还把喝红茶的习惯带到了英国宫廷。</p><p>可惜她多次流产，始终未能生下继承人。当时朝廷里所有的重臣、甚至许多情妇都在疯狂逼迫查理二世和她离婚，另娶新教徒以生下合法王储。但查理二世在这件事上展现了极其罕见的底线和温柔：<strong>他顶住了所有政治压力，坚决拒绝废黜或驱逐凯瑟琳，并在她被人诬陷谋反时拼死保护了她。</strong></p>' 
+            },
+            'cromwell': { 
+                name: '克伦威尔 (Oliver Cromwell)', 
+                subtitle: '死了也被查理二世刨出来的宿敌', 
+                content: '<p>查理二世复辟后，为了立威，也为了泄愤，在1661年下令将已经入土两年的克伦威尔遗体挖出。尸体被吊在泰伯恩刑场，随后枭首。克伦威尔的头颅被插在威斯敏斯特宫的屋顶上风吹日晒。</p><p>这极其惊悚的一幕，宣告了清教徒独裁时代的彻底终结，也是查理二世宣告斯图亚特王朝“王者归来”的最直接的暴力美学。</p>' 
+            },
+            'louis14': { 
+                name: '路易十四 (Louis XIV)', 
+                subtitle: '查理二世的幕后“提款机”', 
+                content: '<p>查理二世和议会的关系一直很紧张，因为议会总是抠搜着不给钱。查理二世为了实现经济自由，直接找上了当时的欧洲首富、法国的“太阳王”路易十四。</p><p>双方签订了极其无耻的《多佛密约》：<strong>只要查理二世在外交上配合法国（比如一起打荷兰），并承诺在合适的时机宣布自己皈依天主教，路易十四每年就给他发巨额的“养老金”。</strong>靠着法国的黑钱，查理二世在晚年终于实现了真正的“经济独立”，甚至敢于直接解散议会。</p>' 
+            },
+            'mistresses': { 
+                name: '皇家情妇团', 
+                subtitle: '卖橘子的平民女孩与心机贵妇', 
+                content: '<p>查理二世的后宫极其庞大且阶层跨度极大。其中最著名的两位：一位是<strong>芭芭拉·帕尔默</strong>，极其嚣张跋扈，甚至敢和王后正面硬刚，给国王生了五个私生子；另一位是底层出身的戏剧演员、曾经在剧院卖橘子的<strong>内尔·格温（Nell Gwyn）</strong>。</p><p>内尔·格温极其聪明幽默。有一次她的马车被愤怒的伦敦市民围住，市民以为车里坐的是另一个讨人厌的法国天主教情妇。内尔把头伸出窗外大喊：<strong>“好人们，请退后！我是国王的那个新教徒情妇！”</strong>人群瞬间爆发出大笑并放行。查理二世临终前特意嘱咐弟弟：“千万别让内尔挨饿。”</p>' 
+            },
+            'monmouth': { 
+                name: '蒙茅斯公爵 (Duke of Monmouth)', 
+                subtitle: '最受宠的私生子，后来的造反狂魔', 
+                content: '<p>他是查理二世和第一任情妇生下的长子，长得极其英俊，而且是个狂热的新教徒。查理二世对他可以说是溺爱到了极点，给了他公爵的头衔和巨大的军权。</p><p>因为王后生不出孩子，很多新教大臣企图证明蒙茅斯是合法婚生的，想推他上位。虽然查理二世极其疼爱他，但在法统问题上绝不松口，坚决承认弟弟詹姆斯二世的继承权。蒙茅斯在查理死后，仗着新教徒的支持起兵造反，结果被亲叔叔詹姆斯二世送上了断头台，连砍了五斧头才死透。</p>' 
+            },
+
+            /* 事件库 */
+            'restoration': { 
+                name: '王政复辟 (1660年)', 
+                subtitle: '大赦天下与旧时代的回归', 
+                content: '<p><strong>【核心事件】</strong><br>在议会和军队将领的邀请下，查理二世发表了《布雷达宣言》，承诺只要让他回去当国王，他保证不追究当年打内战的责任（除了直接处死他爹的那几十个弑君者），并且保证宗教宽容。</p><p><strong>【深远影响】</strong><br>查理二世在30岁生日那天荣归伦敦。随着他的回归，被清教徒压抑了十多年的英国社会迎来了大爆发：剧院重新开张，华丽的服饰和狂欢再次成为主流，英国迎来了科学和文化的复苏（皇家学会正是在这一时期成立，牛顿等大牛开始涌现）。</p>' 
+            },
+            'disasters': { 
+                name: '大瘟疫与伦敦大火 (1665-1666年)', 
+                subtitle: '接踵而至的末日级灾难', 
+                content: '<p><strong>【核心事件】</strong><br>复辟没几年，英国就遭了天谴。先是1665年的大瘟疫（黑死病）卷走了伦敦近四分之一的人口。紧接着1666年，一家面包房的失火引发了著名的<strong>伦敦大火</strong>。大火烧了整整四天四夜，摧毁了伦敦市中心80%的建筑，包括著名的圣保罗大教堂。</p><p><strong>【深远影响】</strong><br>面对大火，平时只会享乐的查理二世展现了惊人的勇气。他亲自跑到火场一线，满脸黑灰地指挥士兵拆除房屋制造隔离带。虽然大火摧毁了旧伦敦，但也彻底烧死了传播瘟疫的老鼠和跳蚤。灾后的重建催生了如今我们看到的现代伦敦的雏形。</p>' 
+            },
+            'dover': { 
+                name: '签署多佛密约 (1670年)', 
+                subtitle: '连亲弟弟都被坑的卖国交易', 
+                content: '<p><strong>【核心事件】</strong><br>查理二世背着议会，甚至背着绝大多数内阁大臣，秘密和法国国王路易十四签订了条约。英国承诺退出与荷兰的联盟，转而帮助法国攻打荷兰，换取每年20万英镑的巨额现钞。</p><p><strong>【深远影响】</strong><br>这不仅是一场彻头彻尾的出卖国家利益，查理二世还在密约里承诺要在适当时机宣布英国恢复天主教。但他极其狡猾，拿了钱后一直拖延，直到咽气前一刻才兑现了宗教承诺。而他那个傻乎乎的弟弟（詹姆斯二世）却把这事当了真，继位后大力推行天主教，最终引爆了光荣革命丢了江山。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
