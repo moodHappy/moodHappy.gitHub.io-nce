@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>安妮女王核心关系网：大不列颠与宫廷宠儿</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与各种关系线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .marry-v { position: absolute; border-left: 2px solid #d81b60; z-index: 1; }
+        
+        .love-dashed-h { position: absolute; border-top: 2px dashed #8e24aa; z-index: 1; }
+        .manipulate-dashed-h { position: absolute; border-top: 2px dashed #e65100; z-index: 1; }
+        .transfer-solid-v { position: absolute; background-color: #1565c0; z-index: 1; width: 2px; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 女王 */
+        .c-sarah { color: #e65100; font-weight: bold; } /* 萨拉 */
+        .c-abigail { color: #1565c0; font-weight: bold; } /* 阿比盖尔 */
+        .c-husband { color: #555555; font-weight: bold; } /* 丈夫乔治 */
+        .c-hanover { color: #8e24aa; font-weight: bold; } /* 汉诺威/乔治一世 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (死命令锁定30px，清剿所有星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">安妮女王：末代绝嗣与大不列颠的诞生</h1>
+
+    <div class="family-tree">
+        <div class="marry-v" style="left: 320px; top: 100px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 160px; color: #d81b60;">相濡以沫 / 怀孕17次全灭</div>
+
+        <div class="manipulate-dashed-h" style="left: 160px; top: 220px; width: 160px;"></div>
+        <div class="label" style="left: 240px; top: 210px; color: #e65100;">极度PUA / 前期掌权</div>
+
+        <div class="love-dashed-h" style="left: 320px; top: 220px; width: 160px;"></div>
+        <div class="label" style="left: 400px; top: 210px; color: #1565c0;">提供情绪价值 / 后期夺宠</div>
+
+        <div class="kill-h" style="left: 160px; top: 340px; width: 160px;"></div>
+        <div class="line" style="left: 320px; top: 220px; width: 2px; height: 120px;"></div>
+        <div class="label" style="left: 240px; top: 330px; color: #555;">防备天主教 / 拒绝传位同父异母弟弟</div>
+
+        <div class="transfer-solid-v" style="left: 480px; top: 280px; height: 60px;"></div>
+        <div class="line" style="left: 320px; top: 280px; width: 160px; height: 2px;"></div>
+        <div class="label" style="left: 400px; top: 270px; color: #8e24aa; font-weight: bold;">王位继承法 / 天降大礼包</div>
+
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('george')">
+            <div class="c-dark">丈夫 / 老实人</div>
+            <div class="c-husband">丹麦的乔治亲王</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 220px; border: 2px solid #e65100;" onclick="showInfo('sarah')">
+            <div class="c-dark">第一任“红人”/ 霸道闺蜜</div>
+            <div class="c-sarah">萨拉·丘吉尔</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 220px; border: 3px solid #c62828; padding: 14px 20px; box-shadow: 0 0 15px rgba(198,40,40,0.3);" onclick="showInfo('anne')">
+            <div class="c-dark">大不列颠首位女王</div>
+            <div class="c-emperor" style="font-size: 22px;">安妮女王</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 220px; border: 2px solid #1565c0;" onclick="showInfo('abigail')">
+            <div class="c-dark">第二任“红人”/ 心机女仆</div>
+            <div class="c-abigail">阿比盖尔·马沙姆</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 340px;" onclick="showInfo('pretender')">
+            <div class="c-dark">流亡的天主教弟弟</div>
+            <div class="c-husband">老僭王詹姆斯</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 340px; border: 2px solid #8e24aa;" onclick="showInfo('george1')">
+            <div class="c-dark">德国远亲 / 汉诺威开国</div>
+            <div class="c-hanover">乔治一世</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">宫廷内斗与大英帝国的崛起</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('settlement')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1701年</div>
+                <div class="c-hanover" style="font-size: 16px; font-weight: bold;">王位继承法：绝杀天主教</div>
+            </div>
+            <div class="event-card" onclick="showInfo('union')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1707年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">英苏合并：大不列颠诞生</div>
+            </div>
+            <div class="event-card" onclick="showInfo('favourite')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">贯穿统治期</div>
+                <div class="c-sarah" style="font-size: 16px; font-weight: bold;">惊心动魄的闺蜜之战</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'anne': { 
+                name: '安妮女王 (Queen Anne)', 
+                subtitle: '被痛风和死婴折磨的大不列颠之母', 
+                content: '<p>安妮是詹姆斯二世的小女儿，也是玛丽二世的亲妹妹。她是个极度悲惨的母亲：一生中经历了 17 次怀孕，绝大多数都是流产或死胎，唯一活过婴儿期的儿子也在 11 岁时夭折了。不断的生育摧毁了她的身体，她晚年患有极其严重的痛风和肥胖症，甚至加冕时都是被人用敞篷轿子抬进威斯敏斯特教堂的。</p><p>由于身体太差且缺乏安全感，她在感情上极度依赖女性密友。但她在政治上绝不是傻白甜，她巧妙地平衡了辉格党和托利党的内斗，赢得了西班牙王位继承战争，并在 1707 年促成了英格兰和苏格兰的正式合并。她常常自称为<strong>“完全的英格兰人”</strong>，在英国老百姓心里，她是一位极其受人爱戴的“好女王安妮”。</p>' 
+            },
+            'george': { 
+                name: '丹麦的乔治亲王', 
+                subtitle: '没存在感但极度忠诚的老实人丈夫', 
+                content: '<p>相比于那些在外面养了一堆情妇的英国国王，乔治亲王简直是中世纪的一股清流。他极其老实，甚至显得有点木讷。查理二世曾经嘲笑他：<strong>“我试过他喝醉的时候，也试过他清醒的时候，发现他肚子里根本没一点东西。”</strong></p><p>但正是这种老实，给了安妮极大的安全感。在安妮被姐姐玛丽二世孤立和欺负时，只有乔治死死守在她身边。夫妻俩感情极好，可惜老天爷没给他们留下一个后代。乔治死于 1708 年的严重哮喘，他的死让安妮女王陷入了彻底的绝望，也加速了她对身边女官的依赖。</p>' 
+            },
+            'sarah': { 
+                name: '萨拉·丘吉尔', 
+                subtitle: '仗势欺人的初代大女主，二战首相丘吉尔的先祖', 
+                content: '<p>萨拉是安妮从小玩到大的闺蜜。安妮性格软弱，而萨拉性格极其强悍、霸道，甚至经常像训孙子一样训斥女王。萨拉的丈夫是赫赫有名的马尔博罗公爵（在欧洲大陆把法国军队按在地上摩擦的军神），这让萨拉在宫廷里的权势达到了只手遮天的地步。</p><p>但萨拉实在太嚣张了。她不仅强迫安妮任命自己喜欢的大臣，甚至在乔治亲王的葬礼上，<strong>极其冷酷地命令悲痛欲绝的女王闭嘴并离开尸体</strong>。这种极度的PUA最终让安妮忍无可忍，两人的友谊彻底破裂。萨拉被赶出宫廷，气得她到处散布女王和新宠儿有女同性恋关系的谣言。</p>' 
+            },
+            'abigail': { 
+                name: '阿比盖尔·马沙姆', 
+                subtitle: '扮猪吃老虎的终极宫斗王者', 
+                content: '<p>阿比盖尔原本是萨拉的一个破产穷表妹，是萨拉可怜她，把她安排进宫廷当扫地女仆的。万万没想到，这是引狼入室。</p><p>阿比盖尔极其聪明，她看准了女王被萨拉欺压得极其痛苦的心理弱点，开始为女王提供极其温柔的“情绪价值”。她不像萨拉那样对女王大吼大叫，而是安安静静地给女王弹琴、按摩痛风的腿，陪女王聊天。这种润物细无声的攻势让女王彻底沦陷。阿比盖尔不仅成功挤走了萨拉，还在政治上暗中支持托利党，直接左右了英国的最高国家政策。</p>' 
+            },
+            'pretender': { 
+                name: '老僭王詹姆斯', 
+                subtitle: '那个被装在暖脚锅里的倒霉弟弟', 
+                content: '<p>安妮其实内心深处对把亲爹赶下台这事一直有负罪感。但当她面临绝嗣危机时，她依然死死守住了新教的底线。她那个流亡在法国的同父异母弟弟（老僭王詹姆斯）写信给她，说只要把王位传给他，什么都好商量。</p><p>安妮的态度极其坚决：<strong>除非你放弃天主教改信新教，否则王冠绝对不可能给你。</strong>弟弟宁死不改信仰，安妮也就彻底断绝了把王位还给斯图亚特家族直系男性的念头。</p>' 
+            },
+            'george1': { 
+                name: '乔治一世 (George I)', 
+                subtitle: '连英语都不会说，人在家中坐，王冠天上来', 
+                content: '<p>既然亲戚里的天主教徒全都被排除了，议会翻遍了欧洲的族谱，最后在德国的汉诺威角落里，找到了安妮女王的一个远房表叔的后代——乔治。</p><p>这位老哥当时已经五十多岁了，一辈子生活在德国，连一句完整的英语都不会说。就因为他是新教徒，并且在继承顺位里排得最靠前，当安妮女王一闭眼，英国人直接跨海把他接过来戴上了王冠，开创了<strong>汉诺威王朝</strong>。因为他不懂英语，所以基本不怎么管英国国内的破事，全都交给首相去打理，这就直接促成了英国“责任内阁制”的彻底成型。</p>' 
+            },
+
+            /* 事件库 */
+            'settlement': { 
+                name: '签署《王位继承法》 (1701年)', 
+                subtitle: '用法律彻底锁死天主教复辟', 
+                content: '<p><strong>【核心事件】</strong><br>在安妮唯一的儿子夭折后，英国议会陷入了极度的恐慌。为了防止安妮死后，那个流亡在法国的天主教弟弟（老僭王）回来抢王位，议会抢先通过了《王位继承法》（Act of Settlement）。</p><p><strong>【深远影响】</strong><br>这部法律极其硬核地规定：<strong>凡是天主教徒，或者与天主教徒结婚的人，永远丧失继承英国王位的资格。</strong>这不仅把斯图亚特王朝的五十多个有顺位的亲戚全部踢出了局，更确保了英国永远是一个新教国家。汉诺威王朝的根基就此奠定。</p>' 
+            },
+            'union': { 
+                name: '英苏合并：大不列颠诞生 (1707年)', 
+                subtitle: '用钱砸出来的统一大业', 
+                content: '<p><strong>【核心事件】</strong><br>苏格兰当时因为极其失败的“达里恩计划”（企图在巴拿马建立殖民地结果全军覆没）导致国家濒临破产。英格兰趁机挥舞着钞票，告诉苏格兰：只要你们同意合并，并且接受《王位继承法》（同意让德国亲戚当国王），我们就帮你们还清国债，并在全球贸易上带你们一起玩。</p><p><strong>【深远影响】</strong><br>在威逼利诱下，苏格兰议会宣告解散，并入威斯敏斯特议会。1707 年，《联合法案》正式生效，英格兰和苏格兰两个打了上千年的国家，终于合并成了<strong>“大不列颠王国”</strong>（米字旗也是在这时候诞生的）。这是安妮女王一生中最伟大的政治遗产。</p>' 
+            },
+            'favourite': { 
+                name: '惊心动魄的闺蜜之战', 
+                subtitle: '一杯毒茶，两幅面孔，终极宫斗', 
+                content: '<p><strong>【核心事件】</strong><br>萨拉·丘吉尔和阿比盖尔·马沙姆为了争夺女王的宠爱，把整个大英帝国的朝廷搞得鸡犬不宁。辉格党支持萨拉，托利党支持阿比盖尔。两派人在议会里吵得不可开交，而背后的核心全看女王今晚让谁进卧室倒茶。</p><p><strong>【深远影响】</strong><br>这场后宫的权力交替，直接改变了英国对欧洲大陆的战争政策。萨拉的失宠，导致她那个打仗百战百胜的丈夫（马尔博罗公爵）被免职，英国随即退出了“西班牙王位继承战争”。这部历史活脱脱就是一部最高级别的职场和情感权谋大戏。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
