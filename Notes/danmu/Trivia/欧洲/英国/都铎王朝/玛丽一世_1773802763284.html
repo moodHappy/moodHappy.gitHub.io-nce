@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>玛丽一世核心关系网：血腥玛丽与绝望主妇</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 420px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与杀戮线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+        .marry-h { position: absolute; border-top: 2px solid #d81b60; z-index: 1; }
+        .prison-dashed-h { position: absolute; border-top: 2px dashed #555555; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 玛丽/亨利 */
+        .c-consort { color: #d81b60; font-weight: bold; } /* 凯瑟琳/菲利普 */
+        .c-elizabeth { color: #1565c0; font-weight: bold; } /* 伊丽莎白 */
+        .c-victim { color: #e65100; font-weight: bold; } /* 克兰麦 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #c62828; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #c62828; }
+
+        /* ================= 护眼大字弹窗 (绝对死命令锁定30px，零星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">玛丽一世：硬核逆袭与“血腥”余生</h1>
+
+    <div class="family-tree">
+        <div class="kill-solid-v" style="left: 160px; top: 80px; height: 60px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 140px; width: 160px;"></div>
+        <div class="kill-solid-v" style="left: 320px; top: 140px; height: 60px;"></div>
+        <div class="label" style="left: 240px; top: 130px; color: #c62828; font-weight: bold;">褫夺头衔 / 打成私生女</div>
+
+        <div class="line" style="left: 480px; top: 80px; height: 60px; width: 2px;"></div>
+        <div class="line" style="left: 320px; top: 140px; width: 160px; height: 2px;"></div>
+        <div class="label" style="left: 400px; top: 130px; color: #d81b60;">相依为命 / 悲剧源头</div>
+
+        <div class="prison-dashed-h" style="left: 100px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 210px; top: 190px; color: #555;">囚禁伦敦塔 / 极限拉扯</div>
+
+        <div class="marry-h" style="left: 320px; top: 200px; width: 220px;"></div>
+        <div class="label" style="left: 430px; top: 190px; color: #d81b60; font-weight: bold;">倒贴式单恋 / 疯狂催生</div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 200px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 260px; color: #c62828; font-weight: bold;">绑上火刑柱 / 终极复仇</div>
+
+        <div class="person" style="left: 160px; top: 80px;" onclick="showInfo('henry8')">
+            <div class="c-dark">父亲 / 顶级渣男</div>
+            <div class="c-emperor">亨利八世</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 80px;" onclick="showInfo('catherine')">
+            <div class="c-dark">母亲 / 废后</div>
+            <div class="c-consort">阿拉贡的凯瑟琳</div>
+        </div>
+
+        <div class="person" style="left: 100px; top: 200px;" onclick="showInfo('elizabeth')">
+            <div class="c-dark">同父异母妹妹</div>
+            <div class="c-elizabeth">伊丽莎白一世</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 200px; border: 2px solid #c62828; padding: 14px 18px;" onclick="showInfo('mary')">
+            <div class="c-dark">英格兰首位女王</div>
+            <div class="c-emperor" style="font-size: 20px;">玛丽一世 (血腥玛丽)</div>
+        </div>
+
+        <div class="person" style="left: 540px; top: 200px;" onclick="showInfo('philip')">
+            <div class="c-dark">丈夫 / 西班牙国王</div>
+            <div class="c-consort">腓力二世</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 320px;" onclick="showInfo('cranmer')">
+            <div class="c-dark">新教大主教</div>
+            <div class="c-victim">托马斯·克兰麦</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">从复仇女神到血腥女王</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('succession')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1553年</div>
+                <div class="c-emperor" style="font-size: 16px; font-weight: bold;">绝地反击夺王冠</div>
+            </div>
+            <div class="event-card" onclick="showInfo('marriage')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1554年</div>
+                <div class="c-consort" style="font-size: 16px; font-weight: bold;">迎娶傲慢西班牙</div>
+            </div>
+            <div class="event-card" onclick="showInfo('burnings')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1555-1558年</div>
+                <div class="c-victim" style="font-size: 16px; font-weight: bold;">玛丽的火刑柱</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'mary': { 
+                name: '玛丽一世 (Mary I)', 
+                subtitle: '童年治愈一生，她用一生治愈童年', 
+                content: '<p>玛丽原本是全欧洲最尊贵的公主。但在她青春期时，父亲为了换老婆，强行和母亲离婚，逼迫她承认母亲是“娼妇”、自己是“私生女”，甚至不准她去见临终的母亲最后一面。这种非人的精神折磨，让她变得极度偏执，并将所有的精神寄托都放在了<strong>罗马天主教</strong>上。</p><p>当她终于在37岁那年靠着硬核的反击当上英国第一位真正的女王后，她的两个终极目标毁了她：<strong>第一是生个天主教继承人，第二是把英国强行拉回天主教的怀抱。</strong>她为此嫁给了一个嫌弃她的外国老男人，烧死了几百个不愿改变信仰的英国人，最终落得个众叛亲离的下场。</p>' 
+            },
+            'henry8': { 
+                name: '亨利八世 (Henry VIII)', 
+                subtitle: '亲手把女儿逼成魔鬼的渣爹', 
+                content: '<p>玛丽早年是亨利八世的掌上明珠，但在安妮·博林上位后，亨利八世对玛丽展现出了丧心病狂的冷酷。他不仅剥夺了玛丽公主的头衔，还派她去给刚刚出生的妹妹（伊丽莎白）当女佣端屎端尿。</p><p>亨利八世甚至威胁玛丽，如果不发誓承认他才是英国教会的最高首脑，就要把她以叛国罪处死。在极度的恐惧中，年轻的玛丽被迫低头签字。这次屈服成了她一辈子无法原谅自己的痛，也为她后来登基后<strong>疯狂迫害新教徒、试图“洗刷罪孽”</strong>埋下了最深的心理炸弹。</p>' 
+            },
+            'catherine': { 
+                name: '阿拉贡的凯瑟琳', 
+                subtitle: '至死不屈的母亲，玛丽的精神图腾', 
+                content: '<p>凯瑟琳被亨利八世流放后，在阴冷发霉的城堡里度过了余生。她临死前给亨利八世写了一封极其卑微又深情的信，唯一的要求就是希望能见女儿玛丽最后一面，但被残忍拒绝。</p><p>母亲的惨死成了玛丽心中永远的刺。玛丽登基后的第一件事，就是立刻让议会通过法案，<strong>正式宣布父母的婚姻是合法神圣的，彻底洗刷了母亲身上的屈辱。</strong></p>' 
+            },
+            'elizabeth': { 
+                name: '伊丽莎白一世 (Elizabeth I)', 
+                subtitle: '在刀尖上跳舞的塑料姐妹', 
+                content: '<p>作为安妮·博林的女儿，伊丽莎白从小就是玛丽最痛恨的“那个贱人的杂种”。但在面对弟弟（爱德华六世）和权臣的压迫时，姐妹俩又曾短暂地抱团取暖。</p><p>玛丽登基后，伊丽莎白作为新教徒的希望，自然成了玛丽的眼中钉。在“怀亚特叛乱”中，玛丽怀疑伊丽莎白参与了谋反，直接把这个亲妹妹关进了伦敦塔的死牢。伊丽莎白每天都觉得自己的脑袋要搬家，凭借着极高的情商和装疯卖傻（假装愿意改信天主教），才极其惊险地保住了一条命，<strong>最终硬生生熬死了姐姐，迎来了自己的黄金时代。</strong></p>' 
+            },
+            'philip': { 
+                name: '腓力二世 (Philip II of Spain)', 
+                subtitle: '只图家产不图人的傲慢老公', 
+                content: '<p>为了生下天主教继承人，38岁的玛丽疯狂地迷恋上了27岁的西班牙王储腓力。但这完全是一场倒贴式的政治单恋。腓力在给朋友的信中极其刻薄地写道：<strong>“我完全感受不到任何肉体上的吸引力。”</strong></p><p>腓力在英国待了一年多，发现不仅议会不给他实权，而且英国人极度排外，于是借口打仗直接跑回了欧洲大陆。他把玛丽当成了纯粹的提款机和军事工具，甚至逼迫玛丽让英国卷入了对法国的战争，直接导致英国丢掉了在欧洲大陆最后的堡垒——加来港。这成了压垮玛丽的最后一根稻草。</p>' 
+            },
+            'cranmer': { 
+                name: '托马斯·克兰麦 (Thomas Cranmer)', 
+                subtitle: '当年判父母离婚的仇人，必须烧死', 
+                content: '<p>克兰麦是亨利八世时期的坎特伯雷大主教。当年正是他亲手宣布亨利八世和凯瑟琳的婚姻无效，并在后来大力推行新教改革。这在玛丽眼里，他就是毁了自己一生的罪魁祸首。</p><p>玛丽登基后，立刻将克兰麦投入死牢。在火刑柱前，克兰麦为了活命曾多次写下悔过书承认教皇的权威。但玛丽根本不想饶他，<strong>坚持必须烧死他</strong>。克兰麦在临死前幡然醒悟，在火堆中伸出那只写过悔过书的右手，让烈火先烧毁这只“犯罪的手”，极其悲壮地殉道，反而让新教徒的抵抗意志达到了顶点。</p>' 
+            },
+
+            /* 事件库 */
+            'succession': { 
+                name: '绝地反击夺王冠 (1553年)', 
+                subtitle: '真正的女王绝不认输', 
+                content: '<p><strong>【核心事件】</strong><br>面对诺森伯兰公爵的追捕和“九日女王”简·格雷的篡位，玛丽没有选择逃亡海外，而是骑着马跑到了自家的封地东盎格利亚。她写信给枢密院，极其强硬地宣布自己才是合法的女王。全英国痛恨外戚干政的贵族和平民纷纷拿起武器，潮水般汇聚到她的麾下。</p><p><strong>【深远影响】</strong><br>玛丽不仅是英国历史上第一位凭借自身权利而非婚姻登基的女性君主，更证明了英国民众对都铎血统合法性的极度狂热。她的胜利本该是一场完美的逆袭，可惜她把这份民意彻底用错了地方。</p>' 
+            },
+            'marriage': { 
+                name: '“假孕”风波与国运衰退 (1554-1558年)', 
+                subtitle: '生理与心理的双重折磨', 
+                content: '<p><strong>【核心事件】</strong><br>玛丽在婚后极其渴望孩子。她先后两次出现了停经、腹部隆起、孕吐等所有怀孕的症状，全国甚至连庆祝的钟声都准备好了。然而十个月过去，肚子里什么都没有。现代医学认为她可能患上了严重的<strong>“假性怀孕”或是卵巢肿瘤</strong>。</p><p><strong>【深远影响】</strong><br>肚子里的“空欢喜”和丈夫的抛弃，让玛丽在晚年陷入了极度的抑郁和疯狂。她认为这是上帝因为英国还没有彻底清除“异端”而对她降下的惩罚，于是更加疯狂地加大了烧死新教徒的力度。</p>' 
+            },
+            'burnings': { 
+                name: '玛丽的火刑柱 (1555-1558年)', 
+                subtitle: '“血腥玛丽”称号的由来', 
+                content: '<p><strong>【核心事件】</strong><br>为了将英国强行拉回天主教，玛丽恢复了古老的《异端法》。在短短三年半的时间里，她下令将<strong>近三百名拒绝改宗的新教徒（包括孕妇和盲人）活活烧死在史密斯菲尔德等地的火刑柱上</strong>。</p><p><strong>【深远影响】</strong><br>这些残酷的火刑不仅没有吓倒英国人，反而引发了极度的反感和同情。《殉道者之书》将她的暴行记录下来，传遍了千家万户。玛丽本想拯救英国人的灵魂，结果却让英国人对天主教产生了长达数百年的极度恐惧和仇恨。1558年，在疾病和失去加来港的悲痛中，这位背负着“血腥”骂名的绝望女王凄凉离世，把王座留给了她最讨厌的妹妹——伊丽莎白。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
