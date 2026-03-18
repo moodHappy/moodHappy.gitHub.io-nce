@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>克伦威尔核心关系网：护国公与屠龙少年</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 480px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与各种关系线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .kill-v { position: absolute; border-left: 2px dashed #c62828; z-index: 1; }
+        .kill-solid-h { position: absolute; background-color: #c62828; z-index: 1; height: 2px; }
+        .kill-solid-v { position: absolute; background-color: #c62828; z-index: 1; width: 2px; }
+        
+        .ally-dashed-h { position: absolute; border-top: 2px dashed #1565c0; z-index: 1; }
+        .purge-solid-v { position: absolute; background-color: #e65100; z-index: 1; width: 2px; }
+        .revenge-dashed-v { position: absolute; border-left: 2px dashed #8e24aa; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-cromwell { color: #e65100; font-weight: bold; } /* 克伦威尔 */
+        .c-king { color: #c62828; font-weight: bold; } /* 查理一世 */
+        .c-army { color: #2e7d32; font-weight: bold; } /* 新模范军 */
+        .c-parliament { color: #1565c0; font-weight: bold; } /* 议会 */
+        .c-irish { color: #555555; font-weight: bold; } /* 爱尔兰 */
+        .c-charles2 { color: #8e24aa; font-weight: bold; } /* 查理二世 */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #e65100; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #e65100; }
+
+        /* ================= 护眼大字弹窗 (死命令锁定30px，零星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #e65100; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">克伦威尔：护国公与死后绞刑</h1>
+
+    <div class="family-tree">
+        <div class="kill-solid-h" style="left: 160px; top: 100px; width: 160px;"></div>
+        <div class="label" style="left: 240px; top: 90px; color: #c62828; font-weight: bold;">签发死刑令 / 弑君者</div>
+
+        <div class="purge-solid-v" style="left: 320px; top: 100px; height: 120px;"></div>
+        <div class="label" style="left: 320px; top: 160px; color: #e65100;">武力解散 / 独裁统治</div>
+
+        <div class="ally-dashed-h" style="left: 320px; top: 220px; width: 160px;"></div>
+        <div class="label" style="left: 400px; top: 210px; color: #2e7d32;">缔造铁军 / 权力基本盘</div>
+
+        <div class="kill-solid-v" style="left: 320px; top: 220px; height: 120px;"></div>
+        <div class="kill-solid-h" style="left: 160px; top: 340px; width: 160px;"></div>
+        <div class="label" style="left: 240px; top: 330px; color: #c62828; font-weight: bold;">德罗赫达大屠杀 / 种族清洗</div>
+
+        <div class="revenge-dashed-v" style="left: 480px; top: 220px; height: 120px;"></div>
+        <div class="kill-solid-h" style="left: 320px; top: 340px; width: 160px;"></div>
+        <div class="label" style="left: 400px; top: 330px; color: #8e24aa; font-weight: bold;">掘墓鞭尸 / 枭首示众</div>
+
+
+        <div class="person" style="left: 160px; top: 100px;" onclick="showInfo('charles1')">
+            <div class="c-dark">断头国王</div>
+            <div class="c-king">查理一世</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 100px;" onclick="showInfo('parliament')">
+            <div class="c-dark">曾经的老板 / 革命议会</div>
+            <div class="c-parliament">残缺议会</div>
+        </div>
+
+        <div class="person" style="left: 320px; top: 220px; border: 3px solid #e65100; padding: 14px 20px; box-shadow: 0 0 15px rgba(230,81,0,0.3);" onclick="showInfo('cromwell')">
+            <div class="c-dark">英格兰共和国护国公</div>
+            <div class="c-cromwell" style="font-size: 22px;">奥利弗·克伦威尔</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 220px;" onclick="showInfo('army')">
+            <div class="c-dark">战无不胜的清教徒军团</div>
+            <div class="c-army">新模范军 (铁骑军)</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 340px;" onclick="showInfo('irish')">
+            <div class="c-dark">受难者</div>
+            <div class="c-irish">爱尔兰天主教徒</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 340px;" onclick="showInfo('charles2')">
+            <div class="c-dark">复辟者 / 终极复仇</div>
+            <div class="c-charles2">查理二世</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">从护国公到掘墓鞭尸的三大剧目</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('naseby')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1645年</div>
+                <div class="c-army" style="font-size: 16px; font-weight: bold;">纳斯比战役封神</div>
+            </div>
+            <div class="event-card" onclick="showInfo('protectorate')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1653年起</div>
+                <div class="c-cromwell" style="font-size: 16px; font-weight: bold;">无冕之王的军事独裁</div>
+            </div>
+            <div class="event-card" onclick="showInfo('posthumous')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1661年</div>
+                <div class="c-charles2" style="font-size: 16px; font-weight: bold;">骇人听闻的死后处决</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'cromwell': { 
+                name: '奥利弗·克伦威尔 (Oliver Cromwell)', 
+                subtitle: '虔诚的清教徒，残暴的军事独裁者', 
+                content: '<p>克伦威尔是个极度狂热的清教徒，他坚信自己是在替上帝执行任务。在内战爆发前，他只是个默默无闻的乡绅，连正规军事训练都没受过。但他凭着惊人的直觉，打造了一支由清教徒组成的“铁骑军”，把原本不可一世的国王骑兵打得抱头鼠窜。</p><p>但在处死查理一世后，他发现由一帮议员来治国实在太低效了。于是，他<strong>带着全副武装的士兵冲进议会，指着议长的鼻子把他们全赶回了家</strong>，自己当上了“护国公”。他在国内禁绝一切娱乐活动（连庆祝圣诞节都被禁止），在国外打赢了荷兰和西班牙，让英国的海上霸权进一步稳固。他是个矛盾的综合体：既是推翻暴君的英雄，也是比暴君更专制的军阀。</p>' 
+            },
+            'charles1': { 
+                name: '查理一世 (Charles I)', 
+                subtitle: '被他亲手送上断头台的国王', 
+                content: '<p>在内战后期，原本有些议员想和查理一世和谈，只要国王肯低头让步就行。但克伦威尔看透了国王的心思：查理一世表面上假装和谈，暗地里却在勾结外国军队企图反杀。</p><p>克伦威尔果断发动“普莱德清洗”，把议会里所有同情国王的议员全部驱逐，剩下的硬核派组成了特别法庭。克伦威尔是第三个在死刑判决书上签字的人。他认为只有砍掉这颗骄傲的头颅，英格兰才能迎来真正的和平。</p>' 
+            },
+            'parliament': { 
+                name: '残缺议会 (Rump Parliament)', 
+                subtitle: '被当成抹布用完就扔的革命战友', 
+                content: '<p>议会本来是克伦威尔的大老板，但在革命成功后，老板和打工仔的矛盾爆发了。议会想削减军队的军费，而军队则坚决不干。</p><p>1653年，忍无可忍的克伦威尔带着火枪手冲进下议院，大骂议员们是“酒囊饭袋”和“腐败分子”，直接把这群曾经和他并肩作战的革命同志赶出了大门，并在门上挂了块牌子：<strong>“此房出租，不带家具”</strong>。英格兰的议会民主实验，就这样被他亲手物理终结了。</p>' 
+            },
+            'army': { 
+                name: '新模范军 (New Model Army)', 
+                subtitle: '唱着赞美诗砍人的古代特种部队', 
+                content: '<p>这是克伦威尔的绝对王牌。与当时欧洲那些为了钱打仗的雇佣兵不同，新模范军是一支有着极强信仰的军队。士兵们不喝酒、不赌博，上阵砍人之前还要集体唱圣歌。</p><p>克伦威尔提拔军官不看贵族血统，只看打仗猛不猛。他曾经说过：<strong>“我宁愿要一个穿粗布衣服、知道自己在为什么而战的队长，也不要一个只会装腔作势的所谓绅士。”</strong>这支军队成了护国公时期维持军事独裁的基石。</p>' 
+            },
+            'irish': { 
+                name: '爱尔兰天主教徒', 
+                subtitle: '被克伦威尔屠戮的无辜冤魂', 
+                content: '<p>如果说在英格兰，克伦威尔还算是个有争议的英雄，那在爱尔兰人眼里，他就是个不折不扣的恶魔。1649年，他率军登陆爱尔兰镇压天主教徒叛乱。</p><p>在德罗赫达（Drogheda）等地，他下令进行了令人发指的<strong>无差别大屠杀，甚至连躲在教堂里的神父和平民也不放过</strong>。他没收了天主教徒的大量土地，把爱尔兰人赶到了贫瘠的西部。这场血腥的种族和宗教清洗，在爱尔兰人的民族记忆中留下了至今无法磨灭的极度仇恨。</p>' 
+            },
+            'charles2': { 
+                name: '查理二世 (Charles II)', 
+                subtitle: '隐忍多年，最终回来疯狂刨坟', 
+                content: '<p>查理二世在流亡期间吃尽了苦头。克伦威尔死后，他那无能的儿子理查·克伦威尔根本镇不住骄兵悍将，国家陷入混乱，议会只能把查理二世请回来复辟。</p><p>查理二世复辟后，虽然表面上大赦天下，但对当年在父亲死刑判决书上签字的“弑君者”展开了极其冷酷的追杀。对于已经病死在床上的克伦威尔，查理二世也没有放过，而是下令掘墓，上演了欧洲历史上最惊悚的<strong>“死后处决”</strong>。</p>' 
+            },
+
+            /* 事件库 */
+            'naseby': { 
+                name: '纳斯比战役封神 (1645年)', 
+                subtitle: '新模范军摧毁骑士党的决战', 
+                content: '<p><strong>【核心事件】</strong><br>在纳斯比村，查理一世的保王党骑兵（鲁珀特亲王指挥）虽然在初期冲破了议会军的防线，但他们因为贪婪而去抢劫敌人的辎重营地，失去了阵型。</p><p><strong>【深远影响】</strong><br>克伦威尔则展现了极强的战场纪律性。他的铁骑军在击溃敌军侧翼后，没有去抢劫，而是立刻重新集结，回头狠狠砸进了国王步兵的背后，将国王军打得全军覆没。这场战役彻底奠定了克伦威尔在军队中不可撼动的“神级”地位。</p>' 
+            },
+            'protectorate': { 
+                name: '无冕之王的独裁统治 (1653年起)', 
+                subtitle: '连庆祝圣诞节都要抓起来', 
+                content: '<p><strong>【核心事件】</strong><br>解散议会后，克伦威尔就任“护国公”。他将全国划分为11个军区，由少将实行严酷的军事管制。作为一个狂热的清教徒，他下令关闭了所有的剧院、妓院和酒馆，甚至规定<strong>连庆祝圣诞节都是违法的（因为觉得这太“天主教”了）</strong>。</p><p><strong>【深远影响】</strong><br>虽然英国在国际上的地位空前强大，但老百姓被这种窒息的高压统治逼得喘不过气来。这也是为什么他死后没多久，英国人就迫不及待地把那个满肚子花花肠子的查理二世请了回来，大家实在是太想看戏和喝酒了。</p>' 
+            },
+            'posthumous': { 
+                name: '骇人听闻的死后处决 (1661年)', 
+                subtitle: '死了也要把你拉出来砍头', 
+                content: '<p><strong>【核心事件】</strong><br>在查理二世复辟后的1661年1月30日（恰好是查理一世被砍头的12周年纪念日），克伦威尔以及另外两名弑君者的尸体被从威斯敏斯特大教堂里挖了出来。</p><p><strong>【深远影响】</strong><br>这三具已经腐烂的尸体被极其侮辱性地套上衣服，拖到泰伯恩刑场<strong>重新施以绞刑</strong>。随后，克伦威尔的头颅被砍下来，用一根长矛钉在威斯敏斯特大厅的屋顶上，风吹日晒了整整20多年才被取下。这位曾经不可一世的独裁者，最终以这样一种极度惊悚且屈辱的方式，结束了自己在英国历史舞台上的最后一次“演出”。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
