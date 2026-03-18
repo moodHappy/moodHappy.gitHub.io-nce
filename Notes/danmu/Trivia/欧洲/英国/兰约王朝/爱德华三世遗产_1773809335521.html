@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=680, user-scalable=yes">
+    <title>爱德华三世子嗣与玫瑰战争图谱</title>
+    <style>
+        body {
+            background-color: #f8f9fa; 
+            margin: 0;
+            padding: 20px 0 60px 0; 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 0 30px 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .family-tree {
+            position: relative;
+            width: 640px;
+            height: 440px; 
+        }
+
+        /* 人物卡片 */
+        .person {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid #d0d0d0; 
+            background-color: #ffffff; 
+            text-align: center;
+            padding: 12px 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            z-index: 2;
+            letter-spacing: 1px;
+            min-width: 68px;
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+
+        .person:hover {
+            transform: translate(-50%, -52%); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #888;
+        }
+
+        /* 基础线条与各种关系线 */
+        .line { position: absolute; z-index: 1; background-color: #a0a0a0; }
+        .kill-h { position: absolute; border-top: 2px dashed #c62828; z-index: 1; }
+        .marry-h { position: absolute; border-top: 2px solid #d81b60; z-index: 1; height: 0; }
+        .bastard-dashed-v { position: absolute; border-left: 2px dashed #e65100; z-index: 1; }
+
+        /* 关系标签 */
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            padding: 2px 6px;
+            z-index: 3;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* 颜色分类 */
+        .c-emperor { color: #c62828; font-weight: bold; } /* 国王源头 */
+        .c-lancaster { color: #c62828; font-weight: bold; } /* 兰开斯特(红) */
+        .c-york { color: #1565c0; font-weight: bold; } /* 约克(白) */
+        .c-beaufort { color: #e65100; font-weight: bold; } /* 博福特私生系 */
+        .c-tudor { color: #8e24aa; font-weight: bold; } /* 都铎(紫) */
+        .c-dark { color: #555555; font-size: 12px;} 
+
+        /* 事件区块 */
+        .events-section {
+            width: 640px;
+            margin-top: 20px;
+            padding-left: 66px; 
+            box-sizing: border-box; 
+        }
+        .events-title { font-size: 20px; color: #555; margin-bottom: 16px; border-left: 4px solid #8e24aa; padding-left: 10px; }
+        .event-cards-container { display: flex; gap: 15px; width: 100%; }
+        .event-card {
+            border: 1px solid #d0d0d0; background-color: #ffffff; text-align: center;
+            padding: 14px 8px; line-height: 1.6; border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s ease; flex: 1; 
+        }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-color: #8e24aa; }
+
+        /* ================= 护眼大字弹窗 (绝对死命令锁定30px，清剿所有星号) ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(4px); display: flex; justify-content: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            position: absolute; top: 0; bottom: 80px; width: 100%; max-width: 680px; 
+            background-color: #fff; border-radius: 0 0 16px 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-header { padding: 30px 30px 20px 30px; border-bottom: 1px solid #eee; position: relative; }
+        .modal-close { position: absolute; top: 25px; right: 30px; font-size: 54px; color: #999; cursor: pointer; line-height: 1; font-weight: 300; }
+        .modal-close:hover { color: #333; }
+        .modal-title { margin: 0 0 10px 0; font-size: 36px; color: #111; font-weight: bold; }
+        .modal-subtitle { font-size: 20px; color: #c62828; font-weight: 500; display: block; }
+        /* 钢铁纪律：字体严格锁定为 30px，绝不妥协 */
+        .modal-content { padding: 20px 30px 40px 30px; flex: 1; overflow-y: auto; font-size: 30px; color: #333; line-height: 1.8; text-align: justify; }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 4px; }
+        .modal-content p { margin-top: 0; margin-bottom: 24px; }
+        .modal-content strong { color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">爱德华三世的遗产：红白玫瑰与都铎溯源</h1>
+
+    <div class="family-tree">
+        <div class="line" style="left: 320px; top: 60px; width: 2px; height: 40px;"></div>
+        <div class="line" style="left: 160px; top: 100px; width: 320px; height: 2px;"></div>
+        
+        <div class="line" style="left: 160px; top: 100px; width: 2px; height: 40px;"></div>
+        <div class="label" style="left: 160px; top: 90px; color: #c62828;">第4子 (红玫瑰源头)</div>
+
+        <div class="line" style="left: 480px; top: 100px; width: 2px; height: 40px;"></div>
+        <div class="label" style="left: 480px; top: 90px; color: #1565c0;">第3子与第5子结合 (白玫瑰)</div>
+
+        <div class="line" style="left: 160px; top: 180px; width: 2px; height: 30px;"></div>
+        <div class="line" style="left: 80px; top: 210px; width: 160px; height: 2px;"></div>
+        
+        <div class="line" style="left: 80px; top: 210px; width: 2px; height: 30px;"></div>
+        <div class="label" style="left: 80px; top: 200px; color: #c62828;">正妻嫡出</div>
+        
+        <div class="bastard-dashed-v" style="left: 240px; top: 210px; height: 30px;"></div>
+        <div class="label" style="left: 240px; top: 200px; color: #e65100;">情妇私生子 (后合法化)</div>
+
+        <div class="line" style="left: 480px; top: 180px; width: 2px; height: 60px;"></div>
+
+        <div class="kill-h" style="left: 160px; top: 260px; width: 240px;"></div>
+        <div class="label" style="left: 280px; top: 250px; color: #555; font-weight: bold;">三十年血腥互砍 (绝嗣)</div>
+
+        <div class="line" style="left: 240px; top: 280px; width: 2px; height: 80px;"></div>
+        <div class="label" style="left: 240px; top: 320px; color: #8e24aa;">孤儿寡母 / 熬到最后</div>
+
+        <div class="line" style="left: 480px; top: 280px; width: 2px; height: 80px;"></div>
+        <div class="label" style="left: 480px; top: 320px; color: #1565c0;">白玫瑰末代公主</div>
+
+        <div class="marry-h" style="left: 240px; top: 380px; width: 240px;"></div>
+        <div class="label" style="left: 360px; top: 370px; color: #d81b60; font-weight: bold;">联姻合并 / 诞生都铎玫瑰</div>
+
+        <div class="person" style="left: 320px; top: 60px;" onclick="showInfo('edward3')">
+            <div class="c-dark">金雀花老祖宗</div>
+            <div class="c-emperor">爱德华三世</div>
+        </div>
+
+        <div class="person" style="left: 160px; top: 160px;" onclick="showInfo('gaunt')">
+            <div class="c-dark">第四子 (红玫瑰老祖)</div>
+            <div class="c-lancaster">兰开斯特公爵 (冈特)</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 160px;" onclick="showInfo('york_ancestors')">
+            <div class="c-dark">第五子后代+第三子后代</div>
+            <div class="c-york">约克公爵家族</div>
+        </div>
+
+        <div class="person" style="left: 80px; top: 260px; border: 2px solid #c62828;" onclick="showInfo('lancaster_kings')">
+            <div class="c-dark">亨利四、五、六世</div>
+            <div class="c-lancaster">兰开斯特诸王</div>
+        </div>
+
+        <div class="person" style="left: 240px; top: 260px; border: 2px dashed #e65100;" onclick="showInfo('beaufort')">
+            <div class="c-dark">私生逆袭系</div>
+            <div class="c-beaufort">玛格丽特·博福特</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 260px; border: 2px solid #1565c0;" onclick="showInfo('york_kings')">
+            <div class="c-dark">爱德华四世、理查三世</div>
+            <div class="c-york">约克诸王</div>
+        </div>
+
+        <div class="person" style="left: 240px; top: 380px; border: 3px solid #8e24aa; padding: 14px 18px;" onclick="showInfo('henry7')">
+            <div class="c-dark">捡漏大帝 / 都铎开国</div>
+            <div class="c-tudor" style="font-size: 18px;">亨利七世 (都铎)</div>
+        </div>
+
+        <div class="person" style="left: 480px; top: 380px; border: 2px solid #1565c0;" onclick="showInfo('elizabeth_york')">
+            <div class="c-dark">爱德华四世之女</div>
+            <div class="c-york">约克的伊丽莎白</div>
+        </div>
+    </div>
+
+    <div class="events-section">
+        <div class="events-title">三个决定王权归属的法理BUG</div>
+        <div class="event-cards-container">
+            <div class="event-card" onclick="showInfo('york_claim')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">法理冲突</div>
+                <div class="c-york" style="font-size: 16px; font-weight: bold;">约克的高顺位宣称</div>
+            </div>
+            <div class="event-card" onclick="showInfo('beaufort_loophole')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">血统漏洞</div>
+                <div class="c-beaufort" style="font-size: 16px; font-weight: bold;">私生子的逆袭</div>
+            </div>
+            <div class="event-card" onclick="showInfo('tudor_rose')">
+                <div class="c-dark" style="margin-bottom: 4px; font-size: 12px;">1486年</div>
+                <div class="c-tudor" style="font-size: 16px; font-weight: bold;">都铎玫瑰的诞生</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeInfo()">&times;</div>
+                <h2 class="modal-title" id="modalTitle">标题</h2>
+                <span class="modal-subtitle" id="modalSubtitle">副标题</span>
+            </div>
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            'edward3': { 
+                name: '爱德华三世 (Edward III)', 
+                subtitle: '万恶之源：生得太多，封得太满', 
+                content: '<p>这位带领英国打赢克雷西战役的战神，晚年却给子孙挖了个巨坑。他有五个活到成年的儿子。当时的长子（黑太子）死得早，王位传给了孙子理查二世。结果理查二世太作死，被爱德华三世的<strong>第四个儿子（兰开斯特公爵）的儿子</strong>赶下台篡了位。</p><p>这一下就坏了规矩！因为如果按照严格的继承顺位，就算理查二世没后代，王位也该传给爱德华三世的<strong>第三个儿子的后代</strong>。这种“老四的儿子抢了老大的孙子的王位，却无视了老三的后代”的操作，直接给后来的玫瑰战争埋下了最致命的法理炸弹。</p>' 
+            },
+            'gaunt': { 
+                name: '冈特的约翰 (John of Gaunt)', 
+                subtitle: '兰开斯特的始祖，到处留情的首富', 
+                content: '<p>爱德华三世的第四子，初代兰开斯特公爵，富可敌国。他的正妻给他生了儿子，也就是后来篡位的亨利四世（红玫瑰的开国君主）。</p><p>但他极其风流，在正妻死后，他和相好了多年的情妇（凯瑟琳·斯温福德）生下了一堆私生子，这些私生子被赐姓为<strong>“博福特”（Beaufort）</strong>。后来他竟然正式娶了这个情妇，并让教皇下令把这些私生子合法化了。这个“合法化的私生子家族”，后来成了都铎王朝的唯一法理根基。</p>' 
+            },
+            'york_ancestors': { 
+                name: '约克公爵家族', 
+                subtitle: '法理上的真正第一顺位', 
+                content: '<p>约克家族的血统简直是“强强联合”的叠Buff。他们是爱德华三世<strong>第五子（纯男性直系后代）</strong>和<strong>第三子（通过女性继承的更高顺位血脉）</strong>联姻的产物。</p><p>在红玫瑰（兰开斯特家族的亨利六世）把国家搞得一团糟、甚至精神分裂的时候，约克公爵理直气壮地站出来说：<strong>“论辈分，我祖上是老三，你祖上是老四，你凭什么坐王位？”</strong>这就是白玫瑰起兵造反最核心、最硬核的底气。</p>' 
+            },
+            'lancaster_kings': { 
+                name: '兰开斯特诸王 (红玫瑰)', 
+                subtitle: '篡位得来，疯病送走', 
+                content: '<p>包括亨利四世、亨利五世（阿金库尔战神）、亨利六世（疯王）。他们虽然是篡位上来的，但靠着亨利五世的盖世武功强行洗白了。</p><p>可惜到了亨利六世，不仅把法国领土丢光了，自己还变成了精神病。在玫瑰战争的绞肉机里，亨利六世被暗杀，他唯一的独生子在蒂克斯伯里战役中被砍死。至此，<strong>兰开斯特家族的正统直系男性血脉，被物理意义上彻底抹除，断子绝孙。</strong></p>' 
+            },
+            'beaufort': { 
+                name: '玛格丽特·博福特', 
+                subtitle: '在夹缝中保住最后火种的铁娘子', 
+                content: '<p>她是那个“被合法化的私生子家族（博福特）”的最后传人。在兰开斯特正系死绝后，她身上那点微弱的红玫瑰血脉，竟然成了反约克阵营的唯一希望。</p><p>她13岁就生下了儿子亨利·都铎。在约克家族（爱德华四世、理查三世）统治的恐怖时期，她极其清醒地把儿子送到法国去避难，自己则留在国内左右逢源，甚至暗中串联被理查三世迫害的约克旧部。她是一位真正的幕后大玩家，硬生生把儿子推上了王座。</p>' 
+            },
+            'york_kings': { 
+                name: '约克诸王 (白玫瑰)', 
+                subtitle: '赢了天下，输给内斗', 
+                content: '<p>爱德华四世是个军事天才，把红玫瑰打得全军覆没。但他死后，他亲弟弟理查三世发动政变，杀侄篡位（塔中王子），直接引发了全英格兰的震怒。</p><p>约克家族其实是被自己人搞死的。理查三世的残暴，导致一大批原本忠于白玫瑰的贵族，宁愿去支持海峡对岸那个名不见经传的亨利·都铎，也不愿再效忠理查三世。在博斯沃思战役中，理查三世战死沙场，白玫瑰的男性主脉也随之断绝。</p>' 
+            },
+            'henry7': { 
+                name: '亨利七世 (都铎)', 
+                subtitle: '捡漏之王，天命之子', 
+                content: '<p>亨利·都铎的宣称权极其微弱，他不仅出身于曾被明令禁止继承王位的“博福特私生系”，而且他的父系（都铎家族）只是个威尔士的小侍卫。</p><p>但运气来了挡都挡不住：红玫瑰正系死绝了，白玫瑰自己把自己杀得众叛亲离。他带着雇佣军登陆英国，靠着继父斯坦利家族的临阵倒戈，在博斯沃思击杀了理查三世。他在战场上直接戴上了从灌木丛里捡来的王冠，开创了都铎王朝。</p>' 
+            },
+            'elizabeth_york': { 
+                name: '约克的伊丽莎白', 
+                subtitle: '终结战争的白玫瑰公主', 
+                content: '<p>爱德华四世的大女儿。在她的两个弟弟（塔中王子）被害后，她成为了约克家族理论上的第一继承人。</p><p>亨利七世登基后做的最聪明的一件事，就是立刻兑现承诺，迎娶了这位前朝公主。这招不仅安抚了天下所有的约克旧部，更重要的是，<strong>他通过妻子的绝佳血统，强行弥补了自己那极其薄弱的合法性。</strong></p>' 
+            },
+
+            /* 事件库 */
+            'york_claim': { 
+                name: '约克的高顺位宣称', 
+                subtitle: '老三的后代向老四的后代讨债', 
+                content: '<p><strong>【核心逻辑】</strong><br>约克家族的理查公爵造反时，核心法理非常硬：爱德华三世的第三子（克拉伦斯公爵）的独生女，嫁给了第五子（约克公爵）的儿子。根据中世纪的继承法，<strong>女性是可以传递继承权的</strong>。因此，结合了老三和老五血脉的约克家族，在顺位上绝对高于兰开斯特（老四）的后代。</p><p><strong>【深远影响】</strong><br>这套法理让约克家族在初期获得了大量讲究正统的老贵族支持，也让红白玫瑰的争夺具备了“拨乱反正”的法理伪装。</p>' 
+            },
+            'beaufort_loophole': { 
+                name: '私生子的逆袭', 
+                subtitle: '微弱的血脉成了最后的救命稻草', 
+                content: '<p><strong>【核心逻辑】</strong><br>当年教皇虽然把博福特家族（兰开斯特老祖宗的私生子系）合法化了，但后来的英王亨利四世特意加了一条法令：<strong>博福特家族及其后代，永远不得继承英格兰王位。</strong></p><p><strong>【深远影响】</strong><br>谁能想到，几十年后，正经的兰开斯特男人全死光了。亨利·都铎（博福特家族的后代）只能硬着头皮上。大家也默契地无视了当年那条“禁止继承”的法令，毕竟只要能把残暴的理查三世赶下台，哪怕是个八竿子打不着的远房亲戚也行。</p>' 
+            },
+            'tudor_rose': { 
+                name: '都铎玫瑰的诞生 (1486年)', 
+                subtitle: '史上最强公关视觉设计', 
+                content: '<p><strong>【核心逻辑】</strong><br>亨利七世（红玫瑰仅存的代理人）迎娶了约克的伊丽莎白（白玫瑰的继承人）。为了在全英国宣示内战的彻底结束，亨利七世命人设计了一个全新的王室徽章：<strong>一朵红色的玫瑰，包裹着一朵白色的玫瑰。</strong></p><p><strong>【深远影响】</strong><br>这就是著名的<strong>“都铎玫瑰”</strong>。这个视觉符号极其强大，它时刻提醒着英格兰人：两大家族的血脉已经通过婚姻融为一体，从此不再有兰开斯特和约克之分，只有都铎。这场持续了三十年的大乱斗，终于在这场联姻中画上了句号。</p>' 
+            }
+        };
+
+        function showInfo(id) {
+            const data = dataStore[id];
+            if (data) {
+                document.getElementById('modalTitle').innerText = data.name;
+                document.getElementById('modalSubtitle').innerText = data.subtitle;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('infoModal').classList.add('active');
+            }
+        }
+
+        function closeInfo() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+    </script>
+
+</body>
+</html>
