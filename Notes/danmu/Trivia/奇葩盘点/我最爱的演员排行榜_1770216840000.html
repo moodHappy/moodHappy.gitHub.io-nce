@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我最喜爱的女演员排行榜</title>
+    <title>大清后宫 - 翻牌绿头牌</title>
     <style>
         :root {
             --text-main: #2d3748;
             --primary: #667eea;
             --link-hover: #764ba2;
+            --imperial-gold: #f59e0b;
+            --imperial-gold-hover: #d97706;
         }
 
         body {
@@ -34,10 +36,11 @@
             font-size: 1.5rem;
         }
 
-        /* 新增：按钮容器和样式 */
         .action-buttons {
             display: flex;
-            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
             margin-bottom: 1.5rem;
         }
 
@@ -45,7 +48,7 @@
             background: rgba(255, 255, 255, 0.9);
             color: var(--primary);
             border: 2px solid var(--primary);
-            padding: 8px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 600;
@@ -65,6 +68,29 @@
             transform: translateY(0);
         }
 
+        /* 翻牌专属帝王金按钮 */
+        .btn-draw {
+            background: var(--imperial-gold);
+            color: white;
+            border-color: var(--imperial-gold);
+            font-size: 1rem;
+            padding: 8px 24px;
+            animation: pulse 2s infinite;
+        }
+
+        .btn-draw:hover {
+            background: var(--imperial-gold-hover);
+            border-color: var(--imperial-gold-hover);
+            box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
         .table-container {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
@@ -74,7 +100,7 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             width: 100%;
             max-width: 800px;
-            overflow: hidden;
+            overflow: auto;
         }
 
         table {
@@ -87,7 +113,7 @@
         th, td {
             padding: 12px 6px;
             border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             vertical-align: middle;
         }
 
@@ -97,9 +123,6 @@
             color: #475569;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-        }
-
-        td:nth-child(2), th:nth-child(2) {
             white-space: nowrap;
         }
 
@@ -128,7 +151,7 @@
         }
 
         .jp-name {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #718096;
             line-height: 1.2;
             word-break: break-all;
@@ -157,50 +180,105 @@
         .rank-number {
             font-weight: 800;
             color: #a0aec0;
-            font-size: 1rem;
             text-align: center;
         }
 
-        .rank-1 { color: #fbbf24; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); font-size: 1.2rem;}
-        .rank-2 { color: #94a3b8; text-shadow: 0 0 8px rgba(148, 163, 184, 0.4); font-size: 1.1rem;}
-        .rank-3 { color: #b45309; text-shadow: 0 0 8px rgba(180, 83, 9, 0.4); font-size: 1.05rem;}
+        .harem-title {
+            font-weight: 700;
+            color: #e53e3e;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        /* 前三名专属高亮颜色 */
+        .title-0 { color: #d69e2e; text-shadow: 0 0 8px rgba(214, 158, 46, 0.4); font-size: 1.05rem;} /* 皇后 */
+        .title-1 { color: #805ad5; } /* 皇贵妃 */
+        .title-2 { color: #3182ce; } /* 贵妃 */
 
-        .crown {
-            margin-right: 4px; 
-            font-size: 1rem;
-            display: inline-block;
-            vertical-align: baseline;
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        /* 翻牌弹窗样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        @keyframes popIn {
-            0% { transform: scale(0) rotate(-15deg); opacity: 0; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        .modal-content {
+            background: linear-gradient(to bottom, #fffdf0, #fff);
+            border: 4px solid var(--imperial-gold);
+            border-radius: 12px;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 15px;
+            font-size: 1.5rem;
+            color: #a0aec0;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .modal-close:hover { color: #4a5568; }
+
+        .modal-header {
+            font-size: 1.2rem;
+            color: #718096;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .modal-result {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #c53030;
+            margin: 15px 0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
 
         @media (min-width: 600px) {
-            th, td { padding: 16px 20px; font-size: 1rem; }
-            .jp-name { font-size: 0.95rem; }
+            th, td { padding: 16px 12px; font-size: 0.95rem; }
+            .jp-name { font-size: 0.85rem; }
             .score-input { width: 70px; font-size: 1rem; }
-            .rank-number { font-size: 1.1rem; }
-            .rank-1 { font-size: 1.3rem;}
-            .rank-2 { font-size: 1.2rem;}
-            .rank-3 { font-size: 1.1rem;}
-            .crown { font-size: 1.1rem; margin-right: 6px; }
             body { padding: 2rem 1rem; }
-            h1 { font-size: 2rem; margin-bottom: 1rem; }
-            .btn { font-size: 1rem; padding: 10px 24px; }
+            h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+            .btn { font-size: 0.95rem; padding: 10px 20px; }
+            .btn-draw { padding: 10px 30px; font-size: 1.1rem; }
         }
     </style>
 </head>
 <body>
 
-    <h1>我最喜爱的女演员排行榜</h1>
+    <h1>后宫佳丽三千绿头牌</h1>
 
     <div class="action-buttons">
+        <button class="btn btn-draw" onclick="drawCard()">🎲 翻牌侍寝</button>
         <button class="btn" onclick="exportData()">⬇️ 导出备份</button>
         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
         <button class="btn" onclick="document.getElementById('importFile').click()">⬆️ 导入备份</button>
+    </div>
+
+    <div class="modal-overlay" id="drawModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">×</span>
+            <div class="modal-header">奉天承运，皇帝诏曰：</div>
+            <div style="color: #4a5568; font-size: 1.1rem;">今晚翻牌侍寝的佳丽是</div>
+            <div class="modal-result" id="drawResultText"></div>
+            <div style="color: #718096; font-size: 0.9rem;">钦此！</div>
+        </div>
     </div>
 
     <div class="table-container">
@@ -208,9 +286,10 @@
             <thead>
                 <tr>
                     <th width="40" style="text-align: center;">排名</th>
-                    <th>中文名称</th>
-                    <th>日语名称</th>
-                    <th width="70" style="text-align: center;">打分</th>
+                    <th width="70" style="text-align: center;">位分</th>
+                    <th>名号</th>
+                    <th>外邦译名</th>
+                    <th width="70" style="text-align: center;">恩宠(打分)</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -280,11 +359,15 @@
             { name: "神谷美玖", jpName: "神谷みく", enName: "Miku Kamiya" }
         ];
 
+        // 后宫位分层级
+        const haremTitlesArray = ["皇后", "皇贵妃", "贵妃", "妃", "嫔", "贵人", "常在", "答应", "官女子"];
+
         // 初始化分数
         function loadScores() {
             actressesData.forEach(item => {
                 const savedScore = localStorage.getItem(`score_${item.name}`);
                 item.score = savedScore !== null ? savedScore : "";
+                item.haremTitle = "-"; // 初始化位分为空
             });
         }
         
@@ -294,69 +377,92 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            // 排序逻辑
+            // 排序逻辑：有分数的在上面（分数高到低），没分数的在下面
             actressesData.sort((a, b) => {
                 const scoreA = a.score === "" ? -1 : Number(a.score);
                 const scoreB = b.score === "" ? -1 : Number(b.score);
                 return scoreB - scoreA;
             });
 
+            let currentTitleIndex = 0;
+            let previousScore = null;
+
             actressesData.forEach((item, index) => {
                 const tr = document.createElement('tr');
+
+                // 计算位分逻辑
+                if (item.score !== "") {
+                    let numScore = Number(item.score);
+                    // 如果分数比上一个低，则降级
+                    if (previousScore !== null && numScore < previousScore) {
+                        currentTitleIndex++;
+                    }
+                    previousScore = numScore;
+                    
+                    // 如果超过了称号数组长度，全部设为最底层"官女子"
+                    item.haremTitle = currentTitleIndex < haremTitlesArray.length ? haremTitlesArray[currentTitleIndex] : "官女子";
+                } else {
+                    item.haremTitle = "秀女(待选)";
+                }
 
                 // 1. 排名列
                 const tdRank = document.createElement('td');
                 tdRank.className = 'rank-number';
+                tdRank.textContent = item.score !== "" ? index + 1 : "-";
+
+                // 2. 位分列 (新增)
+                const tdTitle = document.createElement('td');
+                tdTitle.className = 'harem-title';
+                tdTitle.textContent = item.haremTitle;
+                // 给高等妃子加上专属颜色
                 if (item.score !== "") {
-                    tdRank.textContent = index + 1;
-                    if (index === 0) tdRank.classList.add('rank-1');
-                    else if (index === 1) tdRank.classList.add('rank-2');
-                    else if (index === 2) tdRank.classList.add('rank-3');
+                    if (currentTitleIndex === 0) tdTitle.classList.add('title-0');
+                    else if (currentTitleIndex === 1) tdTitle.classList.add('title-1');
+                    else if (currentTitleIndex === 2) tdTitle.classList.add('title-2');
                 } else {
-                    tdRank.textContent = "-";
+                    tdTitle.style.color = "#a0aec0";
+                    tdTitle.style.fontWeight = "normal";
                 }
 
-                // 2. 中文姓名列
+                // 3. 中文姓名列
                 const tdName = document.createElement('td');
                 const wikiUrl = `https://zh.wikipedia.org/wiki/${encodeURIComponent(item.name)}`;
-                let crownHtml = (item.score !== "" && Number(item.score) > 100) ? '<span class="crown" title="绝世神颜！">👑</span>' : '';
-                tdName.innerHTML = `${crownHtml}<a href="${wikiUrl}" target="_blank" class="table-link">${item.name}</a>`;
+                tdName.innerHTML = `<a href="${wikiUrl}" target="_blank" class="table-link">${item.name}</a>`;
 
-                // 3. 日语名称列
+                // 4. 日语名称列
                 const tdJpName = document.createElement('td');
                 tdJpName.className = "jp-name";
                 const urlSlug = item.enName.toLowerCase().replace(/\s+/g, '-');
                 const jableUrl = `https://jable.tv/models/${urlSlug}/`;
                 tdJpName.innerHTML = `<a href="${jableUrl}" target="_blank" class="table-link" style="color:#718096; text-decoration:none;">${item.jpName}</a>`;
 
-                // 4. 打分列
+                // 5. 打分列
                 const tdScore = document.createElement('td');
                 tdScore.style.textAlign = "center";
                 const inputScore = document.createElement('input');
                 inputScore.type = 'number';
                 inputScore.className = 'score-input';
-                inputScore.placeholder = '110';
+                inputScore.placeholder = '赐分';
                 inputScore.value = item.score;
 
-                // 失去焦点保存
-                inputScore.addEventListener('blur', (e) => {
+                // 保存触发逻辑
+                const saveScore = (e) => {
                     item.score = e.target.value;
                     localStorage.setItem(`score_${item.name}`, item.score);
                     renderTable();
-                });
+                };
 
-                // 回车保存
+                inputScore.addEventListener('blur', saveScore);
                 inputScore.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
-                        item.score = e.target.value;
-                        localStorage.setItem(`score_${item.name}`, item.score);
-                        inputScore.blur(); // 触发 blur 事件
+                        inputScore.blur();
                     }
                 });
 
                 tdScore.appendChild(inputScore);
 
                 tr.appendChild(tdRank);
+                tr.appendChild(tdTitle); // 插入位分列
                 tr.appendChild(tdName);
                 tr.appendChild(tdJpName);
                 tr.appendChild(tdScore);
@@ -365,12 +471,36 @@
             });
         }
 
-        // ================= 新增：备份导出与导入逻辑 =================
+        // ================= 翻牌侍寝逻辑 =================
+        function drawCard() {
+            // 只从已经打过分（入了后宫）的佳丽中抽取
+            const haremMembers = actressesData.filter(item => item.score !== "");
+            
+            if (haremMembers.length === 0) {
+                alert("陛下，后宫空虚，请先为秀女们赐分册封吧！");
+                return;
+            }
 
-        // 导出数据
+            // 随机抽取一位
+            const randomIndex = Math.floor(Math.random() * haremMembers.length);
+            const luckyGirl = haremMembers[randomIndex];
+
+            // 弹出圣旨
+            const modal = document.getElementById('drawModal');
+            const resultText = document.getElementById('drawResultText');
+            
+            resultText.innerHTML = `【${luckyGirl.haremTitle}】<br/>${luckyGirl.name}`;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('drawModal');
+            modal.classList.remove('active');
+        }
+
+        // ================= 备份导出与导入逻辑 =================
         function exportData() {
             const dataToExport = {};
-            // 收集所有在 actressesData 里的评分
             actressesData.forEach(item => {
                 const score = localStorage.getItem(`score_${item.name}`);
                 if (score !== null && score !== "") {
@@ -379,25 +509,21 @@
             });
 
             if (Object.keys(dataToExport).length === 0) {
-                alert("当前没有可导出的评分记录！");
+                alert("陛下，目前没有已册封的记录可供备份！");
                 return;
             }
 
-            // 转换为 JSON 字符串并创建下载链接
             const dataStr = JSON.stringify(dataToExport);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(dataBlob);
             
             const linkElement = document.createElement('a');
             linkElement.setAttribute('href', url);
-            linkElement.setAttribute('download', 'actress_ranking_backup.json');
+            linkElement.setAttribute('download', 'harem_ranking_backup.json');
             linkElement.click();
-            
-            // 释放 URL 对象
             URL.revokeObjectURL(url);
         }
 
-        // 导入数据
         function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -408,7 +534,6 @@
                     const importedData = JSON.parse(e.target.result);
                     let importCount = 0;
                     
-                    // 将读取的数据写入 localStorage
                     for (const key in importedData) {
                         if (key.startsWith('score_')) {
                             localStorage.setItem(key, importedData[key]);
@@ -417,16 +542,15 @@
                     }
 
                     if (importCount > 0) {
-                        loadScores(); // 重新从 localStorage 加载到内存
-                        renderTable(); // 重新渲染表格
-                        alert(`成功导入 ${importCount} 条评分记录！`);
+                        loadScores(); 
+                        renderTable(); 
+                        alert(`成功恢复 ${importCount} 位爱妃的记录！`);
                     } else {
-                        alert("备份文件中没有找到有效的评分数据。");
+                        alert("备份文件中没有找到有效的记录。");
                     }
                 } catch (error) {
-                    alert("导入失败，文件格式可能不正确！");
+                    alert("导入失败，文件格式可能损坏！");
                 }
-                // 清空 input，以便可以重复导入同一个文件
                 event.target.value = '';
             };
             reader.readAsText(file);
