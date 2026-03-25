@@ -11,6 +11,8 @@
             --link-hover: #764ba2;
             --imperial-gold: #f59e0b;
             --imperial-gold-hover: #d97706;
+            --cloud-blue: #4299e1;
+            --cloud-blue-hover: #3182ce;
         }
 
         * {
@@ -45,15 +47,46 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 1rem;
             width: 100%;
+            max-width: 800px;
         }
 
         .action-row {
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             gap: 10px;
+            width: 100%;
+        }
+
+        .cloud-sync-box {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: 1px dashed rgba(102, 126, 234, 0.5);
+        }
+
+        .token-input {
+            width: 90%;
+            max-width: 300px;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .token-input:focus {
+            border-color: var(--primary);
         }
 
         .btn {
@@ -76,12 +109,19 @@
         .btn:hover { background: var(--link-hover); transform: translateY(-2px); }
         .btn:active { transform: translateY(0); }
 
+        .btn-cloud {
+            background: var(--cloud-blue);
+            box-shadow: 0 4px 10px rgba(66, 153, 225, 0.4);
+        }
+        .btn-cloud:hover { background: var(--cloud-blue-hover); }
+
         .btn-draw {
             background: var(--imperial-gold);
             box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);
             animation: pulse 2s infinite;
             padding: 10px 28px;
             font-size: 1.05rem;
+            margin-top: 5px;
         }
 
         .btn-draw:hover {
@@ -151,8 +191,7 @@
             font-size: 0.7rem;
             line-height: 1.1;
         }
-        
-        /* 外文名专属链接样式 */
+
         a.jp-link {
             color: #718096;
             text-decoration: none;
@@ -252,6 +291,8 @@
             body { padding: 2rem 1rem; }
             h1 { font-size: 1.8rem; }
             .btn { font-size: 1rem; padding: 10px 22px; }
+            .cloud-sync-box { flex-direction: row; justify-content: space-between; padding: 10px 20px; }
+            .token-input { width: 200px; }
         }
     </style>
 </head>
@@ -260,11 +301,20 @@
     <h1>后宫佳丽三千人</h1>
 
     <div class="action-buttons-wrapper">
+        <div class="cloud-sync-box">
+            <input type="password" id="githubTokenInput" placeholder="输入 GitHub Token (留空不保存)" class="token-input">
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-cloud" id="btn-download" onclick="downloadFromGithub()">☁️ 云端下载</button>
+                <button class="btn btn-cloud" id="btn-upload" onclick="uploadToGithub()">☁️ 云端备份</button>
+            </div>
+        </div>
+
         <div class="action-row">
             <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
-            <button class="btn" onclick="document.getElementById('importFile').click()">⬆️ 导入备份</button>
-            <button class="btn" onclick="exportData()">⬇️ 导出备份</button>
+            <button class="btn" style="background: #a0aec0;" onclick="document.getElementById('importFile').click()">⬆️ 本地导入</button>
+            <button class="btn" style="background: #a0aec0;" onclick="exportData()">⬇️ 本地导出</button>
         </div>
+        
         <div class="action-row">
             <button class="btn btn-draw" onclick="drawCard()">🎲 翻牌侍寝</button>
         </div>
@@ -302,7 +352,140 @@
     </div>
 
     <script>
-        // 在这里的 jpLink: "#" 中填入你想要的具体网址即可
+        // ================= GitHub 云同步配置 =================
+        const GITHUB_CONF = {
+            owner: 'moodHappy',
+            repo: 'moodHappy.github.io-nce',
+            path: 'harem_data.json',
+            token: localStorage.getItem('github_harem_token') || ''
+        };
+
+        // 页面加载时自动填充保存过的 Token
+        document.getElementById('githubTokenInput').value = GITHUB_CONF.token;
+
+        // 实时保存用户输入的 Token 到本地
+        document.getElementById('githubTokenInput').addEventListener('input', (e) => {
+            GITHUB_CONF.token = e.target.value.trim();
+            localStorage.setItem('github_harem_token', GITHUB_CONF.token);
+        });
+
+        // 获取文件 SHA（GitHub API 更新文件时必须带上该文件的原始 SHA）
+        async function getFileSha() {
+            const url = `https://api.github.com/repos/${GITHUB_CONF.owner}/${GITHUB_CONF.repo}/contents/${GITHUB_CONF.path}`;
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONF.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.sha;
+                }
+            } catch (e) {
+                console.error('获取 SHA 失败:', e);
+            }
+            return null;
+        }
+
+        // 上传数据到 GitHub
+        async function uploadToGithub() {
+            if (!GITHUB_CONF.token) { alert('陛下，请先在上方输入您的 GitHub Token！'); return; }
+
+            const btn = document.getElementById('btn-upload');
+            const originalText = btn.innerText;
+            btn.innerText = '正在起草圣旨...';
+
+            const dataToExport = {};
+            actressesData.forEach(item => {
+                const score = localStorage.getItem(`score_${item.name}`);
+                if (score !== null && score !== "") dataToExport[`score_${item.name}`] = score;
+                const sleepCount = localStorage.getItem(`sleepCount_${item.name}`);
+                if (sleepCount !== null && sleepCount !== "") dataToExport[`sleepCount_${item.name}`] = sleepCount;
+            });
+
+            // Unicode 转 Base64
+            const jsonStr = JSON.stringify(dataToExport, null, 2);
+            const contentBase64 = btoa(unescape(encodeURIComponent(jsonStr)));
+            const sha = await getFileSha();
+
+            const url = `https://api.github.com/repos/${GITHUB_CONF.owner}/${GITHUB_CONF.repo}/contents/${GITHUB_CONF.path}`;
+            const body = {
+                message: 'Auto Backup Harem Data',
+                content: contentBase64
+            };
+            if (sha) body.sha = sha;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONF.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    alert('敬事房记录已成功同步至云端！');
+                } else {
+                    const err = await response.json();
+                    alert('上传失败: ' + err.message);
+                }
+            } catch (e) {
+                alert('网络波动，上传出错: ' + e);
+            } finally {
+                btn.innerText = originalText;
+            }
+        }
+
+        // 从 GitHub 下载数据
+        async function downloadFromGithub() {
+            if (!GITHUB_CONF.token) { alert('陛下，请先在上方输入您的 GitHub Token！'); return; }
+
+            const btn = document.getElementById('btn-download');
+            const originalText = btn.innerText;
+            btn.innerText = '正在调取卷宗...';
+
+            const url = `https://api.github.com/repos/${GITHUB_CONF.owner}/${GITHUB_CONF.repo}/contents/${GITHUB_CONF.path}`;
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONF.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Base64 转 Unicode
+                    const jsonStr = decodeURIComponent(escape(atob(data.content)));
+                    const importedData = JSON.parse(jsonStr);
+
+                    for (const key in importedData) {
+                        if (key.startsWith('score_') || key.startsWith('sleepCount_')) {
+                            localStorage.setItem(key, importedData[key]);
+                        }
+                    }
+                    loadScores();
+                    renderTable();
+                    alert('云端卷宗调取成功！已为您恢复所有记录。');
+                } else if (response.status === 404) {
+                    alert('云端空空如也，陛下请先点击【云端备份】进行初次上传！');
+                } else {
+                    const err = await response.json();
+                    alert('下载失败: ' + err.message);
+                }
+            } catch (e) {
+                alert('网络波动，下载出错: ' + e);
+            } finally {
+                btn.innerText = originalText;
+            }
+        }
+        // ======================================================
+
         const actressesData = [
             { name: "希崎杰西卡", jpName: "希崎ジェシカ", enName: "Jessica Kizaki", jpLink: "https://jable.tv/models/jessica-kizaki/" },
             { name: "小野六花", jpName: "小野六花", enName: "Rikka Ono", jpLink: "https://jable.tv/models/0478c4db9858c4e6c60af7fbf828009a/" },
@@ -475,7 +658,6 @@
 
                 const tdJpName = document.createElement('td');
                 tdJpName.className = "jp-name";
-                // 这里调用数据里写好的 jpLink
                 tdJpName.innerHTML = `<a href="${item.jpLink}" target="_blank" class="jp-link">${item.jpName}</a>`; 
 
                 const tdScore = document.createElement('td');
@@ -537,6 +719,7 @@
             document.getElementById('drawModal').classList.remove('active');
         }
 
+        // 本地导出备份
         function exportData() {
             const dataToExport = {};
             actressesData.forEach(item => {
@@ -563,6 +746,7 @@
             URL.revokeObjectURL(url);
         }
 
+        // 本地导入备份
         function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
