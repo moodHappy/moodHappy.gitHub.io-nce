@@ -27,11 +27,42 @@
         h1 {
             text-align: center;
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             color: #1a202c;
             letter-spacing: 1px;
             text-shadow: 0 2px 4px rgba(255,255,255,0.5);
             font-size: 1.5rem;
+        }
+
+        /* 新增：按钮容器和样式 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .table-container {
@@ -157,13 +188,20 @@
             .rank-3 { font-size: 1.1rem;}
             .crown { font-size: 1.1rem; margin-right: 6px; }
             body { padding: 2rem 1rem; }
-            h1 { font-size: 2rem; margin-bottom: 2rem; }
+            h1 { font-size: 2rem; margin-bottom: 1rem; }
+            .btn { font-size: 1rem; padding: 10px 24px; }
         }
     </style>
 </head>
 <body>
 
     <h1>我最喜爱的女演员排行榜</h1>
+
+    <div class="action-buttons">
+        <button class="btn" onclick="exportData()">⬇️ 导出备份</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+        <button class="btn" onclick="document.getElementById('importFile').click()">⬆️ 导入备份</button>
+    </div>
 
     <div class="table-container">
         <table id="rankingTable">
@@ -176,7 +214,7 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                </tbody>
+            </tbody>
         </table>
     </div>
 
@@ -242,11 +280,15 @@
             { name: "神谷美玖", jpName: "神谷みく", enName: "Miku Kamiya" }
         ];
 
-        // 初始化分数（尝试从本地存储读取，如果没有则为空）
-        actressesData.forEach(item => {
-            const savedScore = localStorage.getItem(`score_${item.name}`);
-            item.score = savedScore !== null ? savedScore : "";
-        });
+        // 初始化分数
+        function loadScores() {
+            actressesData.forEach(item => {
+                const savedScore = localStorage.getItem(`score_${item.name}`);
+                item.score = savedScore !== null ? savedScore : "";
+            });
+        }
+        
+        loadScores();
 
         function renderTable() {
             const tbody = document.getElementById('tableBody');
@@ -274,13 +316,13 @@
                     tdRank.textContent = "-";
                 }
 
-                // 2. 中文姓名列 (皇冠加在姓名前面，且中文名本身不换行)
+                // 2. 中文姓名列
                 const tdName = document.createElement('td');
                 const wikiUrl = `https://zh.wikipedia.org/wiki/${encodeURIComponent(item.name)}`;
                 let crownHtml = (item.score !== "" && Number(item.score) > 100) ? '<span class="crown" title="绝世神颜！">👑</span>' : '';
                 tdName.innerHTML = `${crownHtml}<a href="${wikiUrl}" target="_blank" class="table-link">${item.name}</a>`;
 
-                // 3. 日语名称列 (带 Jable 链接)
+                // 3. 日语名称列
                 const tdJpName = document.createElement('td');
                 tdJpName.className = "jp-name";
                 const urlSlug = item.enName.toLowerCase().replace(/\s+/g, '-');
@@ -296,19 +338,19 @@
                 inputScore.placeholder = '110';
                 inputScore.value = item.score;
 
-                // 失去焦点触发保存与重绘
+                // 失去焦点保存
                 inputScore.addEventListener('blur', (e) => {
                     item.score = e.target.value;
                     localStorage.setItem(`score_${item.name}`, item.score);
                     renderTable();
                 });
 
-                // 回车触发保存与重绘
+                // 回车保存
                 inputScore.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         item.score = e.target.value;
                         localStorage.setItem(`score_${item.name}`, item.score);
-                        renderTable();
+                        inputScore.blur(); // 触发 blur 事件
                     }
                 });
 
@@ -321,6 +363,73 @@
 
                 tbody.appendChild(tr);
             });
+        }
+
+        // ================= 新增：备份导出与导入逻辑 =================
+
+        // 导出数据
+        function exportData() {
+            const dataToExport = {};
+            // 收集所有在 actressesData 里的评分
+            actressesData.forEach(item => {
+                const score = localStorage.getItem(`score_${item.name}`);
+                if (score !== null && score !== "") {
+                    dataToExport[`score_${item.name}`] = score;
+                }
+            });
+
+            if (Object.keys(dataToExport).length === 0) {
+                alert("当前没有可导出的评分记录！");
+                return;
+            }
+
+            // 转换为 JSON 字符串并创建下载链接
+            const dataStr = JSON.stringify(dataToExport);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', url);
+            linkElement.setAttribute('download', 'actress_ranking_backup.json');
+            linkElement.click();
+            
+            // 释放 URL 对象
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入数据
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    let importCount = 0;
+                    
+                    // 将读取的数据写入 localStorage
+                    for (const key in importedData) {
+                        if (key.startsWith('score_')) {
+                            localStorage.setItem(key, importedData[key]);
+                            importCount++;
+                        }
+                    }
+
+                    if (importCount > 0) {
+                        loadScores(); // 重新从 localStorage 加载到内存
+                        renderTable(); // 重新渲染表格
+                        alert(`成功导入 ${importCount} 条评分记录！`);
+                    } else {
+                        alert("备份文件中没有找到有效的评分数据。");
+                    }
+                } catch (error) {
+                    alert("导入失败，文件格式可能不正确！");
+                }
+                // 清空 input，以便可以重复导入同一个文件
+                event.target.value = '';
+            };
+            reader.readAsText(file);
         }
 
         renderTable();
