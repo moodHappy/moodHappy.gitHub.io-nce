@@ -157,12 +157,45 @@
         .modal-close { position: absolute; top: 5px; right: 12px; font-size: 1.5rem; color: #a0aec0; cursor: pointer; }
         .modal-header { font-size: 1.15rem; color: #718096; margin-bottom: 8px; letter-spacing: 1px; font-weight: 700; border-bottom: 1px dashed #cbd5e0; padding-bottom: 10px;}
 
-        /* 弹窗表单样式 */
+        /* 弹窗表单及自动补全样式 */
         .modal-form { margin: 15px 0; text-align: left; }
-        .form-group { margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; position: relative; } /* 添加了相对定位 */
         .form-group label { display: block; font-size: 0.9rem; color: #4a5568; margin-bottom: 6px; font-weight: 700; }
         .modal-input { width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.3s; font-family: inherit; resize: vertical; box-sizing: border-box;}
         .modal-input:focus { border-color: var(--imperial-gold); }
+
+        /* 自定义自动补全菜单样式 */
+        .autocomplete-items {
+            position: absolute;
+            border: 2px solid var(--imperial-gold);
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            max-height: 160px;
+            overflow-y: auto;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            display: none;
+        }
+        .autocomplete-items div {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 0.95rem;
+            color: #2d3748;
+            transition: background-color 0.2s;
+        }
+        .autocomplete-items div:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-items div:hover {
+            background-color: #fef08a; /* 皇室金色的淡化版 */
+            color: #b45309;
+            font-weight: 600;
+        }
 
         .modal-btn-box { margin-top: 15px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;}
         .footer { margin-top: 1.5rem; font-size: 0.75rem; color: #4a5568; text-align: center; width: 100%; padding-bottom: 1rem; }
@@ -204,8 +237,6 @@
         <div class="calendar-grid" id="cal-grid"></div>
     </div>
 
-    <datalist id="actressesList"></datalist>
-
     <div class="modal-overlay" id="settingsModal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeSettingsModal()">×</span>
@@ -239,7 +270,8 @@
             <div class="modal-form">
                 <div class="form-group">
                     <label>侍寝佳丽名号</label>
-                    <input type="text" id="recordName" class="modal-input" list="actressesList" placeholder="如：小野六花" autocomplete="off">
+                    <input type="text" id="recordName" class="modal-input" placeholder="如：小野六花" autocomplete="off">
+                    <div id="autocomplete-list" class="autocomplete-items"></div>
                 </div>
                 <div class="form-group">
                     <label>当夜备注信息</label>
@@ -390,14 +422,8 @@
             yearSelect.value = now.getFullYear();
             monthSelect.value = now.getMonth() + 1;
 
-            const datalist = document.getElementById('actressesList');
-            actressesData.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.name;
-                datalist.appendChild(option);
-            });
-
             renderCalendar();
+            setupAutocomplete(); // 初始化自动补全
         }
 
         function getLocalDateString(dateObj) {
@@ -451,6 +477,9 @@
             document.getElementById('modal-header-text').innerText = `【敬事房档】 ${dateStr}`;
             document.getElementById('recordName').value = record.name || "";
             document.getElementById('recordRemark').value = record.remark || "";
+            
+            // 每次打开弹窗重置下拉列表状态
+            document.getElementById('autocomplete-list').style.display = "none";
 
             document.getElementById('drawModal').classList.add('active');
         }
@@ -503,6 +532,7 @@
 
             document.getElementById('recordName').value = luckyGirl.name;
             document.getElementById('recordRemark').value = "龙体安康，随机翻牌选中";
+            document.getElementById('autocomplete-list').style.display = "none"; // 随机抽取后隐藏联想
         }
 
         function drawCardForToday() {
@@ -515,7 +545,56 @@
 
         function closeModal() {
             document.getElementById('drawModal').classList.remove('active');
+            document.getElementById('autocomplete-list').style.display = "none"; // 关闭弹窗时隐藏联想
         }
+
+        // ================= 自动补全 (Autocomplete) =================
+        function setupAutocomplete() {
+            const input = document.getElementById("recordName");
+            const autocompleteList = document.getElementById("autocomplete-list");
+
+            input.addEventListener("input", function() {
+                const val = this.value;
+                autocompleteList.innerHTML = "";
+                
+                if (!val) {
+                    autocompleteList.style.display = "none";
+                    return;
+                }
+                
+                // 模糊匹配：只要名字或日文名包含输入的字，就展示
+                const matched = actressesData.filter(item => 
+                    item.name.includes(val) || item.jpName.includes(val) || item.enName.toLowerCase().includes(val.toLowerCase())
+                );
+
+                if (matched.length > 0) {
+                    autocompleteList.style.display = "block";
+                    matched.forEach(item => {
+                        const div = document.createElement("div");
+                        // 简单高亮匹配的部分
+                        const regex = new RegExp(`(${val})`, "gi");
+                        div.innerHTML = item.name.replace(regex, "<span style='color:var(--imperial-gold); font-weight:bold;'>$1</span>");
+                        
+                        div.addEventListener("click", function() {
+                            input.value = item.name;
+                            autocompleteList.innerHTML = "";
+                            autocompleteList.style.display = "none";
+                        });
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.style.display = "none";
+                }
+            });
+
+            // 点击输入框外部时隐藏下拉菜单
+            document.addEventListener("click", function(e) {
+                if (e.target !== input && e.target !== autocompleteList) {
+                    autocompleteList.style.display = "none";
+                }
+            });
+        }
+
 
         // ================= GitHub 云同步 =================
         const GITHUB_CONF = {
