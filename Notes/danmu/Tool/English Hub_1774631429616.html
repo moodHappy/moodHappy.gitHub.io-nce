@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>English Learning Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+            padding-bottom: 40px; /* 底部留白 */
+        }
+
+        .container {
+            max-width: 600px; /* 限制最大宽度，平板/电脑上也好看 */
+            margin: 0 auto;
+        }
+
+        /* --- Header 紧凑化 --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .header-text h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .header-text p {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .settings-icon {
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.8;
+            padding: 5px;
+        }
+
+        /* --- Nav Tabs 分类标签 --- */
+        .nav-scroll-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            -webkit-overflow-scrolling: touch; /* iOS 平滑滚动 */
+        }
+
+        .nav-tabs {
+            display: inline-flex;
+            gap: 10px;
+            padding: 0 5px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #764ba2;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* --- App Grid --- */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 移动端改为3列 */
+            gap: 10px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .app-item {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 14px;
+            padding: 12px 5px; /* 减少内边距 */
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+        }
+
+        .app-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+        }
+
+        .app-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            width: 100%;
+        }
+
+        .app-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #2d3748;
+            line-height: 1.2;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            padding: 0 2px;
+        }
+
+        /* 描述文字在小屏上可能太乱，这里做得很小，或者可以考虑隐藏 */
+        .app-desc {
+            font-size: 0.6rem;
+            color: #718096;
+            line-height: 1.1;
+            transform: scale(0.9);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* 点击数样式微调 */
+        .click-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0,0,0,0.05);
+            color: #666;
+            font-size: 0.55rem;
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        /* --- Footer Stats --- */
+        .visitor-stats {
+            margin-top: 25px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.7rem;
+        }
+
+        /* --- Icon Gradients --- */
+        /* 保持原有的渐变色逻辑，也可以统一简化，这里保留您的个性化设置 */
+        .app-item[data-id="nce-homepage"] .app-icon { background: linear-gradient(135deg, #FF416C, #FF4B2B); }
+        .app-item[data-id="fiction"] .app-icon { background: linear-gradient(135deg, #FF6F61, #DE483A); }
+        .app-item[data-id="b1-article"] .app-icon { background: linear-gradient(135deg, #1abc9c, #16a085); }
+        .app-item[data-id="news-levels-1"] .app-icon { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); }
+        .app-item[data-id="dogonews"] .app-icon { background: linear-gradient(135deg, #4ecdc4, #44d4cc); }
+        .app-item[data-id="breaking-news"] .app-icon { background: linear-gradient(135deg, #45b7d1, #5bc5e8); }
+        .app-item[data-id="news-levels-2"] .app-icon { background: linear-gradient(135deg, #f9ca24, #f5cd2e); }
+        .app-item[data-id="engoo-news"] .app-icon { background: linear-gradient(135deg, #6c5ce7, #8b7ed8); }
+        .app-item[data-id="bbc-planet"] .app-icon { background: linear-gradient(135deg, #fd79a8, #ff8eb5); }
+        .app-item[data-id="days-levels"] .app-icon { background: linear-gradient(135deg, #fdcb6e, #fed766); }
+        .app-item[data-id="english-novel"] .app-icon { background: linear-gradient(135deg, #a0d911, #87d068); }
+        .app-item[data-id="zhongzhuanzhan"] .app-icon { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .app-item[data-id="text-sync"] .app-icon { background: linear-gradient(135deg, #00b894, #26d0ce); }
+        .app-item[data-id="privatebin"] .app-icon { background: linear-gradient(135deg, #e17055, #e58e71); }
+        .app-item[data-id="mood-happy"] .app-icon { background: linear-gradient(135deg, #6a82fb, #fc5c7d); }
+        .app-item[data-id="file-sync"] .app-icon { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .app-item[data-id="password-generator"] .app-icon { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+        .app-item[data-id="moon-tv"] .app-icon { background: linear-gradient(135deg, #00cec9, #81ecec); }
+
+        /* --- Modal Styles (Copy from previous) --- */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); justify-content: center; align-items: center; }
+        .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2); animation: modal-anim 0.3s ease-out; }
+        .modal-content h3 { font-size: 1.1rem; margin-bottom: 15px; color: #333; text-align: center; }
+        .modal-content input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; margin-bottom: 10px; }
+        .modal-buttons { display: flex; justify-content: flex-end; margin-top: 15px; gap: 10px; }
+        .modal-buttons button { padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
+        #saveBtn { background-color: #667eea; color: white; }
+        #cancelBtn { background-color: #f0f0f0; color: #555; }
+        @keyframes modal-anim { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .ripple { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.6); transform: scale(0); animation: ripple-animation 0.6s linear; }
+        @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
+
+        /* Media Queries - 平板和桌面端适配 */
+        @media (min-width: 768px) {
+            .app-grid { grid-template-columns: repeat(4, 1fr); gap: 15px; }
+            .app-item { padding: 20px 10px; }
+            .app-name { font-size: 0.9rem; }
+            .header-text h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-text">
+                <h1>📚 English Hub</h1>
+                <p>One tap to learn.</p>
+            </div>
+            <div class="settings-icon" onclick="showSettingsModal()">⚙️</div>
+        </div>
+
+        <div class="nav-scroll-container">
+            <div class="nav-tabs" id="categoryTabs">
+                <div class="nav-tab active" data-cat="all">全部</div>
+                <div class="nav-tab" data-cat="reading">阅读</div>
+                <div class="nav-tab" data-cat="news">新闻</div>
+                <div class="nav-tab" data-cat="tools">工具</div>
+                <div class="nav-tab" data-cat="media">娱乐</div>
+            </div>
+        </div>
+
+        <div class="app-grid" id="appGrid">
+            </div>
+
+        <div class="visitor-stats">
+            <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+            <div>
+                PV: <span id="busuanzi_value_page_pv">--</span> | Site: <span id="busuanzi_value_site_pv">--</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Github Sync Settings</h3>
+            <p style="color:red; font-size: 0.75rem; margin-bottom:10px;">⚠️ Token 存储在本地浏览器中。</p>
+            <input type="text" id="githubUsername" placeholder="GitHub 用户名 (Username)">
+            <input type="text" id="githubRepo" placeholder="仓库名 (Repo Name)">
+            <input type="password" id="githubPat" placeholder="Token (ghp_...)">
+            <input type="text" id="dataPath" placeholder="路径 (e.g. Notes/)">
+            <div id="connectionStatus" style="font-size:0.8rem; text-align:center; margin-top:5px;"></div>
+            <div class="modal-buttons">
+                <button id="cancelBtn">取消</button>
+                <button id="saveBtn">连接并保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 定义应用数据，增加了 'category' 属性以便分组
+        const allApps = [
+            // Reading (阅读)
+            { id: "nce-homepage", category: "reading", name: "NCE Home", desc: "新概念主页", icon: "🏫", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/NCEHomepage.html", count: 0 },
+            { id: "fiction", category: "reading", name: "Fiction", desc: "英文小说", icon: "📚", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/Fiction/index.html", count: 0 },
+            { id: "b1-article", category: "reading", name: "B1 Article", desc: "B1文章", icon: "📝", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/B1-article-view.html", count: 0 },
+            { id: "english-novel", category: "reading", name: "Novels", desc: "小说站", icon: "📖", url: "https://yingyuxiaoshuo.com/", count: 0 },
+
+            // News (新闻)
+            { id: "news-levels-1", category: "news", name: "News Lvl 1", desc: "分级新闻", icon: "📰", url: "https://englishnewsinlevels.com/", count: 0 },
+            { id: "news-levels-2", category: "news", name: "News Lvl 2", desc: "三级新闻", icon: "📊", url: "https://www.newsinlevels.com/", count: 0 },
+            { id: "engoo-news", category: "news", name: "Engoo", desc: "每日新闻", icon: "📖", url: "https://engoo.com/app/daily-news?max_level=5&min_level=5", count: 0 },
+            { id: "dogonews", category: "news", name: "DOGO", desc: "学生新闻", icon: "🐕", url: "https://www.dogonews.com/", count: 0 },
+            { id: "breaking-news", category: "news", name: "Breaking", desc: "时事练习", icon: "⚡", url: "https://breakingnewsenglish.com/", count: 0 },
+            { id: "bbc-planet", category: "news", name: "BBC Planet", desc: "深度报道", icon: "🌍", url: "https://www.bbc.com/future-planet", count: 0 },
+            { id: "days-levels", category: "news", name: "Days Lvl", desc: "历史今天", icon: "📅", url: "https://www.daysinlevels.com/", count: 0 },
+
+            // Tools (工具)
+            { id: "zhongzhuanzhan", category: "tools", name: "中转站", desc: "文本暂存", icon: "🔁", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/Texttohtml.html?hash=Y90YTV2KMBWCYOKL", count: 0 },
+            { id: "text-sync", category: "tools", name: "Text Sync", desc: "文本同步", icon: "☁️", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/Text_Sync.html", count: 0 },
+            { id: "file-sync", category: "tools", name: "File Sync", desc: "文件同步", icon: "🗄️", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/File_Sync.html", count: 0 },
+            { id: "privatebin", category: "tools", name: "PrivateBin", desc: "加密分享", icon: "🔒", url: "https://privatebin.net/", count: 0 },
+            { id: "mood-happy", category: "tools", name: "Mood", desc: "辅助工具", icon: "😊", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/new.html", count: 0 },
+            { id: "password-generator", category: "tools", name: "Pass Gen", desc: "密码生成", icon: "🔑", url: "https://moodhappy.github.io/moodHappy.gitHub.io-nce/style/multi_select_password_generator.html", count: 0 },
+
+            // Media (娱乐)
+            { id: "moon-tv", category: "media", name: "Moon TV", desc: "电影聚合", icon: "📺", url: "https://moon-tv-ten-sable-46.vercel.app/login?redirect=%2F", count: 0 }
+        ];
+
+        let currentCategory = 'all';
+
+        // GitHub Config Variables
+        let githubConfig = {};
+        const GITHUB_CONFIG_KEY = 'githubConfig';
+        const GITHUB_DATA_FILE_NAME = 'app_click_counts.json';
+
+        // DOM Elements
+        const settingsModal = document.getElementById('settingsModal');
+        const appGrid = document.getElementById('appGrid');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // --- Tab Switching Logic ---
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // Remove active class from all
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                // Add to clicked
+                e.target.classList.add('active');
+                // Filter
+                currentCategory = e.target.getAttribute('data-cat');
+                renderApps();
+            });
+        });
+
+        // --- Core Functions ---
+
+        function renderApps() {
+            appGrid.innerHTML = '';
+
+            // Filter apps based on category
+            const filteredApps = currentCategory === 'all' 
+                ? allApps 
+                : allApps.filter(app => app.category === currentCategory);
+
+            // Sort logic: In 'all' view, sort by clicks. In specific views, maybe keep logical order or sort by clicks too.
+            // Let's keep sorting by clicks for now as it puts favorites first.
+            filteredApps.sort((a, b) => b.count - a.count);
+
+            filteredApps.forEach(app => {
+                const appItem = document.createElement('div');
+                appItem.className = 'app-item';
+                appItem.setAttribute('data-id', app.id);
+                // Use onclick with event to prevent double firing issues on some mobiles
+                appItem.onclick = function(event) { openApp(app.url, this, app.id, event); };
+
+                appItem.innerHTML = `
+                    <div class="click-badge">${app.count}</div>
+                    <div class="app-icon">${app.icon}</div>
+                    <div class="app-info">
+                        <div class="app-name">${app.name}</div>
+                        <div class="app-desc">${app.desc}</div>
+                    </div>
+                `;
+                appGrid.appendChild(appItem);
+            });
+        }
+
+        function openApp(url, element, appId, event) {
+            createRipple(event, element);
+            element.style.transform = 'scale(0.95)';
+
+            // Update local count immediately for UI feedback
+            const app = allApps.find(a => a.id === appId);
+            if(app) app.count++;
+
+            updateClickCount(appId); // Sync to GitHub
+
+            setTimeout(() => {
+                window.open(url, '_blank');
+                element.style.transform = '';
+                renderApps(); // Re-render to show new count
+            }, 150);
+        }
+
+        // --- GitHub Sync Logic (Same as before, simplified for space) ---
+        async function updateClickCount(appId) {
+            const clickData = {};
+            allApps.forEach(a => clickData[a.id] = a.count);
+            if (githubConfig.pat) {
+                // Fire and forget - don't await to speed up UI
+                saveGitHubData(clickData).catch(err => console.error(err));
+            } else {
+                 // Save to local storage as fallback if no git
+                 localStorage.setItem('temp_click_counts', JSON.stringify(clickData));
+            }
+        }
+
+        async function fetchGitHubData() {
+            if (!githubConfig.pat) {
+                // Try load local fallback
+                const localData = JSON.parse(localStorage.getItem('temp_click_counts') || '{}');
+                return localData;
+            }
+            const fileUrl = `https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/${githubConfig.path}${GITHUB_DATA_FILE_NAME}`;
+            try {
+                const response = await fetch(fileUrl, { headers: { 'Authorization': `token ${githubConfig.pat}` } });
+                if (response.ok) {
+                    const data = await response.json();
+                    return JSON.parse(atob(data.content));
+                }
+            } catch (e) { console.error(e); }
+            return {};
+        }
+
+        async function saveGitHubData(data) {
+            if (!githubConfig.pat) return;
+            const fileUrl = `https://api.github.com/repos/${githubConfig.username}/${githubConfig.repo}/contents/${githubConfig.path}${GITHUB_DATA_FILE_NAME}`;
+            let sha = null;
+            try {
+                const getRes = await fetch(fileUrl, { headers: { 'Authorization': `token ${githubConfig.pat}` } });
+                if (getRes.ok) sha = (await getRes.json()).sha;
+            } catch(e){}
+
+            const payload = {
+                message: "Update stats",
+                content: btoa(JSON.stringify(data, null, 2)),
+                sha: sha
+            };
+
+            await fetch(fileUrl, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${githubConfig.pat}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        async function initData() {
+            const data = await fetchGitHubData();
+            allApps.forEach(app => {
+                if (data[app.id]) app.count = data[app.id];
+            });
+            renderApps();
+        }
+
+        // --- Settings Modal Logic ---
+        function showSettingsModal() {
+            const config = JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY) || '{}');
+            document.getElementById('githubUsername').value = config.username || '';
+            document.getElementById('githubRepo').value = config.repo || '';
+            document.getElementById('githubPat').value = config.pat || '';
+            document.getElementById('dataPath').value = config.path || 'Notes/';
+            settingsModal.style.display = 'flex';
+        }
+
+        document.getElementById('cancelBtn').onclick = () => settingsModal.style.display = 'none';
+
+        document.getElementById('saveBtn').onclick = async () => {
+            const newConfig = {
+                username: document.getElementById('githubUsername').value.trim(),
+                repo: document.getElementById('githubRepo').value.trim(),
+                pat: document.getElementById('githubPat').value.trim(),
+                path: document.getElementById('dataPath').value.trim()
+            };
+            if(!newConfig.path.endsWith('/')) newConfig.path += '/';
+
+            connectionStatus.innerText = "Checking...";
+            // Simple check
+            try {
+                const res = await fetch(`https://api.github.com/repos/${newConfig.username}/${newConfig.repo}`, {
+                     headers: { 'Authorization': `token ${newConfig.pat}` }
+                });
+                if(res.ok) {
+                    localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(newConfig));
+                    githubConfig = newConfig;
+                    connectionStatus.innerText = "Success!";
+                    connectionStatus.style.color = "green";
+                    setTimeout(() => { settingsModal.style.display = 'none'; initData(); }, 800);
+                } else { throw new Error(); }
+            } catch(e) {
+                connectionStatus.innerText = "Failed. Check details.";
+                connectionStatus.style.color = "red";
+            }
+        };
+
+        // --- Ripple Effect ---
+        function createRipple(event, element) {
+            const ripple = document.createElement('span');
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+            ripple.className = 'ripple';
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            element.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const storedConfig = localStorage.getItem(GITHUB_CONFIG_KEY);
+            if (storedConfig) {
+                githubConfig = JSON.parse(storedConfig);
+                initData();
+            } else {
+                // If no config, still render apps just without sync
+                renderApps();
+            }
+        });
+    </script>
+</body>
+</html>
