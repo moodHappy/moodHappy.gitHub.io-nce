@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 生成器</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            --bg-page: #f1f5f9;
+            --bg-panel: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --color-primary: #10b981;
+            --color-primary-hover: #059669;
+            --border-color: #e2e8f0;
+            --a4-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        * { box-sizing: border-box; }
+        
+        body { 
+            font-family: Inter, -apple-system, system-ui, sans-serif; 
+            background-color: var(--bg-page); 
+            color: var(--text-primary); 
+            margin: 0; padding: 0; 
+            display: flex; flex-direction: column; 
+            height: 100vh; overflow: hidden; 
+        }
+        
+        /* 顶部导航 */
+        .navbar { 
+            background: var(--bg-panel); 
+            padding: 12px 20px; 
+            border-bottom: 1px solid var(--border-color); 
+            display: flex; justify-content: space-between; align-items: center; 
+            z-index: 10; 
+        }
+        .navbar h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        
+        /* 导出按钮 */
+        #exportBtn { 
+            background-color: var(--color-primary); 
+            color: white; border: none; 
+            padding: 9px 18px; font-size: 14px; font-weight: 600; 
+            border-radius: 8px; cursor: pointer; 
+            transition: all 0.2s; display: flex; align-items: center; gap: 6px; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        #exportBtn:hover { background-color: var(--color-primary-hover); transform: translateY(-1px); }
+        #exportBtn:disabled { background-color: #a7f3d0; cursor: not-allowed; transform: none; }
+
+        /* 主体内容区 */
+        .main-content { display: flex; flex: 1; overflow: hidden; }
+        
+        /* 左侧代码编辑器 */
+        .editor-pane { width: 35%; display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border-color); }
+        .pane-header { padding: 10px 15px; background: #fafafa; border-bottom: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        textarea { flex: 1; width: 100%; padding: 15px; border: none; resize: none; font-family: 'Fira Code', 'Courier New', monospace; font-size: 13px; line-height: 1.6; outline: none; background: #fdfdfd; color: #1e293b; }
+
+        /* 右侧预览/编辑区 */
+        .preview-pane { 
+            width: 65%; background: #e2e8f0; 
+            overflow: auto; 
+            display: flex; flex-direction: column; align-items: center; 
+            padding: 20px; position: relative; 
+        }
+        
+        /* 悬浮排版工具栏 */
+        .edit-toolbar { 
+            position: sticky; top: 0; background: rgba(255,255,255,0.95); 
+            backdrop-filter: blur(4px);
+            padding: 8px; border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            margin-bottom: 15px; display: flex; gap: 8px; align-items: center; 
+            z-index: 20; border: 1px solid var(--border-color); 
+        }
+        .tool-btn { 
+            background-color: var(--bg-panel); color: var(--text-primary); 
+            border: 1px solid var(--border-color); padding: 7px 16px; 
+            font-size: 15px; font-weight: 700; border-radius: 6px; 
+            cursor: pointer; transition: all 0.2s; 
+            font-family: ui-sans-serif, system-ui, sans-serif;
+        }
+        .tool-btn:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+
+        /* A4 纸张外壳 */
+        .a4-wrapper { 
+            background: white; width: 210mm; min-height: 297mm; 
+            box-shadow: var(--a4-shadow); 
+            position: relative; border-radius: 2px;
+            transform-origin: top center; 
+        }
+        iframe { width: 100%; height: 100%; min-height: 297mm; border: none; display: block; border-radius: 2px;}
+
+        /* 移动端适配 */
+        @media (max-width: 900px) {
+            body { height: auto; overflow: auto; }
+            .main-content { flex-direction: column; height: auto; overflow: visible; }
+            .editor-pane { width: 100%; height: 300px; border-right: none; border-bottom: 1px solid var(--border-color); position: sticky; top: 60px; z-index: 5;}
+            .preview-pane { width: 100%; height: auto; padding: 10px; overflow: visible;}
+            .edit-toolbar { position: sticky; top: 370px; width: 100%; justify-content: center; }
+            .a4-wrapper { 
+                transform: scale(calc((100vw - 20px) / 794)); 
+                margin-bottom: -50%; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h2>PDF 生成器</h2>
+        <button id="exportBtn" onclick="exportToPDF()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 11L11 8L10.2929 7.29289L8.5 9.08579L8.5 2L7.5 2L7.5 9.08579L5.70711 7.29289L5 8L8 11Z" fill="white"/><path d="M4 11.5V12C4 12.5523 4.44772 13 5 13H11C11.5523 13 12 12.5523 12 12V11.5H13V12C13 13.1046 12.1046 14 11 14H5C3.89543 14 3 13.1046 3 12V11.5H4Z" fill="white"/></svg>
+            导出 PDF
+        </button>
+    </div>
+
+    <div class="main-content">
+        <div class="editor-pane">
+            <div class="pane-header">HTML Input</div>
+            <textarea id="htmlInput" placeholder="在此粘贴 HTML 代码..."></textarea>
+        </div>
+
+        <div class="preview-pane">
+            <div class="edit-toolbar">
+                <button class="tool-btn" onclick="changeFontSize(1)" title="增大字体">A+</button>
+                <button class="tool-btn" onclick="changeFontSize(-1)" title="减小字体">A-</button>
+            </div>
+
+            <div class="a4-wrapper" id="captureTarget">
+                <iframe id="previewIframe"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const htmlInput = document.getElementById('htmlInput');
+        const previewIframe = document.getElementById('previewIframe');
+        const exportBtn = document.getElementById('exportBtn');
+
+        htmlInput.addEventListener('input', updatePreview);
+
+        function updatePreview() {
+            const rawHtml = htmlInput.value;
+            const doc = previewIframe.contentDocument || previewIframe.contentWindow.document;
+            doc.open();
+            
+            const injectedHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        html, body { background-color: #ffffff; margin: 0; padding: 0; min-height: 297mm; color: #000; font-family: SimSun, 'Songti SC', serif; }
+                        [contenteditable="true"]:focus { outline: 2px solid #10b981; outline-offset: 1px; }
+                        
+                        table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+                        td, th { transition: background-color 0.1s; position: relative; border: 1px solid #000; padding: 5px; }
+                        
+                        td[data-resizing="col"], th[data-resizing="col"] { border-right: 2px solid #10b981 !important; }
+                        td[data-resizing="row"], th[data-resizing="row"] { border-bottom: 2px solid #10b981 !important; }
+                    </style>
+                </head>
+                <body contenteditable="true">
+                    ${rawHtml}
+                    
+                    <script>
+                        let resizingEl = null;
+                        let startX, startY, startWidth, startHeight;
+                        let resizeMode = '';
+
+                        document.addEventListener('mousemove', (e) => {
+                            if (resizingEl) {
+                                if (resizeMode === 'col' || resizeMode === 'both') {
+                                    resizingEl.style.width = (startWidth + (e.clientX - startX)) + 'px';
+                                }
+                                if (resizeMode === 'row' || resizeMode === 'both') {
+                                    const newHeight = startHeight + (e.clientY - startY) + 'px';
+                                    resizingEl.style.height = newHeight;
+                                    if(resizingEl.parentElement) resizingEl.parentElement.style.height = newHeight;
+                                }
+                                return;
+                            }
+
+                            const target = e.target;
+                            if (target.tagName === 'TD' || target.tagName === 'TH') {
+                                const rect = target.getBoundingClientRect();
+                                const isRightEdge = rect.right - e.clientX <= 8;
+                                const isBottomEdge = rect.bottom - e.clientY <= 8;
+
+                                if (isRightEdge && isBottomEdge) {
+                                    target.style.cursor = 'nwse-resize';
+                                    target.dataset.ready = 'both';
+                                } else if (isRightEdge) {
+                                    target.style.cursor = 'col-resize';
+                                    target.dataset.ready = 'col';
+                                } else if (isBottomEdge) {
+                                    target.style.cursor = 'row-resize';
+                                    target.dataset.ready = 'row';
+                                } else {
+                                    target.style.cursor = 'text';
+                                    target.dataset.ready = '';
+                                }
+                            }
+                        });
+
+                        document.addEventListener('mousedown', (e) => {
+                            const target = e.target;
+                            if ((target.tagName === 'TD' || target.tagName === 'TH') && target.dataset.ready) {
+                                resizingEl = target;
+                                resizeMode = target.dataset.ready;
+                                target.dataset.resizing = resizeMode; 
+                                startX = e.clientX; startY = e.clientY;
+                                startWidth = target.offsetWidth; startHeight = target.offsetHeight;
+                                e.preventDefault(); 
+                            }
+                        });
+
+                        document.addEventListener('mouseup', () => {
+                            if (resizingEl) {
+                                resizingEl.style.cursor = 'text';
+                                resizingEl.dataset.resizing = '';
+                                resizingEl = null; resizeMode = '';
+                            }
+                        });
+                    <\/script>
+                </body>
+                </html>
+            `;
+            doc.write(injectedHtml);
+            doc.close();
+            
+            setTimeout(() => {
+                const bodyHeight = doc.body.scrollHeight;
+                const minHeight = 1122; 
+                previewIframe.style.height = Math.max(minHeight, bodyHeight) + 'px';
+                document.getElementById('captureTarget').style.minHeight = Math.max(minHeight, bodyHeight) + 'px';
+            }, 300);
+        }
+
+        function changeFontSize(delta) {
+            const iframeWin = previewIframe.contentWindow;
+            const selection = iframeWin.getSelection();
+            
+            if (selection.rangeCount === 0) return;
+
+            let node = selection.focusNode;
+            if (node.nodeType === 3) node = node.parentNode;
+
+            let targetElement = node.closest('td, th, p, span, h1, h2, div');
+            if (!targetElement) targetElement = node;
+
+            let currentSize = parseFloat(iframeWin.getComputedStyle(targetElement).fontSize) || 16;
+            let newSize = currentSize + (delta * 1); 
+            
+            targetElement.style.fontSize = newSize + 'px';
+            targetElement.style.lineHeight = '1.5'; 
+        }
+
+        async function exportToPDF() {
+            if (!htmlInput.value.trim()) return;
+            
+            const iframeDoc = previewIframe.contentDocument || previewIframe.contentWindow.document;
+            const iframeBody = iframeDoc.body;
+            
+            iframeBody.setAttribute('contenteditable', 'false');
+            exportBtn.innerHTML = '<svg class="animate-spin" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5V3M8 13V14.5M14.5 8H13M3 8H1.5M12.6 3.4L11.5 4.5M4.5 11.5L3.4 12.6M12.6 12.6L11.5 11.5M4.5 4.5L3.4 3.4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg> 处理中...';
+            
+            let styleElement = document.getElementById('spin-style');
+            if (!styleElement) {
+                styleElement = document.createElement('style');
+                styleElement.id = 'spin-style';
+                styleElement.innerHTML = `.animate-spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+                document.head.appendChild(styleElement);
+            }
+
+            exportBtn.disabled = true;
+
+            try {
+                const isMobile = window.innerWidth <= 900;
+                const wrapper = document.getElementById('captureTarget');
+                if(isMobile) {
+                    wrapper.style.transform = 'none'; 
+                    wrapper.style.marginBottom = '0';
+                }
+
+                const canvas = await html2canvas(iframeBody, {
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: "#ffffff",
+                    windowWidth: 794, 
+                    windowHeight: iframeDoc.documentElement.scrollHeight
+                });
+
+                if(isMobile) {
+                    wrapper.style.transform = `scale(calc((100vw - 20px) / 794))`; 
+                    wrapper.style.marginBottom = '-50%';
+                }
+
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4'); 
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save('Export_' + new Date().getTime() + '.pdf');
+
+            } catch (error) {
+                console.error(error);
+                alert("PDF 生成失败");
+            } finally {
+                iframeBody.setAttribute('contenteditable', 'true');
+                exportBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 11L11 8L10.2929 7.29289L8.5 9.08579L8.5 2L7.5 2L7.5 9.08579L5.70711 7.29289L5 8L8 11Z" fill="white"/><path d="M4 11.5V12C4 12.5523 4.44772 13 5 13H11C11.5523 13 12 12.5523 12 12V11.5H13V12C13 13.1046 12.1046 14 11 14H5C3.89543 14 3 13.1046 3 12V11.5H14Z" fill="white"/></svg> 导出 PDF';
+                exportBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
