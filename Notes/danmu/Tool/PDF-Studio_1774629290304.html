@@ -41,7 +41,17 @@
         }
         .navbar h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
         
-        /* 导出按钮 */
+        .action-group { display: flex; gap: 10px; align-items: center; }
+
+        /* 按钮组 */
+        .btn-secondary {
+            background-color: var(--bg-page); color: var(--text-primary); 
+            border: 1px solid var(--border-color); padding: 8px 14px; 
+            font-size: 13px; font-weight: 600; border-radius: 8px; 
+            cursor: pointer; transition: all 0.2s; display: none; /* 初始隐藏 */
+        }
+        .btn-secondary:hover { background-color: #e2e8f0; }
+
         #exportBtn { 
             background-color: var(--color-primary); 
             color: white; border: none; 
@@ -54,10 +64,10 @@
         #exportBtn:disabled { background-color: #a7f3d0; cursor: not-allowed; transform: none; }
 
         /* 主体内容区 */
-        .main-content { display: flex; flex: 1; overflow: hidden; }
+        .main-content { display: flex; flex: 1; overflow: hidden; transition: all 0.3s ease;}
         
         /* 左侧代码编辑器 */
-        .editor-pane { width: 35%; display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border-color); }
+        .editor-pane { width: 35%; display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border-color); transition: width 0.3s ease; }
         .pane-header { padding: 10px 15px; background: #fafafa; border-bottom: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
         textarea { flex: 1; width: 100%; padding: 15px; border: none; resize: none; font-family: 'Fira Code', 'Courier New', monospace; font-size: 13px; line-height: 1.6; outline: none; background: #fdfdfd; color: #1e293b; }
 
@@ -66,8 +76,12 @@
             width: 65%; background: #e2e8f0; 
             overflow: auto; 
             display: flex; flex-direction: column; align-items: center; 
-            padding: 20px; position: relative; 
+            padding: 20px; position: relative; transition: width 0.3s ease;
         }
+
+        /* ==== 核心：隐藏编辑器的状态 ==== */
+        .main-content.hide-editor .editor-pane { display: none; }
+        .main-content.hide-editor .preview-pane { width: 100%; }
         
         /* 悬浮排版工具栏 */
         .edit-toolbar { 
@@ -107,6 +121,7 @@
                 transform: scale(calc((100vw - 20px) / 794)); 
                 margin-bottom: -50%; 
             }
+            .main-content.hide-editor .preview-pane { height: auto; }
         }
     </style>
 </head>
@@ -114,13 +129,16 @@
 
     <div class="navbar">
         <h2>PDF 生成器</h2>
-        <button id="exportBtn" onclick="exportToPDF()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 11L11 8L10.2929 7.29289L8.5 9.08579L8.5 2L7.5 2L7.5 9.08579L5.70711 7.29289L5 8L8 11Z" fill="white"/><path d="M4 11.5V12C4 12.5523 4.44772 13 5 13H11C11.5523 13 12 12.5523 12 12V11.5H13V12C13 13.1046 12.1046 14 11 14H5C3.89543 14 3 13.1046 3 12V11.5H4Z" fill="white"/></svg>
-            导出 PDF
-        </button>
+        <div class="action-group">
+            <button id="toggleCodeBtn" class="btn-secondary" onclick="toggleEditor()">&lt;/&gt; 代码</button>
+            <button id="exportBtn" onclick="exportToPDF()">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 11L11 8L10.2929 7.29289L8.5 9.08579L8.5 2L7.5 2L7.5 9.08579L5.70711 7.29289L5 8L8 11Z" fill="white"/><path d="M4 11.5V12C4 12.5523 4.44772 13 5 13H11C11.5523 13 12 12.5523 12 12V11.5H13V12C13 13.1046 12.1046 14 11 14H5C3.89543 14 3 13.1046 3 12V11.5H4Z" fill="white"/></svg>
+                导出 PDF
+            </button>
+        </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" id="mainContent">
         <div class="editor-pane">
             <div class="pane-header">HTML Input</div>
             <textarea id="htmlInput" placeholder="在此粘贴 HTML 代码..."></textarea>
@@ -142,8 +160,34 @@
         const htmlInput = document.getElementById('htmlInput');
         const previewIframe = document.getElementById('previewIframe');
         const exportBtn = document.getElementById('exportBtn');
+        const toggleCodeBtn = document.getElementById('toggleCodeBtn');
+        const mainContent = document.getElementById('mainContent');
+        
+        let hasAutoHidden = false; // 防止用户在展开代码区修改时反复自动隐藏
 
-        htmlInput.addEventListener('input', updatePreview);
+        htmlInput.addEventListener('input', () => {
+            updatePreview();
+            
+            // 自动折叠逻辑：只要框里有内容，就展示“代码”切换按钮
+            if (htmlInput.value.trim().length > 0) {
+                toggleCodeBtn.style.display = 'block';
+                // 如果是第一次粘贴，自动隐藏左侧代码区
+                if (!hasAutoHidden) {
+                    mainContent.classList.add('hide-editor');
+                    hasAutoHidden = true;
+                }
+            } else {
+                // 如果清空了输入框，恢复原状
+                toggleCodeBtn.style.display = 'none';
+                mainContent.classList.remove('hide-editor');
+                hasAutoHidden = false;
+            }
+        });
+
+        // 切换代码区显示/隐藏
+        function toggleEditor() {
+            mainContent.classList.toggle('hide-editor');
+        }
 
         function updatePreview() {
             const rawHtml = htmlInput.value;
