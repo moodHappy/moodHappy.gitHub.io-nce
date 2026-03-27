@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anki Pro (Optimized)</title>
+
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Anki_Pro.png">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root { 
+            --bg-body: #f0f2f5; --bg-card: #ffffff; --bg-sidebar: #ffffff;
+            --text-primary: #1a1a1a; --text-secondary: #65676b; 
+            --accent-color: #2563eb; --border-color: #e4e6eb; 
+            --color-again: #ff5252; --color-hard: #ffab40;
+            --color-good: #69f0ae; --color-easy: #40c4ff;
+            --color-error: #ef4444;
+            /* Anki 统计配色 */
+            --color-new: #42a5f5; 
+            --color-learn: #ff7043; 
+            --color-young: #ffa726; 
+            --color-mature: #66bb6a; 
+            --color-suspended: #bdbdbd;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --sidebar-width: 280px;
+        }
+        @media (prefers-color-scheme: dark) { 
+            :root { 
+                --bg-body: #18191a; --bg-card: #242526; --bg-sidebar: #242526;
+                --text-primary: #e4e6eb; --text-secondary: #b0b3b8; 
+                --accent-color: #60a5fa; --border-color: #3e4042; 
+                --color-good: #00e676; 
+            } 
+        }
+
+        * { -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); display: flex; flex-direction: column; }
+
+        .container { 
+            width: 100%; max-width: 600px; margin: 0 auto; 
+            position: relative; box-sizing: border-box; padding: 10px 20px;
+            flex: 1; display: flex; flex-direction: column; 
+            transition: margin 0.3s ease;
+        }
+
+        /* === Header === */
+        header { 
+            flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; 
+            margin-bottom: 15px; position: relative; padding-top: 10px; height: 50px;
+        }
+
+        .header-title-group { text-align: center; flex: 1; }
+        h1 { font-family: 'Merriweather', serif; margin: 0; font-size: 1.4rem; }
+        .subtitle { color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;}
+
+        .icon-btn { 
+            background: transparent; border: none; color: var(--text-primary);
+            width: 40px; height: 40px; border-radius: 50%; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; font-size: 22px;
+            transition: all 0.2s;
+        }
+        .icon-btn:active { background: rgba(0,0,0,0.05); }
+
+        /* === 侧边栏 (Sidebar) === */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: var(--sidebar-width); background: var(--bg-sidebar);
+            z-index: 1001; transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 2px 0 12px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+        }
+        .sidebar.active { transform: translateX(0); }
+
+        .sidebar-header {
+            padding: 25px 20px; border-bottom: 1px solid var(--border-color);
+            background: var(--bg-body);
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+
+        .sidebar-menu { padding: 10px 0; overflow-y: auto; flex: 1; }
+        .menu-item {
+            padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.03);
+            font-size: 0.95rem; color: var(--text-primary);
+        }
+        .menu-item:active { background: rgba(0,0,0,0.05); }
+        .menu-item.action { color: var(--accent-color); font-weight: 500; }
+        .menu-icon { width: 24px; text-align: center; margin-right: 12px; font-size: 1.1rem; }
+
+        /* Toggle Switch */
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 34px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        input:checked + .toggle-slider { background-color: var(--accent-color); }
+        input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        /* === 统计面板 (Advanced) === */
+        .chart-section {
+            background: var(--bg-body); border-radius: 12px; padding: 15px; margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+        .chart-header { font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); border-left: 3px solid var(--accent-color); padding-left: 8px; }
+        .chart-canvas-container { position: relative; height: 200px; width: 100%; }
+
+        .stats-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+        .summary-card { background: var(--bg-body); padding: 10px 5px; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
+        .summary-val { font-size: 1.1rem; font-weight: 800; display: block; }
+        .summary-label { font-size: 0.7rem; color: var(--text-secondary); }
+
+        /* === 同步与控制 === */
+        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; display: none; align-items: center; gap: 5px; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); z-index: 50; }
+        .sync-badge.success { background: #dcfce7; color: #166534; }
+        .sync-badge.error { background: #fee2e2; color: #991b1b; }
+        .spin { animation: spin 1s infinite linear; display: inline-block; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .controls { 
+            background: var(--bg-card); padding: 15px 20px; border-radius: 20px; 
+            border: 1px solid var(--border-color); margin-bottom: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); flex-shrink: 0; display: block;
+        }
+        .controls.hidden { display: none !important; }
+
+        .controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        select#year-select { padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); }
+        .months-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+        .month-btn { padding: 8px 0; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; color: var(--text-secondary); font-size: 0.85rem; }
+        .month-btn.active { background: var(--accent-color); color: white; font-weight: 600; }
+        .month-btn:hover { background: var(--bg-body); }
+
+        #notes-container { 
+            perspective: 1000px; position: relative; flex: 1; display: flex; flex-direction: column; 
+            justify-content: flex-end; padding-bottom: 20px; transition: all 0.3s ease;
+        }
+        body.hide-archive #notes-container { justify-content: center; padding-bottom: 5vh; }
+
+        .note-card { 
+            background: var(--bg-card); border-radius: 24px; padding: 30px 24px; 
+            border: 1px solid var(--border-color); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08);
+            position: relative; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; min-height: 45vh; 
+            user-select: none; -webkit-user-select: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        /* 状态控制类 */
+        .hidden-el { display: none !important; }
+        .invisible-el { opacity: 0; pointer-events: none; }
+
+        .btn-delete-card {
+            position: absolute; left: 20px; top: 20px; background: transparent; border: none; 
+            color: var(--text-secondary); cursor: pointer; padding: 8px; border-radius: 50%; opacity: 0.5; z-index: 20;
+        }
+        .btn-delete-card:hover { background: #fee2e2; color: #ef4444; opacity: 1; }
+
+        .note-word { font-family: 'Merriweather', serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
+        .note-source { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; padding: 4px 10px; border-radius: 12px; background: rgba(0,0,0,0.03); max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;}
+
+        .note-meaning { 
+            font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
+            display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
+            background: var(--bg-body); border-radius: 16px; padding: 20px; 
+            filter: blur(10px); opacity: 0.7; transition: all 0.3s;
+        }
+        .note-meaning.revealed { filter: none; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px; user-select: text;}
+
+        .tts-container { margin-top: auto; margin-bottom: 15px; height: 50px; display: flex; align-items: center; justify-content: center; }
+        .tts-btn { background: transparent; border: none; color: var(--accent-color); cursor: pointer; transition: all 0.3s; width: 60px; height: 60px; display:flex; align-items:center; justify-content:center;}
+        .tts-btn:hover { transform: scale(1.1); }
+        .tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; pointer-events: none;}
+        .tts-btn.error { color: var(--color-error); animation: shake 0.5s; }
+        @keyframes breathe { 50% { opacity: 0.6; transform: scale(1.1); } }
+        @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } }
+
+        .anki-controls { 
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; margin-top: 10px;
+            opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s;
+        }
+        /* 当 meaning 被 reveal 时，显示 control */
+        .note-meaning.revealed ~ .anki-controls { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+        .anki-btn {
+            padding: 12px 4px; border-radius: 12px; border: none; cursor: pointer;
+            background: var(--bg-body); color: var(--text-secondary); position: relative; overflow: hidden;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+        }
+        .anki-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+        .btn-again::after { background: var(--color-again); } 
+        .btn-hard::after { background: var(--color-hard); } 
+        .btn-good::after { background: var(--color-good); } 
+        .btn-easy::after { background: var(--color-easy); }
+        .btn-label { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px;}
+        .btn-time { font-size: 0.7rem; opacity: 0.8; }
+
+        /* === 底部统计栏 (New Feature) === */
+        .bottom-stats-bar {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            padding: 15px 0 5px 0;
+            width: 100%;
+            margin-top: auto;
+            flex-shrink: 0;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* === 模态框 (Modal) === */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal { background: var(--bg-card); padding: 25px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .modal.full-height { height: 85vh; }
+        .modal h2 { margin-top: 0; font-size: 1.3rem; margin-bottom: 20px; text-align: center; font-weight: 800; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.85em; font-weight: 600; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); box-sizing: border-box; font-size: 14px; }
+
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+        .btn-save { background: var(--accent-color); color: white; width: 100%; }
+        .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
+
+        .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+        .tts-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .tts-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-mini { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-size:12px; }
+
+        /* Empty State & Error */
+        .status-page { text-align: center; padding: 40px 0; width: 100%; }
+        .emoji-lg { font-size: 3.5rem; margin-bottom: 15px; display: block; }
+        .error-box { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 12px; font-size: 0.9rem; text-align: left; margin-top: 20px;}
+
+        @media (max-width: 600px) {
+            .modal.full-height { width: 100%; height: 100%; max-width: none; max-height: none; border-radius: 0; top: 0; bottom: 0; margin: 0; padding: 15px;}
+            .stats-summary-grid { gap: 5px; margin-bottom: 15px; }
+            .summary-val { font-size: 1rem; }
+            .chart-header { font-size: 0.85rem; padding-left: 6px; margin-bottom: 8px; }
+            .chart-canvas-container { height: 180px; }
+            .chart-section { padding: 10px; margin-bottom: 10px; }
+            .bottom-stats-bar { font-size: 0.7rem; padding-bottom: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2><span style="font-size:1.5rem">🗂️</span> Anki Pro</h2>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:5px;">Optimized & Auto-Sync</div>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item">
+                <span style="display:flex; align-items:center"><span class="menu-icon">📅</span> 显示归档面板</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sidebar-show-archive" onchange="toggleConfig('showArchivePanel', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="menu-item">
+                <span style="display:flex; align-items:center"><span class="menu-icon">🗑️</span> 启用云端删除</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sidebar-enable-delete" onchange="toggleConfig('enableDelete', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="menu-item action" onclick="openStatsModal()">
+                <span style="display:flex; align-items:center"><span class="menu-icon">📊</span> 统计数据 (Statistics)</span>
+                <span>›</span>
+            </div>
+
+            <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 20px;">
+
+            <div class="menu-item action" onclick="fetchCloudProgress(this)">
+                <span style="display:flex; align-items:center"><span class="menu-icon">⬇️</span> 从云端下载进度</span>
+            </div>
+            <div class="menu-item action" onclick="syncProgressToCloud(this)">
+                <span style="display:flex; align-items:center"><span class="menu-icon">☁️</span> 上传进度到云端</span>
+            </div>
+        </div>
+        <div style="padding: 20px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
+            Version 4.3 Optimized
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal full-height">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
+                <h2 style="margin:0">📊 牌组统计</h2>
+                <button class="icon-btn" style="width:30px; height:30px; font-size:18px;" onclick="document.getElementById('statsModal').style.display='none'">✕</button>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding-right:5px; -webkit-overflow-scrolling: touch;">
+                <div class="stats-summary-grid">
+                    <div class="summary-card"><span class="summary-val" id="sum-due" style="color:var(--color-again)">0</span><span class="summary-label">今日到期</span></div>
+                    <div class="summary-card"><span class="summary-val" id="sum-avg-int">0d</span><span class="summary-label">平均间隔</span></div>
+                    <div class="summary-card"><span class="summary-val" id="sum-retention">0%</span><span class="summary-label">今日复习保留率</span></div>
+                </div>
+                <div class="chart-section"><div class="chart-header">将来到期的复习 (Forecast)</div><div class="chart-canvas-container"><canvas id="chartForecast"></canvas></div></div>
+                <div class="chart-section"><div class="chart-header">卡片数量 (Card Counts)</div><div class="chart-canvas-container" style="height:250px;"><canvas id="chartCounts"></canvas></div></div>
+                <div class="chart-section"><div class="chart-header">复习间隔 (Review Intervals)</div><div class="chart-canvas-container"><canvas id="chartIntervals"></canvas></div></div>
+                <div class="chart-section"><div class="chart-header">本次学习回答分布 (Answer Buttons)</div><div class="chart-canvas-container"><canvas id="chartButtons"></canvas></div></div>
+                <div class="chart-section"><div class="chart-header">今日逐小时分析 (Hourly Breakdown)</div><div class="chart-canvas-container"><canvas id="chartHourly"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>⚙️ 高级配置</h2>
+            <div class="form-group">
+                <label>TTS 语音源配置 (多路自动切换)</label>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">系统将按顺序尝试播放。支持 <code>{text}</code> 占位符。</div>
+                <div id="tts-config-list"></div>
+                <button class="btn-mini" style="width:100%; border-style:dashed; padding:10px;" onclick="addTTSConfig()">+ 添加语音源</button>
+            </div>
+            <hr style="border:0; border-top:1px solid var(--border-color); margin: 15px 0;">
+            <div class="form-group"><label>GitHub User</label> <input type="text" id="gh-user"></div>
+            <div class="form-group"><label>GitHub Repo</label> <input type="text" id="gh-repo"></div>
+            <div class="form-group"><label>Access Token</label> <input type="password" id="gh-token" placeholder="ghp_..."></div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-cancel" onclick="document.getElementById('settingsModal').style.display='none'" style="flex:1">取消</button>
+                <button class="btn btn-save" onclick="saveSettings()" style="flex:1">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <button class="icon-btn" onclick="toggleSidebar(true)" title="菜单">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            <div class="header-title-group">
+                <h1>Anki Pro</h1>
+                <div class="subtitle" id="deck-stats">正在准备数据...</div>
+            </div>
+            <button class="icon-btn" onclick="openSettings()" title="高级设置">⚙️</button>
+            <div id="sync-status" class="sync-badge"></div>
+        </header>
+
+        <div class="controls" id="archive-panel">
+            <div class="controls-header">
+                <span style="font-weight:600; display:flex; align-items:center; gap:6px;">📅 归档浏览</span>
+                <select id="year-select" disabled><option>加载中...</option></select>
+            </div>
+            <div class="months-grid" id="month-container"></div>
+        </div>
+
+        <div id="notes-container">
+
+            <div id="state-message" class="status-page">
+                <div class="emoji-lg" id="msg-emoji">⏳</div>
+                <div id="msg-title" style="font-weight:700; margin-bottom:5px;">初始化中...</div>
+                <div id="msg-desc" style="color:var(--text-secondary); font-size:0.9rem;"></div>
+                <div id="msg-action" style="margin-top:20px;"></div>
+            </div>
+
+            <div id="static-card" class="note-card hidden-el" onclick="handleCardClick(event)">
+                <button id="btn-delete-card" class="btn-delete-card hidden-el" onclick="deleteCurrentCard(this)" title="从云端永久删除">🗑️</button>
+
+                <div id="card-word" class="note-word">--</div>
+                <a id="card-source" href="#" target="_blank" class="note-source">Source Link</a>
+
+                <div id="card-meaning" class="note-meaning">--</div>
+
+                <div class="tts-container">
+                    <button id="btn-play-tts" class="tts-btn" onclick="playTTS(this)">
+                         <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+
+                <div class="anki-controls">
+                    <button class="anki-btn btn-again" onclick="handleRate(1)">
+                        <span class="btn-label">重来</span><span class="btn-time" id="time-again">1m</span>
+                    </button>
+                    <button class="anki-btn btn-hard" onclick="handleRate(2)">
+                        <span class="btn-label">困难</span><span class="btn-time" id="time-hard">5m</span>
+                    </button>
+                    <button class="anki-btn btn-good" onclick="handleRate(3)">
+                        <span class="btn-label">良好</span><span class="btn-time" id="time-good">10m</span>
+                    </button>
+                    <button class="anki-btn btn-easy" onclick="handleRate(4)">
+                        <span class="btn-label">简单</span><span class="btn-time" id="time-easy">4d</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bottom-stats-bar" id="bottom-stats-text">
+            今天在 0 秒内学习了 0 张卡片 (平均每张卡片 0 秒)
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // Global Variables & Config
+        // ============================================
+        let globalAudio = null;
+        let isDirty = false; // 脏数据标记：true 表示有未同步的进度
+        let currentCardStartTime = 0; // 记录当前卡片开始显示的时间
+
+        const DEFAULT_TTS_LIST = [
+            { url: 'https://read-aloud-123.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
+            { url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}', token: '' }
+        ];
+
+        let USER_CONFIG = {
+            user: localStorage.getItem('gh_user') || 'moodHappy',
+            repo: localStorage.getItem('gh_repo') || 'HelloWorld',
+            token: localStorage.getItem('gh_token') || '',
+            ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || JSON.stringify(DEFAULT_TTS_LIST)),
+            enableDelete: localStorage.getItem('gh_enable_delete') === 'true',
+            showArchivePanel: localStorage.getItem('gh_show_archive_panel') !== 'false' 
+        };
+
+        const SYNC_FILE_PATH = 'Notes/anki_data.json'; 
+        const LOCAL_DB_KEY = 'anki_db_v2'; 
+        const DELETED_IDS_KEY = 'anki_deleted_ids'; 
+        const DAILY_STATS_KEY = 'anki_daily_stats_v1';
+
+        // Helper: Manage Daily Stats
+        function getDailyStats() {
+            const todayStr = new Date().toLocaleDateString();
+            let data = JSON.parse(localStorage.getItem(DAILY_STATS_KEY) || 'null');
+            // 如果日期不同，或者数据结构旧（缺少 count/time），则重置
+            if (!data || data.date !== todayStr || typeof data.count === 'undefined') {
+                data = { 
+                    date: todayStr, 
+                    buttons: {1:0, 2:0, 3:0, 4:0}, 
+                    hourly: new Array(24).fill(0),
+                    count: 0, // 今天复习的总张数
+                    time: 0   // 今天复习的总秒数
+                };
+            }
+            return data;
+        }
+
+        function updateDailyStats(rating, durationSec) {
+            let data = getDailyStats();
+            data.buttons[rating]++;
+            data.hourly[new Date().getHours()]++;
+
+            data.count = (data.count || 0) + 1;
+            // Cap duration per card to 60s to avoid AFK skewing stats
+            const safeDuration = Math.min(Math.max(0, durationSec), 60); 
+            data.time = (data.time || 0) + safeDuration;
+
+            localStorage.setItem(DAILY_STATS_KEY, JSON.stringify(data));
+            return data;
+        }
+
+        function updateBottomStatsUI() {
+            const stats = getDailyStats();
+            const count = stats.count || 0;
+            const time = stats.time || 0;
+
+            // Format total time string (seconds or minutes)
+            let timeStr = "";
+            if (time < 60) {
+                timeStr = `${Math.round(time)} 秒`;
+            } else {
+                timeStr = `${(time / 60).toFixed(1)} 分钟`;
+            }
+
+            // Calculate average (avoid divide by zero)
+            const avg = count > 0 ? (time / count).toFixed(1) : 0;
+
+            const text = `今天在 ${timeStr}内学习了 ${count} 张卡片 (平均每张卡片 ${avg} 秒)`;
+            const el = document.getElementById('bottom-stats-text');
+            if(el) el.innerText = text;
+        }
+
+        let sessionStats = getDailyStats();
+        let CURRENT_VIEW_YEAR = new Date().getFullYear();
+        let CURRENT_VIEW_MONTH = new Date().getMonth() + 1;
+        let GLOBAL_CONFIG = null;
+        let cardQueue = [], totalItemsCount = 0;
+        let charts = {};
+
+        // ============================================
+        // 🧠 Scheduler & Algorithm (Optimized with Fuzz)
+        // ============================================
+        class AnkiScheduler {
+            constructor() { this.db = JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || '{}'); }
+            save() { localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(this.db)); }
+
+            loadExternalData(cloudData) { 
+                if (!cloudData) return 0; 
+                let updateCount = 0;
+                const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+                for (const [id, cloudCard] of Object.entries(cloudData)) {
+                    if (blacklist.includes(id)) continue; 
+                    const localCard = this.db[id];
+                    if (!localCard || (localCard.lastModified||0) < (cloudCard.lastModified||0)) {
+                        this.db[id] = cloudCard;
+                        updateCount++;
+                    }
+                }
+                this.save(); 
+                return updateCount;
+            }
+
+            getCardState(id) {
+                if (!this.db[id]) {
+                    this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0, laps: 0, reviews: 0 };
+                }
+                if (isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
+                return this.db[id];
+            }
+
+            previewNextDue(id) {
+                const card = this.getCardState(id);
+                return {
+                    again: this.calculate(card, 1).timeText,
+                    hard:  this.calculate(card, 2).timeText,
+                    good:  this.calculate(card, 3).timeText,
+                    easy:  this.calculate(card, 4).timeText
+                };
+            }
+
+            answerCard(id, rating) {
+                const result = this.calculate(this.getCardState(id), rating);
+                result.card.reviews = (result.card.reviews || 0) + 1;
+                if(rating === 1) result.card.laps = (result.card.laps || 0) + 1;
+
+                this.db[id] = result.card; 
+                this.save();
+
+                // Mark as Dirty for Auto-Sync
+                isDirty = true;
+
+                // Note: daily stats update now happens in handleRate to capture time accurately
+                return result;
+            }
+
+            // 核心算法优化：引入 Fuzz (Jitter)
+            applyFuzz(interval) {
+                if (interval < 3) return interval; // 短间隔不波动
+                // 波动范围 ±5%
+                const fuzzFactor = 0.95 + (Math.random() * 0.1); 
+                let newInterval = Math.round(interval * fuzzFactor);
+                // 确保至少有 1 天的变化（如果基数够大），并且不会变成 0
+                return Math.max(1, newInterval);
+            }
+
+            calculate(originalCard, rating) {
+                let card = JSON.parse(JSON.stringify(originalCard));
+                if (card.easeFactor < 1.3 || isNaN(card.easeFactor)) card.easeFactor = 2.5;
+
+                let nextIntervalMin = 0;
+                let isReview = false;
+
+                if (rating === 1) { 
+                    card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
+                    card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+                } else if (card.state === 'new' || card.state === 'learning') {
+                    if (rating === 2) nextIntervalMin = 6; 
+                    else if (rating === 3) { 
+                        if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } 
+                        else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; isReview = true;} 
+                    } else if (rating === 4) { card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; isReview = true;} 
+                } else { 
+                    isReview = true;
+                    if (rating === 2) { card.interval = Math.max(1, Math.floor(card.interval * 1.2)); card.easeFactor -= 0.15; } 
+                    else if (rating === 3) { card.interval = Math.floor(card.interval * card.easeFactor); } 
+                    else if (rating === 4) { card.interval = Math.floor(card.interval * card.easeFactor * 1.3); card.easeFactor += 0.15; }
+                    nextIntervalMin = card.interval * 1440;
+                }
+
+                // Apply Fuzzing to long-term reviews to scatter heatmaps
+                if (isReview && card.interval > 2) {
+                    card.interval = this.applyFuzz(card.interval);
+                    nextIntervalMin = card.interval * 1440;
+                }
+
+                if (nextIntervalMin < 1440) card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
+                else {
+                    const daysToAdd = Math.round(nextIntervalMin / 1440);
+                    const targetDate = new Date();
+                    targetDate.setDate(targetDate.getDate() + daysToAdd);
+                    targetDate.setHours(4, 0, 0, 0); // Reset to 4AM next due day
+                    if (targetDate.getTime() <= Date.now()) targetDate.setDate(targetDate.getDate() + 1);
+                    card.dueDate = targetDate.getTime();
+                }
+                card.lastModified = Date.now(); 
+
+                let timeText;
+                if (nextIntervalMin < 60) timeText = nextIntervalMin + 'm';
+                else if (nextIntervalMin < 1440) timeText = Math.round(nextIntervalMin / 60) + 'h';
+                else if (nextIntervalMin < 43200) timeText = Math.round(nextIntervalMin / 1440) + 'd';
+                else if (nextIntervalMin < 525600) timeText = Math.round(nextIntervalMin / 43200) + 'mo';
+                else timeText = Math.round(nextIntervalMin / 525600) + 'y';
+
+                return { card, timeText };
+            }
+        }
+        const scheduler = new AnkiScheduler();
+
+        // ============================================
+        // ☁️ Auto-Sync Logic
+        // ============================================
+        // 当用户切换标签页或关闭浏览器时，如果有脏数据，尝试同步
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && isDirty) {
+                console.log("[AutoSync] Triggered by visibility hidden");
+                syncProgressToCloud(null, true);
+            }
+        });
+
+        // 备用：部分浏览器支持 beforeunload 进行少量网络请求
+        window.addEventListener('beforeunload', (e) => {
+            if (isDirty) {
+                // navigator.sendBeacon 也许更好，但这里复用现有逻辑
+                syncProgressToCloud(null, true);
+            }
+        });
+
+        // ============================================
+        // Sidebar & View
+        // ============================================
+        function toggleSidebar(show) {
+            const sb = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if(show) { 
+                sb.classList.add('active'); overlay.classList.add('active'); 
+                document.getElementById('sidebar-show-archive').checked = USER_CONFIG.showArchivePanel;
+                document.getElementById('sidebar-enable-delete').checked = USER_CONFIG.enableDelete;
+            } else { 
+                sb.classList.remove('active'); overlay.classList.remove('active'); 
+            }
+        }
+
+        function toggleConfig(key, value) {
+            USER_CONFIG[key] = value;
+            localStorage.setItem('gh_' + key, value);
+            if(key === 'showArchivePanel') applyViewSettings();
+            if(key === 'enableDelete') {
+                 const btn = document.getElementById('btn-delete-card');
+                 if(btn) value ? btn.classList.remove('hidden-el') : btn.classList.add('hidden-el');
+            }
+        }
+
+        function applyViewSettings() {
+            const panel = document.getElementById('archive-panel');
+            if(USER_CONFIG.showArchivePanel) {
+                panel.classList.remove('hidden'); document.body.classList.remove('hide-archive');
+            } else {
+                panel.classList.add('hidden'); document.body.classList.add('hide-archive');
+            }
+        }
+
+        // ============================================
+        // Sync API
+        // ============================================
+        const uiSync = document.getElementById('sync-status');
+        function updateSyncStatus(msg, type) {
+            uiSync.style.display = 'inline-flex'; uiSync.className = `sync-badge ${type}`; uiSync.innerHTML = msg;
+            if(type !== 'loading') setTimeout(() => { uiSync.style.display = 'none'; }, 3000);
+        }
+
+        async function fetchCloudProgress(btnElement) {
+            if(btnElement) toggleSidebar(false); 
+            if(!USER_CONFIG.token) { alert("请先在高级设置中填写 Token"); return; }
+            const originalText = btnElement ? btnElement.innerHTML : '';
+            if(btnElement) { btnElement.style.pointerEvents='none'; btnElement.innerHTML = `<span class="spin">🔄</span> 下载中...`; }
+            else updateSyncStatus('<span class="spin">🔄</span> 下载中...', 'loading');
+
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
+            try {
+                const res = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                if(res.status === 404) { 
+                    if(btnElement) { btnElement.innerHTML = '无存档'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.style.pointerEvents='auto';}, 2000); }
+                    else updateSyncStatus('无存档', 'error');
+                    return; 
+                }
+                if(!res.ok) throw new Error('Fetch failed');
+                const data = await res.json();
+                const content = decodeURIComponent(escape(atob(data.content))); 
+                const count = scheduler.loadExternalData(JSON.parse(content));
+
+                // 重置脏数据状态，因为刚下载完
+                isDirty = false;
+
+                if(btnElement) { btnElement.innerHTML = `✅ 更新${count}条`; setTimeout(() => { location.reload(); }, 1000); }
+                else { updateSyncStatus(`✅ 更新${count}条`, 'success'); setTimeout(() => { location.reload(); }, 1500); }
+            } catch(e) { 
+                if(btnElement) { btnElement.innerHTML = '❌ 失败'; setTimeout(() => { btnElement.innerHTML = originalText; btnElement.style.pointerEvents='auto';}, 2000); }
+                else updateSyncStatus('❌ 同步失败', 'error');
+            }
+        }
+
+        async function syncProgressToCloud(btnElement, isSilent = false) {
+            if(btnElement) toggleSidebar(false);
+            if(!USER_CONFIG.token) { if(!isSilent) alert('请先配置 Token'); return; }
+
+            const originalText = (btnElement && !isSilent) ? btnElement.innerHTML : '';
+            if(btnElement && !isSilent) { btnElement.style.pointerEvents='none'; btnElement.innerHTML = `<span class="spin">🔄</span> 上传...`; }
+            else { updateSyncStatus('<span class="spin">☁️</span> 上传中...', 'loading'); }
+
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/${SYNC_FILE_PATH}`;
+            try {
+                let sha = null;
+                try {
+                    const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                    if(getRes.ok) { sha = (await getRes.json()).sha; }
+                } catch(e) {}
+
+                // Filter deleted ids
+                const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+                for (const id of blacklist) { if (scheduler.db[id]) delete scheduler.db[id]; }
+
+                const contentStr = JSON.stringify(scheduler.db);
+                const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+                const putRes = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Update Anki Progress`, content: contentBase64, sha: sha })
+                });
+
+                if(!putRes.ok) throw new Error('Upload failed');
+
+                // 上传成功，重置脏数据状态
+                isDirty = false;
+
+                if(btnElement && !isSilent) { btnElement.innerHTML = `✅ 成功`; setTimeout(() => { btnElement.style.pointerEvents='auto'; btnElement.innerHTML = originalText; }, 2000); }
+                else { updateSyncStatus('✅ 进度已同步', 'success'); }
+            } catch(e) {
+                if(!isSilent) alert('上传失败: ' + e.message);
+                if(btnElement && !isSilent) { btnElement.style.pointerEvents='auto'; btnElement.innerHTML = originalText; }
+                updateSyncStatus('❌ 同步失败', 'error');
+            }
+        }
+
+        // ============================================
+        // App Flow
+        // ============================================
+        async function startApp() {
+            applyViewSettings();
+            updateBottomStatsUI(); // Initialize stats UI
+            let sha = 'master';
+            try {
+                const res = await fetch(`https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/commits/master?t=${Date.now()}`);
+                if(res.ok) sha = (await res.json()).sha;
+            } catch(e) {}
+
+            const configUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Phrases_note.js`;
+
+            try {
+                const scriptContent = await fetch(configUrl).then(r => r.ok ? r.text() : Promise.reject(r.status));
+                const blob = new Blob([scriptContent], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = async () => {
+                    if (typeof NotesConfig !== 'undefined') GLOBAL_CONFIG = NotesConfig;
+                    else if (typeof NewsConfig !== 'undefined') GLOBAL_CONFIG = NewsConfig;
+                    if (!GLOBAL_CONFIG) { showError("配置加载失败"); return; }
+                    GLOBAL_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${USER_CONFIG.user}/${USER_CONFIG.repo}@${sha}/Notes/Notes/`;
+                    initDateSelectors(GLOBAL_CONFIG);
+                    URL.revokeObjectURL(url);
+                };
+                script.onerror = () => showError(`配置加载错误`);
+                document.head.appendChild(script);
+            } catch (err) { showError(`无法加载配置: ${err.message}`); }
+        }
+
+        function showError(msg) {
+             const msgEl = document.getElementById('state-message');
+             msgEl.classList.remove('hidden-el');
+             document.getElementById('static-card').classList.add('hidden-el');
+             document.getElementById('msg-emoji').textContent = '⚠️';
+             document.getElementById('msg-title').textContent = 'Error';
+             document.getElementById('msg-desc').innerHTML = `<div class="error-box">${msg}</div>`;
+        }
+
+        function initDateSelectors(config) {
+            const yearSelect = document.getElementById('year-select');
+            yearSelect.disabled = false; yearSelect.innerHTML = '';
+            const start = config.startYear || 2025;
+            const total = config.totalYears || 30;
+
+            for (let y = start; y < start + total; y++) {
+                const opt = document.createElement('option');
+                opt.value = y; opt.text = `${y}年`;
+                yearSelect.appendChild(opt);
+            }
+
+            const today = new Date();
+            yearSelect.value = today.getFullYear();
+            yearSelect.addEventListener('change', (e) => loadMonthsForYear(parseInt(e.target.value)));
+            loadMonthsForYear(today.getFullYear());
+
+            setTimeout(() => {
+                const btn = document.querySelector(`button[data-month="${today.getMonth() + 1}"]`);
+                if(btn) btn.click();
+                else { const first = document.querySelector('.month-btn'); if(first) first.click(); }
+            }, 100);
+        }
+
+        function loadMonthsForYear(year) {
+            const monthContainer = document.getElementById('month-container');
+            monthContainer.innerHTML = '';
+            for (let m = 1; m <= 12; m++) {
+                const btn = document.createElement('button');
+                btn.className = 'month-btn';
+                btn.innerText = `${m}月`;
+                btn.dataset.month = m;
+                btn.onclick = () => {
+                    document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    loadCardsForDate(year, m);
+                };
+                monthContainer.appendChild(btn);
+            }
+        }
+
+        async function loadCardsForDate(year, month) {
+            CURRENT_VIEW_YEAR = year; CURRENT_VIEW_MONTH = month;
+
+            // Show Loading
+            document.getElementById('state-message').classList.remove('hidden-el');
+            document.getElementById('static-card').classList.add('hidden-el');
+            document.getElementById('msg-emoji').textContent = '⏳';
+            document.getElementById('msg-title').textContent = 'Reading...';
+            document.getElementById('msg-desc').textContent = `${year}年${month}月`;
+            document.getElementById('msg-action').innerHTML = '';
+
+            let allItems = [];
+            try {
+                const url = GLOBAL_CONFIG.getUrl(year, month) + `?t=${Date.now()}`;
+                const res = await fetch(url);
+                if (res.ok) allItems = await res.json();
+            } catch (e) { console.warn(e); }
+
+            allItems.forEach(item => { item._year = year; item._month = month; });
+
+            const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+            const filteredItems = allItems.filter(item => !blacklist.includes(item.id));
+            const uniqueItems = Array.from(new Map(filteredItems.map(item => [item.id, item])).values());
+            totalItemsCount = uniqueItems.length;
+
+            const learning = [], review = [], newCards = [];
+            uniqueItems.forEach(item => {
+                const s = scheduler.getCardState(item.id);
+                if (s.dueDate > Date.now()) return; 
+                if (s.state === 'learning') learning.push(item);
+                else if (s.state === 'review') review.push(item);
+                else newCards.push(item);
+            });
+
+            const shuffle = (arr) => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}};
+            shuffle(learning); shuffle(review); shuffle(newCards);
+
+            cardQueue = [...learning, ...review, ...newCards];
+            updateDeckStats(); 
+            renderCard();
+        }
+
+        // ============================================
+        // 🚀 Render Logic (Optimized for DOM Performance)
+        // ============================================
+        function renderCard() {
+            const cardEl = document.getElementById('static-card');
+            const msgEl = document.getElementById('state-message');
+
+            if (cardQueue.length === 0) {
+                // Hide Card, Show Message
+                cardEl.classList.add('hidden-el');
+                msgEl.classList.remove('hidden-el');
+
+                if (totalItemsCount === 0) {
+                    document.getElementById('msg-emoji').textContent = '📭';
+                    document.getElementById('msg-title').textContent = '本月暂无数据';
+                    document.getElementById('msg-desc').textContent = '请切换其他月份查看。';
+                    document.getElementById('msg-action').innerHTML = '';
+                } else {
+                    document.getElementById('msg-emoji').textContent = '🎉';
+                    document.getElementById('msg-title').textContent = '今日任务完成！';
+                    document.getElementById('msg-desc').textContent = '所有待复习卡片已完成。';
+                    // 提供一个明确的同步按钮，虽然有自动同步
+                    document.getElementById('msg-action').innerHTML = `<button class="btn btn-save" onclick="syncProgressToCloud(this)">☁️ 立即同步</button>`;
+                }
+                return;
+            }
+
+            // Start Timer for this card
+            currentCardStartTime = Date.now();
+
+            // Prepare Data
+            const item = cardQueue[0];
+            const times = scheduler.previewNextDue(item.id);
+            const sourceUrl = item.url ? `${item.url}#:~:text=${encodeURIComponent(item.text||'')}` : '#';
+
+            // DOM Updates (No innerHTML rebuild)
+            msgEl.classList.add('hidden-el');
+
+            // 1. Reset State
+            cardEl.style.opacity = '0';
+            cardEl.style.transform = 'translateY(10px)';
+            const meaningEl = document.getElementById('card-meaning');
+            meaningEl.classList.remove('revealed'); 
+
+            // 2. Update Content
+            document.getElementById('card-word').textContent = item.text;
+            document.getElementById('card-source').href = sourceUrl;
+            document.getElementById('card-source').textContent = item.pageTitle || 'Source Link';
+            meaningEl.textContent = item.note; // Hidden by CSS filter until revealed
+
+            // 3. Update Buttons
+            document.getElementById('time-again').textContent = times.again;
+            document.getElementById('time-hard').textContent = times.hard;
+            document.getElementById('time-good').textContent = times.good;
+            document.getElementById('time-easy').textContent = times.easy;
+
+            // 4. Handle Delete Button Visibility
+            const delBtn = document.getElementById('btn-delete-card');
+            if(USER_CONFIG.enableDelete) delBtn.classList.remove('hidden-el');
+            else delBtn.classList.add('hidden-el');
+
+            // 5. Show Card (Transition)
+            cardEl.classList.remove('hidden-el');
+            // Small delay to allow browser to register display:block before transition
+            requestAnimationFrame(() => {
+                cardEl.style.opacity = '1';
+                cardEl.style.transform = 'translateY(0)';
+            });
+        }
+
+        // ============================================
+        // Interaction
+        // ============================================
+        function handleCardClick(e) {
+            // Prevent trigger if clicking buttons/links
+            if (e.target.closest('button') || e.target.closest('a')) return;
+            const meaning = document.getElementById('card-meaning');
+            if (meaning && !meaning.classList.contains('revealed')) { 
+                meaning.classList.add('revealed'); 
+            }
+        }
+
+        function handleRate(rating) {
+            stopCurrentAudio(); 
+            const item = cardQueue[0];
+
+            // Calculate time spent on this card
+            const durationSec = (Date.now() - currentCardStartTime) / 1000;
+
+            // Update stats
+            sessionStats = updateDailyStats(rating, durationSec);
+            updateBottomStatsUI();
+
+            scheduler.answerCard(item.id, rating);
+
+            // Animation Out
+            const cardEl = document.getElementById('static-card');
+            cardEl.style.transform = 'translateY(-20px)'; 
+            cardEl.style.opacity = '0';
+
+            setTimeout(() => {
+                cardQueue.shift();
+                if (rating === 1) cardQueue.push(item);
+                updateDeckStats(); 
+                renderCard();
+            }, 250);
+        }
+
+        function updateDeckStats() {
+            const newCount = cardQueue.filter(item => scheduler.getCardState(item.id).state === 'new').length;
+            const reviewCount = cardQueue.length - newCount;
+            document.getElementById('deck-stats').innerText = 
+                `${CURRENT_VIEW_YEAR}年${CURRENT_VIEW_MONTH}月 | 待复习: ${reviewCount} | 新卡: ${newCount}`;
+        }
+
+        async function deleteCurrentCard(btn) {
+            if(event) event.stopPropagation();
+            if (!USER_CONFIG.token) { alert("错误：请先在设置中填写 Access Token"); openSettings(); return; }
+            if (!confirm("确定要从 GitHub 源文件中永久删除这张卡片吗？此操作不可逆。")) return;
+
+            const item = cardQueue[0];
+            // Disable button
+            btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none';
+
+            // Local Delete
+            const bl = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+            bl.push(item.id);
+            localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(bl));
+            delete scheduler.db[item.id]; scheduler.save();
+
+            const finalizeDelete = async () => {
+                isDirty = true; // Delete triggers dirty state
+                await syncProgressToCloud(null, true); // Force sync deletes
+                stopCurrentAudio();
+                const cardEl = document.getElementById('static-card');
+                cardEl.style.transform = 'scale(0.9)'; cardEl.style.opacity = '0';
+                setTimeout(() => {
+                    cardQueue.shift(); totalItemsCount--; updateDeckStats(); renderCard(); 
+                }, 300);
+            };
+
+            // GitHub Delete Logic (Same as before)
+            const y = item._year || CURRENT_VIEW_YEAR;
+            const m = item._month || CURRENT_VIEW_MONTH;
+            const fileName = `Note_${y}-${m.toString().padStart(2, '0')}.json`;
+            const url = `https://api.github.com/repos/${USER_CONFIG.user}/${USER_CONFIG.repo}/contents/Notes/Notes/${y}/${fileName}`;
+
+            try {
+                const getRes = await fetch(url + `?t=${Date.now()}`, { headers: { 'Authorization': `token ${USER_CONFIG.token}` } });
+                if (!getRes.ok) throw new Error("无法读取源文件");
+                const data = await getRes.json();
+                const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                const newContent = content.filter(c => c.id !== item.id);
+
+                if (newContent.length === content.length) { await finalizeDelete(); return; }
+
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(newContent, null, 2))));
+                await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${USER_CONFIG.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Delete card ${item.id}`, content: contentBase64, sha: data.sha })
+                });
+                await finalizeDelete();
+
+            } catch (e) {
+                alert("GitHub删除遇到问题，但已执行本地强制删除。\n错误: " + e.message);
+                await finalizeDelete();
+            }
+        }
+
+        // ============================================
+        // Audio & Settings (Standard)
+        // ============================================
+        function stopCurrentAudio() {
+            if (globalAudio) {
+                globalAudio.pause(); globalAudio.onended = null; globalAudio.onerror = null; globalAudio = null;
+            }
+        }
+        function constructTTSUrl(configObj, text) {
+            let url = configObj.url.replace('{text}', encodeURIComponent(text));
+            if (configObj.token && !url.includes('token=')) {
+                url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(configObj.token);
+            }
+            return url;
+        }
+        function playTTSChain(text, btn, index) {
+            if (index >= USER_CONFIG.ttsList.length) {
+                btn.classList.remove('playing');
+                btn.classList.add('error'); setTimeout(() => btn.classList.remove('error'), 2000);
+                return;
+            }
+            const currentConfig = USER_CONFIG.ttsList[index];
+            if(!currentConfig.url) { playTTSChain(text, btn, index + 1); return; }
+
+            const url = constructTTSUrl(currentConfig, text);
+            const audio = new Audio(url);
+            globalAudio = audio;
+            audio.onended = () => { btn.classList.remove('playing'); globalAudio = null; };
+            const handleError = (e) => { console.warn(`Source ${index} failed`); playTTSChain(text, btn, index + 1); };
+            audio.onerror = handleError;
+            audio.play().catch(handleError);
+        }
+        function playTTS(btn) {
+            stopCurrentAudio();
+            btn.classList.remove('error'); btn.classList.add('playing');
+            const item = cardQueue[0];
+            if(item) playTTSChain(item.text || '', btn, 0);
+        }
+
+        // ============================================
+        // Settings UI Logic
+        // ============================================
+        function renderTTSConfigList() {
+            const container = document.getElementById('tts-config-list');
+            container.innerHTML = '';
+            USER_CONFIG.ttsList.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'tts-config-item';
+                div.innerHTML = `
+                    <div class="tts-row">
+                        <input type="text" class="tts-url-input" placeholder="URL" value="${item.url}" data-idx="${index}" style="flex:2">
+                        <input type="text" class="tts-token-input" placeholder="Token" value="${item.token || ''}" data-idx="${index}" style="flex:1">
+                    </div>
+                    <div class="tts-actions">
+                        <button class="btn-mini" onclick="testSingleTTS(${index}, this)" title="测试">⚡ 测试</button>
+                        <button class="btn-mini" onclick="removeTTSConfig(${index})" title="删除" style="color:red">🗑️ 删除</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function testSingleTTS(index, btn) {
+            stopCurrentAudio(); 
+            const config = getTTSConfigFromUI(index); 
+            if (!config.url) return;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳';
+            const url = constructTTSUrl(config, "Connection successful");
+            const audio = new Audio(url);
+            globalAudio = audio;
+
+            audio.onended = () => { 
+                btn.innerHTML = '✅'; 
+                setTimeout(() => btn.innerHTML = originalText, 2000); 
+                globalAudio = null; 
+            };
+            audio.onerror = () => { 
+                btn.innerHTML = '❌'; 
+                setTimeout(() => btn.innerHTML = originalText, 2000); 
+                globalAudio = null; 
+            };
+
+            audio.play().catch(() => { 
+                btn.innerHTML = '❌'; 
+                setTimeout(() => btn.innerHTML = originalText, 2000); 
+                globalAudio = null; 
+            });
+        }
+
+        function getTTSConfigFromUI(index) {
+            const urlInp = document.querySelector(`.tts-url-input[data-idx="${index}"]`);
+            const tokenInp = document.querySelector(`.tts-token-input[data-idx="${index}"]`);
+            return { url: urlInp ? urlInp.value.trim() : '', token: tokenInp ? tokenInp.value.trim() : '' };
+        }
+
+        function scrapeTTSConfigs() {
+            const items = document.querySelectorAll('.tts-config-item');
+            const newList = [];
+            items.forEach((item, index) => { newList.push(getTTSConfigFromUI(index)); });
+            return newList.filter(i => i.url.length > 0);
+        }
+
+        function addTTSConfig() { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.push({ url: '', token: '' }); renderTTSConfigList(); }
+        function removeTTSConfig(index) { USER_CONFIG.ttsList = scrapeTTSConfigs(); USER_CONFIG.ttsList.splice(index, 1); renderTTSConfigList(); }
+
+        function openSettings() {
+            toggleSidebar(false);
+            document.getElementById('gh-user').value = USER_CONFIG.user;
+            document.getElementById('gh-repo').value = USER_CONFIG.repo;
+            document.getElementById('gh-token').value = USER_CONFIG.token;
+            renderTTSConfigList();
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function saveSettings() {
+            USER_CONFIG.user = document.getElementById('gh-user').value.trim();
+            USER_CONFIG.repo = document.getElementById('gh-repo').value.trim();
+            USER_CONFIG.token = document.getElementById('gh-token').value.trim();
+
+            const newTTS = scrapeTTSConfigs();
+            if(newTTS.length > 0) USER_CONFIG.ttsList = newTTS;
+
+            localStorage.setItem('gh_user', USER_CONFIG.user);
+            localStorage.setItem('gh_repo', USER_CONFIG.repo);
+            localStorage.setItem('gh_token', USER_CONFIG.token);
+            localStorage.setItem('gh_tts_list', JSON.stringify(USER_CONFIG.ttsList));
+
+            document.getElementById('settingsModal').style.display = 'none';
+            location.reload();
+        }
+        // Stats Chart Logic
+        function openStatsModal() {
+            sessionStats = getDailyStats(); toggleSidebar(false); document.getElementById('statsModal').style.display = 'flex';
+            const db = scheduler.db;
+            const blacklist = JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]');
+            const validCards = Object.values(db).filter(c => !blacklist.includes(c.id)); 
+
+            const now = Date.now();
+            const forecast = {}, intervals = {};
+            const counts = { new:0, learn:0, young:0, mature:0 };
+            let totalInterval = 0, reviewCountForAvg = 0, dueToday = 0;
+
+            validCards.forEach(c => {
+                if (c.state === 'new') counts.new++;
+                else if (c.state === 'learning') counts.learn++;
+                else if (c.state === 'review') {
+                    c.interval >= 21 ? counts.mature++ : counts.young++;
+                    const days = Math.round(c.interval); intervals[days] = (intervals[days] || 0) + 1;
+                    totalInterval += days; reviewCountForAvg++;
+                }
+                if (c.dueDate > now) {
+                    const diffDays = Math.ceil((c.dueDate - now) / 86400000); 
+                    if (diffDays <= 30) forecast[diffDays] = (forecast[diffDays] || 0) + 1;
+                } else if (c.state !== 'new') dueToday++;
+            });
+
+            document.getElementById('sum-due').innerText = dueToday;
+            document.getElementById('sum-avg-int').innerText = reviewCountForAvg > 0 ? (totalInterval / reviewCountForAvg).toFixed(1) + 'd' : '0d';
+            const totalSess = sessionStats.buttons[1]+sessionStats.buttons[2]+sessionStats.buttons[3]+sessionStats.buttons[4];
+            document.getElementById('sum-retention').innerText = totalSess > 0 ? Math.round(((sessionStats.buttons[3]+sessionStats.buttons[4])/totalSess)*100) + '%' : '--';
+
+            const commonOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+
+            // Forecast
+            const fLabs = Array.from({length: 30}, (_, i) => i + 1);
+            createOrUpdateChart('chartForecast', 'bar', { labels: fLabs, datasets: [{ data: fLabs.map(d => forecast[d]||0), backgroundColor: '#bdc3c7' }] }, { ...commonOpts, scales: { x: { display:true }, y: { beginAtZero: true } } });
+
+            // Counts
+            createOrUpdateChart('chartCounts', 'doughnut', { labels: ['New', 'Learn', 'Young', 'Mature'], datasets: [{ data: [counts.new, counts.learn, counts.young, counts.mature], backgroundColor: ['#42a5f5', '#ff7043', '#ffa726', '#66bb6a'], borderWidth: 0 }] }, { ...commonOpts, plugins: { legend: { display: true, position: 'right' } } });
+
+            // Intervals
+            const iLabs = Object.keys(intervals).map(Number).sort((a,b)=>a-b).slice(0, 30);
+            createOrUpdateChart('chartIntervals', 'bar', { labels: iLabs, datasets: [{ data: iLabs.map(d => intervals[d]), backgroundColor: '#26a69a' }] }, commonOpts);
+
+            // Buttons
+            const bData = [sessionStats.buttons[1], sessionStats.buttons[2], sessionStats.buttons[3], sessionStats.buttons[4]];
+            createOrUpdateChart('chartButtons', 'pie', { labels: ['Again', 'Hard', 'Good', 'Easy'], datasets: [{ data: bData.some(x=>x>0)?bData:[1], backgroundColor: bData.some(x=>x>0)?['#ff5252', '#ffab40', '#69f0ae', '#40c4ff']:['#e0e0e0'], borderWidth: 0 }] }, { ...commonOpts, plugins: { legend: { display: true, position: 'bottom' } } });
+
+            // Hourly
+            createOrUpdateChart('chartHourly', 'line', { labels: sessionStats.hourly.map((_, i) => i), datasets: [{ data: sessionStats.hourly, borderColor: '#7e57c2', backgroundColor: 'rgba(126, 87, 194, 0.2)', fill: true, tension: 0.4 }] }, { ...commonOpts, scales: { y: { beginAtZero: true } } });
+        }
+
+        function createOrUpdateChart(id, type, data, options) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(ctx, { type, data, options });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const m = document.getElementById('card-meaning');
+            if(m && m.classList.contains('revealed')) {
+                if(e.key==='1') handleRate(1); if(e.key==='2') handleRate(2); if(e.key==='3') handleRate(3); if(e.key==='4') handleRate(4);
+            } else if ((e.key===' ' || e.key==='Enter') && !document.getElementById('static-card').classList.contains('hidden-el')) {
+                handleCardClick({target: document.body}); // Simulate click
+            }
+        });
+
+        startApp();
+    </script>
+</body>
+</html>
