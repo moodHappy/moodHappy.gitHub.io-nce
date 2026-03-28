@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大清后宫 - 后宫佳丽三千人</title>
+    <style>
+        :root {
+            --text-main: #2d3748;
+            --primary: #667eea;
+            --link-hover: #764ba2;
+            --imperial-gold: #f59e0b;
+            --imperial-gold-hover: #d97706;
+            --cloud-blue: #4299e1;
+            --cloud-blue-hover: #3182ce;
+            --calendar-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            color: var(--text-main);
+            line-height: 1.4;
+            padding: 1rem 0.25rem;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden; 
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            color: #1a202c;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.5);
+            font-size: 1.35rem;
+        }
+
+        .action-buttons-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .token-input {
+            width: 100%; padding: 10px 12px;
+            border: 2px solid #e2e8f0; border-radius: 20px;
+            font-size: 0.9rem; text-align: center; outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .token-input:focus { border-color: var(--primary); }
+
+        .btn {
+            background: var(--primary); color: white; border: none;
+            padding: 8px 16px; border-radius: 20px; font-size: 0.9rem;
+            font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+        }
+
+        .btn:hover { background: var(--link-hover); transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-settings { background: #718096; box-shadow: 0 4px 10px rgba(113, 128, 150, 0.4); padding: 10px 20px; font-size: 1rem; }
+        .btn-settings:hover { background: #4a5568; }
+
+        .btn-cloud { background: var(--cloud-blue); box-shadow: 0 4px 10px rgba(66, 153, 225, 0.4); }
+        .btn-cloud:hover { background: var(--cloud-blue-hover); }
+
+        .btn-draw {
+            background: var(--imperial-gold); box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);
+            animation: pulse 2s infinite; padding: 10px 28px; font-size: 1.05rem;
+        }
+        .btn-draw:hover { background: var(--imperial-gold-hover); animation: none; }
+
+        .btn-save { background: #48bb78; box-shadow: 0 4px 10px rgba(72, 187, 120, 0.4); }
+        .btn-save:hover { background: #38a169; }
+        .btn-danger { background: #e53e3e; box-shadow: 0 4px 10px rgba(229, 62, 62, 0.4); }
+        .btn-danger:hover { background: #c53030; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        /* ========== 日历样式 ========== */
+        .calendar-container {
+            background: var(--calendar-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px; padding: 15px; width: 100%; max-width: 800px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.4);
+            margin-bottom: 1rem;
+        }
+
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 5px; }
+        .cal-select { padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e0; background: white; font-weight: 600; color: var(--primary); outline: none; cursor: pointer; font-size: 0.95rem; }
+        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #718096; margin-bottom: 8px; font-size: 0.85rem; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #edf2f7; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; position: relative; }
+        .cal-day:hover:not(.empty) { background: #e2e8f0; transform: scale(1.05); }
+        .cal-day.empty { background: transparent; cursor: default; }
+        .cal-day.today { border: 2px solid var(--primary); color: var(--primary); font-weight: 800; }
+        .cal-day.has-record::after { content: ''; position: absolute; bottom: 4px; width: 6px; height: 6px; background-color: #e53e3e; border-radius: 50%; }
+
+        /* ========== 表格及其他样式 ========== */
+        .table-container { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 12px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.4); width: 100%; max-width: 800px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: auto; }
+        th, td { padding: 8px 4px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); font-size: 0.75rem; vertical-align: middle; word-break: break-word; }
+        th { background-color: rgba(241, 245, 249, 0.6); font-weight: 600; color: #475569; white-space: nowrap; }
+        .sortable-th { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        .sortable-th:hover { background-color: rgba(226, 232, 240, 0.8); }
+        tr { transition: background-color 0.2s ease; }
+        tr:hover { background-color: rgba(255, 255, 255, 0.95); }
+        tr:last-child td { border-bottom: none; }
+        a.table-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+        a.table-link:hover { text-decoration: underline; }
+        .jp-name { font-size: 0.7rem; line-height: 1.1; }
+        a.jp-link { color: #718096; text-decoration: none; transition: color 0.2s ease; }
+        a.jp-link:hover { color: var(--primary); text-decoration: underline; }
+
+        .num-input { width: 42px; padding: 6px 0; border: 1px solid #cbd5e0; border-radius: 6px; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--primary); background: rgba(255, 255, 255, 0.9); -moz-appearance: textfield; }
+        .num-input::-webkit-outer-spin-button, .num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .num-input:focus { outline: none; border-color: var(--link-hover); transform: scale(1.05); }
+
+        /* 锁定的侍寝数字样式 */
+        .locked-count { font-weight: 800; color: #e53e3e; font-size: 0.95rem; }
+
+        .rank-number { font-weight: 800; color: #a0aec0; text-align: center; }
+        .harem-title { font-weight: 700; color: #e53e3e; text-align: center; white-space: nowrap; font-size: 0.75rem;}
+        .title-0 { color: #d69e2e; text-shadow: 0 0 8px rgba(214, 158, 46, 0.4); font-size: 0.85rem;} 
+        .title-1 { color: #805ad5; } 
+        .title-2 { color: #3182ce; } 
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-content { background: linear-gradient(to bottom, #fffdf0, #fff); border: 4px solid var(--imperial-gold); border-radius: 12px; padding: 25px 20px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; width: 90%; max-width: 350px; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-close { position: absolute; top: 5px; right: 12px; font-size: 1.5rem; color: #a0aec0; cursor: pointer; }
+        .modal-header { font-size: 1.15rem; color: #718096; margin-bottom: 8px; letter-spacing: 1px; font-weight: 700; border-bottom: 1px dashed #cbd5e0; padding-bottom: 10px;}
+
+        /* 弹窗表单及自动补全样式 */
+        .modal-form { margin: 15px 0; text-align: left; }
+        .form-group { margin-bottom: 15px; position: relative; } /* 添加了相对定位 */
+        .form-group label { display: block; font-size: 0.9rem; color: #4a5568; margin-bottom: 6px; font-weight: 700; }
+        .modal-input { width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.3s; font-family: inherit; resize: vertical; box-sizing: border-box;}
+        .modal-input:focus { border-color: var(--imperial-gold); }
+
+        /* 自定义自动补全菜单样式 */
+        .autocomplete-items {
+            position: absolute;
+            border: 2px solid var(--imperial-gold);
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            max-height: 160px;
+            overflow-y: auto;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            display: none;
+        }
+        .autocomplete-items div {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 0.95rem;
+            color: #2d3748;
+            transition: background-color 0.2s;
+        }
+        .autocomplete-items div:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-items div:hover {
+            background-color: #fef08a; /* 皇室金色的淡化版 */
+            color: #b45309;
+            font-weight: 600;
+        }
+
+        .modal-btn-box { margin-top: 15px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;}
+        .footer { margin-top: 1.5rem; font-size: 0.75rem; color: #4a5568; text-align: center; width: 100%; padding-bottom: 1rem; }
+
+        @media (min-width: 600px) {
+            th, td { padding: 12px 8px; font-size: 0.9rem; }
+            .harem-title { font-size: 0.9rem; }
+            .title-0 { font-size: 1rem; }
+            .jp-name { font-size: 0.8rem; }
+            .num-input { width: 55px; font-size: 0.95rem; }
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.8rem; }
+            .btn { font-size: 1rem; padding: 10px 22px; }
+            .calendar-container { padding: 20px 30px; }
+            .cal-day { font-size: 1rem; }
+            .modal-content { padding: 25px 30px; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>后宫佳丽三千人</h1>
+
+    <div class="action-buttons-wrapper">
+        <div class="action-row">
+            <button class="btn btn-draw" onclick="drawCardForToday()">🎲 翻牌侍寝 (今日)</button>
+            <button class="btn btn-settings" onclick="openSettingsModal()">⚙️ 设置</button>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <select id="cal-year" class="cal-select" onchange="renderCalendar()"></select>
+            <select id="cal-month" class="cal-select" onchange="renderCalendar()"></select>
+        </div>
+        <div class="calendar-weekdays">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+        </div>
+        <div class="calendar-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeSettingsModal()">×</span>
+            <div class="modal-header">【数据配置】</div>
+
+            <div class="modal-form">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <input type="password" id="githubTokenInput" placeholder="输入 GitHub Token (留空不保存)" class="token-input">
+                    <div class="modal-btn-box" style="margin-top: 12px;">
+                        <button class="btn btn-cloud" id="btn-download" onclick="downloadFromGithub()">☁️ 云端下载</button>
+                        <button class="btn btn-cloud" id="btn-upload" onclick="uploadToGithub()">☁️ 云端备份</button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="border-top: 1px dashed #cbd5e0; padding-top: 20px;">
+                    <div class="modal-btn-box">
+                        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                        <button class="btn" style="background: #a0aec0;" onclick="document.getElementById('importFile').click()">⬆️ 本地导入</button>
+                        <button class="btn" style="background: #a0aec0;" onclick="exportData()">⬇️ 本地导出</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="drawModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">×</span>
+            <div class="modal-header" id="modal-header-text">【敬事房档】</div>
+
+            <div class="modal-form">
+                <div class="form-group">
+                    <label>侍寝佳丽名号</label>
+                    <input type="text" id="recordName" class="modal-input" placeholder="如：小野六花" autocomplete="off">
+                    <div id="autocomplete-list" class="autocomplete-items"></div>
+                </div>
+                <div class="form-group">
+                    <label>当夜备注信息</label>
+                    <textarea id="recordRemark" class="modal-input" rows="2" placeholder="如：表现甚佳，赏赐金银..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-btn-box" id="modal-btn-box">
+                <button class="btn btn-save" onclick="saveDayRecord()">💾 保存记录</button>
+                <button class="btn btn-draw" onclick="randomFillModal()" style="padding: 8px 16px; font-size: 0.9rem;">🎲 随机重抽</button>
+                <button class="btn btn-danger" onclick="clearDayRecord()">🗑️ 抹除此日</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table id="rankingTable">
+            <thead>
+                <tr>
+                    <th width="30" style="text-align: center;">排名</th>
+                    <th width="50" style="text-align: center;">位分</th>
+                    <th>名号</th>
+                    <th>外文名</th>
+                    <th width="55" style="text-align: center;" class="sortable-th" onclick="setSort('score')" title="点击切换">恩宠<span id="icon-score">🔽</span></th>
+                    <th width="55" style="text-align: center;" class="sortable-th" onclick="setSort('sleepCount')" title="自动由日历统计">侍寝<span id="icon-sleepCount"></span></th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        © Jing Shi Fang Cloud Full-Stack System | Created: March 25, 2026
+    </div>
+
+    <script>
+        // ================= 基础数据与全局变量 =================
+        const actressesData = [
+            { name: "希崎杰西卡", jpName: "希崎ジェシカ", enName: "Jessica Kizaki", jpLink: "https://jable.tv/models/jessica-kizaki/" },
+            { name: "小野六花", jpName: "小野六花", enName: "Rikka Ono", jpLink: "https://jable.tv/models/0478c4db9858c4e6c60af7fbf828009a/" },
+            { name: "凉森玲梦", jpName: "涼森れむ", enName: "Remu Suzumori", jpLink: "#" },
+            { name: "役野满里奈", jpName: "役野満里奈", enName: "Marina Yakuno", jpLink: "#" },
+            { name: "七海蒂娜", jpName: "七海ティナ", enName: "Tina Nanami", jpLink: "https://jable.tv/models/7c7b027875b8615ba9f798e73383f0c4/" },
+            { name: "日下部加奈", jpName: "日下部加奈", enName: "Kana Kusakabe", jpLink: "#" },
+            { name: "宫地莉央", jpName: "宮地莉央", enName: "Rio Miyachi", jpLink: "#" },
+            { name: "三田真铃", jpName: "三田真鈴", enName: "Marin Mita", jpLink: "#" },
+            { name: "村上悠华", jpName: "村上悠華", enName: "Yuuka Murakami", jpLink: "#" },
+            { name: "月野香澄", jpName: "月野香澄", enName: "Kasumi Tsukino", jpLink: "#" },
+            { name: "松冈铃", jpName: "松岡すず", enName: "Suzu Matsuoka", jpLink: "#" },
+            { name: "友田彩也香", jpName: "友田彩也香", enName: "Sayaka Tomoda", jpLink: "#" },
+            { name: "一乃葵", jpName: "一乃あおい", enName: "Aoi Ichino", jpLink: "#" },
+            { name: "梦乃爱华", jpName: "夢乃あいか", enName: "Aika Yumeno", jpLink: "#" },
+            { name: "白峰美羽", jpName: "白峰ミウ", enName: "Miu Shiramine", jpLink: "#" },
+            { name: "新井莉麻", jpName: "新井リマ", enName: "Rima Arai", jpLink: "#" },
+            { name: "坂道美琉", jpName: "坂道みる", enName: "Miru Sakamichi", jpLink: "#" },
+            { name: "樱空桃", jpName: "桜空もも", enName: "Momo Sakura", jpLink: "#" },
+            { name: "末广纯", jpName: "末広純", enName: "Jun Suehiro", jpLink: "#" },
+            { name: "本庄铃", jpName: "本庄鈴", enName: "Suzu Honjo", jpLink: "#" },
+            { name: "美咲佳奈", jpName: "美咲かんな", enName: "Kei Misaki", jpLink: "#" },
+            { name: "七森莉莉", jpName: "七森リリ", enName: "Riri Nanamori", jpLink: "#" },
+            { name: "椎名心春", jpName: "椎名心春", enName: "Koharu Shiina", jpLink: "#" },
+            { name: "大槻响", jpName: "大槻ひびき", enName: "Hibiki Otsuki", jpLink: "#" },
+            { name: "新有菜", jpName: "新ありな", enName: "Arina Arata", jpLink: "#" },
+            { name: "河北彩伽", jpName: "河北彩伽", enName: "Saika Kawakita", jpLink: "#" },
+            { name: "明里紬", jpName: "明里つむぎ", enName: "Tsumugi Akari", jpLink: "#" },
+            { name: "斋藤亚美里", jpName: "斎藤あみり", enName: "Amiri Saito", jpLink: "#" },
+            { name: "香水纯", jpName: "香水じゅん", enName: "Jun Kosui", jpLink: "#" },
+            { name: "三上悠亚", jpName: "三上悠亜", enName: "Yua Mikami", jpLink: "#" },
+            { name: "初音实", jpName: "初音みのり", enName: "Minori Hatsune", jpLink: "#" },
+            { name: "小川阿佐美", jpName: "小川あさ美", enName: "Asami Ogawa", jpLink: "#" },
+            { name: "神咲诗织", jpName: "神咲詩織", enName: "Shiori Kanzaki", jpLink: "#" },
+            { name: "立花美凉", jpName: "立花美涼", enName: "Misuzu Tachibana", jpLink: "#" },
+            { name: "川北明沙", jpName: "川北メイサ", enName: "Meisa Kawakita", jpLink: "#" },
+            { name: "多香良", jpName: "多香良", enName: "Takara", jpLink: "#" },
+            { name: "永濑未萌", jpName: "永瀬みなも", enName: "Minamo Nagase", jpLink: "#" },
+            { name: "天使萌", jpName: "天使もえ", enName: "Moe Amatsuka", jpLink: "#" },
+            { name: "五日市芽衣", jpName: "いつかいち めい", enName: "Miman Aika", jpLink: "#" },
+            { name: "庵姬花", jpName: "庵ひめか", enName: "Himeka Iori", jpLink: "#" },
+            { name: "藤浦惠", jpName: "藤浦めぐ", enName: "Megu Fujiura", jpLink: "#" },
+            { name: "前田桃杏", jpName: "前田桃杏", enName: "Moa Maeda", jpLink: "#" },
+            { name: "八蜜凛", jpName: "八蜜凛", enName: "Rin Yamitsu", jpLink: "#" },
+            { name: "百田光希", jpName: "百田光希", enName: "Mitsuki Momota", jpLink: "#" },
+            { name: "西宫梦", jpName: "西宮ゆめ", enName: "Yume Nishimiya", jpLink: "#" },
+            { name: "佐佐木明希", jpName: "佐々木あき", enName: "Aki Sasaki", jpLink: "#" },
+            { name: "松下纱荣子", jpName: "松下紗栄子", enName: "Saeko Matsushita", jpLink: "#" },
+            { name: "南泽海香", jpName: "南沢海香", enName: "Umika Minamizawa", jpLink: "#" },
+            { name: "九野雏乃", jpName: "九野ひなの", enName: "Hinano Kuno", jpLink: "https://jable.tv/models/4ff80bb6ffd5d143712005afeebd2432/" },
+            { name: "小野坂唯香", jpName: "小野坂ゆいか", enName: "Yuika Onosaka", jpLink: "#" },
+            { name: "宫西光", jpName: "宮西ひかる", enName: "Hikaru Miyanishi", jpLink: "#" },
+            { name: "望乃琉衣", jpName: "望乃るい", enName: "Rui Nono", jpLink: "#" },
+            { name: "善场麻美", jpName: "善場まみ", enName: "Mami Zenba", jpLink: "#" },
+            { name: "佐佐木沙希", jpName: "佐々木さき", enName: "Saki Sasaki", jpLink: "#" },
+            { name: "妃光莉", jpName: "妃ひかり", enName: "Hikari Kisaki", jpLink: "#" },
+            { name: "新妻优香", jpName: "新妻ゆうか", enName: "Yuuka Niizuma", jpLink: "#" },
+            { name: "白玉(神谷美玖)", jpName: "しらたま", enName: "Shiratama", jpLink: "#" },
+            { name: "神谷美玖", jpName: "神谷みく", enName: "Miku Kamiya", jpLink: "#" }
+        ];
+
+        const haremTitlesArray = ["皇后", "皇贵妃", "贵妃", "妃", "嫔", "贵人", "常在", "答应", "官女子"];
+        let currentSortKey = 'score'; 
+        let sortDesc = true;
+        let currentEditDate = ""; 
+
+        let haremHistory = JSON.parse(localStorage.getItem('harem_history')) || {};
+
+        // ================= 数据初始化与统计 =================
+        function loadScores() {
+            actressesData.forEach(item => {
+                const savedScore = localStorage.getItem(`score_${item.name}`);
+                item.score = savedScore !== null ? savedScore : "";
+                item.sleepCount = 0; 
+                item.haremTitle = "-"; item.displayRank = "-"; item.titleLevel = -1;
+            });
+            recalculateSleepCounts(); 
+        }
+
+        function recalculateSleepCounts() {
+            actressesData.forEach(a => a.sleepCount = 0);
+
+            for (const date in haremHistory) {
+                const record = haremHistory[date];
+                const actress = actressesData.find(a => a.name === record.name);
+                if (actress) {
+                    actress.sleepCount++;
+                }
+            }
+
+            actressesData.forEach(a => {
+                if (a.sleepCount > 0) localStorage.setItem(`sleepCount_${a.name}`, a.sleepCount);
+                else localStorage.removeItem(`sleepCount_${a.name}`);
+            });
+        }
+
+        // ================= 敬事房日历系统 =================
+        function initCalendar() {
+            const yearSelect = document.getElementById('cal-year');
+            const monthSelect = document.getElementById('cal-month');
+
+            for (let y = 2020; y <= 2100; y++) {
+                const opt = document.createElement('option'); opt.value = y; opt.text = y + '年'; yearSelect.appendChild(opt);
+            }
+            for (let m = 1; m <= 12; m++) {
+                const opt = document.createElement('option'); opt.value = m; opt.text = m + '月'; monthSelect.appendChild(opt);
+            }
+
+            const now = new Date();
+            yearSelect.value = now.getFullYear();
+            monthSelect.value = now.getMonth() + 1;
+
+            renderCalendar();
+            setupAutocomplete(); // 初始化自动补全
+        }
+
+        function getLocalDateString(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function renderCalendar() {
+            const year = parseInt(document.getElementById('cal-year').value);
+            const month = parseInt(document.getElementById('cal-month').value) - 1;
+            const grid = document.getElementById('cal-grid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay(); 
+            const daysInMonth = new Date(year, month + 1, 0).getDate(); 
+            const todayStr = getLocalDateString(new Date());
+
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'cal-day empty'; grid.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-day'; cell.innerText = day;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+                if (dateStr === todayStr) cell.classList.add('today');
+                if (haremHistory[dateStr]) cell.classList.add('has-record');
+
+                cell.onclick = () => showDayInfo(dateStr);
+                grid.appendChild(cell);
+            }
+        }
+
+        // ================= 弹窗控制与表单编辑 =================
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function showDayInfo(dateStr) {
+            currentEditDate = dateStr;
+            const record = haremHistory[dateStr] || {};
+
+            document.getElementById('modal-header-text').innerText = `【敬事房档】 ${dateStr}`;
+            document.getElementById('recordName').value = record.name || "";
+            document.getElementById('recordRemark').value = record.remark || "";
+            
+            // 每次打开弹窗重置下拉列表状态
+            document.getElementById('autocomplete-list').style.display = "none";
+
+            document.getElementById('drawModal').classList.add('active');
+        }
+
+        function saveDayRecord() {
+            const nameInput = document.getElementById('recordName').value.trim();
+            const remarkInput = document.getElementById('recordRemark').value.trim();
+
+            if (!nameInput) {
+                alert("陛下，名号不可为空！若要抹除记录请点击【抹除此日】。");
+                return;
+            }
+
+            const actress = actressesData.find(a => a.name === nameInput);
+            const title = actress ? actress.haremTitle : "未入册";
+
+            haremHistory[currentEditDate] = {
+                name: nameInput,
+                remark: remarkInput,
+                title: title
+            };
+
+            localStorage.setItem('harem_history', JSON.stringify(haremHistory));
+
+            recalculateSleepCounts(); 
+            renderTable();
+            renderCalendar();
+            closeModal();
+        }
+
+        function clearDayRecord() {
+            if(haremHistory[currentEditDate]) {
+                delete haremHistory[currentEditDate];
+                localStorage.setItem('harem_history', JSON.stringify(haremHistory));
+                recalculateSleepCounts(); 
+                renderTable();
+                renderCalendar();
+            }
+            closeModal();
+        }
+
+        function randomFillModal() {
+            const haremMembers = actressesData.filter(item => item.score !== "");
+            if (haremMembers.length === 0) {
+                alert("陛下，后宫空虚，请先为秀女们赐分册封吧！");
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * haremMembers.length);
+            const luckyGirl = haremMembers[randomIndex];
+
+            document.getElementById('recordName').value = luckyGirl.name;
+            document.getElementById('recordRemark').value = "龙体安康，随机翻牌选中";
+            document.getElementById('autocomplete-list').style.display = "none"; // 随机抽取后隐藏联想
+        }
+
+        function drawCardForToday() {
+            const todayStr = getLocalDateString(new Date());
+            showDayInfo(todayStr); 
+            if (!haremHistory[todayStr]) {
+                randomFillModal(); 
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('drawModal').classList.remove('active');
+            document.getElementById('autocomplete-list').style.display = "none"; // 关闭弹窗时隐藏联想
+        }
+
+        // ================= 自动补全 (Autocomplete) =================
+        function setupAutocomplete() {
+            const input = document.getElementById("recordName");
+            const autocompleteList = document.getElementById("autocomplete-list");
+
+            input.addEventListener("input", function() {
+                const val = this.value;
+                autocompleteList.innerHTML = "";
+                
+                if (!val) {
+                    autocompleteList.style.display = "none";
+                    return;
+                }
+                
+                // 模糊匹配：只要名字或日文名包含输入的字，就展示
+                const matched = actressesData.filter(item => 
+                    item.name.includes(val) || item.jpName.includes(val) || item.enName.toLowerCase().includes(val.toLowerCase())
+                );
+
+                if (matched.length > 0) {
+                    autocompleteList.style.display = "block";
+                    matched.forEach(item => {
+                        const div = document.createElement("div");
+                        // 简单高亮匹配的部分
+                        const regex = new RegExp(`(${val})`, "gi");
+                        div.innerHTML = item.name.replace(regex, "<span style='color:var(--imperial-gold); font-weight:bold;'>$1</span>");
+                        
+                        div.addEventListener("click", function() {
+                            input.value = item.name;
+                            autocompleteList.innerHTML = "";
+                            autocompleteList.style.display = "none";
+                        });
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.style.display = "none";
+                }
+            });
+
+            // 点击输入框外部时隐藏下拉菜单
+            document.addEventListener("click", function(e) {
+                if (e.target !== input && e.target !== autocompleteList) {
+                    autocompleteList.style.display = "none";
+                }
+            });
+        }
+
+
+        // ================= GitHub 云同步 =================
+        const GITHUB_CONF = {
+            owner: 'moodHappy', repo: 'moodHappy.github.io-nce',
+            path: 'harem_data.json', token: localStorage.getItem('github_harem_token') || ''
+        };
+
+        document.getElementById('githubTokenInput').value = GITHUB_CONF.token;
+        document.getElementById('githubTokenInput').addEventListener('input', (e) => {
+            GITHUB_CONF.token = e.target.value.trim();
+            localStorage.setItem('github_harem_token', GITHUB_CONF.token);
+        });
+
+        async function getFileSha() {
+            const url = `https://api.github.com/repos/${GITHUB_CONF.owner}/${GITHUB_CONF.repo}/contents/${GITHUB_CONF.path}`;
+            try {
+                const response = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_CONF.token}`, 'Accept': 'application/vnd.github.v3+json' }});
+                if (response.ok) return (await response.json()).sha;
+            } catch (e) { console.error('获取 SHA 失败:', e); }
+            return null;
+        }
+
+        async function uploadToGithub() {
+            if (!GITHUB_CONF.token) { alert('陛下，请先输入您的 GitHub Token！'); return; }
+            const btn = document.getElementById('btn-upload');
+            const originalText = btn.innerText; btn.innerText = '正在起草圣旨...';
+
+            const dataToExport = { harem_history: haremHistory };
+            actressesData.forEach(item => {
+                const score = localStorage.getItem(`score_${item.name}`);
+                if (score !== null && score !== "") dataToExport[`score_${item.name}`] = score;
+            });
+
+            const jsonStr = JSON.stringify(dataToExport, null, 2);
+            const contentBase64 = btoa(unescape(encodeURIComponent(jsonStr)));
+            const sha = await getFileSha();
+
+            const url = `https://api.github.com/repos/${GITHUB_CONF.owner}/${GITHUB_CONF.repo}/contents/${GITHUB_CONF.path}`;
+            const body = { message: 'Auto Backup Harem Data (Calendar Bound)', content: contentBase64 };
+            if (sha) body.sha = sha;
+
+            try {
+                const response = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${GITHUB_CONF.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (response.ok) {
+                    alert('敬事房档（含备注）已成功同步至云端！');
+                    closeSettingsModal();
+                } else {
+                    alert('上传失败: ' + (await response.json()).message);
+                }
+            } catch (e) { alert('网络波动，上传出错: ' + e); } 
+            finally { btn.innerText = originalText; }
+        }
+
+        async function downloadFromGithub() {
+            if (!GITHUB_CONF.token) { alert('陛下，请先输入您的 GitHub Token！'); return; }
+            const btn = document.getElementById('btn-download');
+            const originalText = btn.innerText; btn.innerText = '正在调取卷宗...';
+
+            const url = `https://api.github.com/repos/${GITHUB_CONF.owner}/${GITHUB_CONF.repo}/contents/${GITHUB_CONF.path}`;
+            try {
+                const response = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_CONF.token}`, 'Accept': 'application/vnd.github.v3+json' }});
+                if (response.ok) {
+                    const data = await response.json();
+                    const importedData = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+                    for (const key in importedData) {
+                        if (key.startsWith('score_')) localStorage.setItem(key, importedData[key]);
+                    }
+                    if (importedData.harem_history) {
+                        haremHistory = importedData.harem_history;
+                        localStorage.setItem('harem_history', JSON.stringify(haremHistory));
+                    }
+                    loadScores(); renderTable(); renderCalendar();
+                    alert('云端卷宗调取成功！已为您自动合并所有历史侍寝次数。');
+                    closeSettingsModal();
+                } else if (response.status === 404) alert('云端空空如也，陛下请先点击【云端备份】进行初次上传！');
+                else alert('下载失败: ' + (await response.json()).message);
+            } catch (e) { alert('网络波动，下载出错: ' + e); } 
+            finally { btn.innerText = originalText; }
+        }
+
+        // ================= 本地导入导出与表格 =================
+        function exportData() {
+            const dataToExport = { harem_history: haremHistory };
+            actressesData.forEach(item => {
+                const score = localStorage.getItem(`score_${item.name}`);
+                if (score !== null && score !== "") dataToExport[`score_${item.name}`] = score;
+            });
+
+            const dataBlob = new Blob([JSON.stringify(dataToExport)], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', url);
+            linkElement.setAttribute('download', 'harem_ranking_backup.json');
+            linkElement.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    for (const key in importedData) {
+                        if (key.startsWith('score_')) localStorage.setItem(key, importedData[key]);
+                    }
+                    if (importedData.harem_history) {
+                        haremHistory = importedData.harem_history;
+                        localStorage.setItem('harem_history', JSON.stringify(haremHistory));
+                    }
+                    loadScores(); renderTable(); renderCalendar();
+                    alert(`成功恢复数据！侍寝次数已重新校准。`);
+                    closeSettingsModal();
+                } catch (error) { alert("导入失败，文件格式可能损坏！"); }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function setSort(key) {
+            if (currentSortKey === key) sortDesc = !sortDesc;
+            else { currentSortKey = key; sortDesc = true; }
+            updateSortIcons(); renderTable();
+        }
+
+        function updateSortIcons() {
+            document.getElementById('icon-score').textContent = currentSortKey === 'score' ? (sortDesc ? '🔽' : '🔼') : '';
+            document.getElementById('icon-sleepCount').textContent = currentSortKey === 'sleepCount' ? (sortDesc ? '🔽' : '🔼') : '';
+        }
+
+        function calculateTitlesAndRanks() {
+            let sortedForTitle = [...actressesData].sort((a, b) => {
+                const scoreA = a.score === "" ? -1 : Number(a.score);
+                const scoreB = b.score === "" ? -1 : Number(b.score);
+                return scoreB - scoreA;
+            });
+
+            let currentTitleIndex = 0;
+            let previousScore = null;
+            let currentRank = 1;
+
+            sortedForTitle.forEach((item) => {
+                if (item.score !== "") {
+                    let numScore = Number(item.score);
+                    if (previousScore !== null && numScore < previousScore) currentTitleIndex++;
+                    previousScore = numScore;
+                    item.haremTitle = currentTitleIndex < haremTitlesArray.length ? haremTitlesArray[currentTitleIndex] : "官女子";
+                    item.titleLevel = currentTitleIndex;
+                    item.displayRank = currentRank++;
+                } else {
+                    item.haremTitle = "秀女"; item.titleLevel = -1; item.displayRank = "-";
+                }
+            });
+        }
+
+        function renderTable() {
+            calculateTitlesAndRanks();
+            actressesData.sort((a, b) => {
+                let valA, valB;
+                if (currentSortKey === 'score') {
+                    valA = a.score === "" ? -1 : Number(a.score); valB = b.score === "" ? -1 : Number(b.score);
+                } else if (currentSortKey === 'sleepCount') {
+                    valA = a.sleepCount === "" ? -1 : Number(a.sleepCount); valB = b.sleepCount === "" ? -1 : Number(b.sleepCount);
+                }
+                if (valA === valB) return 0;
+                return sortDesc ? (valB - valA) : (valA - valB);
+            });
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            actressesData.forEach((item) => {
+                const tr = document.createElement('tr');
+                const tdRank = document.createElement('td'); tdRank.className = 'rank-number'; tdRank.textContent = item.displayRank;
+
+                const tdTitle = document.createElement('td'); tdTitle.className = 'harem-title'; tdTitle.textContent = item.haremTitle;
+                if (item.score !== "") {
+                    if (item.titleLevel === 0) tdTitle.classList.add('title-0');
+                    else if (item.titleLevel === 1) tdTitle.classList.add('title-1');
+                    else if (item.titleLevel === 2) tdTitle.classList.add('title-2');
+                } else { tdTitle.style.color = "#a0aec0"; tdTitle.style.fontWeight = "normal"; }
+
+                const tdName = document.createElement('td');
+                const wikiUrl = `https://zh.wikipedia.org/wiki/${encodeURIComponent(item.name)}`;
+                tdName.innerHTML = `<a href="${wikiUrl}" target="_blank" class="table-link">${item.name}</a>`;
+
+                const tdJpName = document.createElement('td'); tdJpName.className = "jp-name";
+                tdJpName.innerHTML = `<a href="${item.jpLink}" target="_blank" class="jp-link">${item.jpName}</a>`; 
+
+                // 恩宠评分 
+                const tdScore = document.createElement('td'); tdScore.style.textAlign = "center";
+                const inputScore = document.createElement('input'); inputScore.type = 'number'; inputScore.className = 'num-input'; inputScore.value = item.score;
+                inputScore.addEventListener('blur', (e) => {
+                    item.score = e.target.value; localStorage.setItem(`score_${item.name}`, item.score); renderTable();
+                });
+                inputScore.addEventListener('keypress', (e) => { if(e.key==='Enter') inputScore.blur(); });
+                tdScore.appendChild(inputScore);
+
+                // 侍寝次数 (只读)
+                const tdSleepCount = document.createElement('td'); 
+                tdSleepCount.style.textAlign = "center";
+                const spanSleepCount = document.createElement('span');
+                spanSleepCount.className = 'locked-count';
+                spanSleepCount.textContent = item.sleepCount || 0;
+                tdSleepCount.appendChild(spanSleepCount);
+
+                tr.appendChild(tdRank); tr.appendChild(tdTitle); tr.appendChild(tdName); tr.appendChild(tdJpName); tr.appendChild(tdScore); tr.appendChild(tdSleepCount);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 初始化
+        initCalendar(); 
+        loadScores();
+        updateSortIcons();
+        renderTable();
+    </script>
+</body>
+</html>
