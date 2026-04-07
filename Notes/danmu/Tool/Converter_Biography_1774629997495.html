@@ -77,11 +77,11 @@
         }
         .modal h3 { margin: 0; font-size: 1.2rem; color: #333; }
 
-        input[type="text"], input[type="password"] {
+        input[type="text"], input[type="url"], input[type="password"] {
             width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
             font-size: 1rem; box-sizing: border-box; outline: none; background-color: #FAFAFA;
         }
-        input[type="text"]:focus, input[type="password"]:focus { border-color: var(--primary); background-color: #FFF; }
+        input[type="text"]:focus, input[type="url"]:focus, input[type="password"]:focus { border-color: var(--primary); background-color: #FFF; }
 
         .path-list-container {
             border: 1px solid #eee; border-radius: 12px; max-height: 160px; 
@@ -127,6 +127,9 @@
                 <option value="4">🌸 樱花浅粉 (居中)</option>
             </select>
         </label>
+        
+        <input type="url" id="originalLink" placeholder="🔗 选填：在此粘贴原文链接 (如 https://...)" autocomplete="off">
+        
         <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder="请输入文章标题（第一行）及正文..."></textarea>
 
         <div class="action-bar">
@@ -216,6 +219,8 @@
 
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
+        const originalLink = document.getElementById('originalLink').value.trim(); // 获取原文链接
+        
         if (!input) { showToast('⚠️ 纯文本框为空'); return; }
 
         const lines = input.split(/\n+/).map(line => line.trim()).filter(line => line !== '');
@@ -234,6 +239,11 @@
 
         let htmlBody = `    <h1>${articleTitle}</h1>\n`;
         htmlBody += bodyLines.map(p => `    <p>${p}</p>`).join('\n');
+
+        // 如果填写了原文链接，追加到文章末尾
+        if (originalLink) {
+            htmlBody += `\n    <p style="text-align: right; margin-top: 2em; font-size: 0.85em;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; opacity: 0.8;">🔗 阅读原文</a>\n    </p>`;
+        }
 
         const fullHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -261,7 +271,6 @@ ${htmlBody}
         showToast('✨ 转换成功');
     }
 
-    // 新增：生成日期文件名函数
     function generateDateFileName() {
         const now = new Date();
         const year = now.getFullYear();
@@ -269,13 +278,13 @@ ${htmlBody}
         const date = String(now.getDate()).padStart(2, '0');
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
-        
+
         const dateStr = `${year}${month}${date}${hours}${minutes}`;
-        
+
         const fileNameInput = document.getElementById('inlineFileName');
         fileNameInput.removeAttribute('readonly');
         fileNameInput.value = dateStr;
-        
+
         showToast('🕒 已生成日期文件名');
     }
 
