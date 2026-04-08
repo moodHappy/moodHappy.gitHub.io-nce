@@ -219,7 +219,7 @@
 
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
-        const originalLink = document.getElementById('originalLink').value.trim(); // 获取原文链接
+        const originalLink = document.getElementById('originalLink').value.trim(); 
 
         if (!input) { showToast('⚠️ 纯文本框为空'); return; }
 
@@ -239,7 +239,6 @@
 
         let htmlBody = `    <h1>${articleTitle}</h1>\n`;
 
-        // 将原文链接插入到标题下方，并居中显示
         if (originalLink) {
             htmlBody += `    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
         }
@@ -264,7 +263,6 @@ ${htmlBody}
         document.getElementById('outputText').value = fullHtml;
 
         const safeTitle = articleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
-
         const fileNameInput = document.getElementById('inlineFileName');
         fileNameInput.removeAttribute('readonly');
         fileNameInput.value = safeTitle;
@@ -333,14 +331,11 @@ ${htmlBody}
     function renderPathList() {
         const list = document.getElementById('pathList');
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        
-        // 如果没有默认路径，默认取最新使用的那个（即数组最后一个）
         const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[paths.length - 1];
 
         list.innerHTML = '';
         
-        // 【核心修改处】：将数组“倒序”遍历。
-        // 这样不仅新的推送记录会排在最上面，而且你以前存入的旧记录，也会变成最新的在上面。
+        // 保留上次优化的倒序排列，让最近推送路径置顶
         const displayPaths = [...paths].reverse();
         
         displayPaths.forEach(p => {
@@ -371,7 +366,6 @@ ${htmlBody}
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
             if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
-                // 如果删除了默认的，就取剩下的最新的一条设为默认
                 localStorage.setItem(DEFAULT_PATH_KEY, paths[paths.length - 1]);
             }
             renderPathList();
@@ -390,9 +384,6 @@ ${htmlBody}
         btn.disabled = true;
 
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        
-        // 【配合倒序渲染的保存逻辑】：先剔除旧记录，再将其追加到末尾。
-        // 因为渲染时用了 reverse()，所以追加在末尾的数据，展示时就会在最上面！
         paths = paths.filter(p => p !== targetPath); 
         paths.push(targetPath); 
         localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); 
@@ -402,11 +393,13 @@ ${htmlBody}
         }
 
         try {
-            let baseName = "";
+            let finalFileName = "";
 
             if (customFileName) {
-                baseName = customFileName.replace(/\.html$/i, '');
+                // 【核心修复】：如果用户指定了文件名（比如点击日期生成的 202604081317），则不再胡乱追加时间戳尾巴
+                finalFileName = customFileName.replace(/\.html$/i, '') + ".html";
             } else {
+                // 只有在没填文件名，完全靠程序自动抓取标题的时候，才加上随机时间戳防止重名
                 let extractedTitle = "未命名网页";
                 const titleMatch = contentToPush.match(/<title>(.*?)<\/title>/i);
                 const h1Match = contentToPush.match(/<h1>(.*?)<\/h1>/i);
@@ -416,10 +409,10 @@ ${htmlBody}
                 } else if (h1Match && h1Match[1]) {
                     extractedTitle = h1Match[1];
                 }
-                baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+                const baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+                finalFileName = `${baseName}_${Date.now()}.html`;
             }
 
-            const finalFileName = `${baseName}_${Date.now()}.html`;
             const token = localStorage.getItem('gh_token');
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${finalFileName}`;
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
