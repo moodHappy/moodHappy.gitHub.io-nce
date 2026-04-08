@@ -195,21 +195,11 @@
     const DEFAULT_PATH_KEY = "gh_article_default_path";
     const INITIAL_PATH = "Notes/Articles";
 
-    // 统一排版结构，仅更改配色方案
     const premiumThemes = [
-        // 0: 典雅书卷
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FAFAFA; color: #2C2C2C; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #EEEEEE; padding-bottom: 20px; color: #111111; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-
-        // 1: 温润纸张
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F8F4E6; color: #4A3F35; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; color: #2C241B; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-
-        // 2: 现代极简
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFFFFF; color: #333333; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #E0E0E0; padding-bottom: 20px; color: #000000; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-
-        // 3: 护眼抹茶
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-
-        // 4: 樱花浅粉
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`
     ];
 
@@ -219,7 +209,7 @@
 
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
-        const originalLink = document.getElementById('originalLink').value.trim(); // 获取原文链接
+        const originalLink = document.getElementById('originalLink').value.trim(); 
 
         if (!input) { showToast('⚠️ 纯文本框为空'); return; }
 
@@ -239,7 +229,6 @@
 
         let htmlBody = `    <h1>${articleTitle}</h1>\n`;
 
-        // 将原文链接插入到标题下方，并居中显示
         if (originalLink) {
             htmlBody += `    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
         }
@@ -333,10 +322,12 @@ ${htmlBody}
     function renderPathList() {
         const list = document.getElementById('pathList');
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
+        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[paths.length - 1];
 
         list.innerHTML = '';
-        paths.forEach(p => {
+        const displayPaths = [...paths].reverse();
+        
+        displayPaths.forEach(p => {
             const div = document.createElement('div');
             div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
             div.innerHTML = `
@@ -364,7 +355,7 @@ ${htmlBody}
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
             if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
-                localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
+                localStorage.setItem(DEFAULT_PATH_KEY, paths[paths.length - 1]);
             }
             renderPathList();
         }
@@ -382,19 +373,22 @@ ${htmlBody}
         btn.disabled = true;
 
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        if (!paths.includes(targetPath)) { 
-            paths.push(targetPath); 
-            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); 
-        }
+        paths = paths.filter(item => item !== targetPath);
+        paths.push(targetPath);
+        localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
+        
         if (document.getElementById('setAsDefault').checked) {
             localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
         }
 
         try {
             let baseName = "";
+            let finalFileName = "";
 
             if (customFileName) {
                 baseName = customFileName.replace(/\.html$/i, '');
+                // 核心修复点：使用纯净的文件名，不再追加乱码后缀，让外部工具能够正确解析日期！
+                finalFileName = `${baseName}.html`;
             } else {
                 let extractedTitle = "未命名网页";
                 const titleMatch = contentToPush.match(/<title>(.*?)<\/title>/i);
@@ -406,12 +400,42 @@ ${htmlBody}
                     extractedTitle = h1Match[1];
                 }
                 baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+                
+                // 如果没有提供自定义文件名，为了防止覆盖，仍然加上时间戳
+                finalFileName = `${baseName}_${Date.now()}.html`;
             }
 
-            const finalFileName = `${baseName}_${Date.now()}.html`;
             const token = localStorage.getItem('gh_token');
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${finalFileName}`;
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
+
+            // 核心修复点2：先查询文件是否已存在获取其 SHA（这样纯净文件名覆盖推送时 GitHub 就不会报错）
+            let fileSha = null;
+            try {
+                const getRes = await fetch(url, {
+                    method: 'GET',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                if (getRes.ok) {
+                    const fileData = await getRes.json();
+                    fileSha = fileData.sha;
+                }
+            } catch (e) {
+                // 如果文件不存在则忽略
+            }
+
+            const pushBody = { 
+                message: `Auto-push: ${finalFileName}`, 
+                content: base64Content 
+            };
+            
+            // 如果文件已存在，加上 sha 值以支持直接覆盖更新
+            if (fileSha) {
+                pushBody.sha = fileSha;
+            }
 
             const res = await fetch(url, {
                 method: 'PUT',
@@ -419,10 +443,7 @@ ${htmlBody}
                     'Authorization': `Bearer ${token}`, 
                     'Content-Type': 'application/json' 
                 },
-                body: JSON.stringify({ 
-                    message: `Auto-push: ${finalFileName}`, 
-                    content: base64Content 
-                })
+                body: JSON.stringify(pushBody)
             });
 
             if (!res.ok) { 
