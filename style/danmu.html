@@ -81,7 +81,7 @@
         .list-item.selected { background-color: var(--selected-bg); }
         .list-item.selected::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary); }
         .list-item.marked { background-color: #fffdf2; }
-        
+
         /* Drag & Drop Styles */
         .drag-handle {
             padding: 0 12px 0 0; font-size: 18px; color: #d0d7de;
@@ -272,12 +272,12 @@
 
     let config = {};
     let currentPath = '';
-    let currentItems = []; // 混合目录和文件，用于统一排序
-    let currentDirs = [];  // 用于特殊判断的备用
-    let currentFiles = []; // 用于特殊判断的备用
+    let currentItems = []; 
+    let currentDirs = [];  
+    let currentFiles = []; 
     let isBatchMode = false;
     let selectedFilesMap = new Map(); 
-    
+
     // 排序相关状态
     let sortableInstance = null;
     let currentSortSha = null;
@@ -296,7 +296,7 @@
         if (type === 'error') toast.style.background = 'rgba(207, 34, 46, 0.9)';
         else if (type === 'success') toast.style.background = 'rgba(45, 164, 78, 0.9)';
         else toast.style.background = 'rgba(36, 41, 47, 0.9)';
-        
+
         toast.style.display = 'block';
         toast.style.opacity = '1';
 
@@ -326,7 +326,7 @@
         if (config.token) headers['Authorization'] = `token ${config.token}`;
         const noCacheUrl = url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
         const response = await fetch(noCacheUrl, { ...options, headers });
-        
+
         if (response.status === 204) return true;
         if (!response.ok) {
             const err = await response.json().catch(()=>({}));
@@ -364,11 +364,9 @@
             let sortOrder = [];
             currentSortSha = null;
 
-            // 处理所有文件和读取排序配置文件
             for (const item of data) {
                 if(item.name.toLowerCase() === 'index.html') continue;
-                
-                // 拦截特殊排序文件
+
                 if (item.name === '_sort_order.json') {
                     currentSortSha = item.sha;
                     try {
@@ -376,35 +374,59 @@
                         const decoded = decodeURIComponent(escape(atob(sortData.content)));
                         sortOrder = JSON.parse(decoded);
                     } catch(e) { console.warn("解析排序文件失败", e); }
-                    continue; // 排序文件本身不显示在列表中
+                    continue; 
                 }
 
                 if(item.type === 'dir') {
                     items.push(item);
                 } else if(item.name.match(/\.(html|json)$/)) {
-                    const ts = (item.name.match(/_(\d{13})\./) || [])[1];
+                    // 核心修复1：双重正则解析，同时兼容含有旧时间戳以及纯净数字日期的文件名
+                    let ts = 0;
+                    let dateStr = '';
+                    
+                    const tsMatch = item.name.match(/_(\d{13})\./);
+                    const dateMatch = item.name.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(?:_.*)?\.(?:html|json)$/i);
+
+                    if (tsMatch) {
+                        ts = parseInt(tsMatch[1]);
+                        dateStr = new Date(ts).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12: false});
+                    } else if (dateMatch) {
+                        const [_, y, m, d, h, min] = dateMatch;
+                        ts = new Date(y, m - 1, d, h, min).getTime();
+                        dateStr = `${m}/${d} ${h}:${min}`;
+                    }
+
                     items.push({
                         ...item,
-                        timestamp: ts ? parseInt(ts) : 0,
-                        dateStr: ts ? new Date(parseInt(ts)).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12: false}) : ''
+                        timestamp: ts,
+                        dateStr: dateStr
                     });
                 }
             }
 
-            // 1. 默认排序：文件夹在前，按名字倒序（年份）；文件在后，按时间倒序
+            // 1. 默认排序：文件夹在前，按名字倒序；文件在后，按时间戳降序(如果时间戳一样按名字降序)
             let defaultDirs = items.filter(i => i.type === 'dir').sort((a,b) => b.name.localeCompare(a.name));
-            let defaultFiles = items.filter(i => i.type !== 'dir').sort((a,b) => b.timestamp - a.timestamp);
+            let defaultFiles = items.filter(i => i.type !== 'dir').sort((a,b) => {
+                if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+                return b.name.localeCompare(a.name);
+            });
             let combined = [...defaultDirs, ...defaultFiles];
 
-            // 2. 如果存在自定义排序，则覆盖
+            // 2. 自定义排序覆盖
             if (sortOrder && Array.isArray(sortOrder) && sortOrder.length > 0) {
                 combined.sort((a, b) => {
                     const indexA = sortOrder.indexOf(a.name);
                     const indexB = sortOrder.indexOf(b.name);
+                    
+                    // 如果都在拖拽列表里，按列表里相对位置排
                     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    if (indexA !== -1) return -1; // A在排序表中，优先
-                    if (indexB !== -1) return 1;  // B在排序表中，优先
-                    return 0; // 都不在排序表中，保持默认相对位置
+                    
+                    // 核心修复2：如果A是新文件(不在列表)，B在列表，强制让新文件A排在B前面(置顶)
+                    if (indexA === -1 && indexB !== -1) return -1;
+                    if (indexA !== -1 && indexB === -1) return 1;
+                    
+                    // 都不在排序表中的，保持上面计算好的默认降序顺序
+                    return 0; 
                 });
             }
 
@@ -434,7 +456,6 @@
         const ul = document.querySelector('#file-list ul');
         if (!ul) return;
 
-        // 获取 DOM 中当前顺序的文件名列表
         const newOrder = Array.from(ul.children).map(li => li.dataset.filename).filter(Boolean);
 
         showToast("正在同步排序状态...", "info");
@@ -442,7 +463,6 @@
         try {
             const sortFilePath = currentPath + '/_sort_order.json';
             const contentRaw = JSON.stringify(newOrder, null, 2);
-            // 兼容中文 Base64 转换
             const contentBase64 = btoa(unescape(encodeURIComponent(contentRaw)));
 
             const body = {
@@ -458,7 +478,7 @@
                 body: JSON.stringify(body)
             });
 
-            currentSortSha = res.content.sha; // 更新 SHA 以便下次能正确覆盖
+            currentSortSha = res.content.sha; 
             showToast("✅ 排序已永久保存", "success");
 
         } catch (e) {
@@ -480,7 +500,7 @@
 
         currentItems.forEach(item => {
             const li = document.createElement('li');
-            li.dataset.filename = item.name; // 用于排序保存
+            li.dataset.filename = item.name; 
 
             if (item.type === 'dir') {
                 const href = `?path=${encodeURIComponent(item.path)}`;
@@ -501,7 +521,8 @@
                 if (isSelected && isBatchMode) itemClass += " selected";
                 if (isMarked) itemClass += " marked";
 
-                let cleanName = item.name.replace(/_\d{13}\.(html|json)/, '').replace(/_/g, ' ');
+                // 核心UI优化：干净地移除文件后缀名显示
+                let cleanName = item.name.replace(/_\d{13}\.(html|json)$/, '').replace(/\.(html|json)$/i, '').replace(/_/g, ' ');
                 const realUrl = `https://${config.user}.github.io/${config.repo}/${item.path}`;
 
                 li.innerHTML = `
@@ -525,14 +546,13 @@
         listEl.innerHTML = '';
         listEl.appendChild(ul);
 
-        // 初始化 Sortable 拖拽库
         if (sortableInstance) sortableInstance.destroy();
         sortableInstance = new Sortable(ul, {
-            handle: '.drag-handle', // 只有按住 ☰ 才能拖拽
+            handle: '.drag-handle', 
             animation: 150,
             ghostClass: 'sortable-ghost',
             onEnd: function () {
-                saveSortOrder(); // 拖拽结束后自动触发保存
+                saveSortOrder(); 
             }
         });
     }
@@ -763,7 +783,7 @@
             if(files.length > 0) {
                  const f = files.sort((a,b)=>b.name.localeCompare(a.name))[0]; 
                  const url = `https://${config.user}.github.io/${config.repo}/${f.path}`;
-                 const name = f.name.replace(/_\d{13}\..*$/,'').replace(/_/g,' ');
+                 const name = f.name.replace(/_\d{13}\..*$/,'').replace(/\.(html|json)$/i, '').replace(/_/g,' ');
                  document.getElementById('latest-container').innerHTML = `
                     <a href="${url}" target="_blank" class="latest-card">
                         <div>
