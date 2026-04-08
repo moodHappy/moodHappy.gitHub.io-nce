@@ -319,15 +319,15 @@ ${htmlBody}
         document.getElementById('pushModal').style.display = 'flex';
     }
 
+    // 核心优化 1：渲染时直接按数组原始顺序渲染，确保底层数据本身就是正确排序的
     function renderPathList() {
         const list = document.getElementById('pathList');
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[paths.length - 1];
+        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
 
         list.innerHTML = '';
-        const displayPaths = [...paths].reverse();
         
-        displayPaths.forEach(p => {
+        paths.forEach(p => {
             const div = document.createElement('div');
             div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
             div.innerHTML = `
@@ -355,7 +355,8 @@ ${htmlBody}
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
             if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
-                localStorage.setItem(DEFAULT_PATH_KEY, paths[paths.length - 1]);
+                // 如果删除了默认的，退回到最新的首个项
+                localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
             }
             renderPathList();
         }
@@ -373,8 +374,10 @@ ${htmlBody}
         btn.disabled = true;
 
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
+        
+        // 核心优化 2：彻底弃用反转逻辑，直接在保存底层数据时，将最新使用的强行插入到数组头部(unshift)
         paths = paths.filter(item => item !== targetPath);
-        paths.push(targetPath);
+        paths.unshift(targetPath);
         localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
         
         if (document.getElementById('setAsDefault').checked) {
@@ -387,7 +390,7 @@ ${htmlBody}
 
             if (customFileName) {
                 baseName = customFileName.replace(/\.html$/i, '');
-                // 核心修复点：使用纯净的文件名，不再追加乱码后缀，让外部工具能够正确解析日期！
+                // 确保导出的文件名绝对纯净，以适配各大外部软件的排序规则
                 finalFileName = `${baseName}.html`;
             } else {
                 let extractedTitle = "未命名网页";
@@ -401,7 +404,6 @@ ${htmlBody}
                 }
                 baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
                 
-                // 如果没有提供自定义文件名，为了防止覆盖，仍然加上时间戳
                 finalFileName = `${baseName}_${Date.now()}.html`;
             }
 
@@ -409,7 +411,6 @@ ${htmlBody}
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${finalFileName}`;
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
 
-            // 核心修复点2：先查询文件是否已存在获取其 SHA（这样纯净文件名覆盖推送时 GitHub 就不会报错）
             let fileSha = null;
             try {
                 const getRes = await fetch(url, {
@@ -432,7 +433,6 @@ ${htmlBody}
                 content: base64Content 
             };
             
-            // 如果文件已存在，加上 sha 值以支持直接覆盖更新
             if (fileSha) {
                 pushBody.sha = fileSha;
             }
