@@ -333,10 +333,17 @@ ${htmlBody}
     function renderPathList() {
         const list = document.getElementById('pathList');
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
+        
+        // 如果没有默认路径，默认取最新使用的那个（即数组最后一个）
+        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[paths.length - 1];
 
         list.innerHTML = '';
-        paths.forEach(p => {
+        
+        // 【核心修改处】：将数组“倒序”遍历。
+        // 这样不仅新的推送记录会排在最上面，而且你以前存入的旧记录，也会变成最新的在上面。
+        const displayPaths = [...paths].reverse();
+        
+        displayPaths.forEach(p => {
             const div = document.createElement('div');
             div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
             div.innerHTML = `
@@ -364,7 +371,8 @@ ${htmlBody}
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
             if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
-                localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
+                // 如果删除了默认的，就取剩下的最新的一条设为默认
+                localStorage.setItem(DEFAULT_PATH_KEY, paths[paths.length - 1]);
             }
             renderPathList();
         }
@@ -383,9 +391,10 @@ ${htmlBody}
 
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
         
-        // 【核心修改位置】重新排序路径，让最近使用的始终保持在数组最前面（索引0）
-        paths = paths.filter(p => p !== targetPath); // 先剔除旧的重复记录
-        paths.unshift(targetPath); // 将最新使用的路径插到最前面
+        // 【配合倒序渲染的保存逻辑】：先剔除旧记录，再将其追加到末尾。
+        // 因为渲染时用了 reverse()，所以追加在末尾的数据，展示时就会在最上面！
+        paths = paths.filter(p => p !== targetPath); 
+        paths.push(targetPath); 
         localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); 
 
         if (document.getElementById('setAsDefault').checked) {
