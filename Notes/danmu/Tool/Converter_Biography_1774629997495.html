@@ -195,11 +195,21 @@
     const DEFAULT_PATH_KEY = "gh_article_default_path";
     const INITIAL_PATH = "Notes/Articles";
 
+    // 统一排版结构，仅更改配色方案
     const premiumThemes = [
+        // 0: 典雅书卷
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FAFAFA; color: #2C2C2C; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #EEEEEE; padding-bottom: 20px; color: #111111; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+
+        // 1: 温润纸张
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F8F4E6; color: #4A3F35; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; color: #2C241B; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+
+        // 2: 现代极简
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFFFFF; color: #333333; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #E0E0E0; padding-bottom: 20px; color: #000000; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+
+        // 3: 护眼抹茶
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+
+        // 4: 樱花浅粉
         `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`
     ];
 
@@ -209,7 +219,7 @@
 
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
-        const originalLink = document.getElementById('originalLink').value.trim(); 
+        const originalLink = document.getElementById('originalLink').value.trim(); // 获取原文链接
 
         if (!input) { showToast('⚠️ 纯文本框为空'); return; }
 
@@ -229,6 +239,7 @@
 
         let htmlBody = `    <h1>${articleTitle}</h1>\n`;
 
+        // 将原文链接插入到标题下方，并居中显示
         if (originalLink) {
             htmlBody += `    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
         }
@@ -319,20 +330,13 @@ ${htmlBody}
         document.getElementById('pushModal').style.display = 'flex';
     }
 
-    // 核心修改 1：通过反转展示顺序，使最新的（即原数组末尾的）置顶显示
     function renderPathList() {
         const list = document.getElementById('pathList');
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        
-        // 默认选中项：如果未设置，优先选择最新添加的一个
-        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[paths.length - 1];
+        const defaultPath = localStorage.getItem(DEFAULT_PATH_KEY) || paths[0];
 
         list.innerHTML = '';
-        
-        // 倒序展示，完美兼容已有缓存
-        const displayPaths = [...paths].reverse();
-        
-        displayPaths.forEach(p => {
+        paths.forEach(p => {
             const div = document.createElement('div');
             div.className = `path-item ${p === defaultPath ? 'selected' : ''}`;
             div.innerHTML = `
@@ -360,8 +364,7 @@ ${htmlBody}
             paths = paths.filter(item => item !== p);
             localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
             if (localStorage.getItem(DEFAULT_PATH_KEY) === p) {
-                // 如果删除了默认的，退回到最新的一个
-                localStorage.setItem(DEFAULT_PATH_KEY, paths[paths.length - 1]);
+                localStorage.setItem(DEFAULT_PATH_KEY, paths[0]);
             }
             renderPathList();
         }
@@ -379,12 +382,10 @@ ${htmlBody}
         btn.disabled = true;
 
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH];
-        
-        // 核心修改 2：无论路径是否已存在，先移除再放入末尾。结合倒序渲染，即可实现“最近使用置顶”
-        paths = paths.filter(item => item !== targetPath);
-        paths.push(targetPath);
-        localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
-        
+        if (!paths.includes(targetPath)) { 
+            paths.push(targetPath); 
+            localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths)); 
+        }
         if (document.getElementById('setAsDefault').checked) {
             localStorage.setItem(DEFAULT_PATH_KEY, targetPath);
         }
