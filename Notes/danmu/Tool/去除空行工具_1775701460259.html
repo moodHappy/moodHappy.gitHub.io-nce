@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本排版工具 (净化/缩进/带格式复制)</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h2 {
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            align-self: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        /* 复制按钮的独立样式 */
+        #copyBtn {
+            background-color: #6c757d; 
+        }
+        #copyBtn:hover {
+            background-color: #5a6268;
+        }
+        /* 复制成功时的绿色状态 */
+        #copyBtn.success {
+            background-color: #28a745 !important; 
+        }
+    </style>
+</head>
+<body>
+
+    <h2>中文文本一键排版工具</h2>
+    
+    <div class="container">
+        <textarea id="inputText" placeholder="请在此处粘贴需要处理的原始文本..."></textarea>
+        
+        <button onclick="formatText()">一键排版 (去空行/#/* + 首行缩进)</button>
+        
+        <textarea id="outputText" placeholder="处理后的规范排版文本将显示在这里..." readonly></textarea>
+        
+        <button id="copyBtn" onclick="copyResult()">复制结果 (默认四号字)</button>
+    </div>
+
+    <script>
+        // 处理文本的核心逻辑
+        function formatText() {
+            const rawText = document.getElementById('inputText').value;
+            
+            const cleanedText = rawText
+                .replace(/[#＃*＊]/g, '')    // 去除中英文字符 # 和 *
+                .split('\n')                // 按行分割
+                .map(line => line.trim())   // 去除行首尾空格
+                .filter(line => line !== '')// 过滤纯空行
+                .map(line => '　　' + line) // 统一添加两个全角空格实现首行缩进
+                .join('\n');                // 重新组合
+                
+            document.getElementById('outputText').value = cleanedText;
+        }
+
+        // 复制到剪贴板的逻辑 (带富文本格式)
+        function copyResult() {
+            const outputText = document.getElementById('outputText').value;
+            const copyBtn = document.getElementById('copyBtn');
+
+            if (!outputText) {
+                alert('没有可复制的内容，请先输入并处理文本。');
+                return;
+            }
+
+            // 中文四号字对应 CSS 中的 14pt。
+            // 我们将换行符 \n 替换为 HTML 的 <br> 标签，以保持排版。
+            // 设置了基础的宋体/serif字体，防止复制到 Word 后变成英文字体。
+            const htmlContent = `<div style="font-size: 14pt; font-family: '宋体', SimSun, serif; line-height: 1.5;">${outputText.replace(/\n/g, '<br>')}</div>`;
+
+            // 成功状态反馈函数
+            const showSuccess = (msg) => {
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = msg;
+                copyBtn.classList.add('success');
+                setTimeout(() => {
+                    copyBtn.innerText = originalText;
+                    copyBtn.classList.remove('success');
+                }, 2000);
+            };
+
+            // 检查浏览器是否支持较新的 ClipboardItem API
+            if (navigator.clipboard && window.ClipboardItem) {
+                // 同时准备纯文本和富文本 (HTML) 两种格式
+                // 这样粘贴到记事本会用纯文本，粘贴到 Word 会用富文本
+                const textBlob = new Blob([outputText], { type: 'text/plain' });
+                const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+
+                const clipboardItem = new ClipboardItem({
+                    'text/plain': textBlob,
+                    'text/html': htmlBlob
+                });
+
+                navigator.clipboard.write([clipboardItem])
+                    .then(() => showSuccess('复制成功 (带四号字格式)！'))
+                    .catch(err => {
+                        console.error('富文本复制出错，退化为纯文本:', err);
+                        fallbackCopy(outputText, showSuccess);
+                    });
+            } else {
+                // 如果浏览器不支持 ClipboardItem，则退化为普通纯文本复制
+                fallbackCopy(outputText, showSuccess);
+            }
+        }
+
+        // 退化的纯文本复制逻辑
+        function fallbackCopy(text, successCallback) {
+            navigator.clipboard.writeText(text).then(() => {
+                successCallback('复制成功 (仅纯文本)！');
+            }).catch(err => {
+                alert('复制失败，请手动选中并复制。');
+                console.error('复制出错:', err);
+            });
+        }
+    </script>
+
+</body>
+</html>
