@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>双语对照电子书生成器 (带进度记忆终极版)</title>
+    <title>双语对照电子书生成器 (全功能终极版)</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -60,14 +60,14 @@
             background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;
         }
         .modal-content { background: white; width: 80%; height: 80%; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; }
-        #code-output { flex: 1; font-family: monospace; font-size: 12px; margin-top: 10px; border: 1px solid #ccc; padding: 10px; overflow: auto; }
+        #code-output { flex: 1; font-family: monospace; font-size: 12px; margin-top: 10px; border: 1px solid #ccc; padding: 10px; overflow: auto; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📖 双语书导出工具 (内置进度记忆)</h2>
+            <h2 style="margin-top:0; text-align: center;">📖 沉浸式双语书生成器 (全能版)</h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著 (上半区)</b></label>
@@ -80,8 +80,8 @@
             </div>
             
             <div class="button-group">
-                <button class="btn-main" onclick="startReading()">预览阅读效果</button>
-                <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并复制源码 HTML</button>
+                <button class="btn-main" onclick="startReading()">预览双语效果</button>
+                <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并复制带记忆/模式切换的源码</button>
             </div>
         </div>
     </div>
@@ -90,7 +90,7 @@
         <div class="nav-bar">
             <button class="btn-tool" onclick="location.reload()" style="margin-left: 0;">← 返回修改内容</button>
             <span style="font-size: 14px;"><input type="checkbox" id="sync-active" checked> 开启比例同步滚动</span>
-            <button class="btn-tool" onclick="downloadFile()">直接保存 HTML 文件</button>
+            <button class="btn-tool" onclick="downloadFile()">保存此书 HTML</button>
         </div>
         <div class="panes">
             <div class="pane" id="pane-en"><div class="inner" id="out-en"></div></div>
@@ -101,11 +101,11 @@
     <div id="code-modal">
         <div class="modal-content">
             <div style="display:flex; justify-content: space-between; align-items: center;">
-                <b>导出版源码已生成：</b>
-                <button style="padding: 5px 15px;" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
+                <b>🎉 导出版源码已生成：</b>
+                <button style="padding: 5px 15px; cursor: pointer;" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
             </div>
             <textarea id="code-output" readonly></textarea>
-            <p style="font-size: 12px; color: #666;">代码已复制！保存为 .html 文件后，它将永久记住你在该浏览器上的阅读位置。</p>
+            <p style="font-size: 12px; color: #666;">代码已复制！保存为 .html 文件后，它将支持【记忆阅读位置】和【英/中/双模式实时切换】。</p>
         </div>
     </div>
 
@@ -137,6 +137,7 @@
         pEn.onscroll = () => sync(pEn, pZh);
         pZh.onscroll = () => sync(pZh, pEn);
 
+        // --- 核心：打包带模式切换和记忆功能的 HTML ---
         function getFullSource() {
             const finalEn = format(enInput.value);
             const finalZh = format(zhInput.value);
@@ -146,71 +147,133 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>双语对照书 (进度记忆版)</title>
+    <title>沉浸阅读器</title>
     <style>
         body, html { margin: 0; height: 100%; font-family: sans-serif; overflow: hidden; background: #f8fafc; }
         .bar { height: 40px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 13px; }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        .btn { background: #334155; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.2s; }
+        .btn:hover { background: #475569; }
+        .btn-mode { background: #3b82f6; font-weight: bold; }
+        .btn-mode:hover { background: #2563eb; }
+        
         .panes { display: flex; flex-direction: column; height: calc(100vh - 40px); }
-        .pane { flex: 1; overflow-y: auto; padding: 40px; border-bottom: 2px solid #cbd5e1; scroll-behavior: auto; }
-        #en { background: white; font-family: "Georgia", serif; font-size: 1.25rem; line-height: 1.8; }
+        .pane { flex: 1; overflow-y: auto; padding: 40px; scroll-behavior: auto; }
+        #en { background: white; font-family: "Georgia", serif; font-size: 1.25rem; line-height: 1.8; border-bottom: 2px solid #cbd5e1; }
         #zh { background: #f1f5f9; font-size: 1.15rem; line-height: 1.8; color: #334155; }
         .inner { max-width: 800px; margin: 0 auto; }
-        button { background: #334155; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body>
     <div class="bar">
-        <span>📖 阅读进度已自动保存</span>
-        <button onclick="if(confirm('重置？')){localStorage.removeItem('${bookId}');location.reload();}">重置阅读进度并回到顶部</button>
+        <span id="status-text">📖 进度自动保存中...</span>
+        <div class="controls">
+            <button id="mode-btn" class="btn btn-mode" onclick="toggleMode()">模式: 双语对照</button>
+            <button class="btn" onclick="if(confirm('重置阅读进度并回到顶部？')){localStorage.removeItem('${bookId}');location.reload();}">重置</button>
+        </div>
     </div>
     <div class="panes">
         <div class="pane" id="en"><div class="inner">${finalEn}</div></div>
         <div class="pane" id="zh"><div class="inner">${finalZh}</div></div>
     </div>
     <script>
-        const e=document.getElementById('en'), z=document.getElementById('zh');
+        const e = document.getElementById('en'), z = document.getElementById('zh');
+        const modeBtn = document.getElementById('mode-btn');
         const id = "${bookId}";
-        let s=false;
         
-        // 恢复进度
+        let s = false;
+        let mode = 0; // 0: 双语, 1: 纯英文, 2: 纯中文
+        const modeLabels = ['双语对照', '纯英模式', '纯中模式'];
+
+        // 获取当前正在阅读的百分比
+        function getRatio() {
+            if (mode === 1) return e.scrollHeight > e.clientHeight ? e.scrollTop / (e.scrollHeight - e.clientHeight) : 0;
+            if (mode === 2) return z.scrollHeight > z.clientHeight ? z.scrollTop / (z.scrollHeight - z.clientHeight) : 0;
+            return e.scrollHeight > e.clientHeight ? e.scrollTop / (e.scrollHeight - e.clientHeight) : 0;
+        }
+
+        // 设置所有面板的百分比
+        function setRatio(r) {
+            if (mode === 0 || mode === 1) e.scrollTop = r * (e.scrollHeight - e.clientHeight);
+            if (mode === 0 || mode === 2) z.scrollTop = r * (z.scrollHeight - z.clientHeight);
+        }
+
+        // 切换阅读模式
+        function toggleMode() {
+            const currentRatio = getRatio(); // 切换前记录百分比
+            
+            mode = (mode + 1) % 3;
+            modeBtn.innerText = "模式: " + modeLabels[mode];
+            
+            if (mode === 0) {
+                e.style.display = 'block'; z.style.display = 'block';
+                e.style.borderBottom = '2px solid #cbd5e1';
+            } else if (mode === 1) {
+                e.style.display = 'block'; z.style.display = 'none';
+                e.style.borderBottom = 'none';
+            } else {
+                e.style.display = 'none'; z.style.display = 'block';
+            }
+            
+            // 稍作延迟等待 CSS 渲染后再恢复位置，实现无缝衔接
+            setTimeout(() => setRatio(currentRatio), 20);
+        }
+
+        // 页面初始化恢复记忆进度
         window.onload = () => {
             const r = localStorage.getItem(id);
             if(r) { 
-                setTimeout(() => {
-                    e.scrollTop = r * (e.scrollHeight - e.clientHeight);
-                    z.scrollTop = r * (z.scrollHeight - z.clientHeight);
-                }, 100);
+                setTimeout(() => setRatio(parseFloat(r)), 100);
             }
         };
 
-        // 同步与保存
-        function sync(a,b){
-            if(s)return; s=true;
-            const r = a.scrollTop/(a.scrollHeight-a.clientHeight);
-            b.scrollTop = r * (b.scrollHeight-b.clientHeight);
-            localStorage.setItem(id, r); // 保存进度
-            setTimeout(()=>{s=false;},30);
+        // 滚动同步与进度储存
+        function sync(a, b) {
+            if(s) return; s = true;
+            const r = a.scrollHeight > a.clientHeight ? a.scrollTop / (a.scrollHeight - a.clientHeight) : 0;
+            b.scrollTop = r * (b.scrollHeight - b.clientHeight);
+            localStorage.setItem(id, r);
+            setTimeout(() => { s = false; }, 30);
         }
-        e.onscroll=()=>sync(e,z); z.onscroll=()=>sync(z,e);
+
+        e.onscroll = () => { 
+            if(mode === 0) sync(e, z); 
+            else if(mode === 1) localStorage.setItem(id, getRatio()); 
+        };
+        z.onscroll = () => { 
+            if(mode === 0) sync(z, e); 
+            else if(mode === 2) localStorage.setItem(id, getRatio()); 
+        };
     <\/script>
 </body>
 </html>`;
         }
 
         function generateSource() {
-            if(!enInput.value && !zhInput.value) return alert("请先输入");
+            if(!enInput.value && !zhInput.value) return alert("请先填入内容");
             const src = getFullSource();
             document.getElementById('code-output').value = src;
             document.getElementById('code-modal').style.display = 'flex';
-            navigator.clipboard.writeText(src).then(() => alert("已复制到剪贴板！保存为 HTML 即可开启记忆阅读。"));
+            
+            navigator.clipboard.writeText(src).then(() => {
+                alert("✅ 终极版 HTML 源码已生成，并自动复制到剪贴板！\n粘贴保存为文件即可。");
+            }).catch(()=> {
+                alert("生成成功。由于浏览器安全限制，请手动全选下方代码复制。");
+            });
         }
 
         function downloadFile() {
-            if(!enInput.value && !zhInput.value) return alert("请先输入");
+            if(!enInput.value && !zhInput.value) return alert("请先填入内容");
             const blob = new Blob([getFullSource()], {type: 'text/html'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'bilingual_reader.html';
+            a.download = 'immersive_bilingual_book.html';
             a.click();
         }
     </script>
