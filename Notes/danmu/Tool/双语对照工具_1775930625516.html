@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沉浸式双语书生成器 (双击切换工具栏版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>沉浸式双语书生成器 (移动端完美适配 + 自由拖拽版)</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -14,8 +14,11 @@
             --text-dark: #1e293b;
         }
 
+        * { box-sizing: border-box; }
+
         body, html {
-            margin: 0; padding: 0; height: 100%;
+            margin: 0; padding: 0; 
+            height: 100%; height: 100dvh; /* 100dvh 完美解决移动端底部被遮挡问题 */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: var(--bg); overflow: hidden;
         }
@@ -23,41 +26,43 @@
         /* ----- 输入界面 ----- */
         #setup-view {
             padding: 20px; display: flex; flex-direction: column;
-            align-items: center; height: 100%; box-sizing: border-box; overflow-y: auto;
+            align-items: center; height: 100%; overflow-y: auto;
         }
 
         .container { width: 100%; max-width: 1100px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
-        textarea { width: 100%; height: 400px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; line-height: 1.6; resize: none; box-sizing: border-box; }
         
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            margin-top: 10px;
+        /* 移动端下单列显示输入框 */
+        @media (max-width: 768px) {
+            .input-grid { grid-template-columns: 1fr; }
         }
 
-        .btn-main { background: var(--primary); color: white; padding: 12px 60px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; width: 340px; }
+        textarea { width: 100%; height: 350px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; line-height: 1.6; resize: none; }
+        
+        .button-group {
+            display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 10px;
+        }
+
+        .btn-main { background: var(--primary); color: white; padding: 12px 20px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; max-width: 380px; }
         .btn-main:hover { opacity: 0.9; }
         .btn-copy-source { background: var(--secondary); }
 
         /* ----- 预览模式 (仅基础显示) ----- */
-        #reading-view { display: none; flex-direction: column; height: 100vh; }
-        .nav-bar { height: 50px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; }
-        .btn-tool { background: #334155; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        #reading-view { display: none; flex-direction: column; height: 100%; height: 100dvh; }
+        .nav-bar { height: 50px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 100; flex-shrink: 0; }
+        .btn-tool { background: #334155; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
 
-        .panes { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        .pane { flex: 1; overflow-y: auto; padding: 40px; scroll-behavior: auto; }
+        .panes { display: flex; flex-direction: column; flex: 1; overflow: hidden; width: 100%; }
+        .pane { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: auto; -webkit-overflow-scrolling: touch; }
         #pane-en { border-bottom: 2px solid #cbd5e1; background: var(--panel-en); font-family: "Georgia", serif; font-size: 1.25rem; line-height: 1.8; }
         #pane-zh { background: var(--panel-zh); font-size: 1.15rem; line-height: 1.8; color: #334155; }
         .inner { max-width: 850px; margin: 0 auto; }
 
         #code-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px;
         }
-        .modal-content { background: white; width: 80%; height: 80%; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; }
+        .modal-content { background: white; width: 100%; max-width: 800px; height: 80vh; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; }
         #code-output { flex: 1; font-family: monospace; font-size: 12px; margin-top: 10px; border: 1px solid #ccc; padding: 10px; overflow: auto; white-space: pre-wrap; }
     </style>
 </head>
@@ -65,7 +70,7 @@
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📚 双语书导出工具 <span style="font-size:12px; color:#3b82f6;">(双击隐藏/显示工具栏版)</span></h2>
+            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#3b82f6;">(修复移动端遮挡 + 拖拽中线版)</span></h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著</b></label>
@@ -79,16 +84,16 @@
             
             <div class="button-group">
                 <button class="btn-main" onclick="startReading()">预览基础效果</button>
-                <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并打包源码 (双击控制工具栏)</button>
+                <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并复制打包源码</button>
             </div>
         </div>
     </div>
 
     <div id="reading-view">
         <div class="nav-bar">
-            <button class="btn-tool" onclick="location.reload()">← 返回修改</button>
-            <span style="font-size: 14px;"><input type="checkbox" id="sync-active" checked> 开启比例同步滚动</span>
-            <button class="btn-tool" onclick="downloadFile()" style="background: #10b981;">直接保存</button>
+            <button class="btn-tool" onclick="location.reload()">← 返回</button>
+            <span style="font-size: 13px;"><input type="checkbox" id="sync-active" checked> 同步滚动</span>
+            <button class="btn-tool" onclick="downloadFile()" style="background: #10b981;">保存网页</button>
         </div>
         <div class="panes">
             <div class="pane" id="pane-en"><div class="inner" id="out-en"></div></div>
@@ -98,11 +103,12 @@
 
     <div id="code-modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content: space-between;">
-                <b>源码已生成 (支持双击开关工具栏)：</b>
-                <button onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
+            <div style="display:flex; justify-content: space-between; align-items: center;">
+                <b>🎉 源码已生成：</b>
+                <button class="btn-tool" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
             </div>
             <textarea id="code-output" readonly></textarea>
+            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。导出的网页支持双击隐藏菜单、上下拖动中线调整比例。</p>
         </div>
     </div>
 
@@ -143,36 +149,48 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沉浸式双语阅读</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>沉浸式双语阅读器</title>
     <style>
+        * { box-sizing: border-box; }
         :root {
             --bar-bg: #0f172a; --bar-text: white; --btn-bg: #334155;
-            --bg: #f8fafc; --panel-1: #ffffff; --panel-2: #f1f5f9; --text-color: #334155; --border: #cbd5e1;
+            --bg: #f8fafc; --panel-1: #ffffff; --panel-2: #f1f5f9; --text-color: #334155; --border: #cbd5e1; --resizer: #e2e8f0;
         }
-        [data-theme="1"] { --bg: #f4ecd8; --panel-1: #fdf6e3; --panel-2: #eee8d5; --text-color: #5c4b37; --border: #e6d5b8; }
-        [data-theme="2"] { --bg: #0f172a; --panel-1: #0f172a; --panel-2: #1e293b; --text-color: #94a3b8; --border: #334155; }
+        [data-theme="1"] { --bg: #f4ecd8; --panel-1: #fdf6e3; --panel-2: #eee8d5; --text-color: #5c4b37; --border: #e6d5b8; --resizer: #d3c4a9;}
+        [data-theme="2"] { --bg: #0f172a; --panel-1: #0f172a; --panel-2: #1e293b; --text-color: #94a3b8; --border: #334155; --resizer: #1e293b;}
 
-        body, html { margin: 0; height: 100%; font-family: sans-serif; overflow: hidden; background: var(--bg); }
+        body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
         .bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .bar.hidden { transform: translateY(-100%); }
         
-        .controls { display: flex; gap: 8px; }
-        .btn { background: var(--btn-bg); color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .btn { background: var(--btn-bg); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
         
-        .panes { display: flex; flex-direction: column; height: 100vh; }
-        .pane { flex: 1; overflow-y: auto; padding: 40px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); }
+        .panes { display: flex; flex-direction: column; height: 100%; height: 100dvh; width: 100%; position: relative; }
+        .pane { overflow-y: auto; padding: 30px 20px 50px 20px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); -webkit-overflow-scrolling: touch; touch-action: pan-y; }
         .pane::-webkit-scrollbar { display: none; }
-        #en { border-bottom: 2px solid var(--border); font-family: "Georgia", serif; }
-        #zh { background: var(--panel-2); }
-        .inner { max-width: 800px; margin: 0 auto; line-height: 1.8; pointer-events: none; } /* inner禁掉事件，确保双击透传给pane */
+        
+        #en { font-family: "Georgia", serif; flex: 0 0 50%; }
+        #zh { background: var(--panel-2); flex: 1; }
+        
+        .inner { max-width: 800px; margin: 0 auto; line-height: 1.8; pointer-events: none; }
+        
+        /* 拖拽中线样式 */
+        .resizer {
+            display: flex; align-items: center; justify-content: center;
+            height: 14px; background: var(--resizer); cursor: row-resize;
+            flex-shrink: 0; z-index: 10; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+            user-select: none;
+        }
+        .resizer::after { content: '≡'; color: #94a3b8; font-size: 16px; font-weight: bold; }
     </style>
 </head>
 <body data-theme="0">
     <div class="bar" id="top-bar">
         <div class="controls">
-            <button id="mode-btn" class="btn" style="background:#3b82f6" onclick="toggleMode()">模式切换</button>
+            <button id="mode-btn" class="btn" style="background:#3b82f6" onclick="toggleMode()">模式</button>
             <button class="btn" onclick="toggleTheme()">🌓 主题</button>
             <button class="btn" onclick="adjustFont(-0.1)">A-</button>
             <button class="btn" onclick="adjustFont(0.1)">A+</button>
@@ -182,45 +200,93 @@
 
     <div class="panes" id="main-container">
         <div class="pane" id="en"><div class="inner">${finalEn}</div></div>
+        <div class="resizer" id="resizer"></div>
         <div class="pane" id="zh"><div class="inner">${finalZh}</div></div>
     </div>
 
     <script>
         const e = document.getElementById('en'), z = document.getElementById('zh');
         const container = document.getElementById('main-container'), bar = document.getElementById('top-bar');
+        const resizer = document.getElementById('resizer');
         const bookId = "${bookId}";
         
-        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0 };
+        // 增加 splitRatio 用来记忆中线位置，默认 0.5 (对半开)
+        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5 };
         let s = false;
 
-        // 双击逻辑：切换工具栏
-        container.ondblclick = () => {
-            bar.classList.toggle('hidden');
-        };
+        // 双击隐藏/显示工具栏
+        container.ondblclick = () => { bar.classList.toggle('hidden'); };
 
+        // 拖拽中线逻辑
+        let isDragging = false;
+        resizer.addEventListener('pointerdown', (evt) => {
+            isDragging = true;
+            document.body.style.cursor = 'row-resize';
+        });
+        window.addEventListener('pointermove', (evt) => {
+            if (!isDragging) return;
+            // 获取拖动点相对于容器的高度占比
+            let newRatio = evt.clientY / container.clientHeight;
+            // 限制范围在 15% 到 85% 之间，防止拖没了
+            newRatio = Math.max(0.15, Math.min(0.85, newRatio));
+            prefs.splitRatio = newRatio;
+            apply(); 
+        });
+        window.addEventListener('pointerup', () => {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = '';
+                localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs));
+            }
+        });
+
+        // 渲染页面状态
         function apply() {
             document.body.setAttribute('data-theme', prefs.theme);
             e.style.fontSize = (1.25 * prefs.font) + 'rem';
             z.style.fontSize = (1.15 * prefs.font) + 'rem';
-            if (prefs.mode === 0) { e.style.display = 'block'; z.style.display = 'block'; }
-            else if (prefs.mode === 1) { e.style.display = 'block'; z.style.display = 'none'; }
-            else { e.style.display = 'none'; z.style.display = 'block'; }
+            
+            const modeLabels = ['双语', '纯英', '纯中'];
+            document.getElementById('mode-btn').innerText = modeLabels[prefs.mode];
+
+            if (prefs.mode === 0) { 
+                e.style.display = 'block'; 
+                z.style.display = 'block';
+                resizer.style.display = 'flex';
+                // 减去拖拽条一半的高度防止溢出
+                e.style.flex = \`0 0 calc(\${prefs.splitRatio * 100}% - 7px)\`;
+                z.style.flex = '1';
+            }
+            else if (prefs.mode === 1) { 
+                e.style.display = 'block'; 
+                z.style.display = 'none'; 
+                resizer.style.display = 'none';
+                e.style.flex = '1';
+            }
+            else { 
+                e.style.display = 'none'; 
+                z.style.display = 'block'; 
+                resizer.style.display = 'none';
+                z.style.flex = '1';
+            }
             localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs));
         }
 
+        // 计算当前阅读进度占比
         function getR() {
             let active = prefs.mode === 2 ? z : e;
-            return active.scrollTop / (active.scrollHeight - active.clientHeight);
+            return active.scrollHeight > active.clientHeight ? active.scrollTop / (active.scrollHeight - active.clientHeight) : 0;
         }
 
+        // 设定阅读进度占比
         function setR(r) {
             e.scrollTop = r * (e.scrollHeight - e.clientHeight);
             z.scrollTop = r * (z.scrollHeight - z.clientHeight);
         }
 
-        function toggleMode() { const r = getR(); prefs.mode = (prefs.mode + 1) % 3; apply(); setTimeout(()=>setR(r), 50); }
+        function toggleMode() { const r = getR(); prefs.mode = (prefs.mode + 1) % 3; apply(); setTimeout(()=>setR(r), 30); }
         function toggleTheme() { prefs.theme = (prefs.theme + 1) % 3; apply(); }
-        function adjustFont(d) { const r = getR(); prefs.font += d; apply(); setTimeout(()=>setR(r), 50); }
+        function adjustFont(d) { const r = getR(); prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + d)); apply(); setTimeout(()=>setR(r), 30); }
         function clearAll() { localStorage.clear(); location.reload(); }
 
         window.onload = () => {
@@ -229,14 +295,17 @@
             if(r) setTimeout(()=>setR(parseFloat(r)), 100);
         };
 
+        // 滚动同步及进度记录
         function handleScroll(src, target) {
             if(!s && prefs.mode === 0) {
                 s = true;
-                target.scrollTop = (src.scrollTop/(src.scrollHeight-src.clientHeight))*(target.scrollHeight-target.clientHeight);
+                const ratio = src.scrollHeight > src.clientHeight ? src.scrollTop / (src.scrollHeight - src.clientHeight) : 0;
+                target.scrollTop = ratio * (target.scrollHeight - target.clientHeight);
                 setTimeout(()=>s=false, 30);
             }
             localStorage.setItem(bookId+'_pos', getR());
         }
+        
         e.onscroll = () => handleScroll(e, z);
         z.onscroll = () => handleScroll(z, e);
     <\/script>
@@ -245,17 +314,23 @@
         }
 
         function generateSource() {
+            if(!enInput.value && !zhInput.value) return alert("请先填入内容");
             const src = getFullSource();
             document.getElementById('code-output').value = src;
             document.getElementById('code-modal').style.display = 'flex';
-            navigator.clipboard.writeText(src).then(() => alert("源码已复制！\n\n【操作提示】：\n在生成的网页中，双击屏幕任意处即可显示/隐藏工具栏。"));
+            navigator.clipboard.writeText(src).then(() => {
+                // 自动复制成功
+            }).catch(() => {
+                alert("安全限制导致无法自动复制，请全选框内代码手动复制。");
+            });
         }
 
         function downloadFile() {
+            if(!enInput.value && !zhInput.value) return alert("请先填入内容");
             const blob = new Blob([getFullSource()], {type: 'text/html'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'book.html';
+            a.download = 'immersive_bilingual_book.html';
             a.click();
         }
     </script>
