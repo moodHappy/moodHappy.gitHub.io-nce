@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 阅读 & 创作助手 (多源版)</title>
+
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/transfer_station.png">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary-color: #8b7355;
+            --accent-color: #a0522d;
+            --bg-gradient: linear-gradient(135deg, #f8f4f0 0%, #e8e4e0 25%, #f2ede8 50%, #ebe6e1 75%, #f5f1ec 100%);
+            --card-bg: #fcfbf9;
+            --text-main: #2c2c2c;
+            --text-secondary: #5a4a3f;
+            --border-light: rgba(139, 115, 85, 0.15);
+            --dashed-line: 1px dashed #dcd3c3;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'Inter', serif;
+            line-height: 1.75;
+            color: var(--text-main);
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            padding-top: 80px;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(198, 167, 130, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(158, 125, 95, 0.06) 0%, transparent 50%);
+            pointer-events: none; z-index: -1;
+        }
+
+        /* --- 导航栏 --- */
+        .navbar {
+            position: fixed; top: 0; left: 0; width: 100%; height: 64px;
+            background: rgba(252, 251, 249, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(139, 115, 85, 0.1);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; z-index: 1000;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+        }
+
+        .nav-brand { font-weight: 600; font-size: 1.15em; color: var(--text-secondary); user-select: none; display: flex; align-items: center; gap: 10px; }
+        .nav-actions { display: flex; align-items: center; gap: 8px; }
+
+        /* --- 按钮通用 --- */
+        .icon-btn {
+            background: transparent; border: none; cursor: pointer; color: #6b5b4f;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .icon-btn:hover { background: rgba(139, 115, 85, 0.12); color: var(--primary-color); transform: scale(1.05); }
+        .icon-btn:active { transform: scale(0.95); }
+        .icon-btn svg { width: 22px; height: 22px; stroke-width: 2px; }
+
+        .read-btn-top {
+            height: 40px; background: var(--primary-color); color: #fff; border: none;
+            padding: 0 20px; border-radius: 20px; font-family: 'Noto Serif SC', serif;
+            font-size: 0.95em; display: flex; align-items: center; justify-content: center;
+            gap: 6px; cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(139, 115, 85, 0.25); flex-shrink: 0;
+        }
+        .read-btn-top:hover { background: #6b5b4f; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(139, 115, 85, 0.3); }
+        .read-btn-top:active { transform: translateY(0); }
+        .read-btn-top.reading { background: #fff; color: var(--accent-color); border: 1px solid var(--accent-color); box-shadow: none; }
+        .read-btn-top svg { width: 18px; height: 18px; fill: currentColor; }
+        .read-btn-top .sound-wave { display: flex; gap: 2px; align-items: center; height: 12px; }
+        .bar { width: 2px; background: currentColor; animation: wave 0.8s infinite ease-in-out; }
+        .bar:nth-child(1) { animation-delay: 0s; height: 6px; }
+        .bar:nth-child(2) { animation-delay: 0.1s; height: 12px; }
+        .bar:nth-child(3) { animation-delay: 0.2s; height: 8px; }
+        @keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+
+        /* 旋转动画 (用于加载) */
+        .spin-anim { animation: spin 1s linear infinite; }
+
+        /* --- 正文区域 --- */
+        .content-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .text-placeholder { min-height: 500px; padding: 20px 10px; font-size: 1.4em; line-height: 1.8; color: #2c2c2c; white-space: pre-wrap; }
+
+        .ai-analyze-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            background-color: rgba(139, 115, 85, 0.08); border: 1px solid rgba(139, 115, 85, 0.15);
+            border-radius: 50%; width: 20px; height: 20px; margin: 0 3px; cursor: pointer;
+            color: var(--primary-color); position: relative; top: -2px; transition: all 0.2s;
+        }
+        .ai-analyze-btn:hover { background-color: var(--primary-color); color: white; transform: scale(1.1); }
+        .ai-analyze-btn.last-clicked {
+            background-color: #d32f2f !important; color: white !important; border-color: #d32f2f !important;
+            box-shadow: 0 0 6px rgba(211, 47, 47, 0.5); transform: scale(1.15); z-index: 10;
+        }
+        .ai-analyze-btn svg { width: 10px; height: 10px; fill: currentColor; }
+
+        /* --- 通用模态框 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 44, 44, 0.4); backdrop-filter: blur(4px);
+            z-index: 2000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.25s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-card {
+            background: var(--card-bg); width: 92%; max-width: 650px;
+            border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            max-height: 85vh; display: flex; flex-direction: column;
+            border: 1px solid var(--border-light); transform: scale(0.95);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-overlay.active .modal-card { transform: scale(1); }
+
+        .modal-sticky-header {
+            flex-shrink: 0; background: var(--card-bg); padding: 20px 24px 15px;
+            border-bottom: 1px solid var(--border-light); border-radius: 16px 16px 0 0;
+            z-index: 10;
+        }
+        .modal-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .modal-title { font-size: 1.2em; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; }
+        .modal-scroll-body { flex: 1; overflow-y: auto; padding: 24px; background: #fff; border-radius: 0 0 16px 16px; -webkit-overflow-scrolling: touch; }
+
+        /* --- AI 分析排版 --- */
+        .original-sentence-box { 
+            background: #f0ebe5; padding: 16px; border-radius: 10px; 
+            border-left: 5px solid var(--primary-color); color: #3e3e3e; 
+            font-family: 'Inter', sans-serif; font-size: 1.05em; 
+            line-height: 1.6; font-style: italic; margin-top: 5px;
+        }
+        .ai-result-content { line-height: 1.9; color: #333; font-size: 15px; font-family: 'Inter', sans-serif; }
+        .ai-result-content h1, .ai-result-content h2, .ai-result-content h3 { 
+            color: var(--text-secondary); margin: 1.5em 0 0.8em; font-size: 1.15em; font-weight: 700;
+            border-bottom: var(--dashed-line); padding-bottom: 8px; position: relative;
+        }
+        .ai-result-content ul, .ai-result-content ol { padding-left: 0; list-style-type: none; margin-bottom: 1em; }
+        .ai-result-content li { margin-bottom: 12px; padding-left: 10px; position: relative; }
+        .ai-result-content strong { color: #d35400; font-weight: 600; margin-right: 2px; }
+        .ai-result-content li > strong:first-child {
+            display: inline-block; background-color: rgba(139, 115, 85, 0.1); color: var(--primary-color);
+            padding: 2px 8px; border-radius: 6px; font-size: 0.9em; margin-right: 8px;
+            font-weight: 500; transform: translateY(-1px);
+        }
+        .ai-result-content hr { border: 0; border-top: var(--dashed-line); margin: 25px 0; }
+
+        /* --- 表单元素 --- */
+        .settings-input, .settings-select, .settings-textarea {
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd;
+            border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 1em; background: #fff;
+        }
+        .save-btn { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; }
+
+        /* 多源管理样式 */
+        .provider-list { list-style: none; margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .provider-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
+        .provider-item:last-child { border-bottom: none; }
+        .provider-info { display: flex; flex-direction: column; gap: 2px; }
+        .provider-name { font-weight: 600; color: var(--text-secondary); font-size: 0.95em; }
+        .provider-detail { font-size: 0.8em; color: #888; }
+        .provider-actions { display: flex; gap: 8px; }
+        .btn-sm { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; }
+        .btn-danger { background: #ffebee; color: #c62828; }
+        .new-provider-box { background: #f8f4f0; padding: 15px; border-radius: 8px; border: 1px dashed var(--primary-color); margin-bottom: 15px; }
+
+        /* 范围滑块样式 */
+        .range-slider-container { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .range-slider { -webkit-appearance: none; width: 100%; height: 6px; background: #e0d5ca; border-radius: 5px; outline: none; }
+        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--primary-color); border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+        .ai-loading { text-align: center; padding: 40px; color: var(--primary-color); }
+        .spinner { width: 30px; height: 30px; border: 3px solid rgba(139,115,85,0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- 生成模块 --- */
+        .select-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .select-group select { flex: 1; }
+        .gen-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .gen-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95em; }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary-color) !important; color: var(--primary-color); }
+        #randomTopicsList { list-style: none; margin-top: 20px; padding: 0; }
+        #randomTopicsList li { padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: #fafafa; }
+        #randomTopicsList li:hover { background: #f0ebe5; border-color: #dcd3c3; }
+
+        /* --- 风格管理 --- */
+        #customStyleList { list-style: none; max-height: 200px; overflow-y: auto; margin-top: 10px; border: 1px solid #eee; border-radius: 8px; }
+        #customStyleList li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+
+        /* --- 设置分组 --- */
+        .settings-section-title { font-size: 0.9em; font-weight: 700; color: var(--primary-color); margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .settings-section-title:first-child { margin-top: 0; }
+
+        @media (max-width: 600px) {
+            .navbar { padding: 0 16px; height: 56px; }
+            .nav-brand { font-size: 1em; }
+            .read-btn-top { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
+            .read-btn-top span { display: none; }
+            .content-container { padding: 15px; }
+            .modal-overlay { align-items: flex-end; }
+            .modal-card { width: 100% !important; max-width: 100%; margin: 0; border-radius: 24px 24px 0 0; max-height: 85vh; height: auto; transform: translateY(100%); }
+            .modal-overlay.active .modal-card { transform: translateY(0); scale: 1; }
+            .select-group { flex-direction: column; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span>阅读助手</span>
+        </div>
+        <div class="nav-actions">
+            <button class="icon-btn" id="pushBtn" title="推送当前内容到云端">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </button>
+
+            <button id="readAloudButton" class="read-btn-top" title="朗读全文">
+                <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <div class="sound-wave" id="waveIcon" style="display:none;"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+                <span>朗读</span>
+            </button>
+
+            <button class="icon-btn" onclick="openModal('generateModal')" title="生成微小说">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </button>
+
+            <button class="icon-btn" id="settingsBtn" title="AI 设置">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="content-container">
+        <div id="dynamic-content" class="text-placeholder">加载中...</div>
+    </div>
+
+    <div id="aiResultModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-sticky-header">
+                <div class="modal-header-top">
+                    <div class="modal-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #a0522d"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                        <span>AI 深度分析</span>
+                    </div>
+                    <span style="font-size:0.75em;color:#999;font-weight:400;margin-left:auto;">双击窗口关闭</span>
+                </div>
+                <div class="original-sentence-box" id="aiOriginalSentence"></div>
+            </div>
+            <div id="aiResultContent" class="modal-scroll-body ai-result-content"></div>
+        </div>
+    </div>
+
+    <div id="generateModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-sticky-header">
+                <div class="modal-header-top">
+                    <div class="modal-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon></svg>
+                        <span>生成微小说</span>
+                    </div>
+                    <button class="icon-btn" onclick="closeModal('generateModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                </div>
+            </div>
+            <div class="modal-scroll-body">
+                <div class="select-group">
+                    <select id="themeCategorySelect" class="settings-select"></select>
+                    <select id="difficultySelect" class="settings-select"></select>
+                    <select id="styleSelect" class="settings-select"></select>
+                </div>
+                <input type="text" id="themeInput" class="settings-input" placeholder="输入主题，或选择分类后生成题目..." />
+
+                <div class="gen-actions">
+                    <button class="btn-outline" id="genTopicsBtn" onclick="generateRandomTopics(event)">🎲 生成随机题目</button>
+                    <button class="btn-primary" onclick="confirmGenerate(event)">✨ 创作并同步GitHub</button>
+                </div>
+
+                <div id="genStatus" style="margin-top:10px; color:#8b7355; font-size:0.9em; text-align:center;"></div>
+                <ul id="randomTopicsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="styleManagementModal" class="modal-overlay">
+        <div class="modal-card" style="max-height: 50vh;">
+            <div class="modal-sticky-header">
+                <div class="modal-header-top">
+                    <h3 class="modal-title">🎨 管理风格</h3>
+                    <button class="icon-btn" onclick="closeStyleManagementModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                </div>
+            </div>
+            <div class="modal-scroll-body">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="addStyleInput" class="settings-input" style="margin-bottom:0;" placeholder="新风格名称..." />
+                    <button onclick="addCustomStyle()" class="save-btn" style="width:auto;">添加</button>
+                </div>
+                <ul id="customStyleList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-sticky-header">
+                <div class="modal-header-top">
+                    <h3 class="modal-title">设置</h3>
+                    <button class="icon-btn" onclick="closeModal('settingsModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                </div>
+            </div>
+            <div class="modal-scroll-body">
+                <div class="settings-section-title">🔊 语音朗读 (TTS)</div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">语言 (Language)</label>
+                    <select id="ttsLangSelect" class="settings-select" onchange="updateVoiceList()">
+                        <option value="en">English (英语)</option>
+                        <option value="zh">Chinese (中文)</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">语音角色 (Voice)</label>
+                    <select id="ttsVoiceSelect" class="settings-select"></select>
+                </div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">语速: <span id="ttsSpeedDisplay">0</span>%</label>
+                    <div class="range-slider-container">
+                        <span style="font-size:0.8em;color:#999">慢</span>
+                        <input type="range" id="ttsSpeedRange" class="range-slider" min="-50" max="50" value="0">
+                        <span style="font-size:0.8em;color:#999">快</span>
+                    </div>
+                </div>
+
+                <div class="settings-section-title">🤖 AI 模型源配置 (多源支持)</div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">当前使用模型 (Active Provider)</label>
+                    <select id="activeProviderSelect" class="settings-select" onchange="switchActiveProvider(this.value)"></select>
+                </div>
+
+                <div class="provider-list" id="providerListDisplay"></div>
+
+                <div class="new-provider-box">
+                    <label style="display:block;margin-bottom:8px;font-size:0.85em;color:#8b7355;font-weight:600;">添加新 AI 源 (兼容 OpenAI 格式)</label>
+                    <input type="text" id="newProviderName" class="settings-input" style="margin-bottom:8px;font-size:0.9em;" placeholder="备注名 (如: DeepSeek, Moonshot)">
+                    <input type="text" id="newProviderHost" class="settings-input" style="margin-bottom:8px;font-size:0.9em;" placeholder="API Host (如: https://api.deepseek.com/v1)">
+                    <input type="password" id="newProviderKey" class="settings-input" style="margin-bottom:8px;font-size:0.9em;" placeholder="API Key (sk-...)">
+                    <input type="text" id="newProviderModel" class="settings-input" style="margin-bottom:10px;font-size:0.9em;" placeholder="模型ID (如: deepseek-chat)">
+                    <button onclick="addNewProvider()" class="btn-outline" style="width:100%;padding:8px;font-size:0.9em;">+ 添加配置</button>
+                </div>
+
+                <div class="settings-section-title">☁️ 同步设置</div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">GitHub Token (PAT)</label>
+                    <input type="password" id="ghTokenInput" class="settings-input" placeholder="ghp_...">
+                    <small style="color:#999; display:block; margin-top:-10px; margin-bottom:10px;">用于生成小说同步及云端推送功能</small>
+                </div>
+                <div class="settings-group">
+                    <label style="display:block;margin-bottom:8px;color:#666;font-size:0.9em;">系统提示词 (分析用)</label>
+                    <textarea id="systemPromptInput" class="settings-textarea" rows="4"></textarea>
+                </div>
+
+                <button id="saveSettingsBtn" class="save-btn">保存设置</button>
+                <div style="margin-top:20px; font-size:0.85em; color:#999; text-align:center;">
+                    <span id="cacheSizeDisplay">缓存: 0</span> | <a href="#" onclick="clearAICache()" style="color:#8b7355; text-decoration:none;">清空缓存</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心配置 ---
+        const DEFAULT_PROMPT = "你是一位精通中英文的语言专家。请分析我提供的句子：\n1. 判断难度等级 (A1-C2)。\n2. 详细解释核心语法结构。\n3. 提供准确、优美的中文翻译。\n请使用 Markdown 格式输出。";
+        const LAST_CLICKED_KEY = 'ai_reader_last_clicked_index';
+
+        // --- GitHub 读取配置 ---
+        const GH_CONFIG = {
+            owner: 'moodHappy',
+            repo: 'HelloWorld',
+            path: 'Notes/B1.md'
+        };
+
+        // --- GitHub 推送配置 ---
+        const PUSH_CONFIG = {
+            owner: 'moodHappy',
+            repo: 'moodHappy.gitHub.io-nce',
+            path: 'Notes/danmu/Prose'
+        };
+
+        // --- TTS 语音数据 ---
+        const TTS_VOICES = {
+            'en': [
+                { id: 'en-US-GuyNeural', name: '🇺🇸 Guy (男, 标准)' },
+                { id: 'en-US-JennyNeural', name: '🇺🇸 Jenny (女, 标准)' },
+                { id: 'en-US-AriaNeural', name: '🇺🇸 Aria (女, 助手)' },
+                { id: 'en-GB-RyanNeural', name: '🇬🇧 Ryan (男, 英音)' }
+            ],
+            'zh': [
+                { id: 'zh-CN-XiaoxiaoNeural', name: '🇨🇳 晓晓 (女, 活泼)' },
+                { id: 'zh-CN-XiaobeiNeural', name: '🇨🇳 晓北 (女, 东北话/活泼)' }, 
+                { id: 'zh-CN-YunxiNeural', name: '🇨🇳 云希 (男, 活泼)' },
+                { id: 'zh-CN-YunjianNeural', name: '🇨🇳 云健 (男, 稳重)' },
+                { id: 'zh-CN-YunyangNeural', name: '🇨🇳 云扬 (男, 新闻)' },
+                { id: 'zh-HK-HiuGaaiNeural', name: '🇭🇰 晓佳 (女, 粤语)' },
+                { id: 'zh-TW-HsiaoChenNeural', name: '🇹🇼 晓臻 (女, 台湾)' }
+            ]
+        };
+
+        const TTS_DOMAINS = [
+            { 
+                url: 'https://read-aloud-bay.vercel.app/api/synthesis', 
+                paramType: 'percent', 
+                needFormat: true 
+            },
+            { 
+                url: 'https://ms-ra-forwarder-for-ifreetime-2.vercel.app/api/aiyue', 
+                paramType: 'number', 
+                needFormat: false
+            }
+        ];
+
+        // --- 状态变量 ---
+        let currentAudio = null;
+        let isReading = false;
+        let ttsQueue = []; 
+        let aiProviders = [];
+        let activeProviderIndex = 0;
+
+        // --- 生成配置 ---
+        const THEME_LIBRARY = { '日常生活':[],'悬疑推理':[],'科幻奇幻':[],'历史现实':[],'哲理寓言':[],'爱情情感':[],'心理情绪':[],'幽默讽刺':[],'奇遇冒险':[] };
+        const DIFFICULTY_LEVELS = ['A1 (入门)', 'A2 (初级)', 'B1 (中级)', 'B2 (中高级)', 'C1 (高级)', 'C2 (精通)'];
+        const BUILT_IN_STYLES = ['口语风格','简洁风格','叙事风格','书面风格','新闻风格','幽默风格','讽刺风格','黑镜风格','文学风格','哲理风格','商业风格','学术风格'];
+        const CUSTOM_STYLES_KEY = 'ai_reader_custom_styles';
+
+        // --- 缓存管理 ---
+        const CACHE_PREFIX = 'ai_cache_v1_';
+        function generateCacheKey(text, prompt, model) {
+            let str = text + "|" + prompt + "|" + model; let hash = 0;
+            for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i) | 0;
+            return CACHE_PREFIX + Math.abs(hash);
+        }
+        function getFromCache(key) { const item = JSON.parse(localStorage.getItem(key)); return (!item || Date.now() - item.timestamp > 86400000) ? null : item.content; }
+        function saveToCache(key, content) { try { localStorage.setItem(key, JSON.stringify({ content, timestamp: Date.now() })); updateCacheDisplay(); } catch(e) { clearAICache(); } }
+        function updateCacheDisplay() {
+            let count = 0; for(let i=0; i<localStorage.length; i++) if(localStorage.key(i).startsWith(CACHE_PREFIX)) count++;
+            document.getElementById('cacheSizeDisplay').innerText = `缓存: ${count}`;
+        }
+        function clearAICache() { Object.keys(localStorage).forEach(k => k.startsWith(CACHE_PREFIX) && localStorage.removeItem(k)); updateCacheDisplay(); }
+
+        // --- 初始内容加载 ---
+        function loadContent() {
+            const container = document.getElementById('dynamic-content');
+            container.innerHTML = '加载中...';
+
+            const rawUrl = `https://raw.githubusercontent.com/${GH_CONFIG.owner}/${GH_CONFIG.repo}/master/${GH_CONFIG.path}`;
+            const fetchUrl = `${rawUrl}?t=${Date.now()}`; 
+
+            fetch(fetchUrl)
+                .then(r => {
+                    if(!r.ok) throw new Error("无法加载 GitHub 文件");
+                    return r.text();
+                })
+                .then(d => {
+                    container.innerHTML = d.replace(/\n/g, '<br>');
+                    injectAIButtons();
+                })
+                .catch(e => {
+                    container.innerHTML = "加载失败，请检查网络或配置。<br>" + e.message;
+                });
+        }
+
+        // --- TTS 功能逻辑 (保持不变) ---
+        function loadTTSConfig() {
+            const savedLang = localStorage.getItem('tts_lang') || 'en';
+            const savedVoice = localStorage.getItem('tts_voice'); 
+            const savedSpeed = localStorage.getItem('tts_speed') || '0';
+            const langSelect = document.getElementById('ttsLangSelect');
+            const speedRange = document.getElementById('ttsSpeedRange');
+            langSelect.value = savedLang;
+            speedRange.value = savedSpeed;
+            document.getElementById('ttsSpeedDisplay').innerText = savedSpeed;
+            updateVoiceList(savedVoice);
+        }
+
+        function updateVoiceList(targetVoiceId = null) {
+            const lang = document.getElementById('ttsLangSelect').value;
+            const voiceSelect = document.getElementById('ttsVoiceSelect');
+            voiceSelect.innerHTML = ''; 
+            const voices = TTS_VOICES[lang] || TTS_VOICES['en'];
+            voices.forEach(v => {
+                let opt = document.createElement('option');
+                opt.value = v.id;
+                opt.text = v.name;
+                voiceSelect.add(opt);
+            });
+            if (targetVoiceId && voices.some(v => v.id === targetVoiceId)) {
+                voiceSelect.value = targetVoiceId;
+            } else {
+                voiceSelect.selectedIndex = 0;
+            }
+        }
+
+        function splitTextIntoSentences(text) {
+            if (!text) return [];
+            const segments = text.match(/[^。！？.!?\r\n]+[。！？.!?\r\n]*/g) || [text];
+            const MAX_CHUNK = 800;
+            const chunks = [];
+            let currentChunk = '';
+            for (let seg of segments) {
+                if (currentChunk.length + seg.length > MAX_CHUNK) {
+                    if (currentChunk) chunks.push(currentChunk);
+                    currentChunk = seg;
+                } else {
+                    currentChunk += seg;
+                }
+            }
+            if (currentChunk) chunks.push(currentChunk);
+            return chunks;
+        }
+
+        function startTTS(fullText) {
+            stopTTS(); 
+            if (!fullText || !fullText.trim()) return;
+            ttsQueue = splitTextIntoSentences(fullText);
+            isReading = true;
+            updateReadBtn();
+            playNextInQueue();
+        }
+
+        function stopTTS() {
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+            ttsQueue = [];
+            isReading = false;
+            updateReadBtn();
+        }
+
+        async function playNextInQueue() {
+            if (ttsQueue.length === 0) { stopTTS(); return; }
+            const textSegment = ttsQueue.shift(); 
+            const voiceName = document.getElementById('ttsVoiceSelect').value || 'en-US-GuyNeural';
+            const speedVal = document.getElementById('ttsSpeedRange').value || 0;
+            let success = false;
+
+            for(let domain of TTS_DOMAINS) {
+                try {
+                    const params = new URLSearchParams();
+                    params.append('text', textSegment);
+                    params.append('voiceName', voiceName);
+
+                    if (domain.paramType === 'percent') {
+                        const rateStr = parseInt(speedVal) >= 0 ? `+${speedVal}%` : `${speedVal}%`;
+                        params.append('rate', rateStr);
+                    } else {
+                        params.append('speed', speedVal);
+                    }
+
+                    if (domain.needFormat) {
+                        params.append('format', 'audio-24khz-48kbitrate-mono-mp3');
+                        params.append('outputFormat', 'audio-24khz-48kbitrate-mono-mp3');
+                    }
+
+                    const audioUrl = `${domain.url}?${params.toString()}`;
+                    await new Promise((resolve, reject) => {
+                        const a = new Audio(audioUrl);
+                        a.oncanplaythrough = () => {
+                            currentAudio = a;
+                            a.play().catch(e => reject(e));
+                            a.onended = () => { playNextInQueue(); };
+                            resolve();
+                        };
+                        a.onerror = () => reject(new Error("Audio Error"));
+                        setTimeout(() => reject(new Error("Timeout")), 8000); 
+                    });
+                    success = true; break; 
+                } catch (e) { continue; }
+            }
+            if (!success) { playNextInQueue(); }
+        }
+
+        function updateReadBtn() {
+            const btn = document.getElementById('readAloudButton');
+            const playIcon = document.getElementById('playIcon');
+            const waveIcon = document.getElementById('waveIcon');
+            const textSpan = btn.querySelector('span');
+            if(isReading) { 
+                btn.classList.add('reading'); 
+                playIcon.style.display='none'; 
+                waveIcon.style.display='flex'; 
+                if(textSpan) textSpan.textContent="停止"; 
+            } else { 
+                btn.classList.remove('reading'); 
+                playIcon.style.display='block'; 
+                waveIcon.style.display='none'; 
+                if(textSpan) textSpan.textContent="朗读"; 
+            }
+        }
+
+        // --- AI 多源配置管理 ---
+        function loadAIConfig() {
+            // 从 LocalStorage 加载配置，如果没有则使用默认 Groq 配置
+            const stored = localStorage.getItem('ai_providers');
+            if (stored) {
+                aiProviders = JSON.parse(stored);
+            } else {
+                aiProviders = [{
+                    name: 'Groq (默认)',
+                    host: 'https://api.groq.com/openai/v1',
+                    key: '',
+                    model: 'meta-llama/llama-4-maverick-17b-128e-instruct'
+                }];
+                // 尝试迁移旧的 key
+                const oldKey = localStorage.getItem('groq_api_key');
+                if (oldKey) aiProviders[0].key = oldKey;
+            }
+
+            const savedIndex = localStorage.getItem('active_provider_index');
+            activeProviderIndex = (savedIndex !== null && aiProviders[savedIndex]) ? parseInt(savedIndex) : 0;
+
+            renderProviderUI();
+        }
+
+        function renderProviderUI() {
+            const listEl = document.getElementById('providerListDisplay');
+            const selectEl = document.getElementById('activeProviderSelect');
+
+            listEl.innerHTML = '';
+            selectEl.innerHTML = '';
+
+            aiProviders.forEach((p, index) => {
+                // 渲染下拉菜单
+                let opt = document.createElement('option');
+                opt.value = index;
+                opt.text = p.name;
+                if(index === activeProviderIndex) opt.selected = true;
+                selectEl.add(opt);
+
+                // 渲染列表
+                let item = document.createElement('div');
+                item.className = 'provider-item';
+                item.innerHTML = `
+                    <div class="provider-info">
+                        <span class="provider-name">${p.name}</span>
+                        <span class="provider-detail">${p.model} | ${p.host}</span>
+                    </div>
+                    <div class="provider-actions">
+                        <button class="btn-sm btn-danger" onclick="deleteProvider(${index})">删除</button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        function switchActiveProvider(index) {
+            activeProviderIndex = parseInt(index);
+            localStorage.setItem('active_provider_index', activeProviderIndex);
+        }
+
+        function addNewProvider() {
+            const name = document.getElementById('newProviderName').value.trim();
+            const host = document.getElementById('newProviderHost').value.trim();
+            const key = document.getElementById('newProviderKey').value.trim();
+            const model = document.getElementById('newProviderModel').value.trim();
+
+            if (!name || !host || !key || !model) {
+                alert("请填写完整的 AI 配置信息");
+                return;
+            }
+
+            aiProviders.push({ name, host, key, model });
+            saveProviders();
+
+            // 清空输入
+            document.getElementById('newProviderName').value = '';
+            document.getElementById('newProviderHost').value = '';
+            document.getElementById('newProviderKey').value = '';
+            document.getElementById('newProviderModel').value = '';
+
+            // 自动选中新添加的
+            activeProviderIndex = aiProviders.length - 1;
+            renderProviderUI();
+        }
+
+        function deleteProvider(index) {
+            if (confirm("确定要删除这个配置吗？")) {
+                aiProviders.splice(index, 1);
+                if (aiProviders.length === 0) {
+                     // 至少保留一个空的或默认
+                     aiProviders.push({name: 'New Provider', host:'', key:'', model:''});
+                }
+                if (activeProviderIndex >= aiProviders.length) activeProviderIndex = 0;
+                saveProviders();
+                renderProviderUI();
+            }
+        }
+
+        function saveProviders() {
+            localStorage.setItem('ai_providers', JSON.stringify(aiProviders));
+            localStorage.setItem('active_provider_index', activeProviderIndex);
+        }
+
+        // --- 通用 AI 调用 (重构后) ---
+        async function callGenericAI(messages, temp = 0.7) {
+            const provider = aiProviders[activeProviderIndex];
+            if (!provider || !provider.key) throw new Error("请先在设置中配置有效的 AI 模型和 API Key");
+
+            // 处理 Host URL，确保包含 /chat/completions，兼容 OpenAI 格式
+            let endpoint = provider.host;
+            if (!endpoint.endsWith('/v1/chat/completions') && !endpoint.endsWith('/chat/completions')) {
+                // 简单的智能补全，如果结尾没有 /，加 /
+                if (!endpoint.endsWith('/')) endpoint += '/';
+                // 如果结尾没有 v1 且不是特定非 v1 接口，通常补全 chat/completions
+                endpoint += 'chat/completions';
+            }
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${provider.key}`, 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    model: provider.model, 
+                    messages: messages, 
+                    temperature: temp,
+                    stream: false
+                })
+            });
+
+            const data = await res.json();
+            if(!res.ok) throw new Error(data.error?.message || `请求失败: ${res.status}`);
+            return data.choices[0]?.message?.content || "";
+        }
+
+        // --- GitHub API 基础操作 ---
+        function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+
+        async function getGitHubSHA(token, owner, repo, path) {
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+            if (res.status === 404) return null;
+            if (!res.ok) throw new Error(`GitHub 读取失败: ${res.status}`);
+            const data = await res.json();
+            return data.sha;
+        }
+
+        async function uploadToGitHub(content, token) {
+            const apiUrl = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+            const sha = await getGitHubSHA(token, GH_CONFIG.owner, GH_CONFIG.repo, GH_CONFIG.path);
+            const body = { message: "Update via AI Reader", content: utf8_to_b64(content), committer: { name: "AI Reader", email: "bot@ai-reader.com" } };
+            if (sha) body.sha = sha;
+            const res = await fetch(apiUrl, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (!res.ok) { const err = await res.json(); throw new Error(err.message || "上传失败"); }
+            return true;
+        }
+
+        // --- 推送当前内容到 moodHappy.gitHub.io-nce ---
+        async function pushCurrentContent() {
+            const btn = document.getElementById('pushBtn');
+            const token = document.getElementById('ghTokenInput').value || localStorage.getItem('gh_token');
+
+            if (!token) {
+                alert("请先在设置中配置 GitHub Token 才能使用推送功能");
+                openModal('settingsModal');
+                return;
+            }
+
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div>';
+            btn.disabled = true;
+
+            try {
+                const contentDiv = document.getElementById('dynamic-content');
+                if (!contentDiv) throw new Error("找不到内容区域");
+
+                let rawText = contentDiv.innerText.trim();
+                let firstSentence = rawText.split(/[。.!?！？]/)[0].trim();
+                if (firstSentence.length > 50) firstSentence = firstSentence.substring(0, 50) + "...";
+                if (firstSentence.length === 0) firstSentence = `Saved Article`;
+
+                const now = new Date();
+                const pad = (n) => n.toString().padStart(2, '0');
+                const yyyy = now.getFullYear();
+                const mm = pad(now.getMonth() + 1);
+                const dd = pad(now.getDate());
+                const timeStr = `${yyyy}/${mm}/${dd} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+                const clone = contentDiv.cloneNode(true);
+                clone.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
+
+                const fileContent = `---
+title: "${firstSentence.replace(/"/g, '\\"')}"
+date: "${timeStr}"
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>${firstSentence}</title>
+    <style>
+        body {
+            font-family: 'Noto Serif SC', 'Times New Roman', serif;
+            max-width: 800px; margin: 0 auto; padding: 40px 20px;
+            line-height: 2.2; font-size: 22px; color: #333;
+            background: #fcfbf9; word-wrap: break-word;
+        }
+        h1 { font-size: 1.5em; margin-bottom: 20px; color: #5a4a3f; line-height: 1.4; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
+        .article-meta { 
+            font-size: 0.8em; color: #999; margin-bottom: 30px; 
+            display: flex; align-items: center; gap: 6px;
+        }
+        img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+        @media (max-width: 600px) { body { padding: 20px; font-size: 20px; line-height: 2.0; } }
+    </style>
+</head>
+<body>
+    <h1>${firstSentence}</h1>
+    <div class="article-meta">📅 ${timeStr}</div>
+    ${clone.innerHTML}
+</body>
+</html>`;
+
+                let safeFilename = firstSentence.replace(/[\\/:*?"<>|\s]/g, '_').replace(/[\u0000-\u001F]/g, '');
+                if (safeFilename.length > 30) safeFilename = safeFilename.substring(0, 30); 
+                const timestampSuffix = Date.now(); 
+                const filename = `${safeFilename}_${timestampSuffix}.html`;
+                const fullPath = `${PUSH_CONFIG.path}/${filename}`;
+                const apiUrl = `https://api.github.com/repos/${PUSH_CONFIG.owner}/${PUSH_CONFIG.repo}/contents/${fullPath}`;
+
+                const body = {
+                    message: `Push: ${filename}`,
+                    content: utf8_to_b64(fileContent),
+                    committer: { name: "AI Reader", email: "bot@reader.app" }
+                };
+
+                const res = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`, 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if(!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.message || "GitHub API 错误");
+                }
+
+                alert(`推送成功！\n\n标题: ${firstSentence}\n时间: ${timeStr}`);
+
+            } catch (e) {
+                alert(`推送失败: ${e.message}`);
+                console.error(e);
+            } finally {
+                btn.innerHTML = originalIcon;
+                btn.disabled = false;
+            }
+        }
+
+        // --- 分析功能 (已更新为使用 callGenericAI) ---
+        async function handleAIAnalyzeClick(target) {
+            const btn = target.closest('.ai-analyze-btn');
+            if (!btn) return;
+            const allBtns = document.querySelectorAll('.ai-analyze-btn');
+            allBtns.forEach(b => b.classList.remove('last-clicked'));
+            btn.classList.add('last-clicked');
+            localStorage.setItem(LAST_CLICKED_KEY, Array.from(allBtns).indexOf(btn));
+
+            const sentence = extractSentenceBefore(btn);
+            if (!sentence || sentence.length < 2) return;
+            const box = document.getElementById('aiResultContent');
+            document.getElementById('aiOriginalSentence').innerText = sentence;
+            box.innerHTML = '<div class="ai-loading"><div class="spinner"></div><p>分析中...</p></div>';
+            openModal('aiResultModal');
+
+            // 获取当前Provider信息用于缓存Key
+            const currentProvider = aiProviders[activeProviderIndex] || {};
+            const model = currentProvider.model || 'unknown';
+            const prompt = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
+            const cacheKey = generateCacheKey(sentence, prompt, model);
+            const cached = getFromCache(cacheKey);
+
+            if (cached) { box.innerHTML = `<div class="ai-result-content">${marked.parse(cached)}</div>`; return; }
+
+            try {
+                const content = await callGenericAI([{role: "system", content: prompt}, {role: "user", content: `Analyze: "${sentence}"`}]);
+                saveToCache(cacheKey, content);
+                box.innerHTML = `<div class="ai-result-content">${marked.parse(content)}</div>`;
+            } catch (e) { box.innerHTML = `<p style="color:#a0522d;padding:20px;">错误: ${e.message}</p>`; }
+        }
+
+        function extractSentenceBefore(node) {
+            let t = "", c = node.previousSibling;
+            while(c) {
+                if(c.nodeType===3) { t = c.nodeValue + t; if(t.lastIndexOf('.') > -1 && t.lastIndexOf('.') < t.length-1) { t=t.substring(t.lastIndexOf('.')+1); break; } }
+                else if(c.classList?.contains('ai-analyze-btn')) break;
+                else t = c.innerText + t;
+                c = c.previousSibling;
+            }
+            return t.trim();
+        }
+
+        // --- 注入逻辑 ---
+        function injectAIButtons() {
+            const div = document.getElementById('dynamic-content');
+            if(!div.innerText.trim()) return;
+            div.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove());
+            const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
+            const nodes = []; while(w.nextNode()) nodes.push(w.currentNode);
+            nodes.forEach(n => {
+                if (n.nodeValue.includes('.')) {
+                    const f = document.createDocumentFragment();
+                    n.nodeValue.split(/(\.)/).forEach(p => {
+                        f.appendChild(document.createTextNode(p));
+                        if(p==='.') {
+                            const b = document.createElement('span');
+                            b.className = 'ai-analyze-btn';
+                            b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>';
+                            b.onclick = (e) => handleAIAnalyzeClick(e.target);
+                            f.appendChild(b);
+                        }
+                    });
+                    n.parentNode.replaceChild(f, n);
+                }
+            });
+            const idx = localStorage.getItem(LAST_CLICKED_KEY);
+            if (idx !== null) { const btns = div.querySelectorAll('.ai-analyze-btn'); if(btns[idx]) btns[idx].classList.add('last-clicked'); }
+        }
+
+        // --- 辅助功能 ---
+        function populateSelectors() {
+            const catSel = document.getElementById('themeCategorySelect');
+            const diffSel = document.getElementById('difficultySelect');
+            catSel.innerHTML = '<option value="" disabled selected>选择分类</option>';
+            for(let c in THEME_LIBRARY) { let o = document.createElement('option'); o.value=c; o.text=c; catSel.add(o); }
+            catSel.onchange = () => document.getElementById('themeInput').value = '';
+            diffSel.innerHTML = '';
+            DIFFICULTY_LEVELS.forEach(l => { let o = document.createElement('option'); o.value=l.split(' ')[0]; o.text=l; if(l.startsWith('B1')) o.selected=true; diffSel.add(o); });
+            populateStyleSelector();
+        }
+        function populateStyleSelector() {
+            const styleSel = document.getElementById('styleSelect');
+            styleSel.innerHTML = '';
+            const customStyles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || [];
+            [...BUILT_IN_STYLES, ...customStyles].forEach(s => { let o = document.createElement('option'); o.value=s; o.text=s; styleSel.add(o); });
+            styleSel.add(new Option('⚙️ 管理风格...', 'manage'));
+            styleSel.onchange = (e) => { if(e.target.value === 'manage') { openStyleManagementModal(); e.target.value = BUILT_IN_STYLES[0]; } };
+        }
+        function openStyleManagementModal() { populateCustomStyleList(); document.getElementById('generateModal').classList.remove('active'); document.getElementById('styleManagementModal').classList.add('active'); }
+        function closeStyleManagementModal() { document.getElementById('styleManagementModal').classList.remove('active'); document.getElementById('generateModal').classList.add('active'); populateStyleSelector(); }
+        function populateCustomStyleList() {
+            const list = document.getElementById('customStyleList'); list.innerHTML = '';
+            (JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []).forEach(s => list.innerHTML += `<li><span>${s}</span><button class="delete-style-btn" onclick="deleteStyle('${s}')">删除</button></li>`);
+        }
+        window.addCustomStyle = () => { const val = document.getElementById('addStyleInput').value.trim(); const styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []; if(val && !styles.includes(val) && !BUILT_IN_STYLES.includes(val)) { styles.push(val); localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles)); document.getElementById('addStyleInput').value=''; populateCustomStyleList(); } };
+        window.deleteStyle = (val) => { let styles = JSON.parse(localStorage.getItem(CUSTOM_STYLES_KEY)) || []; localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles.filter(s => s !== val))); populateCustomStyleList(); };
+
+        async function generateRandomTopics(e) {
+            e.preventDefault();
+            const theme = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value;
+            if(!theme) { document.getElementById('genStatus').innerText = "请先选择分类或输入主题"; return; }
+            document.getElementById('genStatus').innerText = "正在生成题目...";
+            document.getElementById('randomTopicsList').innerHTML = '';
+            try {
+                const text = await callGenericAI([{role:"user", content: `Based on theme "${theme}", generate 5 creative short story titles in Simplified Chinese. Separate with newlines. Just the titles.`}]);
+                text.split('\n').filter(t=>t.trim()).forEach(t => {
+                    let li = document.createElement('li'); li.innerText = t.replace(/^\d+\.\s*/, '').replace(/["《》]/g, ''); li.onclick = () => startGeneration(li.innerText); document.getElementById('randomTopicsList').appendChild(li);
+                });
+                document.getElementById('genStatus').innerText = "点击题目开始生成";
+            } catch(err) { document.getElementById('genStatus').innerText = "生成失败: " + err.message; }
+        }
+        async function confirmGenerate(e) { e.preventDefault(); const topic = document.getElementById('themeInput').value.trim() || document.getElementById('themeCategorySelect').value; if(!topic) return document.getElementById('genStatus').innerText = "请输入主题"; startGeneration(topic); }
+
+        // --- 生成逻辑更新：强制分段 ---
+        async function startGeneration(topic) {
+            const ghToken = localStorage.getItem('gh_token');
+            const statusDiv = document.getElementById('genStatus');
+            if (!ghToken) return statusDiv.innerText = "错误：请先在设置中配置 GitHub Token";
+            const diff = document.getElementById('difficultySelect').value;
+            const style = document.getElementById('styleSelect').value;
+
+            statusDiv.innerText = `正在创作: ${topic} (${diff})...`;
+
+            // 更新 Prompt：强制分段 (Break into paragraphs)
+            const prompt = `Role: Professional English Storyteller.
+Task: Write a short story based on theme: "${topic}".
+Constraints:
+1. LANGUAGE: STRICTLY ENGLISH ONLY.
+2. Level: CEFR ${diff}.
+3. Style: ${style}.
+4. Length: ~200 words.
+5. FORMATTING: Separate the story into 3-4 distinct paragraphs. Use double newlines (\\n\\n) between paragraphs.
+6. Output: ONLY the story text. Do not include the title.`;
+
+            try {
+                const story = await callGenericAI([{role:"user", content: prompt}]);
+                statusDiv.innerText = "创作完成，正在同步...";
+                await uploadToGitHub(story, ghToken);
+                localStorage.removeItem(LAST_CLICKED_KEY);
+                statusDiv.innerText = "同步成功！";
+                closeModal('generateModal');
+                // 创作完成后，刷新内容
+                loadContent(); 
+            } catch(err) { statusDiv.innerText = "失败: " + err.message; }
+        }
+
+        // --- 初始化 ---
+        window.openModal = id => { if(id === 'generateModal') populateSelectors(); document.getElementById(id).classList.add('active'); };
+        window.closeModal = id => document.getElementById(id).classList.remove('active');
+
+        // 双击关闭模态框
+        document.querySelectorAll('.modal-card').forEach(card => {
+            card.addEventListener('dblclick', function(e) {
+                if(window.getSelection().toString().length > 0) return;
+                if(['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+                const modalId = this.closest('.modal-overlay').id;
+                if(modalId === 'aiResultModal') {
+                    closeModal(modalId);
+                }
+            });
+        });
+
+        document.getElementById('pushBtn').onclick = pushCurrentContent;
+
+        document.getElementById('readAloudButton').onclick = () => { if(isReading) { stopTTS(); } else { const c = document.getElementById('dynamic-content').cloneNode(true); c.querySelectorAll('.ai-analyze-btn').forEach(b => b.remove()); startTTS(c.innerText); } };
+        document.getElementById('ttsSpeedRange').oninput = function() { document.getElementById('ttsSpeedDisplay').innerText = this.value; };
+
+        document.getElementById('settingsBtn').onclick = () => { 
+            loadTTSConfig(); 
+            loadAIConfig(); // 加载多源 AI 配置
+            openModal('settingsModal'); 
+        };
+
+        document.getElementById('saveSettingsBtn').onclick = () => {
+            localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
+            localStorage.setItem('groq_prompt', document.getElementById('systemPromptInput').value);
+            localStorage.setItem('tts_lang', document.getElementById('ttsLangSelect').value);
+            localStorage.setItem('tts_voice', document.getElementById('ttsVoiceSelect').value);
+            localStorage.setItem('tts_speed', document.getElementById('ttsSpeedRange').value);
+
+            // AI配置已在添加/删除时实时保存，但确保Active Index保存
+            saveProviders();
+
+            closeModal('settingsModal'); alert('设置已保存');
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('ghTokenInput').value = localStorage.getItem('gh_token') || '';
+            document.getElementById('systemPromptInput').value = localStorage.getItem('groq_prompt') || DEFAULT_PROMPT;
+            loadTTSConfig();
+            loadAIConfig(); // 初始加载 AI 配置
+            updateCacheDisplay();
+            loadContent(); 
+            document.querySelectorAll('.modal-overlay').forEach(o => o.onclick = e => { if(e.target===o) closeModal(o.id) });
+        });
+    </script>
+</body>
+</html>
