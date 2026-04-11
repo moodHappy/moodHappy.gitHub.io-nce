@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重新分段排版工具</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --primary-hover: #45a049;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --border-color: #ccc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #fff;
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .textarea-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            font-size: 16px;
+            font-family: inherit;
+            line-height: 1.6;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            resize: vertical;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+        }
+
+        button {
+            padding: 10px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .copy-btn {
+            background-color: #2196F3;
+        }
+
+        .copy-btn:hover {
+            background-color: #1976D2;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 150px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 12px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 15px;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>重新分段排版</h1>
+    
+    <div class="textarea-group">
+        <textarea id="inputText" placeholder="请将需要分段的文本粘贴到这里..."></textarea>
+        
+        <div class="button-group">
+            <button onclick="reformatText()">⬇️ 重新分段</button>
+            <button class="copy-btn" onclick="copyText()">📋 一键复制</button>
+        </div>
+        
+        <textarea id="outputText" placeholder="排版后的内容将显示在这里..." readonly></textarea>
+    </div>
+</div>
+
+<div id="toast">复制成功！</div>
+
+<script>
+    function reformatText() {
+        const inputText = document.getElementById('inputText').value;
+        const outputTextarea = document.getElementById('outputText');
+        
+        if (!inputText.trim()) {
+            outputTextarea.value = '';
+            return;
+        }
+
+        // 按照英文句号进行分割
+        const segments = inputText.split('.');
+        
+        // 处理分割后的数组：去除首尾空格，过滤掉空段落，并在末尾补回英文句号
+        const formattedSegments = segments
+            .map(segment => segment.trim())
+            .filter(segment => segment.length > 0)
+            .map(segment => segment + '.');
+
+        // 使用双换行符将段落重新拼接，形成明显的段落间隔
+        const resultText = formattedSegments.join('\n\n');
+        
+        outputTextarea.value = resultText;
+    }
+
+    function copyText() {
+        const outputTextarea = document.getElementById('outputText');
+        
+        if (!outputTextarea.value.trim()) {
+            showToast("没有可复制的内容");
+            return;
+        }
+
+        // 选择文本
+        outputTextarea.select();
+        outputTextarea.setSelectionRange(0, 99999); // 适配移动设备
+
+        // 执行复制操作
+        navigator.clipboard.writeText(outputTextarea.value).then(() => {
+            showToast("复制成功！");
+        }).catch(err => {
+            console.error('复制失败: ', err);
+            // 兼容旧版浏览器
+            document.execCommand("copy");
+            showToast("复制成功！");
+        });
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = "show";
+        setTimeout(() => {
+            toast.className = toast.className.replace("show", "");
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>
