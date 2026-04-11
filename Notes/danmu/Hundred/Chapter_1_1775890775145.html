@@ -61,14 +61,17 @@
         const e = document.getElementById('en'), z = document.getElementById('zh');
         const container = document.getElementById('main-container'), bar = document.getElementById('top-bar');
         const resizer = document.getElementById('resizer');
-        const bookId = "book_1775950303129";
+        const bookId = "book_1775950944487";
         
-        // 增加 splitRatio 用来记忆中线位置，默认 0.5 (对半开)
-        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5 };
+        // 加入 barHidden 属性，默认 false
+        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false };
         let s = false;
 
-        // 双击隐藏/显示工具栏
-        container.ondblclick = () => { bar.classList.toggle('hidden'); };
+        // 双击记忆并隐藏/显示工具栏
+        container.ondblclick = () => { 
+            prefs.barHidden = !prefs.barHidden;
+            apply();
+        };
 
         // 拖拽中线逻辑
         let isDragging = false;
@@ -78,9 +81,7 @@
         });
         window.addEventListener('pointermove', (evt) => {
             if (!isDragging) return;
-            // 获取拖动点相对于容器的高度占比
             let newRatio = evt.clientY / container.clientHeight;
-            // 限制范围在 15% 到 85% 之间，防止拖没了
             newRatio = Math.max(0.15, Math.min(0.85, newRatio));
             prefs.splitRatio = newRatio;
             apply(); 
@@ -93,12 +94,19 @@
             }
         });
 
-        // 渲染页面状态
+        // 渲染页面状态 (包括顶部栏的显示状态)
         function apply() {
             document.body.setAttribute('data-theme', prefs.theme);
             e.style.fontSize = (1.25 * prefs.font) + 'rem';
             z.style.fontSize = (1.15 * prefs.font) + 'rem';
             
+            // 处理工具栏记忆状态
+            if (prefs.barHidden) {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+            }
+
             const modeLabels = ['双语', '纯英', '纯中'];
             document.getElementById('mode-btn').innerText = modeLabels[prefs.mode];
 
@@ -106,7 +114,6 @@
                 e.style.display = 'block'; 
                 z.style.display = 'block';
                 resizer.style.display = 'flex';
-                // 减去拖拽条一半的高度防止溢出
                 e.style.flex = `0 0 calc(${prefs.splitRatio * 100}% - 7px)`;
                 z.style.flex = '1';
             }
