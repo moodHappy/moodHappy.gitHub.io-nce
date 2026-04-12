@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>沉浸式双语书生成器 (集成专业词典版)</title>
+    <title>沉浸式双语书生成器 (纯净无下划线版)</title>
     <style>
         :root {
             --bg: #f8fafc; --panel-en: #ffffff; --panel-zh: #f1f5f9;
@@ -41,7 +41,7 @@
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;">(集成专业划词/考纲词典版)</span></h2>
+            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;">(纯净无下划线版)</span></h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著</b></label>
@@ -79,7 +79,7 @@
                 <button class="btn-tool" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
             </div>
             <textarea id="code-output" readonly></textarea>
-            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。导出的文件在联网状态下自带完整的划词翻译、发音及考纲显示功能，且支持一键开关。</p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。已去除单词底部的下划线虚线，界面更纯净，查词功能依然保持不变。</p>
         </div>
     </div>
 
@@ -102,7 +102,6 @@
             const finalZh = format(zhInput.value);
             const bookId = "book_" + Date.now();
 
-            // 构造超长源码模板
             return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -163,7 +162,6 @@
         const resizer = document.getElementById('resizer');
         const bookId = "${bookId}";
         
-        // 核心设置记忆 (新增 dictEnabled)
         let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true };
         let s = false;
 
@@ -193,7 +191,6 @@
 
             if (prefs.barHidden) bar.classList.add('hidden'); else bar.classList.remove('hidden');
             
-            // 查词按钮 UI 更新
             const dictBtn = document.getElementById('dict-btn');
             if(prefs.dictEnabled) {
                 dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#10b981";
@@ -232,16 +229,10 @@
         e.onscroll = () => handleScroll(e, z);
         z.onscroll = () => handleScroll(z, e);
 
-        // ==========================================
-        // 核心内置：API 脱壳环境模拟与脚本集成
-        // ==========================================
-        
-        // 模拟 GM 函数 API
         const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
         const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
         const GM_addStyle = (css) => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); };
         
-        // 跨域代理包装器：规避 dict.youdao.com 等 API 限制
         const GM_xmlhttpRequest = (opt) => {
             let url = opt.url;
             if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
@@ -254,17 +245,16 @@
             }).catch(err => { if(opt.onerror) opt.onerror(err); });
         };
 
-        // 隔离执行用户级查词脚本
         (function() {
             const ttsConfig = {
                 voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"],
                 apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
             };
 
-            // 样式注入：只有当 body 包含 dict-enabled 时，.tm-word 才具有交互特效
+            // 【修改点】：去除了 .tm-word 的 border-bottom 相关样式，只保留圆角和鼠标形态，确保在未点击/Hover时不显示线段
             GM_addStyle(\`
-                .dict-enabled .tm-word { cursor: pointer; transition: all 0.2s ease; padding: 0 1px; border-radius: 3px; border-bottom: 1px dotted rgba(150,150,150,0.5); }
-                .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; border-bottom: 2px solid #2196F3; }
+                .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+                .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
                 
                 .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
                 .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
@@ -412,7 +402,6 @@
                 if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
             }
 
-            // 仅扫描并包裹英文区的内容，极大节约性能
             function wrapTextNodesToWord(rootNode) {
                 const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON']);
                 const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
@@ -469,7 +458,6 @@
                 tippy.delegate(document.body, {
                     target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
                     onShow(instance) {
-                        // 如果全局查词被关闭，阻止弹窗
                         if (!document.body.classList.contains('dict-enabled')) return false;
 
                         const word = instance.reference.innerText.trim();
@@ -507,11 +495,9 @@
                 });
             }
 
-            // 初始化
             setTimeout(() => {
                 initAudioPlayer();
                 initCEFRStaticDict();
-                // 仅扫描英文区域，不污染全局
                 const enContainer = document.getElementById('en-inner');
                 if(enContainer) wrapTextNodesToWord(enContainer);
                 setupTippyDelegate();
