@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>danmu - 智能全兼容版博客</title>
+    <title>danmu - 智能全兼容版博客 (高亮修复)</title>
     <link rel="icon" type="image/png" href="./icon/Miyetsuko.png">
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -106,19 +106,18 @@
         .progress-log { font-size: 12px; color: #666; max-height: 150px; overflow-y: auto; background: #f8f8f8; padding: 10px; border-radius: 4px; border: 1px solid #eee; margin-top: 10px; }
         .log-item { margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 2px; }
 
-        /* --- 沉浸式阅读器 UI (为 Iframe 完美适配做了调整) --- */
+        /* --- 沉浸式阅读器 UI --- */
         #reader-modal { background: var(--bg); display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; flex-direction: column; }
         .reader-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fff; border-bottom: 1px solid var(--border); flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10;}
         .reader-title { font-weight: bold; font-size: 16px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        /* reader-body 变成 flex 容器，方便内部内容拉伸 */
         .reader-body { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.8; font-size: 1.1em; color: #2c2c2c; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; }
         .reader-content-wrapper { max-width: 800px; width: 100%; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex-shrink: 0; }
 
-        /* --- 核心修复：查词与高亮样式 --- */
+        /* --- 查词与高亮样式 --- */
         .tm-word { cursor: pointer; transition: all 0.2s ease; padding: 0 1px; border-radius: 3px; border-bottom: 1px dotted transparent; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .tm-word:hover, .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; border-bottom: 2px solid #2196F3; }
-        .highlight-blue { color: #1967d2; font-weight: 500; }
-        .highlight-red { color: #d93025; font-weight: 500; }
+        .highlight-blue { color: #1967d2 !important; font-weight: 500 !important; }
+        .highlight-red { color: #d93025 !important; font-weight: 500 !important; }
 
         .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
         .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
@@ -316,7 +315,7 @@
     }
 
     // ==========================================
-    // 模块 3：DOM 包裹与融合高亮算法
+    // 模块 3：DOM 包裹与融合高亮算法 (强化跨文档能力)
     // ==========================================
     function getLemma(word) {
         const lower = word.toLowerCase(); if (lemmaCache.has(lower)) return lemmaCache.get(lower);
@@ -338,11 +337,15 @@
         await Promise.all(promises);
     }
 
+    // 跨文档节点注入函数（支持主页面和 iframe）
     function injectHighlightToElement(rootNode) {
         if(!rootNode) return;
+        
+        // 动态获取当前操作的 Document 对象，这样 iframe 也能完美兼容
+        const targetDoc = rootNode.ownerDocument || document;
         const ignoreTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG', 'PRE', 'CODE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'BUTTON', 'A', 'MATH']);
         
-        const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+        const walker = targetDoc.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
             acceptNode: function(node) {
                 const parent = node.parentNode;
                 if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.isContentEditable) return NodeFilter.FILTER_REJECT;
@@ -357,12 +360,12 @@
 
         nodesToWrap.forEach(textNode => {
             const text = textNode.nodeValue;
-            const fragment = document.createDocumentFragment();
+            const fragment = targetDoc.createDocumentFragment();
             let lastIndex = 0;
             
             text.replace(/\b([a-zA-Z\u00C0-\u024F'-]+)\b/g, (match, p1, offset) => {
-                if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
-                const span = document.createElement('span');
+                if (offset > lastIndex) fragment.appendChild(targetDoc.createTextNode(text.substring(lastIndex, offset)));
+                const span = targetDoc.createElement('span');
                 span.className = 'tm-word';
                 span.textContent = match;
                 
@@ -375,7 +378,7 @@
                 return match;
             });
             
-            if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+            if (lastIndex < text.length) fragment.appendChild(targetDoc.createTextNode(text.substring(lastIndex)));
             if (fragment.childNodes.length > 0) textNode.parentNode.replaceChild(fragment, textNode);
         });
     }
@@ -533,7 +536,7 @@
     }
 
     // ==========================================
-    // 模块 6：★ 核心修复的沉浸式阅读与降维拦截 ★
+    // 模块 6：核心 - 支持 iframe 穿透高亮
     // ==========================================
     function handleDirClick(e, path) { e.preventDefault(); loadPath(path); }
     function handleFileClick(e, sha, url, title) {
@@ -550,7 +553,6 @@
         document.getElementById('reader-title').innerText = title; 
         modal.style.display = 'flex'; 
         
-        // 1. 初始化弹窗样式为普通文章状态
         readerBody.style.padding = '20px';
         contentBox.className = 'reader-content-wrapper';
         contentBox.style = '';
@@ -561,21 +563,56 @@
             if(!response.ok) throw new Error("无法抓取文件");
             const htmlText = await response.text();
             
-            // 2. 智能嗅探：判断目标是不是你生成的“独立双语书App”
             if (htmlText.includes('class="panes"') && htmlText.includes('id="main-container"')) {
-                // 是双语书！降维隔离：抹除首页外层的留白样式，用 100% iframe 完美加载
+                // iframe 隔离模式
                 readerBody.style.padding = '0';
                 contentBox.className = '';
                 contentBox.style.width = '100%';
                 contentBox.style.flex = '1';
                 
-                // 双语书自带查词、自带样式、自带脚本，放到 iframe 中就不会受首页影响了
-                contentBox.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none; display:block;"></iframe>`;
+                const iframe = document.createElement('iframe');
+                iframe.src = url;
+                iframe.style = "width:100%; height:100%; border:none; display:block;";
+                
+                iframe.onload = () => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        
+                        // 1. 给 iframe 强行注入红蓝样式的 CSS
+                        const style = iframeDoc.createElement('style');
+                        style.textContent = `
+                            .highlight-blue { color: #1967d2 !important; font-weight: 500 !important; }
+                            .highlight-red { color: #d93025 !important; font-weight: 500 !important; }
+                        `;
+                        iframeDoc.head.appendChild(style);
+                        
+                        // 2. 延迟执行，防止和双语书内置的初始化产生冲突
+                        setTimeout(() => {
+                            // 穿透操作1：为主页来不及包裹的纯文本进行高亮渲染
+                            injectHighlightToElement(iframeDoc.body);
+                            
+                            // 穿透操作2：如果某些单词被内置脚本抢先包上了 .tm-word，补上颜色类名
+                            iframeDoc.querySelectorAll('.tm-word').forEach(span => {
+                                if (span.classList.contains('highlight-red') || span.classList.contains('highlight-blue')) return;
+                                const word = span.textContent.trim();
+                                if (checkInSet(word, excludedWords)) {}
+                                else if (checkInSet(word, redWords)) span.classList.add('highlight-red');
+                                else if (checkInSet(word, blueWords)) span.classList.add('highlight-blue');
+                            });
+                        }, 100);
+                        
+                    } catch (e) {
+                        console.warn("Iframe 跨域或加载限制，高亮注入跳过", e);
+                    }
+                };
+                
+                contentBox.innerHTML = '';
+                contentBox.appendChild(iframe);
             } else {
-                // 是普通文章！继续采用抽离正文注入卡片的模式
+                // 普通卡片模式
                 const doc = new DOMParser().parseFromString(htmlText, 'text/html');
                 contentBox.innerHTML = (doc.querySelector('.content-container') || doc.body).innerHTML;
-                injectHighlightToElement(contentBox); // 给普通文章注入首页的高亮与查词引擎
+                injectHighlightToElement(contentBox); 
             }
         } catch (error) { 
             contentBox.innerHTML = `<div class="reader-loading" style="color:red;">❌ 抓取失败。<br><br><a href="${url}" target="_blank" style="color:var(--primary);">点击此处强制在新窗口打开</a></div>`; 
@@ -584,7 +621,7 @@
     
     function closeReaderModal() { 
         document.getElementById('reader-modal').style.display = 'none'; 
-        document.getElementById('reader-content-wrapper').innerHTML = ''; // 清理掉 iframe 或 DOM 避免残留音频播放
+        document.getElementById('reader-content-wrapper').innerHTML = ''; 
     }
 
     function toggleMark(e, path) { e.preventDefault(); e.stopPropagation(); markedPaths.has(path) ? markedPaths.delete(path) : markedPaths.add(path); localStorage.setItem('gh_marked_files', JSON.stringify(Array.from(markedPaths))); renderList(); }
