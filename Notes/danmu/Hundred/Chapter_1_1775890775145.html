@@ -56,10 +56,37 @@
         const e = document.getElementById('en'), z = document.getElementById('zh');
         const container = document.getElementById('main-container'), bar = document.getElementById('top-bar');
         const resizer = document.getElementById('resizer');
-        const bookId = "book_1775956043846";
+        const bookId = "book_1775982545543";
         
         let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true };
         let s = false;
+        
+        // --- 新增：双指独立微调参数 ---
+        let isIndependent = false;
+        let independentTimer = null;
+
+        // 手机端：双指触摸检测
+        window.addEventListener('touchstart', evt => { if (evt.touches.length >= 2) isIndependent = true; }, {passive: true});
+        window.addEventListener('touchmove', evt => { if (evt.touches.length >= 2) isIndependent = true; }, {passive: true});
+        window.addEventListener('touchend', evt => { 
+            if (evt.touches.length < 2) {
+                clearTimeout(independentTimer);
+                // 延迟关闭独立模式，防止手指抬起后的惯性滚动触发双边同步
+                independentTimer = setTimeout(() => isIndependent = false, 800); 
+            }
+        }, {passive: true});
+
+        // 电脑端：按住 Alt 键滚动
+        window.addEventListener('keydown', evt => { if (evt.key === 'Alt') isIndependent = true; });
+        window.addEventListener('keyup', evt => { if (evt.key === 'Alt') isIndependent = false; });
+        window.addEventListener('wheel', evt => {
+            if(evt.altKey) {
+                isIndependent = true;
+                clearTimeout(independentTimer);
+                independentTimer = setTimeout(() => isIndependent = false, 300);
+            }
+        }, {passive: true});
+
 
         container.ondblclick = () => { prefs.barHidden = !prefs.barHidden; apply(); };
 
@@ -114,17 +141,21 @@
         };
 
         function handleScroll(src, target) {
-            if(!s && prefs.mode === 0) {
+            // --- 核心：如果处于双指/Alt键的单边独立滚动状态，跳过同步！ ---
+            if(!s && prefs.mode === 0 && !isIndependent) {
                 s = true;
                 const ratio = src.scrollHeight > src.clientHeight ? src.scrollTop / (src.scrollHeight - src.clientHeight) : 0;
                 target.scrollTop = ratio * (target.scrollHeight - target.clientHeight);
                 setTimeout(()=>s=false, 30);
             }
+            // 无论独立还是同步，只要滚动就实时保存新的基准进度
             localStorage.setItem(bookId+'_pos', getR());
         }
+        
         e.onscroll = () => handleScroll(e, z);
         z.onscroll = () => handleScroll(z, e);
 
+        // --- 字典引擎部分 ---
         const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
         const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
         const GM_addStyle = (css) => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); };
@@ -147,7 +178,6 @@
                 apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
             };
 
-            // 【修改点】：去除了 .tm-word 的 border-bottom 相关样式，只保留圆角和鼠标形态，确保在未点击/Hover时不显示线段
             GM_addStyle(`
                 .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
                 .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
@@ -353,6 +383,7 @@
             function setupTippyDelegate() {
                 tippy.delegate(document.body, {
                     target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+                    // 动态更新 Tippy 的主题偏移和响应，确保弹出气泡不会被双指滑动干扰
                     onShow(instance) {
                         if (!document.body.classList.contains('dict-enabled')) return false;
 
