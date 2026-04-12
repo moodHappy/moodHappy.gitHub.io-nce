@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>沉浸式双语书生成器 (完美记忆版)</title>
+    <title>沉浸式双语书生成器 (内置词典版)</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -69,7 +69,7 @@
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#3b82f6;">(UI记忆无死角版)</span></h2>
+            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;">(内置点按取词词典版)</span></h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著</b></label>
@@ -83,7 +83,7 @@
             
             <div class="button-group">
                 <button class="btn-main" onclick="startReading()">预览基础效果</button>
-                <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并复制打包源码</button>
+                <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并打包独立电子书 (全功能)</button>
             </div>
         </div>
     </div>
@@ -107,7 +107,7 @@
                 <button class="btn-tool" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
             </div>
             <textarea id="code-output" readonly></textarea>
-            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。导出的网页将永久记忆您的阅读进度、中线比例和菜单栏显隐状态。</p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。导出的网页除了UI记忆外，在英文区点击任意单词即可弹出翻译。</p>
         </div>
     </div>
 
@@ -155,9 +155,16 @@
         :root {
             --bar-bg: #0f172a; --bar-text: white; --btn-bg: #334155;
             --bg: #f8fafc; --panel-1: #ffffff; --panel-2: #f1f5f9; --text-color: #334155; --border: #cbd5e1; --resizer: #e2e8f0;
+            --dict-bg: #1e293b; --dict-text: #f8fafc;
         }
-        [data-theme="1"] { --bg: #f4ecd8; --panel-1: #fdf6e3; --panel-2: #eee8d5; --text-color: #5c4b37; --border: #e6d5b8; --resizer: #d3c4a9;}
-        [data-theme="2"] { --bg: #0f172a; --panel-1: #0f172a; --panel-2: #1e293b; --text-color: #94a3b8; --border: #334155; --resizer: #1e293b;}
+        [data-theme="1"] { 
+            --bg: #f4ecd8; --panel-1: #fdf6e3; --panel-2: #eee8d5; --text-color: #5c4b37; --border: #e6d5b8; --resizer: #d3c4a9;
+            --dict-bg: #5c4b37; --dict-text: #fdf6e3;
+        }
+        [data-theme="2"] { 
+            --bg: #0f172a; --panel-1: #0f172a; --panel-2: #1e293b; --text-color: #94a3b8; --border: #334155; --resizer: #1e293b;
+            --dict-bg: #334155; --dict-text: #f8fafc;
+        }
 
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
@@ -171,19 +178,24 @@
         .pane { overflow-y: auto; padding: 30px 20px 50px 20px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); -webkit-overflow-scrolling: touch; touch-action: pan-y; }
         .pane::-webkit-scrollbar { display: none; }
         
-        #en { font-family: "Georgia", serif; flex: 0 0 50%; }
+        #en { font-family: "Georgia", serif; flex: 0 0 50%; cursor: pointer; }
         #zh { background: var(--panel-2); flex: 1; }
         
-        .inner { max-width: 800px; margin: 0 auto; line-height: 1.8; pointer-events: none; }
+        .inner { max-width: 800px; margin: 0 auto; line-height: 1.8; }
         
-        /* 拖拽中线样式 */
-        .resizer {
-            display: flex; align-items: center; justify-content: center;
-            height: 14px; background: var(--resizer); cursor: row-resize;
-            flex-shrink: 0; z-index: 10; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-            user-select: none;
-        }
+        /* 拖拽中线 */
+        .resizer { display: flex; align-items: center; justify-content: center; height: 14px; background: var(--resizer); cursor: row-resize; flex-shrink: 0; z-index: 10; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); user-select: none; }
         .resizer::after { content: '≡'; color: #94a3b8; font-size: 16px; font-weight: bold; }
+
+        /* 弹出词典气泡 */
+        #dict-popup {
+            position: fixed; background: var(--dict-bg); color: var(--dict-text); padding: 10px 14px; 
+            border-radius: 8px; font-size: 14px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            max-width: 240px; word-wrap: break-word; line-height: 1.4; transition: opacity 0.2s;
+            pointer-events: none; /* 防止遮挡滑动 */
+        }
+        #dict-popup.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+        .dict-word { font-weight: bold; font-size: 16px; margin-bottom: 4px; display: block; color: #3b82f6; }
     </style>
 </head>
 <body data-theme="0">
@@ -197,6 +209,8 @@
         </div>
     </div>
 
+    <div id="dict-popup" class="hidden"></div>
+
     <div class="panes" id="main-container">
         <div class="pane" id="en"><div class="inner">${finalEn}</div></div>
         <div class="resizer" id="resizer"></div>
@@ -206,14 +220,74 @@
     <script>
         const e = document.getElementById('en'), z = document.getElementById('zh');
         const container = document.getElementById('main-container'), bar = document.getElementById('top-bar');
-        const resizer = document.getElementById('resizer');
+        const resizer = document.getElementById('resizer'), dictPopup = document.getElementById('dict-popup');
         const bookId = "${bookId}";
         
-        // 增加 barHidden 状态记忆
         let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false };
         let s = false;
 
-        // 双击隐藏/显示工具栏，并记住状态
+        // --- 核心：坐标取词算法与翻译API ---
+        e.addEventListener('click', async (evt) => {
+            let x = evt.clientX, y = evt.clientY;
+            let textNode, offset;
+            
+            // 兼容多端浏览器的坐标取词API
+            if (document.caretRangeFromPoint) {
+                let range = document.caretRangeFromPoint(x, y);
+                if (range) { textNode = range.startContainer; offset = range.startOffset; }
+            } else if (document.caretPositionFromPoint) {
+                let pos = document.caretPositionFromPoint(x, y);
+                if (pos) { textNode = pos.offsetNode; offset = pos.offset; }
+            }
+
+            // 获取到文本节点后，使用正则向前后探索，圈出完整单词
+            if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                let text = textNode.textContent;
+                let start = offset, end = offset;
+                // 仅匹配英文字母和连字符
+                while (start > 0 && /[a-zA-Z\'-]/.test(text[start - 1])) start--;
+                while (end < text.length && /[a-zA-Z\'-]/.test(text[end])) end++;
+                
+                let word = text.slice(start, end).trim();
+                
+                if (word.length > 1) {
+                    showDict(word, x, y);
+                    return;
+                }
+            }
+            // 点了空白处则隐藏词典
+            dictPopup.classList.add('hidden');
+        });
+
+        async function showDict(word, x, y) {
+            dictPopup.innerHTML = \`<span class="dict-word">\${word}</span><i>查询中...</i>\`;
+            
+            // 动态计算气泡位置，防止超出屏幕
+            let pX = x + 15;
+            let pY = y + 20;
+            if (pX + 200 > window.innerWidth) pX = window.innerWidth - 220;
+            if (pY + 80 > window.innerHeight) pY = y - 80;
+            
+            dictPopup.style.left = Math.max(10, pX) + 'px';
+            dictPopup.style.top = Math.max(10, pY) + 'px';
+            dictPopup.classList.remove('hidden');
+
+            try {
+                // 使用免费且无跨域限制的翻译 API (MyMemory)
+                let res = await fetch(\`https://api.mymemory.translated.net/get?q=\${word}&langpair=en|zh-CN\`);
+                let data = await res.json();
+                let trans = data.responseData.translatedText;
+                if(trans) {
+                    dictPopup.innerHTML = \`<span class="dict-word">\${word}</span>\${trans}\`;
+                } else {
+                    dictPopup.innerHTML = \`<span class="dict-word">\${word}</span>未找到释义\`;
+                }
+            } catch (err) {
+                dictPopup.innerHTML = \`<span class="dict-word">\${word}</span>网络连接失败\`;
+            }
+        }
+
+        // 双击隐藏/显示工具栏
         container.ondblclick = () => { 
             prefs.barHidden = !prefs.barHidden;
             apply();
@@ -250,46 +324,22 @@
             document.getElementById('mode-btn').innerText = modeLabels[prefs.mode];
 
             if (prefs.mode === 0) { 
-                e.style.display = 'block'; 
-                z.style.display = 'block';
-                resizer.style.display = 'flex';
-                e.style.flex = \`0 0 calc(\${prefs.splitRatio * 100}% - 7px)\`;
-                z.style.flex = '1';
+                e.style.display = 'block'; z.style.display = 'block'; resizer.style.display = 'flex';
+                e.style.flex = \`0 0 calc(\${prefs.splitRatio * 100}% - 7px)\`; z.style.flex = '1';
             }
             else if (prefs.mode === 1) { 
-                e.style.display = 'block'; 
-                z.style.display = 'none'; 
-                resizer.style.display = 'none';
-                e.style.flex = '1';
+                e.style.display = 'block'; z.style.display = 'none'; resizer.style.display = 'none'; e.style.flex = '1';
             }
             else { 
-                e.style.display = 'none'; 
-                z.style.display = 'block'; 
-                resizer.style.display = 'none';
-                z.style.flex = '1';
+                e.style.display = 'none'; z.style.display = 'block'; resizer.style.display = 'none'; z.style.flex = '1';
             }
 
-            // 处理工具栏显隐
-            if (prefs.barHidden) {
-                bar.classList.add('hidden');
-            } else {
-                bar.classList.remove('hidden');
-            }
-
+            if (prefs.barHidden) bar.classList.add('hidden'); else bar.classList.remove('hidden');
             localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs));
         }
 
-        // 计算当前阅读进度占比
-        function getR() {
-            let active = prefs.mode === 2 ? z : e;
-            return active.scrollHeight > active.clientHeight ? active.scrollTop / (active.scrollHeight - active.clientHeight) : 0;
-        }
-
-        // 设定阅读进度占比
-        function setR(r) {
-            e.scrollTop = r * (e.scrollHeight - e.clientHeight);
-            z.scrollTop = r * (z.scrollHeight - z.clientHeight);
-        }
+        function getR() { let active = prefs.mode === 2 ? z : e; return active.scrollHeight > active.clientHeight ? active.scrollTop / (active.scrollHeight - active.clientHeight) : 0; }
+        function setR(r) { e.scrollTop = r * (e.scrollHeight - e.clientHeight); z.scrollTop = r * (z.scrollHeight - z.clientHeight); }
 
         function toggleMode() { const r = getR(); prefs.mode = (prefs.mode + 1) % 3; apply(); setTimeout(()=>setR(r), 30); }
         function toggleTheme() { prefs.theme = (prefs.theme + 1) % 3; apply(); }
@@ -302,8 +352,10 @@
             if(r) setTimeout(()=>setR(parseFloat(r)), 100);
         };
 
-        // 滚动同步及进度记录
+        // 滚动时隐藏词典浮窗，并同步双侧进度
         function handleScroll(src, target) {
+            dictPopup.classList.add('hidden'); // 滚动自动消隐词典
+            
             if(!s && prefs.mode === 0) {
                 s = true;
                 const ratio = src.scrollHeight > src.clientHeight ? src.scrollTop / (src.scrollHeight - src.clientHeight) : 0;
