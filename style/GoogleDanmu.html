@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>danmu - 全局查词 & 高亮阅读版</title>
+    <title>danmu - 智能全兼容版博客</title>
     <link rel="icon" type="image/png" href="./icon/Miyetsuko.png">
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -106,25 +106,17 @@
         .progress-log { font-size: 12px; color: #666; max-height: 150px; overflow-y: auto; background: #f8f8f8; padding: 10px; border-radius: 4px; border: 1px solid #eee; margin-top: 10px; }
         .log-item { margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 2px; }
 
-        /* 沉浸阅读器 */
+        /* --- 沉浸式阅读器 UI (为 Iframe 完美适配做了调整) --- */
         #reader-modal { background: var(--bg); display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; flex-direction: column; }
-        .reader-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fff; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .reader-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fff; border-bottom: 1px solid var(--border); flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10;}
         .reader-title { font-weight: bold; font-size: 16px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .reader-body { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.8; font-size: 1.1em; color: #2c2c2c; -webkit-overflow-scrolling: touch; }
-        .reader-content-wrapper { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        /* reader-body 变成 flex 容器，方便内部内容拉伸 */
+        .reader-body { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.8; font-size: 1.1em; color: #2c2c2c; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; }
+        .reader-content-wrapper { max-width: 800px; width: 100%; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex-shrink: 0; }
 
         /* --- 核心修复：查词与高亮样式 --- */
-        .tm-word { 
-            cursor: pointer; 
-            transition: all 0.2s ease; 
-            padding: 0 1px; 
-            border-radius: 3px; 
-            border-bottom: 1px dotted transparent; 
-            touch-action: manipulation; /* 解决移动端点击判定问题 */
-            -webkit-tap-highlight-color: transparent; /* 移除移动端丑陋的默认蓝底 */
-        }
+        .tm-word { cursor: pointer; transition: all 0.2s ease; padding: 0 1px; border-radius: 3px; border-bottom: 1px dotted transparent; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .tm-word:hover, .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; border-bottom: 2px solid #2196F3; }
-        
         .highlight-blue { color: #1967d2; font-weight: 500; }
         .highlight-red { color: #d93025; font-weight: 500; }
 
@@ -152,7 +144,6 @@
         .dict-tag.cefr-B2 { background: #FFF3E0; color: #E65100; border-color: #FFE0B2; }
         .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
         .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
-
         .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
         .dict-pos-block { margin-bottom: 4px; }
         .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
@@ -194,7 +185,7 @@
 <div id="reader-modal">
     <div class="reader-header">
         <div class="reader-title" id="reader-title">加载中...</div>
-        <button class="icon-btn" onclick="closeReaderModal()">✖ 关闭</button>
+        <button class="icon-btn" style="border:1px solid var(--border);" onclick="closeReaderModal()">✖ 关闭</button>
     </div>
     <div class="reader-body" id="reader-body">
         <div class="reader-content-wrapper" id="reader-content-wrapper"></div>
@@ -429,7 +420,7 @@
             placement: 'bottom', 
             appendTo: () => document.body, 
             maxWidth: 320,
-            zIndex: 10005, // <--- 核心修复 1：突破 Modal 10000 的遮盖限制
+            zIndex: 10005,
             onShow(instance) {
                 const word = instance.reference.innerText.trim(); const wordKey = word.toLowerCase();
                 const renderContent = (data) => {
@@ -457,11 +448,8 @@
             }
         });
 
-        // <--- 核心修复 2：沉浸式阅读器滑动时，自动隐藏悬浮词典，避免词典卡在屏幕中间
         document.getElementById('reader-body').addEventListener('scroll', () => {
-            document.querySelectorAll('[data-tippy-root]').forEach(el => {
-                if (el._tippy) el._tippy.hide();
-            });
+            document.querySelectorAll('[data-tippy-root]').forEach(el => { if (el._tippy) el._tippy.hide(); });
         }, { passive: true });
     }
 
@@ -472,11 +460,7 @@
     async function ghFetch(url, options = {}) { const headers = options.headers || {}; if (config.token) headers['Authorization'] = `token ${config.token}`; const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime(), { ...options, headers }); if (res.status === 204) return true; if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || `HTTP ${res.status}`); return await res.json(); }
 
     async function init() {
-        config = getConfig();
-        initAudioPlayer();
-        initCEFRStaticDict();
-        setupTippyDelegate(); 
-
+        config = getConfig(); initAudioPlayer(); initCEFRStaticDict(); setupTippyDelegate(); 
         updateWordLists().then(() => injectHighlightToElement(document.getElementById('file-list')));
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -549,7 +533,7 @@
     }
 
     // ==========================================
-    // 模块 6：沉浸式阅读与各种动作触发
+    // 模块 6：★ 核心修复的沉浸式阅读与降维拦截 ★
     // ==========================================
     function handleDirClick(e, path) { e.preventDefault(); loadPath(path); }
     function handleFileClick(e, sha, url, title) {
@@ -559,16 +543,49 @@
     }
 
     async function openReaderModal(url, title) {
-        const modal = document.getElementById('reader-modal'); const contentBox = document.getElementById('reader-content-wrapper');
-        document.getElementById('reader-title').innerText = title; modal.style.display = 'flex'; contentBox.innerHTML = '<div class="reader-loading">🔄 正在抓取内容...</div>';
+        const modal = document.getElementById('reader-modal'); 
+        const contentBox = document.getElementById('reader-content-wrapper');
+        const readerBody = document.getElementById('reader-body');
+        
+        document.getElementById('reader-title').innerText = title; 
+        modal.style.display = 'flex'; 
+        
+        // 1. 初始化弹窗样式为普通文章状态
+        readerBody.style.padding = '20px';
+        contentBox.className = 'reader-content-wrapper';
+        contentBox.style = '';
+        contentBox.innerHTML = '<div class="reader-loading">🔄 正在智能解析内容...</div>';
+        
         try {
-            const response = await fetch(url); if(!response.ok) throw new Error("无法抓取文件");
-            const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-            contentBox.innerHTML = (doc.querySelector('.content-container') || doc.body).innerHTML;
-            injectHighlightToElement(contentBox); 
-        } catch (error) { contentBox.innerHTML = `<div class="reader-loading" style="color:red;">❌ 抓取失败，原文件不支持此模式。<br><br><a href="${url}" target="_blank" style="color:var(--primary);">点击此处强制在新窗口打开</a></div>`; }
+            const response = await fetch(url); 
+            if(!response.ok) throw new Error("无法抓取文件");
+            const htmlText = await response.text();
+            
+            // 2. 智能嗅探：判断目标是不是你生成的“独立双语书App”
+            if (htmlText.includes('class="panes"') && htmlText.includes('id="main-container"')) {
+                // 是双语书！降维隔离：抹除首页外层的留白样式，用 100% iframe 完美加载
+                readerBody.style.padding = '0';
+                contentBox.className = '';
+                contentBox.style.width = '100%';
+                contentBox.style.flex = '1';
+                
+                // 双语书自带查词、自带样式、自带脚本，放到 iframe 中就不会受首页影响了
+                contentBox.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none; display:block;"></iframe>`;
+            } else {
+                // 是普通文章！继续采用抽离正文注入卡片的模式
+                const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+                contentBox.innerHTML = (doc.querySelector('.content-container') || doc.body).innerHTML;
+                injectHighlightToElement(contentBox); // 给普通文章注入首页的高亮与查词引擎
+            }
+        } catch (error) { 
+            contentBox.innerHTML = `<div class="reader-loading" style="color:red;">❌ 抓取失败。<br><br><a href="${url}" target="_blank" style="color:var(--primary);">点击此处强制在新窗口打开</a></div>`; 
+        }
     }
-    function closeReaderModal() { document.getElementById('reader-modal').style.display = 'none'; document.getElementById('reader-content-wrapper').innerHTML = ''; }
+    
+    function closeReaderModal() { 
+        document.getElementById('reader-modal').style.display = 'none'; 
+        document.getElementById('reader-content-wrapper').innerHTML = ''; // 清理掉 iframe 或 DOM 避免残留音频播放
+    }
 
     function toggleMark(e, path) { e.preventDefault(); e.stopPropagation(); markedPaths.has(path) ? markedPaths.delete(path) : markedPaths.add(path); localStorage.setItem('gh_marked_files', JSON.stringify(Array.from(markedPaths))); renderList(); }
     function toggleBatchMode() { isBatchMode = !isBatchMode; const btn = document.getElementById('batch-btn'); const actionBar = document.getElementById('action-bar'); if (isBatchMode) { btn.classList.add('active'); btn.innerHTML = '<span>❌ 取消</span>'; actionBar.classList.add('visible'); } else { btn.classList.remove('active'); btn.innerHTML = '<span>✅ 选择</span>'; actionBar.classList.remove('visible'); selectedFilesMap.clear(); updateActionBar(); } renderList(); }
