@@ -89,7 +89,7 @@
         .btn-edit { background: #2da44e; }
         .action-btn:disabled { background: #57606a; opacity: 0.5; cursor: not-allowed; }
 
-        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; z-index: 10001; display: none; transition: opacity 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; z-index: 10005; display: none; transition: opacity 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto; }
@@ -110,11 +110,19 @@
         #reader-modal { background: var(--bg); display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; flex-direction: column; }
         .reader-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fff; border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .reader-title { font-weight: bold; font-size: 16px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .reader-body { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.8; font-size: 1.1em; color: #2c2c2c; }
+        .reader-body { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.8; font-size: 1.1em; color: #2c2c2c; -webkit-overflow-scrolling: touch; }
         .reader-content-wrapper { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-        /* --- 核心：查词与高亮样式 --- */
-        .tm-word { cursor: pointer; transition: all 0.2s ease; padding: 0 1px; border-radius: 3px; border-bottom: 1px dotted transparent; }
+        /* --- 核心修复：查词与高亮样式 --- */
+        .tm-word { 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            padding: 0 1px; 
+            border-radius: 3px; 
+            border-bottom: 1px dotted transparent; 
+            touch-action: manipulation; /* 解决移动端点击判定问题 */
+            -webkit-tap-highlight-color: transparent; /* 移除移动端丑陋的默认蓝底 */
+        }
         .tm-word:hover, .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; border-bottom: 2px solid #2196F3; }
         
         .highlight-blue { color: #1967d2; font-weight: 500; }
@@ -239,7 +247,7 @@
     }
 
     // ==========================================
-    // 模块 2：查词系统底层与缓存 (替换跨域 API)
+    // 模块 2：查词系统底层与缓存
     // ==========================================
     let globalResultCache = JSON.parse(localStorage.getItem('tm_dict_global_cache') || '{}');
     let saveTimeout = null;
@@ -262,7 +270,6 @@
             }).catch(()=>{});
     }
 
-    // API 请求包装 (使用标准 fetch，处理 CORS 报错)
     async function fetchTranslation(text) {
         const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`);
         if (!res.ok) throw new Error('API failed'); return await res.json();
@@ -276,7 +283,7 @@
     }
     async function fetchWordLevel(text) {
         try {
-            const res = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`); // 可能会被 CORS 拦截
+            const res = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`); 
             const data = await res.json();
             let result = { stars: 0, tags: [] };
             if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
@@ -288,7 +295,7 @@
         const w = word.toLowerCase();
         if (cefrStaticCache[w]) return cefrStaticCache[w];
         try {
-            const res = await fetch(`https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`); // 可能会被 CORS 拦截
+            const res = await fetch(`https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`); 
             const text = await res.text();
             const match = text.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i) || text.match(/title="CEFR[^>]*>\s*([A-C][1-2])\s*<\/span>/i);
             if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); return cefrStaticCache[w]; }
@@ -296,7 +303,6 @@
         return null;
     }
 
-    // TTS 系统
     let globalAudioPlayer = null; let currentPlayingBtn = null;
     function initAudioPlayer() {
         if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); globalAudioPlayer.id = 'tm-tts-audio'; globalAudioPlayer.style.display = 'none'; globalAudioPlayer.crossOrigin = 'anonymous'; document.body.appendChild(globalAudioPlayer); }
@@ -341,7 +347,6 @@
         await Promise.all(promises);
     }
 
-    // 核心重写：融合全局 tm-word 和红蓝高亮
     function injectHighlightToElement(rootNode) {
         if(!rootNode) return;
         const ignoreTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG', 'PRE', 'CODE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'BUTTON', 'A', 'MATH']);
@@ -370,7 +375,6 @@
                 span.className = 'tm-word';
                 span.textContent = match;
                 
-                // 混合高亮词表逻辑
                 if (checkInSet(match, excludedWords)) { /* 仅作为词可查，不染色 */ } 
                 else if (checkInSet(match, redWords)) span.classList.add('highlight-red');
                 else if (checkInSet(match, blueWords)) span.classList.add('highlight-blue');
@@ -418,7 +422,14 @@
     function setupTippyDelegate() {
         if(window._tippyDelegate) return;
         window._tippyDelegate = tippy.delegate(document.body, {
-            target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+            target: '.tm-word', 
+            trigger: 'click', 
+            interactive: true, 
+            theme: 'light-border', 
+            placement: 'bottom', 
+            appendTo: () => document.body, 
+            maxWidth: 320,
+            zIndex: 10005, // <--- 核心修复 1：突破 Modal 10000 的遮盖限制
             onShow(instance) {
                 const word = instance.reference.innerText.trim(); const wordKey = word.toLowerCase();
                 const renderContent = (data) => {
@@ -445,8 +456,14 @@
                 }
             }
         });
-    }
 
+        // <--- 核心修复 2：沉浸式阅读器滑动时，自动隐藏悬浮词典，避免词典卡在屏幕中间
+        document.getElementById('reader-body').addEventListener('scroll', () => {
+            document.querySelectorAll('[data-tippy-root]').forEach(el => {
+                if (el._tippy) el._tippy.hide();
+            });
+        }, { passive: true });
+    }
 
     // ==========================================
     // 模块 5：GitHub 数据抓取与 UI 流程
@@ -458,7 +475,7 @@
         config = getConfig();
         initAudioPlayer();
         initCEFRStaticDict();
-        setupTippyDelegate(); // 绑定一次事件，终身受益
+        setupTippyDelegate(); 
 
         updateWordLists().then(() => injectHighlightToElement(document.getElementById('file-list')));
 
@@ -519,7 +536,7 @@
         });
 
         listEl.innerHTML = ''; listEl.appendChild(ul);
-        injectHighlightToElement(listEl); // 为列表名注魂
+        injectHighlightToElement(listEl); 
         if (sortableInstance) sortableInstance.destroy(); sortableInstance = new Sortable(ul, { handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost', onEnd: saveSortOrder });
     }
 
@@ -548,7 +565,7 @@
             const response = await fetch(url); if(!response.ok) throw new Error("无法抓取文件");
             const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
             contentBox.innerHTML = (doc.querySelector('.content-container') || doc.body).innerHTML;
-            injectHighlightToElement(contentBox); // 为文章注魂
+            injectHighlightToElement(contentBox); 
         } catch (error) { contentBox.innerHTML = `<div class="reader-loading" style="color:red;">❌ 抓取失败，原文件不支持此模式。<br><br><a href="${url}" target="_blank" style="color:var(--primary);">点击此处强制在新窗口打开</a></div>`; }
     }
     function closeReaderModal() { document.getElementById('reader-modal').style.display = 'none'; document.getElementById('reader-content-wrapper').innerHTML = ''; }
