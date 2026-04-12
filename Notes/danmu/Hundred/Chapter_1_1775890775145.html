@@ -15,7 +15,7 @@
 
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
-        .bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .bar.hidden { transform: translateY(-100%); }
         
         .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -61,13 +61,13 @@
         const e = document.getElementById('en'), z = document.getElementById('zh');
         const container = document.getElementById('main-container'), bar = document.getElementById('top-bar');
         const resizer = document.getElementById('resizer');
-        const bookId = "book_1775950944487";
+        const bookId = "book_1775952863188";
         
-        // 加入 barHidden 属性，默认 false
+        // 增加 barHidden 状态记忆
         let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false };
         let s = false;
 
-        // 双击记忆并隐藏/显示工具栏
+        // 双击隐藏/显示工具栏，并记住状态
         container.ondblclick = () => { 
             prefs.barHidden = !prefs.barHidden;
             apply();
@@ -94,19 +94,12 @@
             }
         });
 
-        // 渲染页面状态 (包括顶部栏的显示状态)
+        // 渲染页面状态
         function apply() {
             document.body.setAttribute('data-theme', prefs.theme);
             e.style.fontSize = (1.25 * prefs.font) + 'rem';
             z.style.fontSize = (1.15 * prefs.font) + 'rem';
             
-            // 处理工具栏记忆状态
-            if (prefs.barHidden) {
-                bar.classList.add('hidden');
-            } else {
-                bar.classList.remove('hidden');
-            }
-
             const modeLabels = ['双语', '纯英', '纯中'];
             document.getElementById('mode-btn').innerText = modeLabels[prefs.mode];
 
@@ -129,6 +122,14 @@
                 resizer.style.display = 'none';
                 z.style.flex = '1';
             }
+
+            // 处理工具栏显隐
+            if (prefs.barHidden) {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+            }
+
             localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs));
         }
 
