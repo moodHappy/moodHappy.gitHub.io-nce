@@ -17,14 +17,17 @@
 
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
-        .bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .bar { position: fixed; top: 0; left: 0; right: 0; min-height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 10px rgba(0,0,0,0.2); padding: 5px 10px; }
         .bar.hidden { transform: translateY(-100%); }
         
-        .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-        .btn { background: var(--btn-bg); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;}
+        .controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .btn { background: var(--btn-bg); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;}
         
-        .panes { display: flex; flex-direction: column; height: 100%; height: 100dvh; width: 100%; position: relative; }
-        .pane { overflow-y: auto; padding: 30px 20px 50px 20px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+        .sync-label { display: flex; align-items: center; gap: 4px; background: var(--btn-bg); padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; }
+        .sync-label input { margin: 0; width: 14px; height: 14px; accent-color: #10b981; }
+
+        .panes { display: flex; flex-direction: column; height: 100%; height: 100dvh; width: 100%; position: relative; padding-top: 48px; }
+        .pane { overflow-y: auto; padding: 10px 20px 50px 20px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); -webkit-overflow-scrolling: touch; touch-action: pan-y; }
         .pane::-webkit-scrollbar { display: none; }
         
         #en { font-family: "Georgia", serif; flex: 0 0 50%; }
@@ -42,6 +45,9 @@
             <button class="btn" onclick="toggleTheme()">🌓 主题</button>
             <button class="btn" onclick="adjustFont(-0.1)">A-</button>
             <button class="btn" onclick="adjustFont(0.1)">A+</button>
+            <label class="sync-label" title="取消勾选即可单边拖动微调对齐">
+                <input type="checkbox" id="sync-cb" onchange="toggleSync()"> 同步
+            </label>
             <button id="dict-btn" class="btn" style="background:#10b981" onclick="toggleDict()">查词: 开</button>
         </div>
     </div>
@@ -56,37 +62,11 @@
         const e = document.getElementById('en'), z = document.getElementById('zh');
         const container = document.getElementById('main-container'), bar = document.getElementById('top-bar');
         const resizer = document.getElementById('resizer');
-        const bookId = "book_1775982545543";
+        const bookId = "book_1775984159283";
         
-        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true };
+        // --- 新增 syncEnabled 状态记忆 ---
+        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true, syncEnabled: true };
         let s = false;
-        
-        // --- 新增：双指独立微调参数 ---
-        let isIndependent = false;
-        let independentTimer = null;
-
-        // 手机端：双指触摸检测
-        window.addEventListener('touchstart', evt => { if (evt.touches.length >= 2) isIndependent = true; }, {passive: true});
-        window.addEventListener('touchmove', evt => { if (evt.touches.length >= 2) isIndependent = true; }, {passive: true});
-        window.addEventListener('touchend', evt => { 
-            if (evt.touches.length < 2) {
-                clearTimeout(independentTimer);
-                // 延迟关闭独立模式，防止手指抬起后的惯性滚动触发双边同步
-                independentTimer = setTimeout(() => isIndependent = false, 800); 
-            }
-        }, {passive: true});
-
-        // 电脑端：按住 Alt 键滚动
-        window.addEventListener('keydown', evt => { if (evt.key === 'Alt') isIndependent = true; });
-        window.addEventListener('keyup', evt => { if (evt.key === 'Alt') isIndependent = false; });
-        window.addEventListener('wheel', evt => {
-            if(evt.altKey) {
-                isIndependent = true;
-                clearTimeout(independentTimer);
-                independentTimer = setTimeout(() => isIndependent = false, 300);
-            }
-        }, {passive: true});
-
 
         container.ondblclick = () => { prefs.barHidden = !prefs.barHidden; apply(); };
 
@@ -123,6 +103,10 @@
                 document.body.classList.remove('dict-enabled');
             }
 
+            // 更新同步复选框状态
+            const syncCb = document.getElementById('sync-cb');
+            if(syncCb) syncCb.checked = prefs.syncEnabled;
+
             localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs));
         }
 
@@ -132,6 +116,7 @@
         function toggleMode() { const r = getR(); prefs.mode = (prefs.mode + 1) % 3; apply(); setTimeout(()=>setR(r), 30); }
         function toggleTheme() { prefs.theme = (prefs.theme + 1) % 3; apply(); }
         function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; apply(); }
+        function toggleSync() { prefs.syncEnabled = document.getElementById('sync-cb').checked; apply(); }
         function adjustFont(d) { const r = getR(); prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + d)); apply(); setTimeout(()=>setR(r), 30); }
 
         window.onload = () => {
@@ -141,14 +126,14 @@
         };
 
         function handleScroll(src, target) {
-            // --- 核心：如果处于双指/Alt键的单边独立滚动状态，跳过同步！ ---
-            if(!s && prefs.mode === 0 && !isIndependent) {
+            // --- 核心：通过 prefs.syncEnabled 判断是否要双边联动 ---
+            if(!s && prefs.mode === 0 && prefs.syncEnabled) {
                 s = true;
                 const ratio = src.scrollHeight > src.clientHeight ? src.scrollTop / (src.scrollHeight - src.clientHeight) : 0;
                 target.scrollTop = ratio * (target.scrollHeight - target.clientHeight);
                 setTimeout(()=>s=false, 30);
             }
-            // 无论独立还是同步，只要滚动就实时保存新的基准进度
+            // 永远记住当前的基准进度
             localStorage.setItem(bookId+'_pos', getR());
         }
         
@@ -383,7 +368,6 @@
             function setupTippyDelegate() {
                 tippy.delegate(document.body, {
                     target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
-                    // 动态更新 Tippy 的主题偏移和响应，确保弹出气泡不会被双指滑动干扰
                     onShow(instance) {
                         if (!document.body.classList.contains('dict-enabled')) return false;
 
