@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>沉浸式双语书生成器 (移动端完美适配 + 自由拖拽版)</title>
+    <title>沉浸式双语书生成器 (完美记忆版)</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -46,7 +46,7 @@
         .btn-main:hover { opacity: 0.9; }
         .btn-copy-source { background: var(--secondary); }
 
-        /* ----- 预览模式 ----- */
+        /* ----- 预览模式 (仅基础显示) ----- */
         #reading-view { display: none; flex-direction: column; height: 100%; height: 100dvh; }
         .nav-bar { height: 50px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 100; flex-shrink: 0; }
         .btn-tool { background: #334155; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
@@ -69,7 +69,7 @@
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#3b82f6;">(UI记忆满配版)</span></h2>
+            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#3b82f6;">(UI记忆无死角版)</span></h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著</b></label>
@@ -107,7 +107,7 @@
                 <button class="btn-tool" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
             </div>
             <textarea id="code-output" readonly></textarea>
-            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。导出的网页支持记忆所有设置（包括工具栏的隐藏状态）。</p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。导出的网页将永久记忆您的阅读进度、中线比例和菜单栏显隐状态。</p>
         </div>
     </div>
 
@@ -161,7 +161,7 @@
 
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
-        .bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .bar { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .bar.hidden { transform: translateY(-100%); }
         
         .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -209,11 +209,11 @@
         const resizer = document.getElementById('resizer');
         const bookId = "${bookId}";
         
-        // 加入 barHidden 属性，默认 false
+        // 增加 barHidden 状态记忆
         let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false };
         let s = false;
 
-        // 双击记忆并隐藏/显示工具栏
+        // 双击隐藏/显示工具栏，并记住状态
         container.ondblclick = () => { 
             prefs.barHidden = !prefs.barHidden;
             apply();
@@ -240,19 +240,12 @@
             }
         });
 
-        // 渲染页面状态 (包括顶部栏的显示状态)
+        // 渲染页面状态
         function apply() {
             document.body.setAttribute('data-theme', prefs.theme);
             e.style.fontSize = (1.25 * prefs.font) + 'rem';
             z.style.fontSize = (1.15 * prefs.font) + 'rem';
             
-            // 处理工具栏记忆状态
-            if (prefs.barHidden) {
-                bar.classList.add('hidden');
-            } else {
-                bar.classList.remove('hidden');
-            }
-
             const modeLabels = ['双语', '纯英', '纯中'];
             document.getElementById('mode-btn').innerText = modeLabels[prefs.mode];
 
@@ -275,6 +268,14 @@
                 resizer.style.display = 'none';
                 z.style.flex = '1';
             }
+
+            // 处理工具栏显隐
+            if (prefs.barHidden) {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+            }
+
             localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs));
         }
 
