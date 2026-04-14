@@ -114,7 +114,7 @@
 <div id="settings-icon" title="设置 GitHub Token" onclick="openTokenSettings()">🔐</div>
 
 <div class="main-container">
-    <h1>✨ 传记排版 & 源码推送 <span style="font-size:12px; color:#FF3B30;">(云端高亮版)</span></h1>
+    <h1>✨ 传记排版 & 源码推送 <span style="font-size:12px; color:#AF52DE;">(双语模糊回忆版)</span></h1>
 
     <div class="card">
         <label>
@@ -131,7 +131,7 @@
 
         <input type="url" id="originalLink" placeholder="🔗 选填：在此粘贴原文链接 (如 https://...)" autocomplete="off">
 
-        <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder="请输入文章标题（第一行）及正文..."></textarea>
+        <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder="在此粘贴双语对照文本..."></textarea>
 
         <div class="action-bar">
             <button class="btn-primary" onclick="generateHTML()">🎨 转换</button>
@@ -148,7 +148,7 @@
             <button class="btn-secondary" onclick="generateDateFileName()" style="padding: 0 16px; border-radius: 8px;" title="生成当前日期时间作为文件名">🕒 日期</button>
         </div>
 
-        <textarea id="outputText" class="result-area" autocomplete="off" spellcheck="false" placeholder="这里将显示生成的带有内置工具栏、词典及云端红字高亮的完整HTML代码..."></textarea>
+        <textarea id="outputText" class="result-area" autocomplete="off" spellcheck="false" placeholder="这里将显示生成的带有内置工具栏、词典、云端高亮及中文模糊的完整HTML代码..."></textarea>
     </div>
 </div>
 
@@ -234,9 +234,16 @@
             htmlBody += `    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
         }
 
-        htmlBody += bodyLines.map(p => `    <p>${p}</p>`).join('\n');
+        // 核心：智能判断中文段落，包裹专属 class 和交互点击事件
+        htmlBody += bodyLines.map(p => {
+            if (/[\u4e00-\u9fa5]/.test(p)) {
+                return `    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">${p}</p>`;
+            } else {
+                return `    <p>${p}</p>`;
+            }
+        }).join('\n');
 
-        // 生成注入包含工具栏、词典、云端高亮的完整超级代码
+        // 生成注入包含工具栏、词典、云端高亮、中文模糊的完整超级代码
         const fullHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -259,6 +266,12 @@
         .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
         .reader-btn:active { transform: scale(0.95); }
         #content-container { transition: font-size 0.2s; }
+
+        /* ----- 核心：中文段落模糊滤镜 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
 
         /* ----- 生词云端高亮红色核心样式 ----- */
         body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
@@ -304,6 +317,7 @@
         <div class="reader-controls">
             <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
             <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
             <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
             <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
         </div>
@@ -316,12 +330,13 @@ ${htmlBody}
     <script>
         // UI 控制及记忆功能
         const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
-        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: true, barHidden: false, highlightEnabled: true };
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: true, barHidden: false, highlightEnabled: true, blurEnabled: true };
         
         const bar = document.getElementById('top-bar');
         const content = document.getElementById('content-container');
         const dictBtn = document.getElementById('dict-btn');
         const hlBtn = document.getElementById('hl-btn');
+        const blurBtn = document.getElementById('blur-btn');
 
         function applyPrefs() {
             content.style.fontSize = prefs.font + 'em';
@@ -344,11 +359,21 @@ ${htmlBody}
                 hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
             }
 
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled');
+                blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
+                // 开启模糊功能时，强制将所有中文段落恢复模糊状态
+                document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
+            } else {
+                document.body.classList.remove('global-blur-enabled');
+                blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "#E5E5EA"; blurBtn.style.color = "#1C1C1E";
+            }
+
             localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
         }
 
         document.addEventListener('dblclick', (e) => {
-            if(e.target.closest('#top-bar')) return;
+            if(e.target.closest('#top-bar') || e.target.classList.contains('zh-para')) return;
             prefs.barHidden = !prefs.barHidden;
             applyPrefs();
             if(window.getSelection().toString().length > 0) return;
@@ -357,6 +382,7 @@ ${htmlBody}
         function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); }
         function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); }
         function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
+        function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
 
         window.addEventListener('DOMContentLoaded', applyPrefs);
 
@@ -372,7 +398,6 @@ ${htmlBody}
             if (cached) {
                 try {
                     const {data, time} = JSON.parse(cached);
-                    // 本地缓存24小时，防网络卡顿
                     if (now - time < 24 * 60 * 60 * 1000) { 
                         highlightWords = new Set(data);
                         applyHighlightsToDOM();
@@ -540,6 +565,9 @@ ${htmlBody}
                     acceptNode: function(currentNode) {
                         const parent = currentNode.parentNode;
                         if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        // 不包裹中文段落，防止点击查词和模糊点击冲突
+                        if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
+                        
                         const text = currentNode.nodeValue;
                         if (!text.trim() || !/\\b[a-zA-Z'-]+\\b/.test(text)) return NodeFilter.FILTER_REJECT;
                         return NodeFilter.FILTER_ACCEPT;
@@ -784,7 +812,6 @@ ${htmlBody}
             const token = localStorage.getItem('gh_token');
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${finalFileName}`;
             
-            // 使用 encodeURIComponent 完美处理中文编码
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
 
             const res = await fetch(url, {
