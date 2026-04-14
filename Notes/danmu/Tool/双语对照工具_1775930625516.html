@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>沉浸式双语书生成器 (弹性全屏修复版)</title>
+    <title>沉浸式双语书生成器</title>
     <style>
         :root {
             --bg: #f8fafc; --panel-en: #ffffff; --panel-zh: #f1f5f9;
@@ -41,7 +41,7 @@
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;">(彻底修复白边占位问题)</span></h2>
+            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;"></span></h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著</b></label>
@@ -99,15 +99,7 @@
 
         function getFullSource() {
             const finalEn = format(enInput.value);
-            
-            // 智能处理中文段落，添加模糊交互所需的类名
-            const finalZh = zhInput.value.split('\n').filter(l => l.trim()).map(p => {
-                const text = p.trim();
-                if (/[\u4e00-\u9fa5]/.test(text)) {
-                    return `<p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">${text}</p>`;
-                }
-                return `<p>${text}</p>`;
-            }).join('');
+            const finalZh = format(zhInput.value);
 
             const bookId = "book_" + Date.now();
 
@@ -128,19 +120,20 @@
         [data-theme="1"] { --bg: #f4ecd8; --panel-1: #fdf6e3; --panel-2: #eee8d5; --text-color: #5c4b37; --border: #e6d5b8; --resizer: #d3c4a9;}
         [data-theme="2"] { --bg: #0f172a; --panel-1: #0f172a; --panel-2: #1e293b; --text-color: #94a3b8; --border: #334155; --resizer: #1e293b;}
 
-        /* 核心修复：采用 Flexbox 彻底解决隐藏后留白的占位问题 */
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
         .bar { 
             flex-shrink: 0; background: var(--bar-bg); color: var(--bar-text); 
-            display: flex; align-items: center; justify-content: center; 
-            padding: 8px 10px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            padding: 10px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
             transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, opacity 0.2s ease;
             max-height: 120px; opacity: 1; overflow: hidden;
         }
         body.bar-hidden .bar { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; border: none; }
         
-        .controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .controls { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .controls-row { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; }
+        
         .btn { background: var(--btn-bg); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;}
         
         .sync-label { display: flex; align-items: center; gap: 4px; background: var(--btn-bg); padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; color: white;}
@@ -157,12 +150,6 @@
         .resizer { flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 14px; background: var(--resizer); cursor: row-resize; z-index: 10; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); user-select: none; }
         .resizer::after { content: '≡'; color: #94a3b8; font-size: 16px; font-weight: bold; }
 
-        /* ----- 中文段落模糊回忆样式 ----- */
-        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
-        .global-blur-enabled .zh-para { cursor: pointer; }
-        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
-        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
-
         /* ----- 云端生词红字高亮样式 ----- */
         body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
     </style>
@@ -170,16 +157,19 @@
 <body data-theme="0">
     <div class="bar" id="top-bar">
         <div class="controls">
-            <button id="mode-btn" class="btn" style="background:#3b82f6" onclick="toggleMode()">模式</button>
-            <button class="btn" onclick="toggleTheme()">🌓 主题</button>
-            <button class="btn" onclick="adjustFont(-0.1)">A-</button>
-            <button class="btn" onclick="adjustFont(0.1)">A+</button>
-            <label class="sync-label" title="取消勾选即可单边微调对齐">
-                <input type="checkbox" id="sync-cb" onchange="toggleSync()"> 同步
-            </label>
-            <button id="blur-btn" class="btn" style="background:#AF52DE" onclick="toggleBlur()">模糊: 开</button>
-            <button id="hl-btn" class="btn" style="background:#FF3B30" onclick="toggleHighlight()">高亮: 开</button>
-            <button id="dict-btn" class="btn" style="background:#10b981" onclick="toggleDict()">查词: 开</button>
+            <div class="controls-row">
+                <button id="mode-btn" class="btn" style="background:#3b82f6" onclick="toggleMode()">模式</button>
+                <button class="btn" onclick="adjustFont(-0.1)">A-</button>
+                <button class="btn" onclick="adjustFont(0.1)">A+</button>
+                <button class="btn" onclick="toggleTheme()">主题</button>
+            </div>
+            <div class="controls-row">
+                <button id="hl-btn" class="btn" style="background:#FF3B30" onclick="toggleHighlight()">高亮: 开</button>
+                <label class="sync-label" title="取消勾选即可单边微调对齐">
+                    <input type="checkbox" id="sync-cb" onchange="toggleSync()"> 同步
+                </label>
+                <button id="dict-btn" class="btn" style="background:#10b981" onclick="toggleDict()">查词: 开</button>
+            </div>
         </div>
     </div>
 
@@ -195,12 +185,11 @@
         const resizer = document.getElementById('resizer');
         const bookId = "${bookId}";
         
-        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true, syncEnabled: true, highlightEnabled: true, blurEnabled: true };
+        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true, syncEnabled: true, highlightEnabled: true };
         let s = false;
 
         // 双击阅读区任意位置隐藏/显示工具栏
         container.ondblclick = (evt) => { 
-            if(evt.target.classList.contains('zh-para')) return; // 防止与模糊点击冲突
             prefs.barHidden = !prefs.barHidden; 
             apply(); 
         };
@@ -239,13 +228,6 @@
             if(prefs.highlightEnabled) { hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; document.body.classList.add('highlights-enabled'); } 
             else { hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "var(--btn-bg)"; document.body.classList.remove('highlights-enabled'); }
 
-            const blurBtn = document.getElementById('blur-btn');
-            if (prefs.blurEnabled) {
-                document.body.classList.add('global-blur-enabled'); blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE";
-            } else {
-                document.body.classList.remove('global-blur-enabled'); blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "var(--btn-bg)";
-            }
-
             const syncCb = document.getElementById('sync-cb');
             if(syncCb) syncCb.checked = prefs.syncEnabled;
 
@@ -260,18 +242,12 @@
         function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; apply(); }
         function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; apply(); }
         function toggleSync() { prefs.syncEnabled = document.getElementById('sync-cb').checked; apply(); }
-        function toggleBlur() { 
-            prefs.blurEnabled = !prefs.blurEnabled; apply(); 
-            if(prefs.blurEnabled) { document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred')); }
-        }
         function adjustFont(d) { const r = getR(); prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + d)); apply(); setTimeout(()=>setR(r), 30); }
 
         window.onload = () => {
             apply();
             const r = localStorage.getItem(bookId+'_pos');
             if(r) setTimeout(()=>setR(parseFloat(r)), 100);
-            // 每次刷新重新给中文加模糊，强迫回忆
-            if(prefs.blurEnabled) { document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred')); }
         };
 
         function handleScroll(src, target) {
