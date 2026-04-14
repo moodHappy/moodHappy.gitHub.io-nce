@@ -384,7 +384,23 @@ ${htmlBody}
         function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
         function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
 
-        window.addEventListener('DOMContentLoaded', applyPrefs);
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            // 恢复阅读位置
+            const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
+            if (savedScroll) {
+                setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
+            }
+        });
+
+        // 监听并保存阅读位置 (加入防抖)
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY + '_scroll', window.scrollY);
+            }, 300);
+        });
 
         // ==========================================
         // 云端红字高亮引擎
@@ -811,7 +827,7 @@ ${htmlBody}
             const finalFileName = `${baseName}_${Date.now()}.html`;
             const token = localStorage.getItem('gh_token');
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${targetPath}/${finalFileName}`;
-            
+
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
 
             const res = await fetch(url, {
