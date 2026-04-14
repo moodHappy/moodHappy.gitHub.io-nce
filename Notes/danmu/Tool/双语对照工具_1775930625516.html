@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>沉浸式双语书生成器 (高亮查词版)</title>
+    <title>沉浸式双语书生成器 (弹性全屏修复版)</title>
     <style>
         :root {
             --bg: #f8fafc; --panel-en: #ffffff; --panel-zh: #f1f5f9;
@@ -11,7 +11,7 @@
         }
         * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; background: var(--bg); overflow: hidden; }
-        
+
         #setup-view { padding: 20px; display: flex; flex-direction: column; align-items: center; height: 100%; overflow-y: auto; }
         .container { width: 100%; max-width: 1100px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
@@ -41,7 +41,7 @@
 
     <div id="setup-view">
         <div class="container">
-            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;">(微调同步 + 高亮查词版)</span></h2>
+            <h2 style="margin-top:0; text-align: center;">📚 双语书生成器 <span style="font-size:12px; color:#10b981;">(彻底修复白边占位问题)</span></h2>
             <div class="input-grid">
                 <div>
                     <label><b>英文原著</b></label>
@@ -52,7 +52,7 @@
                     <textarea id="zh-raw" placeholder="在此粘贴中文内容..."></textarea>
                 </div>
             </div>
-            
+
             <div class="button-group">
                 <button class="btn-main" onclick="startReading()">预览基础排版</button>
                 <button class="btn-main btn-copy-source" onclick="generateSource()">✨ 生成并打包独立电子书源码</button>
@@ -75,18 +75,18 @@
     <div id="code-modal">
         <div class="modal-content">
             <div style="display:flex; justify-content: space-between; align-items: center;">
-                <b>🎉 最终学习版源码已生成：</b>
+                <b>🎉 全能学习版源码已生成：</b>
                 <button class="btn-tool" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
             </div>
             <textarea id="code-output" readonly></textarea>
-            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。已集成云端生词红字高亮功能，可随时在菜单栏进行功能切换。</p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 0;">*代码已复制。已启用全新 Flex 弹性布局引擎，双击隐藏工具栏后将 100% 贴合屏幕边缘，绝无缝隙。</p>
         </div>
     </div>
 
     <script>
         const enInput = document.getElementById('en-raw'), zhInput = document.getElementById('zh-raw');
         const outEn = document.getElementById('out-en'), outZh = document.getElementById('out-zh');
-        
+
         function format(t) { return t.split('\n').filter(l => l.trim()).map(l => `<p>${l.trim()}</p>`).join(''); }
 
         function startReading() {
@@ -99,7 +99,16 @@
 
         function getFullSource() {
             const finalEn = format(enInput.value);
-            const finalZh = format(zhInput.value);
+            
+            // 智能处理中文段落，添加模糊交互所需的类名
+            const finalZh = zhInput.value.split('\n').filter(l => l.trim()).map(p => {
+                const text = p.trim();
+                if (/[\u4e00-\u9fa5]/.test(text)) {
+                    return `<p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">${text}</p>`;
+                }
+                return `<p>${text}</p>`;
+            }).join('');
+
             const bookId = "book_" + Date.now();
 
             return `<!DOCTYPE html>
@@ -119,10 +128,17 @@
         [data-theme="1"] { --bg: #f4ecd8; --panel-1: #fdf6e3; --panel-2: #eee8d5; --text-color: #5c4b37; --border: #e6d5b8; --resizer: #d3c4a9;}
         [data-theme="2"] { --bg: #0f172a; --panel-1: #0f172a; --panel-2: #1e293b; --text-color: #94a3b8; --border: #334155; --resizer: #1e293b;}
 
-        body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
+        /* 核心修复：采用 Flexbox 彻底解决隐藏后留白的占位问题 */
+        body, html { margin: 0; padding: 0; height: 100%; height: 100dvh; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); touch-action: none; }
         
-        .bar { position: fixed; top: 0; left: 0; right: 0; min-height: 48px; background: var(--bar-bg); color: var(--bar-text); display: flex; align-items: center; justify-content: center; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 10px rgba(0,0,0,0.2); padding: 5px 10px; }
-        .bar.hidden { transform: translateY(-100%); }
+        .bar { 
+            flex-shrink: 0; background: var(--bar-bg); color: var(--bar-text); 
+            display: flex; align-items: center; justify-content: center; 
+            padding: 8px 10px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, opacity 0.2s ease;
+            max-height: 120px; opacity: 1; overflow: hidden;
+        }
+        body.bar-hidden .bar { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; border: none; }
         
         .controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .btn { background: var(--btn-bg); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;}
@@ -130,16 +146,22 @@
         .sync-label { display: flex; align-items: center; gap: 4px; background: var(--btn-bg); padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; color: white;}
         .sync-label input { margin: 0; width: 14px; height: 14px; accent-color: #10b981; }
 
-        .panes { display: flex; flex-direction: column; height: 100%; height: 100dvh; width: 100%; position: relative; padding-top: 48px; }
-        .pane { overflow-y: auto; padding: 10px 20px 50px 20px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+        .panes { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; position: relative; }
+        .pane { overflow-y: auto; padding: 15px 20px 50px 20px; scrollbar-width: none; background: var(--panel-1); color: var(--text-color); -webkit-overflow-scrolling: touch; touch-action: pan-y; }
         .pane::-webkit-scrollbar { display: none; }
         
         #en { font-family: "Georgia", serif; flex: 0 0 50%; }
         #zh { background: var(--panel-2); flex: 1; }
         .inner { max-width: 800px; margin: 0 auto; line-height: 1.8; }
         
-        .resizer { display: flex; align-items: center; justify-content: center; height: 14px; background: var(--resizer); cursor: row-resize; flex-shrink: 0; z-index: 10; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); user-select: none; }
+        .resizer { flex-shrink: 0; display: flex; align-items: center; justify-content: center; height: 14px; background: var(--resizer); cursor: row-resize; z-index: 10; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); user-select: none; }
         .resizer::after { content: '≡'; color: #94a3b8; font-size: 16px; font-weight: bold; }
+
+        /* ----- 中文段落模糊回忆样式 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
 
         /* ----- 云端生词红字高亮样式 ----- */
         body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
@@ -152,9 +174,10 @@
             <button class="btn" onclick="toggleTheme()">🌓 主题</button>
             <button class="btn" onclick="adjustFont(-0.1)">A-</button>
             <button class="btn" onclick="adjustFont(0.1)">A+</button>
-            <label class="sync-label" title="取消勾选即可单边拖动微调对齐">
+            <label class="sync-label" title="取消勾选即可单边微调对齐">
                 <input type="checkbox" id="sync-cb" onchange="toggleSync()"> 同步
             </label>
+            <button id="blur-btn" class="btn" style="background:#AF52DE" onclick="toggleBlur()">模糊: 开</button>
             <button id="hl-btn" class="btn" style="background:#FF3B30" onclick="toggleHighlight()">高亮: 开</button>
             <button id="dict-btn" class="btn" style="background:#10b981" onclick="toggleDict()">查词: 开</button>
         </div>
@@ -172,11 +195,17 @@
         const resizer = document.getElementById('resizer');
         const bookId = "${bookId}";
         
-        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true, syncEnabled: true, highlightEnabled: true };
+        let prefs = JSON.parse(localStorage.getItem(bookId+'_prefs')) || { mode: 0, theme: 0, font: 1.0, splitRatio: 0.5, barHidden: false, dictEnabled: true, syncEnabled: true, highlightEnabled: true, blurEnabled: true };
         let s = false;
 
-        container.ondblclick = () => { prefs.barHidden = !prefs.barHidden; apply(); };
+        // 双击阅读区任意位置隐藏/显示工具栏
+        container.ondblclick = (evt) => { 
+            if(evt.target.classList.contains('zh-para')) return; // 防止与模糊点击冲突
+            prefs.barHidden = !prefs.barHidden; 
+            apply(); 
+        };
 
+        // 中线拖拽逻辑
         let isDragging = false;
         resizer.addEventListener('pointerdown', () => { isDragging = true; document.body.style.cursor = 'row-resize'; });
         window.addEventListener('pointermove', (evt) => {
@@ -187,6 +216,7 @@
         });
         window.addEventListener('pointerup', () => { if (isDragging) { isDragging = false; document.body.style.cursor = ''; localStorage.setItem(bookId+'_prefs', JSON.stringify(prefs)); } });
 
+        // 核心渲染函数
         function apply() {
             document.body.setAttribute('data-theme', prefs.theme);
             e.style.fontSize = (1.25 * prefs.font) + 'rem';
@@ -199,24 +229,21 @@
             else if (prefs.mode === 1) { e.style.display = 'block'; z.style.display = 'none'; resizer.style.display = 'none'; e.style.flex = '1'; }
             else { e.style.display = 'none'; z.style.display = 'block'; resizer.style.display = 'none'; z.style.flex = '1'; }
 
-            if (prefs.barHidden) bar.classList.add('hidden'); else bar.classList.remove('hidden');
+            if (prefs.barHidden) document.body.classList.add('bar-hidden'); else document.body.classList.remove('bar-hidden');
             
             const dictBtn = document.getElementById('dict-btn');
-            if(prefs.dictEnabled) {
-                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#10b981";
-                document.body.classList.add('dict-enabled');
-            } else {
-                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "var(--btn-bg)";
-                document.body.classList.remove('dict-enabled');
-            }
+            if(prefs.dictEnabled) { dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#10b981"; document.body.classList.add('dict-enabled'); } 
+            else { dictBtn.innerText = "查词: 关"; dictBtn.style.background = "var(--btn-bg)"; document.body.classList.remove('dict-enabled'); }
 
             const hlBtn = document.getElementById('hl-btn');
-            if(prefs.highlightEnabled) {
-                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30";
-                document.body.classList.add('highlights-enabled');
+            if(prefs.highlightEnabled) { hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; document.body.classList.add('highlights-enabled'); } 
+            else { hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "var(--btn-bg)"; document.body.classList.remove('highlights-enabled'); }
+
+            const blurBtn = document.getElementById('blur-btn');
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled'); blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE";
             } else {
-                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "var(--btn-bg)";
-                document.body.classList.remove('highlights-enabled');
+                document.body.classList.remove('global-blur-enabled'); blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "var(--btn-bg)";
             }
 
             const syncCb = document.getElementById('sync-cb');
@@ -233,12 +260,18 @@
         function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; apply(); }
         function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; apply(); }
         function toggleSync() { prefs.syncEnabled = document.getElementById('sync-cb').checked; apply(); }
+        function toggleBlur() { 
+            prefs.blurEnabled = !prefs.blurEnabled; apply(); 
+            if(prefs.blurEnabled) { document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred')); }
+        }
         function adjustFont(d) { const r = getR(); prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + d)); apply(); setTimeout(()=>setR(r), 30); }
 
         window.onload = () => {
             apply();
             const r = localStorage.getItem(bookId+'_pos');
             if(r) setTimeout(()=>setR(parseFloat(r)), 100);
+            // 每次刷新重新给中文加模糊，强迫回忆
+            if(prefs.blurEnabled) { document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred')); }
         };
 
         function handleScroll(src, target) {
@@ -264,13 +297,8 @@
             if (cached) {
                 try {
                     const {data, time} = JSON.parse(cached);
-                    // 本地缓存24小时
-                    if (now - time < 24 * 60 * 60 * 1000) { 
-                        highlightWords = new Set(data);
-                        applyHighlightsToDOM();
-                        return;
-                    }
-                } catch(e) {}
+                    if (now - time < 24 * 60 * 60 * 1000) { highlightWords = new Set(data); applyHighlightsToDOM(); return; }
+                } catch(err) {}
             }
 
             try {
@@ -288,9 +316,7 @@
             const words = document.querySelectorAll('#en-inner .tm-word');
             words.forEach(span => {
                 const word = span.textContent.trim().toLowerCase();
-                if(highlightWords.has(word)) {
-                    span.classList.add('is-highlight');
-                }
+                if(highlightWords.has(word)) span.classList.add('is-highlight');
             });
         }
 
@@ -301,11 +327,8 @@
         
         const GM_xmlhttpRequest = (opt) => {
             let url = opt.url;
-            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
-                url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-            }
-            fetch(url, { headers: opt.headers || {} })
-            .then(async r => {
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) { url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url); }
+            fetch(url, { headers: opt.headers || {} }).then(async r => {
                 let t = ''; try { t = await r.text(); } catch(err){}
                 if(opt.onload) opt.onload({status: r.status, responseText: t});
             }).catch(err => { if(opt.onerror) opt.onerror(err); });
@@ -468,7 +491,7 @@
             }
 
             function wrapTextNodesToWord(rootNode) {
-                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON']);
+                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'A']);
                 const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
                     acceptNode: function(currentNode) {
                         const parent = currentNode.parentNode;
@@ -581,9 +604,8 @@
             document.getElementById('code-output').value = src;
             document.getElementById('code-modal').style.display = 'flex';
             navigator.clipboard.writeText(src).then(() => {
-                // 复制成功
             }).catch(() => {
-                alert("由于安全限制无法自动复制，请手动全选框内代码复制。");
+                alert("安全限制无法自动复制，请手动复制源码区内容。");
             });
         }
 
@@ -592,7 +614,7 @@
             const blob = new Blob([getFullSource()], {type: 'text/html'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'immersive_bilingual_book_pro.html';
+            a.download = 'immersive_bilingual_book.html';
             a.click();
         }
     </script>
