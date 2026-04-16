@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Refurbish</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* 注入的主题样式 */
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+
+        /* ----- 增强工具栏与阅读器样式 ----- */
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        #content-container { transition: font-size 0.2s; }
+
+        /* ----- 核心：中文段落模糊滤镜 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
+
+        /* ----- 生词云端高亮红色核心样式 ----- */
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+
+        /* ----- 词典弹窗核心样式 ----- */
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 14px; line-height: 1.4; max-width: 280px; min-width: 200px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 18px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 13px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 18px; height: 18px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; }
+        .dict-tag.cefr-A1 { background: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
+        .dict-tag.cefr-A2 { background: #E0F2F1; color: #00695C; border-color: #B2DFDB; }
+        .dict-tag.cefr-B1 { background: #FFF8E1; color: #F57F17; border-color: #FFECB3; }
+        .dict-tag.cefr-B2 { background: #FFF3E0; color: #E65100; border-color: #FFE0B2; }
+        .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
+        .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
+        .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
+        .dict-pos-block { margin-bottom: 4px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="reader-bar" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="content-container">
+    <h1>Refurbish</h1>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">翻新</p>
+    <p>The smell of fresh paint hit Daniel the moment he opened the door.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">丹尼尔一打开门，一股新油漆的气味扑面而来。</p>
+    <p>It wasn’t supposed to be this strong. He had only meant to “lightly refurbish” the apartment.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">这气味本不该这么浓。他原本只是打算“稍微翻新一下”这间公寓。</p>
+    <p>“Just a few touch-ups,” he had told the landlord confidently.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“就简单修补一下，”他当时信心满满地对房东说。</p>
+    <p>Now, standing in the middle of the chaos, he wasn’t so sure anymore.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">而现在，他站在一片狼藉中，已经没那么确定了。</p>
+    <p>The floor was covered in newspapers, half-dried paint rollers lay abandoned, and a ladder leaned dangerously against the wall.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">地板上铺满报纸，半干的滚筒随意丢着，一架梯子危险地靠在墙边。</p>
+    <p>It all started with a stain.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">这一切，都始于一个污渍。</p>
+    <p>A dark, stubborn stain on the living room wall that refused to disappear no matter how hard he scrubbed.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">客厅墙上一块顽固的深色污渍，无论他怎么擦都去不掉。</p>
+    <p>“Fine,” Daniel muttered. “I’ll repaint the wall.”</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“行吧，”丹尼尔嘟囔道，“那我就重新刷墙。”</p>
+    <p>But repainting one wall made the others look old.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">可当他刷完一面墙，其他墙却显得格外陈旧。</p>
+    <p>So he painted the entire room.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">于是他把整个房间都刷了。</p>
+    <p>Then the ceiling looked yellow.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">接着天花板又显得发黄。</p>
+    <p>So he painted that too.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他也顺手刷了天花板。</p>
+    <p>By the third day, “light refurbishing” had turned into a full renovation.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">到了第三天，“小修小补”已经变成了彻底翻新。</p>
+    <p>His neighbor, Mrs. Sato, knocked gently on the open door.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">邻居佐藤太太轻轻敲了敞开的门。</p>
+    <p>“You’re still working?” she asked, peeking inside.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“你还在忙啊？”她探头看了看。</p>
+    <p>Daniel laughed awkwardly. “I may have gone a bit too far.”</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">丹尼尔尴尬地笑了笑：“我可能有点做过头了。”</p>
+    <p>She stepped in carefully, avoiding a patch of wet paint.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">她小心地走进来，避开一块还没干的油漆。</p>
+    <p>“Refurbishing is dangerous,” she said with a knowing smile.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“翻新这种事，很危险的。”她意味深长地笑了笑。</p>
+    <p>“Dangerous?” Daniel raised an eyebrow.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“危险？”丹尼尔挑了挑眉。</p>
+    <p>“Yes. You start fixing things,” she said, “and suddenly you start fixing your life.”</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“是啊。你一开始只是修东西，”她说，“结果不知不觉，就开始修你的人生了。”</p>
+    <p>Daniel paused.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">丹尼尔愣住了。</p>
+    <p>He hadn’t told anyone why he suddenly decided to refurbish the apartment.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他没有告诉任何人，自己为什么突然决定翻新公寓。</p>
+    <p>The truth was, everything else felt worn out.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">其实，是他生活中的一切都变得“陈旧了”。</p>
+    <p>His job. His routines. Even his friendships.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">工作、日常，甚至人际关系。</p>
+    <p>The stain on the wall had just been easier to deal with.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">相比之下，墙上的污渍反而更容易处理。</p>
+    <p>“Maybe that’s not a bad thing,” Daniel said quietly.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“那也许不是坏事，”丹尼尔轻声说道。</p>
+    <p>Mrs. Sato nodded. “Just don’t forget to finish what you started.”</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">佐藤太太点点头：“但别忘了把你开始的事情做完。”</p>
+    <p>That night, Daniel sat on the floor, exhausted.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">那天晚上，丹尼尔疲惫地坐在地板上。</p>
+    <p>The apartment was still messy, but something had changed.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">公寓依然凌乱，但有些东西已经变了。</p>
+    <p>The walls were brighter. The air felt lighter.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">墙更亮了，空气也更轻松了。</p>
+    <p>And for the first time in months, Daniel felt… hopeful.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">而几个月以来，丹尼尔第一次感到……有希望。</p>
+    <p>The next morning, he made a list.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">第二天早上，他列了一张清单。</p>
+    <p>Not just for the apartment—but for everything else he wanted to refurbish.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">不仅是公寓，还有他想要“翻新”的一切。</p>
+    <p>Because sometimes, fixing a wall is just the beginning.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">因为有时候，修一面墙，只是个开始。</p>
+    </div>
+
+    <script>
+        // UI 控制及记忆功能
+        const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: true, barHidden: false, highlightEnabled: true, blurEnabled: true };
+        
+        const bar = document.getElementById('top-bar');
+        const content = document.getElementById('content-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const blurBtn = document.getElementById('blur-btn');
+
+        function applyPrefs() {
+            content.style.fontSize = prefs.font + 'em';
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled');
+                blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
+                // 开启模糊功能时，强制将所有中文段落恢复模糊状态
+                document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
+            } else {
+                document.body.classList.remove('global-blur-enabled');
+                blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "#E5E5EA"; blurBtn.style.color = "#1C1C1E";
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar') || e.target.classList.contains('zh-para')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
+        function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            // 恢复阅读位置
+            const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
+            if (savedScroll) {
+                setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
+            }
+        });
+
+        // 监听并保存阅读位置 (加入防抖)
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY + '_scroll', window.scrollY);
+            }, 300);
+        });
+
+        // ==========================================
+        // 云端红字高亮引擎
+        // ==========================================
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words';
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                const res = await fetch('https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/two.txt');
+                const text = await res.text();
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                highlightWords = new Set(arr);
+                localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                applyHighlightsToDOM();
+            } catch(e) { console.error("Cloud highlight sync failed", e); }
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = document.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) {
+                    span.classList.add('is-highlight');
+                }
+            });
+        }
+
+        // ==========================================
+        // 核心内置：高级词典与TTS引擎
+        // ==========================================
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            }
+            fetch(url, { headers: opt.headers || {} })
+            .then(async r => {
+                let t = ''; try { t = await r.text(); } catch(err){}
+                if(opt.onload) opt.onload({status: r.status, responseText: t});
+            }).catch(err => { if(opt.onerror) opt.onerror(err); });
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                GM_xmlhttpRequest({
+                    method: "GET", url: "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    onload: (res) => {
+                        if (res.status === 200) {
+                            try {
+                                const data = JSON.parse(res.responseText);
+                                if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                            } catch (e) {}
+                        }
+                    }
+                });
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\s*([A-C][1-2])\s*<\/span>/i);
+                                if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+
+            function fetchTranslation(text) {
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`,
+                        onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error('error')); }, onerror: reject
+                    });
+                });
+            }
+
+            function fetchPhonetics(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const data = JSON.parse(res.responseText);
+                                if (data && data.length > 0) {
+                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
+                                    resolve(pObj.text || null); return;
+                                }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+
+            function fetchWordLevel(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            let result = { stars: 0, tags: [] };
+                            try {
+                                if (res.status === 200) {
+                                    const data = JSON.parse(res.responseText);
+                                    if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
+                                    if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) result.stars = data.collins.collins_entries[0].star || 0;
+                                }
+                            } catch (e) {}
+                            resolve(result);
+                        }, onerror: () => resolve({ stars: 0, tags: [] })
+                    });
+                });
+            }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function initAudioPlayer() {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); globalAudioPlayer.style.display = 'none'; document.body.appendChild(globalAudioPlayer); }
+            }
+            function playTTS(apiIndex, text, voice, btn) {
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                const params = new URLSearchParams();
+                if (api.type === "read-aloud") { params.append("text", text); params.append("voiceName", voice); } 
+                else { params.append("t", text); params.append("v", voice); params.append("r", "0"); params.append("p", "0"); }
+                globalAudioPlayer.src = `${api.url}?${params.toString()}`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'A']);
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(currentNode) {
+                        const parent = currentNode.parentNode;
+                        if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        // 不包裹中文段落，防止点击查词和模糊点击冲突
+                        if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
+                        
+                        const text = currentNode.nodeValue;
+                        if (!text.trim() || !/\b[a-zA-Z'-]+\b/.test(text)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+
+                const nodesToWrap = []; let currNode;
+                while ((currNode = walker.nextNode())) { nodesToWrap.push(currNode); }
+
+                nodesToWrap.forEach(textNode => {
+                    const text = textNode.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) textNode.parentNode.replaceChild(fragment, textNode);
+                });
+            }
+
+            function formatDictData(originalWord, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || (levelData.tags && levelData.tags.length > 0)))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += `<span class="dict-tag">${tag}</span>`; });
+                    tagsHtml += `</div>`;
+                }
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${originalWord}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${transData[0] && transData[0][0] ? transData[0][0][0] : ''}</div></div>`;
+                const dictEntries = transData[1];
+                if (dictEntries && dictEntries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    dictEntries.forEach(entry => {
+                        const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
+                        html += `<div class="dict-pos-block"><span class="dict-pos-tag">${pos}.</span><ul class="dict-def-list">`;
+                        displayDefs.forEach(def => { html += `<li class="dict-def-item">${def}</li>`; });
+                        html += `</ul></div>`;
+                    });
+                    html += `</div>`;
+                } else if (!(transData[0] && transData[0][0])) { html += `<div style="padding:5px">No definition found.</div>`; }
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(document.body, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+
+                        const word = instance.reference.innerText.trim();
+                        const wordKey = word.toLowerCase();
+
+                        const renderContent = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const contentDiv = document.createElement('div'); contentDiv.className = 'dict-popup'; contentDiv.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => { contentDiv.addEventListener(evt, e => e.stopPropagation(), { capture: true }); });
+                            const btn = contentDiv.querySelector('.dict-speaker-btn');
+                            if (btn) {
+                                btn.addEventListener('click', (e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const text = btn.getAttribute('data-word');
+                                    if (!text || btn.classList.contains('playing')) return;
+                                    playTTS(0, text.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn);
+                                });
+                            }
+                            instance.setContent(contentDiv);
+                        };
+
+                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
+                        else {
+                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">🔍 正在查询...</div>';
+                            instance.setContent(loadingDiv);
+                            Promise.all([
+                                fetchTranslation(word).catch(() => [[['API Error']]]), fetchPhonetics(word).catch(() => null),
+                                fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] })), fetchCEFRWithTimeout(word).catch(() => null)
+                            ]).then(([transData, ipaText, levelData, cefrLevel]) => {
+                                const resultData = { transData, ipaText, levelData, cefrLevel };
+                                saveToGlobalCache(wordKey, resultData); renderContent(resultData);
+                            });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initAudioPlayer();
+                initCEFRStaticDict();
+                const container = document.getElementById('content-container');
+                if(container) wrapTextNodesToWord(container);
+                setupTippyDelegate();
+                initCloudHighlights(); // 初始化并打上红字高亮
+            }, 500);
+
+        })();
+    </script>
+</body>
+</html>
