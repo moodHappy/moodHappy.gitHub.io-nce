@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>School shootings a new trauma for Turkey as nation mourns</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* 注入的主题样式 */
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+
+        /* ----- 增强工具栏与阅读器样式 ----- */
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        #content-container { transition: font-size 0.2s; }
+
+        /* ----- 核心：中文段落模糊滤镜 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
+
+        /* ----- 生词云端高亮红色核心样式 ----- */
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+
+        /* ----- 词典弹窗核心样式 ----- */
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 14px; line-height: 1.4; max-width: 280px; min-width: 200px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 18px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 13px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 18px; height: 18px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; }
+        .dict-tag.cefr-A1 { background: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
+        .dict-tag.cefr-A2 { background: #E0F2F1; color: #00695C; border-color: #B2DFDB; }
+        .dict-tag.cefr-B1 { background: #FFF8E1; color: #F57F17; border-color: #FFECB3; }
+        .dict-tag.cefr-B2 { background: #FFF3E0; color: #E65100; border-color: #FFE0B2; }
+        .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
+        .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
+        .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
+        .dict-pos-block { margin-bottom: 4px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="reader-bar" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="content-container">
+    <h1>School shootings a new trauma for Turkey as nation mourns</h1>
+    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">
+        <a href="https://www.bbc.com/news/articles/cwyv21q9y1go" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>
+    </div>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">土耳其举国哀悼：校园枪击案成为国家新创伤</p>
+    <p>The coffin of a victim is carried during the funeral prayers in Kahramanmaras</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在卡赫拉曼马拉什的葬礼祈祷中，受害者的棺木被抬起</p>
+    <p>Outside a morgue in south-eastern Turkey about a dozen men rushed to carry a coffin, but it was light - just the weight of a 10-year boy.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在土耳其东南部的一家太平间外，十几名男子冲上前去抬一口棺材，但这口棺材很轻——只有一名10岁男孩的重量。</p>
+    <p>His father followed behind, propped up by relatives on both sides but weighed down by grief. "Oh, my martyred child," he wailed, "oh my darling."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他的父亲紧随其后，被两旁的亲戚搀扶着，却被悲伤压得喘不过气来。“哦，我殉难的孩子，”他哀嚎道，“哦，我的宝贝。”</p>
+    <p>His son was one of eight children shot dead on Wednesday in the city of Kahramanmaras by a fellow student,14, who also killed a teacher. This city, traditionally famous for its ice cream, now has a new and terrible distinction – it is the location of Turkey's first deadly mass school shooting.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他的儿子是周三在卡赫拉曼马拉什市被一名14岁同学枪杀的八名儿童之一，这名凶手还杀害了一名教师。这座传统上以冰淇淋闻名的城市，现在有了一个新的、可怕的特征——它是土耳其第一起致命的校园大规模枪击事件的发生地。</p>
+    <p>Relatives, neighbours and emergency services gathered around as coffins emerged one by one each draped in the Turkish flag. There was an angry yell from one woman towards a line of waiting police. "Too late, too late," she chided. "You didn't save the children." Another woman shouted that the attacker should be hung in the main square, but he is already dead. He was killed at the scene.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">亲属、邻居和急救人员聚集在周围，盖着土耳其国旗的棺材一口接一口地被抬出。一名妇女对着一排待命的警察愤怒地大叫。“太迟了，太迟了，”她斥责道。“你们没有救下孩子们。”另一名妇女高喊着应该把袭击者绞死在主广场上，但他已经死了。他在现场被击毙。</p>
+    <p>Outside the main mosque, a mother wept, leaning forward to stroke the coffin of her daughter, Zeynep. From the family home, beside the Ayser Calik Secondary School, she heard the shots that killed her 10-year-old – shots that have reverberated around Turkey.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在主清真寺外，一位母亲哭泣着，俯身抚摸着她女儿泽伊内普（Zeynep）的棺材。在她位于Ayser Calik中学旁边的家里，她听到了杀害她10岁女儿的枪声——这枪声在土耳其全国回荡。</p>
+    <p>Relatives told us Zeynep was clever and respectful.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">亲戚们告诉我们，泽伊内普很聪明，也很有礼貌。</p>
+    <p>"She became an angel, and she flew away," said Mahmut, her uncle, his voice breaking. "My only wish is to have more security at the schools, so this does not happen again. This pain landed on us. I do not want it to fall on anyone else."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“她成了一个天使，她飞走了，”她的叔叔马哈茂德（Mahmut）声音颤抖地说。“我唯一的愿望就是学校能有更多的安保，这样就不会再发生这种事了。这种痛苦降临在我们身上。我不希望它再落到任何人身上。”</p>
+    <p>The attack came just one day after a former student roamed the corridors of another school in the same region, shooting at will. He wounded 16 but killed only himself.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">就在这次袭击发生的前一天，一名昔日的学生在同一地区的另一所学校的走廊里游荡并随意开枪。他打伤了16人，但只杀死了他自己。</p>
+    <p>"There have been two attacks, in a very short period, both in cities with lower incomes," says Prof Asli Carkoglu, an expert in teen psychology. "These things do have a way of spreading."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“在很短的时间内发生了两起袭击事件，而且都发生在低收入城市，”青少年心理学专家阿斯利·恰尔科格鲁（Asli Carkoglu）教授说。“这些事情确实有蔓延的倾向。”</p>
+    <p>She is worried the deadly shooting here could become "an example for young minds that are frustrated enough".</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">她担心，这里的致命枪击案可能会成为“那些感到足够挫败的年轻心灵的效仿榜样”。</p>
+    <p>The attack was a tragedy but "not a surprise" to people like her who work with young adults and adolescents, she said.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">她说，这次袭击是一场悲剧，但对像她这样从事年轻人和青少年工作的人来说，“并不感到意外”。</p>
+    <p>"There have been stabbings, beatings and attempted suicides in the school system," she told the BBC. "The guns weren't there before, but the violence was."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“学校系统里一直存在持刀伤人、殴打和企图自杀的事件，”她告诉BBC。“以前没有枪支，但暴力一直存在。”</p>
+    <p>The family of Zeynep, a 10-year-old victim, stand over her coffin at her funeral</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">10岁的受害者泽伊内普的家人在她的葬礼上站在她的棺材旁</p>
+    <p>As the victims of the attack were being lowered into their graves, more details were emerging about the killer. The authorities here say he referred on social media to an American gunman, Elliot Rodgers, who killed six students in California in 2014. They also say an entry on his computer, dated 11 April, indicated there would be a major attack "in the near future".</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">当袭击事件的受害者被下葬时，关于凶手的更多细节也浮出水面。当地有关部门表示，他在社交媒体上提到了2014年在加利福尼亚州杀害6名学生的美国枪手埃利奥特·罗杰斯（Elliot Rodgers）。他们还说，他电脑上一篇标注日期为4月11日的记录显示，他要在“不久的将来”发动一次重大袭击。</p>
+    <p>He did not have to go far to get weapons – just to the bedroom of his father, a former police officer who is himself now under arrest. He has made a statement to the authorities, according to reports in the local media, painting a picture of a bright but troubled teenager who spent a lot of time playing war games on his computer and was attending a psychologist.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他不需要走很远就能得到武器——只要去他父亲的卧室就行了，他的父亲是一名前警察，目前也已被捕。据当地媒体报道，他已经向当局作了陈述，描绘了一个聪明但问题重重的青少年形象，他花大量时间在电脑上玩战争游戏，并且正在接受心理医生的治疗。</p>
+    <p>While mass school shootings are a familiar horror for the US, this is a new trauma for Turkey. The authorities want to calm the public and control the narrative.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">虽然对美国来说，大规模校园枪击事件是人们熟悉的恐怖，但这对于土耳其来说是一个新的创伤。当局希望安抚公众并控制舆论导向。</p>
+    <p>Around 150 people have been detained for social media posts about the killings, accused of spreading misinformation, or "glorifying crime and criminals". More than 1,000 social media accounts and Telegram groups have been blocked.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">约150人因在社交媒体上发布有关这些杀戮事件的帖子而被拘留，他们被指控传播虚假信息，或“美化犯罪和罪犯”。超过1000个社交媒体账户和Telegram群组被封锁。</p>
+    <p>There is no evidence of any link between the two attacks this week. And police say "initial findings indicate" that the killer in Kahramanmaras acted alone and was not linked to any terrorist organisation.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">没有证据表明本周的两起袭击事件之间存在任何联系。警方表示，“初步调查结果显示”，卡赫拉曼马拉什的凶手是单独行动的，与任何恐怖组织均无关联。</p>
+    <p>At the school gates, now locked, and guarded by police, teachers laid flowers in memory of the children who were killed where they should have been safe.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在现在已经锁上并由警察把守的学校大门处，老师们献上鲜花，悼念那些本该在安全的地方却遭到杀害的孩子们。</p>
+    </div>
+
+    <script>
+        // UI 控制及记忆功能
+        const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: true, barHidden: false, highlightEnabled: true, blurEnabled: true };
+        
+        const bar = document.getElementById('top-bar');
+        const content = document.getElementById('content-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const blurBtn = document.getElementById('blur-btn');
+
+        function applyPrefs() {
+            content.style.fontSize = prefs.font + 'em';
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled');
+                blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
+                // 开启模糊功能时，强制将所有中文段落恢复模糊状态
+                document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
+            } else {
+                document.body.classList.remove('global-blur-enabled');
+                blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "#E5E5EA"; blurBtn.style.color = "#1C1C1E";
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar') || e.target.classList.contains('zh-para')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
+        function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            // 恢复阅读位置
+            const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
+            if (savedScroll) {
+                setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
+            }
+        });
+
+        // 监听并保存阅读位置 (加入防抖)
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY + '_scroll', window.scrollY);
+            }, 300);
+        });
+
+        // ==========================================
+        // 云端红字高亮引擎
+        // ==========================================
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words';
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                const res = await fetch('https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/two.txt');
+                const text = await res.text();
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                highlightWords = new Set(arr);
+                localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                applyHighlightsToDOM();
+            } catch(e) { console.error("Cloud highlight sync failed", e); }
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = document.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) {
+                    span.classList.add('is-highlight');
+                }
+            });
+        }
+
+        // ==========================================
+        // 核心内置：高级词典与TTS引擎
+        // ==========================================
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            }
+            fetch(url, { headers: opt.headers || {} })
+            .then(async r => {
+                let t = ''; try { t = await r.text(); } catch(err){}
+                if(opt.onload) opt.onload({status: r.status, responseText: t});
+            }).catch(err => { if(opt.onerror) opt.onerror(err); });
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                GM_xmlhttpRequest({
+                    method: "GET", url: "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    onload: (res) => {
+                        if (res.status === 200) {
+                            try {
+                                const data = JSON.parse(res.responseText);
+                                if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                            } catch (e) {}
+                        }
+                    }
+                });
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\s*([A-C][1-2])\s*<\/span>/i);
+                                if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+
+            function fetchTranslation(text) {
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`,
+                        onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error('error')); }, onerror: reject
+                    });
+                });
+            }
+
+            function fetchPhonetics(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const data = JSON.parse(res.responseText);
+                                if (data && data.length > 0) {
+                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
+                                    resolve(pObj.text || null); return;
+                                }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+
+            function fetchWordLevel(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            let result = { stars: 0, tags: [] };
+                            try {
+                                if (res.status === 200) {
+                                    const data = JSON.parse(res.responseText);
+                                    if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
+                                    if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) result.stars = data.collins.collins_entries[0].star || 0;
+                                }
+                            } catch (e) {}
+                            resolve(result);
+                        }, onerror: () => resolve({ stars: 0, tags: [] })
+                    });
+                });
+            }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function initAudioPlayer() {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); globalAudioPlayer.style.display = 'none'; document.body.appendChild(globalAudioPlayer); }
+            }
+            function playTTS(apiIndex, text, voice, btn) {
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                const params = new URLSearchParams();
+                if (api.type === "read-aloud") { params.append("text", text); params.append("voiceName", voice); } 
+                else { params.append("t", text); params.append("v", voice); params.append("r", "0"); params.append("p", "0"); }
+                globalAudioPlayer.src = `${api.url}?${params.toString()}`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'A']);
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(currentNode) {
+                        const parent = currentNode.parentNode;
+                        if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        // 不包裹中文段落，防止点击查词和模糊点击冲突
+                        if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
+                        
+                        const text = currentNode.nodeValue;
+                        if (!text.trim() || !/\b[a-zA-Z'-]+\b/.test(text)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+
+                const nodesToWrap = []; let currNode;
+                while ((currNode = walker.nextNode())) { nodesToWrap.push(currNode); }
+
+                nodesToWrap.forEach(textNode => {
+                    const text = textNode.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) textNode.parentNode.replaceChild(fragment, textNode);
+                });
+            }
+
+            function formatDictData(originalWord, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || (levelData.tags && levelData.tags.length > 0)))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += `<span class="dict-tag">${tag}</span>`; });
+                    tagsHtml += `</div>`;
+                }
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${originalWord}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${transData[0] && transData[0][0] ? transData[0][0][0] : ''}</div></div>`;
+                const dictEntries = transData[1];
+                if (dictEntries && dictEntries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    dictEntries.forEach(entry => {
+                        const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
+                        html += `<div class="dict-pos-block"><span class="dict-pos-tag">${pos}.</span><ul class="dict-def-list">`;
+                        displayDefs.forEach(def => { html += `<li class="dict-def-item">${def}</li>`; });
+                        html += `</ul></div>`;
+                    });
+                    html += `</div>`;
+                } else if (!(transData[0] && transData[0][0])) { html += `<div style="padding:5px">No definition found.</div>`; }
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(document.body, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+
+                        const word = instance.reference.innerText.trim();
+                        const wordKey = word.toLowerCase();
+
+                        const renderContent = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const contentDiv = document.createElement('div'); contentDiv.className = 'dict-popup'; contentDiv.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => { contentDiv.addEventListener(evt, e => e.stopPropagation(), { capture: true }); });
+                            const btn = contentDiv.querySelector('.dict-speaker-btn');
+                            if (btn) {
+                                btn.addEventListener('click', (e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const text = btn.getAttribute('data-word');
+                                    if (!text || btn.classList.contains('playing')) return;
+                                    playTTS(0, text.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn);
+                                });
+                            }
+                            instance.setContent(contentDiv);
+                        };
+
+                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
+                        else {
+                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">🔍 正在查询...</div>';
+                            instance.setContent(loadingDiv);
+                            Promise.all([
+                                fetchTranslation(word).catch(() => [[['API Error']]]), fetchPhonetics(word).catch(() => null),
+                                fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] })), fetchCEFRWithTimeout(word).catch(() => null)
+                            ]).then(([transData, ipaText, levelData, cefrLevel]) => {
+                                const resultData = { transData, ipaText, levelData, cefrLevel };
+                                saveToGlobalCache(wordKey, resultData); renderContent(resultData);
+                            });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initAudioPlayer();
+                initCEFRStaticDict();
+                const container = document.getElementById('content-container');
+                if(container) wrapTextNodesToWord(container);
+                setupTippyDelegate();
+                initCloudHighlights(); // 初始化并打上红字高亮
+            }, 500);
+
+        })();
+    </script>
+</body>
+</html>
