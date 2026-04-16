@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Emma Myers Interview</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* 注入的主题样式 */
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+
+        /* ----- 增强工具栏与阅读器样式 ----- */
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        #content-container { transition: font-size 0.2s; }
+
+        /* ----- 核心：中文段落模糊滤镜 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
+
+        /* ----- 生词云端高亮红色核心样式 ----- */
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+
+        /* ----- 词典弹窗核心样式 ----- */
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 14px; line-height: 1.4; max-width: 280px; min-width: 200px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 18px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 13px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 18px; height: 18px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; }
+        .dict-tag.cefr-A1 { background: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
+        .dict-tag.cefr-A2 { background: #E0F2F1; color: #00695C; border-color: #B2DFDB; }
+        .dict-tag.cefr-B1 { background: #FFF8E1; color: #F57F17; border-color: #FFECB3; }
+        .dict-tag.cefr-B2 { background: #FFF3E0; color: #E65100; border-color: #FFE0B2; }
+        .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
+        .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
+        .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
+        .dict-pos-block { margin-bottom: 4px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="reader-bar" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="content-container">
+    <h1>Emma Myers Interview</h1>
+    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">
+        <a href="https://youtu.be/vmfqlkWLIDE" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>
+    </div>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">艾玛·迈尔斯采访</p>
+    <p>​[00:00]</p>
+    <p>​Thank you for being here. You are making your talk-show debut, is that correct?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​感谢你的到来。这是你的脱口秀首秀，对吧？</p>
+    <p>​Yeah.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。</p>
+    <p>​Ah, welcome. Yeah, that's what I'm talking about. Thank you very much for being here.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​啊，欢迎。耶，这才对嘛。非常感谢你能来这里。</p>
+    <p>​Oh, thank you for having me.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦，谢谢你邀请我。</p>
+    <p>​I also heard that you're also filming a movie</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我还听说你现在正在拍一部电影</p>
+    <p>​[00:12]</p>
+    <p>now with our pal Jennifer Garner...</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">现在正和我们的老朋友珍妮弗·加纳一起...</p>
+    <p>​Yeah.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。</p>
+    <p>​...who I love her so much. Please give her our --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​...我非常喜欢她。请代我们向她——</p>
+    <p>​Oh, I love her.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦，我也爱她。</p>
+    <p>​Yeah, she's the best.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，她是最棒的。</p>
+    <p>​She's incredible. She's so sweet.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​她非常不可思议。她非常甜美。</p>
+    <p>​She plays your mom?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​她在片中演你妈妈？</p>
+    <p>​She does, and she reminds me of my actual mom, so it works out for the best.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，而且她让我想起了我真正的妈妈，所以这安排简直太完美了。</p>
+    <p>​Is actual mom here?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你真正的妈妈今天来了吗？</p>
+    <p>​My actual mom is here. I don't know -- I can't see --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我真正的妈妈来了。我不知道——我看不到——</p>
+    <p>​Actual mom, are you here? [ Cheers and applause ]</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​真正的妈妈，你在吗？[欢呼声和掌声]</p>
+    <p>​Actual mom. Yeah, actual mom!</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​真正的妈妈。耶，真正的妈妈！</p>
+    <p>​[00:34]</p>
+    <p>Hi, mom!</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">嗨，妈妈！</p>
+    <p>​I knew she was going to cry. I knew it.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我就知道她会哭。我就知道。</p>
+    <p>​Aww! She's got to be proud. You got to be proud of your girl here. Was your mom excited that Jennifer Garner is playing her?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哇！她一定很骄傲。你一定为你女儿感到骄傲。珍妮弗·加纳在戏里演你妈妈，她激动吗？</p>
+    <p>​Oh, yeah. I think my dad was more excited, though. [ Laughter ]</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦，是的。不过我觉得我爸爸更激动。[笑声]</p>
+    <p>​[00:52]</p>
+    <p>​Emma, I wanted to ask you about this, because I read this online, that you're a big fan of a band</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​艾玛，我想问你这件事，因为我在网上看到，说你是一个乐队的超级粉丝</p>
+    <p>​[00:57]</p>
+    <p>and you like to -- When you're talking to people, you like to introduce this band to people if they don't know of this.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">而且你喜欢——当你和别人聊天时，如果他们不知道这个乐队，你会向他们安利。</p>
+    <p>​I will introduce if people ask me to, but I'm not going to --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​如果别人问我，我会介绍，但我不会主动硬塞——</p>
+    <p>​Well, I would like to ask you.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​好吧，那我想问问你。</p>
+    <p>​Okay. Then I'll introduce it to everybody.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​好吧。那我就向大家介绍一下。</p>
+    <p>​[01:10]</p>
+    <p>​Yeah. What is the name of the band?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​好耶。这个乐队叫什么名字？</p>
+    <p>​Seventeen.</p>
+    <p>​Seventeen。</p>
+    <p>​Seventeen.</p>
+    <p>​Seventeen。</p>
+    <p>​Uh-huh.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​嗯哼。</p>
+    <p>​Now, you're into this band? How long have you been into Seventeen?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你很喜欢这个乐队对吗？你迷上Seventeen多久了？</p>
+    <p>​I was 15, so about five years ago.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​从我15岁开始，大概五年前吧。</p>
+    <p>​You're 15 into Seventeen.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你15岁时迷上了Seventeen。</p>
+    <p>​Yeah.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。</p>
+    <p>​And we have a photo of Seventeen, okay? This is Seventeen?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我们这有张Seventeen的照片，好吗？这就是Seventeen？</p>
+    <p>​Yeah, that's them.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，这就是他们。</p>
+    <p>​Wow. A lot of people.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哇。好多人啊。</p>
+    <p>​Yeah. Only 13, but...</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，只有13个人，但是...</p>
+    <p>​There's 13 people in Seventeen.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​Seventeen里有13个人。</p>
+    <p>​13 in Seventeen, yeah. It's a whole thing.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​Seventeen里有13个人，是的。这里面是有说法的。</p>
+    <p>​So there's 13 people in Seventeen.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​所以Seventeen里有13个人。</p>
+    <p>​Okay, I'll explain the numbers, okay? There's 13 of them, so it's 13, right? And there are three different groups. You have hip-hop, performance, and vocal. And then there's one team.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​好的，我来解释一下这些数字，好吗？他们有13个人，所以是13，对吧？然后他们分为三个不同的小分队。有嘻哈队、表演队和主唱队。然后他们是一个整体（1个大团队）。</p>
+    <p>​[01:51]</p>
+    <p>So 13 plus 3 plus 1 is 17.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">所以13加3加1等于17。</p>
+    <p>​[01:55]</p>
+    <p>​Okay. Yeah, alright. I'm in.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​好的。耶，明白了。我入坑了。</p>
+    <p>​Yeah.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​耶。</p>
+    <p>​I like that.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我喜欢这个设定。</p>
+    <p>​I know. It's a good thing.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是吧，这个设定很有意思。</p>
+    <p>​Do you have a song I should download or get on my playlist?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你有什么推荐的歌曲让我下载或者加入播放列表吗？</p>
+    <p>​Ooh! My favorite song is -- I think everybody would kind of like this song called "To You."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦！我最喜欢的歌是——我觉得大家可能都会喜欢这首叫做《To You》的歌。</p>
+    <p>​Okay.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​好的。</p>
+    <p>​It's really fun. It's upbeat. It's got a great story behind it, so...</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​这首歌很有趣。节奏很轻快。背后还有一个很棒的故事，所以...</p>
+    <p>​I just like you're so charming selling this. It is everyone's favorite song right now. Yeah, we love it.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我就是觉得你安利的样子太有魅力了。这绝对是大家现在最喜欢的歌了。是的，我们都爱它。</p>
+    <p>​Yeah, yeah. Everybody listen to it.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​耶，耶。大家都去听听吧。</p>
+    <p>​Yeah. Let's talk about "Wednesday." It is the second-most-watched show in the history of Netflix. People can't get enough of it. [ Cheers and applause ]</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。我们来聊聊《星期三》吧。这是Netflix历史上观看次数第二多的剧集。大家都百看不厌。[欢呼声和掌声]</p>
+    <p>​[02:31]</p>
+    <p>Jenna Ortega was just on our show, and she's phenomenal. And you go, "Oh, my gosh, who is this kid?"</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">珍娜·奥尔特加刚刚上过我们的节目，她表现得非常出色。然后你会惊叹，“我的天哪，这孩子是谁？”</p>
+    <p>​[02:39]</p>
+    <p>And then you show up in this scene, I go, "Wow! Who is this kid? Oh, my God. Look at these talented actors." I mean, you're phenomenal.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">然后你在这个场景中出现了，我惊呼，“哇！这孩子又是谁？天哪。看看这些才华横溢的演员。”我是说，你太棒了。</p>
+    <p>​[02:47]</p>
+    <p>Did you know of "The Addams Family" going into this, that you were --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">你在拍这部剧之前了解《亚当斯一家》吗，你当时——</p>
+    <p>​I had watched the '90s movies growing up, but I didn't know it was, like, a TV show and there's a comic and everything. I had no idea. So, then, when I got the role, I kind of dove into it, and I love it. It's so fun.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我是在看90年代的电影长大的，但我不知道它还是电视剧，还有漫画之类的。我完全不知道。所以，当我得到这个角色后，我就开始深入了解，我非常喜欢。太有趣了。</p>
+    <p>​And you knew -- You go, "Well --" You probably get the script, and you go, "I think I want to play Enid, I'll play the roommate," or do you want to -- Do you go, "I want to be Wednesday."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你知道——你会想，“嗯——” 你可能拿到剧本，然后会想，“我想演伊妮德（Enid），我想演室友，” 还是你想—— 你会想，“我想演星期三。”</p>
+    <p>​I'm not a good Wednesday.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我演不好星期三。</p>
+    <p>​You're not a good Wednesday.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你演不好星期三。</p>
+    <p>​No.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的（演不了）。</p>
+    <p>​Could you play Wednesday at all? I mean, do you have any Wednesday in you or are you just positive?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你一点都演不了星期三吗？我是说，你性格里有一点星期三的影子吗，还是你天生就这么阳光？</p>
+    <p>​I'm -- Wednesday does not come to me naturally. Enid does.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我——我的性格天生就不像星期三。像伊妮德。</p>
+    <p>​[03:22]</p>
+    <p>And I think Jenna did such a flawless job with Wednesday</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">而且我觉得珍娜把星期三演得完美无瑕</p>
+    <p>​[03:26]</p>
+    <p>that if I even tried, it would just be a disgrace.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">如果我去试的话，那简直就是自取其辱。</p>
+    <p>​[03:29]</p>
+    <p>​No! You're so funny.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​不！你太逗了。</p>
+    <p>​It would not be --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​绝对不会是——</p>
+    <p>​But are you an optimist? Are you a...</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​但是你是个乐观主义者吗？你是一个...</p>
+    <p>​Yeah, I'm an optimist. I think that's one of the only things I have in common with Enid is that I am an optimist. I don't like wearing colorful clothes. I don't -- I'm not an extrovert. I'm an introvert.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，我是个乐观主义者。我觉得乐观可能是我和伊妮德唯一的一个共同点。我不喜欢穿颜色鲜艳的衣服。我不——我不是一个外向的人。我性格比较内向。</p>
+    <p>​[03:46]</p>
+    <p>​Oh, really?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦，真的吗？</p>
+    <p>​Yeah.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。</p>
+    <p>​But what you just said, I'm... [ Laughter ] It's very interesting, because I would think that would be Wednesday.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​但你刚才说的，我... [笑声] 这很有趣，因为我觉得这恰恰更像星期三。</p>
+    <p>​You'd think, but I just can't pull it off.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​大家可能都会这么想，但我就是演不出那种感觉。</p>
+    <p>​Yeah, I know. No, I'm a disgrace.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，我知道。不，我简直就是个笑话。</p>
+    <p>​[03:59]</p>
+    <p>I mean, I really am. I'm a total disgrace.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">我是说真的。我完全是个笑话。</p>
+    <p>​[04:02]</p>
+    <p>But then you get to turn into a werewolf.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">但后来你要变身成狼人。</p>
+    <p>​Uh-huh.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​嗯哼。</p>
+    <p>​Yeah. Was there werewolf training?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。有专门的狼人训练吗？</p>
+    <p>​Mm-hmm.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​嗯哼。</p>
+    <p>​I'm being serious.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我是认真的。</p>
+    <p>​No, I'm serious, too.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​不，我也是认真的。</p>
+    <p>​[04:12]</p>
+    <p>​So they go to training --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​所以他们真的去参加训练——</p>
+    <p>​Oh, yeah.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦，是的。</p>
+    <p>​[04:16]</p>
+    <p>​Yeah. And you got to --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的。你必须去——</p>
+    <p>​Yeah, the whole thing.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，整套的训练。</p>
+    <p>​[04:19]</p>
+    <p>We did this werewolf boot camp one time, because there's Episode 6, where the parents come and all the family comes. I had four or five brothers, and they really had to get them into the werewolf spirit.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">有一次我们参加了“狼人新兵训练营”，因为在第六集里，父母和全家人都来了。我有四五个兄弟，他们真的必须让大家进入狼人的状态。</p>
+    <p>​[04:32]</p>
+    <p>So they asked me to come in and do, you know, werewolf boot camp, and I was like, "Okay, what does this mean?"</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">所以他们让我去参加，你知道的，狼人训练营，我当时就想，“好吧，这是什么意思？”</p>
+    <p>​Werewolf boot camp. So, that's --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​狼人训练营。所以，那是——</p>
+    <p>​Yeah, it's like --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，就像——</p>
+    <p>​Professionally, people do this for a living?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​从专业的角度来说，有人以教这个为生？</p>
+    <p>​They, like --</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​他们就像——</p>
+    <p>​Werewolf boot camp.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​狼人训练营。</p>
+    <p>​I've never done so much parkour in my life. It was me, like...</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我这辈子都没做过这么多跑酷。那就是我，就像...</p>
+    <p>​I'm assuming.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我能想象。</p>
+    <p>​...running on the floor on all fours, leaping over things. I had to -- We had these stunt guys pretending to be sheep,</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​...四肢着地在地上跑，跳过各种障碍物。我不得不——我们让一些特技演员假装成羊，</p>
+    <p>​[04:55]</p>
+    <p>and we would, like, crawl around them in a circle.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">然后我们就像这样，围着他们转圈爬行。</p>
+    <p>​[04:59]</p>
+    <p>​Mom, were you there on set for this? I just want to make sure this is legit. Oh, my gosh.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​妈妈，拍这场戏的时候你在片场吗？我只是想确认一下这事是不是真的。哦，天哪。</p>
+    <p>​It was -- I think anybody who was walking past was like...</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​它是——我觉得任何路过的人都会想...</p>
+    <p>​Stuntmen pretending to be sheep. Yeah, I love it.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​假装成羊的特技演员。是的，我太喜欢这个画面了。</p>
+    <p>​..."What is going on in there?"</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​...“里面到底在干嘛？”</p>
+    <p>​But you nailed it. It worked.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​但你表现得很完美。效果很好。</p>
+    <p>​It worked.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​效果很好。</p>
+    <p>​Yeah, it worked. Yeah, congratulations.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​是的，很成功。是的，恭喜你。</p>
+    <p>​Thank you.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​谢谢。</p>
+    <p>​I'm so happy you're here on "The Tonight Show," making your debut with us. I want to show everyone a clip. Here's Emma Myers in "Wednesday." Take a look.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我很高兴你来到“今夜秀”，把你的首秀献给我们。我想向大家展示一个片段。这是艾玛·迈尔斯在《星期三》中的表现。请看。</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​(播放《星期三》剧集片段)</p>
+    <p>​[05:21]</p>
+    <p>​Howdy, roomie.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你好，室友。</p>
+    <p>​Wednesday, this is Enid Sinclair.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​星期三，这位是伊妮德·辛克莱。</p>
+    <p>​[05:26]</p>
+    <p>​Are you feeling okay? You look a little...pale.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​你觉得还好吗？你看起来有点...苍白。</p>
+    <p>​[05:29]</p>
+    <p>​Wednesday always looks half dead.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​星期三总是看起来半死不活的。</p>
+    <p>​[05:33]</p>
+    <p>​Oh. Welcome to Ophelia Hall.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦。欢迎来到奥菲莉亚宿舍。</p>
+    <p>​[05:38]</p>
+    <p>Not a hugger. Got it.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">不喜欢拥抱。明白了。</p>
+    <p>​Please excuse Wednesday. She's allergic to color.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​请原谅星期三。她对颜色过敏。</p>
+    <p>​Oh, wow. What happens to you?</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​哦，哇。那接触颜色你会怎么样？</p>
+    <p>​I break out into hives, and then the flesh peels off my bones.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​我会起荨麻疹，然后肉会从我的骨头上剥落下来。</p>
+    <p>​[05:52]</p>
+    <p>​"Oh." That's Emma Myers right there. Season 1 of "Wednesday" is streaming now on Netflix.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">​“哦。”那就是艾玛·迈尔斯。《星期三》第一季现在正在Netflix上热播。</p>
+    </div>
+
+    <script>
+        // UI 控制及记忆功能
+        const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: true, barHidden: false, highlightEnabled: true, blurEnabled: true };
+        
+        const bar = document.getElementById('top-bar');
+        const content = document.getElementById('content-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const blurBtn = document.getElementById('blur-btn');
+
+        function applyPrefs() {
+            content.style.fontSize = prefs.font + 'em';
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled');
+                blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
+                // 开启模糊功能时，强制将所有中文段落恢复模糊状态
+                document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
+            } else {
+                document.body.classList.remove('global-blur-enabled');
+                blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "#E5E5EA"; blurBtn.style.color = "#1C1C1E";
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar') || e.target.classList.contains('zh-para')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
+        function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            // 恢复阅读位置
+            const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
+            if (savedScroll) {
+                setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
+            }
+        });
+
+        // 监听并保存阅读位置 (加入防抖)
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY + '_scroll', window.scrollY);
+            }, 300);
+        });
+
+        // ==========================================
+        // 云端红字高亮引擎
+        // ==========================================
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words';
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                const res = await fetch('https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/two.txt');
+                const text = await res.text();
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                highlightWords = new Set(arr);
+                localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                applyHighlightsToDOM();
+            } catch(e) { console.error("Cloud highlight sync failed", e); }
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = document.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) {
+                    span.classList.add('is-highlight');
+                }
+            });
+        }
+
+        // ==========================================
+        // 核心内置：高级词典与TTS引擎
+        // ==========================================
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            }
+            fetch(url, { headers: opt.headers || {} })
+            .then(async r => {
+                let t = ''; try { t = await r.text(); } catch(err){}
+                if(opt.onload) opt.onload({status: r.status, responseText: t});
+            }).catch(err => { if(opt.onerror) opt.onerror(err); });
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                GM_xmlhttpRequest({
+                    method: "GET", url: "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    onload: (res) => {
+                        if (res.status === 200) {
+                            try {
+                                const data = JSON.parse(res.responseText);
+                                if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                            } catch (e) {}
+                        }
+                    }
+                });
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\s*([A-C][1-2])\s*<\/span>/i);
+                                if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+
+            function fetchTranslation(text) {
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`,
+                        onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error('error')); }, onerror: reject
+                    });
+                });
+            }
+
+            function fetchPhonetics(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const data = JSON.parse(res.responseText);
+                                if (data && data.length > 0) {
+                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
+                                    resolve(pObj.text || null); return;
+                                }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+
+            function fetchWordLevel(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            let result = { stars: 0, tags: [] };
+                            try {
+                                if (res.status === 200) {
+                                    const data = JSON.parse(res.responseText);
+                                    if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
+                                    if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) result.stars = data.collins.collins_entries[0].star || 0;
+                                }
+                            } catch (e) {}
+                            resolve(result);
+                        }, onerror: () => resolve({ stars: 0, tags: [] })
+                    });
+                });
+            }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function initAudioPlayer() {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); globalAudioPlayer.style.display = 'none'; document.body.appendChild(globalAudioPlayer); }
+            }
+            function playTTS(apiIndex, text, voice, btn) {
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                const params = new URLSearchParams();
+                if (api.type === "read-aloud") { params.append("text", text); params.append("voiceName", voice); } 
+                else { params.append("t", text); params.append("v", voice); params.append("r", "0"); params.append("p", "0"); }
+                globalAudioPlayer.src = `${api.url}?${params.toString()}`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'A']);
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(currentNode) {
+                        const parent = currentNode.parentNode;
+                        if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        // 不包裹中文段落，防止点击查词和模糊点击冲突
+                        if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
+                        
+                        const text = currentNode.nodeValue;
+                        if (!text.trim() || !/\b[a-zA-Z'-]+\b/.test(text)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+
+                const nodesToWrap = []; let currNode;
+                while ((currNode = walker.nextNode())) { nodesToWrap.push(currNode); }
+
+                nodesToWrap.forEach(textNode => {
+                    const text = textNode.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) textNode.parentNode.replaceChild(fragment, textNode);
+                });
+            }
+
+            function formatDictData(originalWord, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || (levelData.tags && levelData.tags.length > 0)))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += `<span class="dict-tag">${tag}</span>`; });
+                    tagsHtml += `</div>`;
+                }
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${originalWord}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${transData[0] && transData[0][0] ? transData[0][0][0] : ''}</div></div>`;
+                const dictEntries = transData[1];
+                if (dictEntries && dictEntries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    dictEntries.forEach(entry => {
+                        const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
+                        html += `<div class="dict-pos-block"><span class="dict-pos-tag">${pos}.</span><ul class="dict-def-list">`;
+                        displayDefs.forEach(def => { html += `<li class="dict-def-item">${def}</li>`; });
+                        html += `</ul></div>`;
+                    });
+                    html += `</div>`;
+                } else if (!(transData[0] && transData[0][0])) { html += `<div style="padding:5px">No definition found.</div>`; }
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(document.body, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+
+                        const word = instance.reference.innerText.trim();
+                        const wordKey = word.toLowerCase();
+
+                        const renderContent = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const contentDiv = document.createElement('div'); contentDiv.className = 'dict-popup'; contentDiv.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => { contentDiv.addEventListener(evt, e => e.stopPropagation(), { capture: true }); });
+                            const btn = contentDiv.querySelector('.dict-speaker-btn');
+                            if (btn) {
+                                btn.addEventListener('click', (e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const text = btn.getAttribute('data-word');
+                                    if (!text || btn.classList.contains('playing')) return;
+                                    playTTS(0, text.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn);
+                                });
+                            }
+                            instance.setContent(contentDiv);
+                        };
+
+                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
+                        else {
+                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">🔍 正在查询...</div>';
+                            instance.setContent(loadingDiv);
+                            Promise.all([
+                                fetchTranslation(word).catch(() => [[['API Error']]]), fetchPhonetics(word).catch(() => null),
+                                fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] })), fetchCEFRWithTimeout(word).catch(() => null)
+                            ]).then(([transData, ipaText, levelData, cefrLevel]) => {
+                                const resultData = { transData, ipaText, levelData, cefrLevel };
+                                saveToGlobalCache(wordKey, resultData); renderContent(resultData);
+                            });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initAudioPlayer();
+                initCEFRStaticDict();
+                const container = document.getElementById('content-container');
+                if(container) wrapTextNodesToWord(container);
+                setupTippyDelegate();
+                initCloudHighlights(); // 初始化并打上红字高亮
+            }, 500);
+
+        })();
+    </script>
+</body>
+</html>
