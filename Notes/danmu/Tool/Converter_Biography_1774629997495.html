@@ -234,7 +234,6 @@
             htmlBody += `    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
         }
 
-        // 核心：智能判断中文段落，包裹专属 class 和交互点击事件
         htmlBody += bodyLines.map(p => {
             if (/[\u4e00-\u9fa5]/.test(p)) {
                 return `    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">${p}</p>`;
@@ -243,7 +242,6 @@
             }
         }).join('\n');
 
-        // 生成注入包含工具栏、词典、云端高亮、中文模糊的完整超级代码
         const fullHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -312,23 +310,22 @@
         @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
     </style>
 </head>
-<body>
-    <div class="reader-bar" id="top-bar">
+<body class="bar-hidden global-blur-enabled"> <div class="reader-bar hidden" id="top-bar">
         <div class="reader-controls">
             <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
             <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
             <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
-            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
-            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#E5E5EA; color:#1C1C1E;" onclick="toggleHighlight()">高亮: 关</button>
+            <button id="dict-btn" class="reader-btn" style="background:#E5E5EA; color:#1C1C1E;" onclick="toggleDict()">查词: 关</button>
         </div>
     </div>
 
     <div id="content-container">
-\${htmlBody}
+${htmlBody}
     </div>
 
     <script>
-        // UI 控制及记忆功能
+        // UI 控制及记忆功能，更改了默认状态：隐藏bar，关查词，关高亮，开模糊
         const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
         let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: false, barHidden: true, highlightEnabled: false, blurEnabled: true };
         
@@ -441,31 +438,33 @@
         }
 
         // ==========================================
-        // 核心内置：高级词典与TTS引擎 (支持翻墙极速解析)
+        // 核心内置：高级词典与TTS引擎 (升级代理和防卡死设计)
         // ==========================================
         const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
         const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
         
-        // 【升级版】智能跨域请求，彻底解决翻墙状态下有道/剑桥词典加载慢的问题
+        // 优化：采用双通道代理回退机制，优先极速 corsproxy，彻底兼容翻墙和弱网
         const GM_xmlhttpRequest = (opt) => {
             let url = opt.url;
             if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
-                const attemptFetch = async () => {
-                    // 1. 直连尝试 (适配本身具备跨域环境的浏览器/插件，0延迟)
-                    try { let r1 = await fetch(url, { headers: opt.headers || {} }); return { status: r1.status, responseText: await r1.text() }; } catch(e) {}
-                    // 2. 极速 Cloudflare 代理 (完美适配翻墙节点，极速响应)
-                    try { let r2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(url), { headers: opt.headers || {} }); return { status: r2.status, responseText: await r2.text() }; } catch(e) {}
-                    // 3. 兜底代理 (针对部分特定网络环境)
-                    try { let r3 = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), { headers: opt.headers || {} }); return { status: r3.status, responseText: await r3.text() }; } catch(e) {}
-                    throw new Error('All proxy fallbacks failed');
-                };
-                attemptFetch()
-                    .then(data => { if(opt.onload) opt.onload(data); })
-                    .catch(err => { if(opt.onerror) opt.onerror(err); });
+                const proxy1 = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                const proxy2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                
+                fetch(proxy1, { headers: opt.headers || {} })
+                .then(async r => {
+                    if (!r.ok) throw new Error('Proxy1 failed');
+                    let t = ''; try { t = await r.text(); } catch(err){}
+                    if(opt.onload) opt.onload({status: r.status, responseText: t});
+                }).catch(err => {
+                    fetch(proxy2, { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err2){}
+                        if(opt.onload) opt.onload({status: r.status, responseText: t});
+                    }).catch(err3 => { if(opt.onerror) opt.onerror(err3); });
+                });
                 return;
             }
-            
-            // 谷歌翻译及音标等本身支持跨域的接口，保持直连
+
             fetch(url, { headers: opt.headers || {} })
             .then(async r => {
                 let t = ''; try { t = await r.text(); } catch(err){}
@@ -520,7 +519,7 @@
                     });
                 });
             }
-            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 2500)) ]); }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
 
             function fetchTranslation(text) {
                 return new Promise((resolve, reject) => {
@@ -627,8 +626,12 @@
                     if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += \`<span class="dict-tag">\${tag}</span>\`; });
                     tagsHtml += \`</div>\`;
                 }
-                let html = \`<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">\${originalWord}</span>\${ipaText ? \`<span class="dict-ipa">\${ipaText}</span>\` : ''}<span class="dict-speaker-btn" data-word="\${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>\${tagsHtml}<div class="dict-basic-trans">\${transData[0] && transData[0][0] ? transData[0][0][0] : ''}</div></div>\`;
-                const dictEntries = transData[1];
+                
+                // 确保快速渲染时容错处理 transData 可能存在的 undefined 情况
+                const basicTrans = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = \`<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">\${originalWord}</span>\${ipaText ? \`<span class="dict-ipa">\${ipaText}</span>\` : ''}<span class="dict-speaker-btn" data-word="\${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>\${tagsHtml}<div class="dict-basic-trans">\${basicTrans}</div></div>\`;
+                
+                const dictEntries = transData ? transData[1] : null;
                 if (dictEntries && dictEntries.length > 0) {
                     html += \`<div class="dict-details">\`;
                     dictEntries.forEach(entry => {
@@ -638,7 +641,9 @@
                         html += \`</ul></div>\`;
                     });
                     html += \`</div>\`;
-                } else if (!(transData[0] && transData[0][0])) { html += \`<div style="padding:5px">No definition found.</div>\`; }
+                } else if (!basicTrans) { 
+                    html += \`<div style="padding:5px; color:#666; font-size:13px;">加载中或无释义...</div>\`; 
+                }
                 return html;
             }
 
@@ -669,14 +674,28 @@
 
                         if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
                         else {
-                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">🔍 正在查询...</div>';
+                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">极速查询中...</div>';
                             instance.setContent(loadingDiv);
-                            Promise.all([
-                                fetchTranslation(word).catch(() => [[['API Error']]]), fetchPhonetics(word).catch(() => null),
-                                fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] })), fetchCEFRWithTimeout(word).catch(() => null)
-                            ]).then(([transData, ipaText, levelData, cefrLevel]) => {
-                                const resultData = { transData, ipaText, levelData, cefrLevel };
-                                saveToGlobalCache(wordKey, resultData); renderContent(resultData);
+                            
+                            // 优化：采用异步分步渲染 (Progressive Rendering)。
+                            // 让无跨域限制的 Google 翻译和 API.dev 音标瞬间渲染，不被有道/剑桥代理慢拖累
+                            const pTrans = fetchTranslation(word).catch(() => [[['API Error']]]);
+                            const pPhon = fetchPhonetics(word).catch(() => null);
+                            const pLevel = fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] }));
+                            const pCefr = fetchCEFRWithTimeout(word).catch(() => null);
+
+                            // 第一阶段：瞬间渲染基础翻译与音标
+                            Promise.all([pTrans, pPhon]).then(([transData, ipaText]) => {
+                                const resultData = { transData, ipaText, levelData: null, cefrLevel: null };
+                                if (instance.state.isVisible) renderContent(resultData);
+
+                                // 第二阶段：无感获取星级和标签(含Collins)，获取后静默追加UI
+                                Promise.all([pLevel, pCefr]).then(([levelData, cefrLevel]) => {
+                                    resultData.levelData = levelData;
+                                    resultData.cefrLevel = cefrLevel;
+                                    saveToGlobalCache(wordKey, resultData);
+                                    if (instance.state.isVisible) renderContent(resultData);
+                                });
                             });
                         }
                     }
