@@ -306,11 +306,12 @@
         .dict-def-item { display: inline; }
         .dict-def-item::after { content: "; "; color: #999; }
         .dict-def-item:last-child::after { content: ""; }
-        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; }
+        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; text-align: center; }
         @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
     </style>
 </head>
-<body class="bar-hidden global-blur-enabled"> <div class="reader-bar hidden" id="top-bar">
+<body class="bar-hidden global-blur-enabled">
+    <div class="reader-bar hidden" id="top-bar">
         <div class="reader-controls">
             <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
             <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
@@ -325,7 +326,6 @@ ${htmlBody}
     </div>
 
     <script>
-        // UI 控制及记忆功能，更改了默认状态：隐藏bar，关查词，关高亮，开模糊
         const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
         let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: false, barHidden: true, highlightEnabled: false, blurEnabled: true };
         
@@ -396,9 +396,6 @@ ${htmlBody}
             }, 300);
         });
 
-        // ==========================================
-        // 云端红字高亮引擎
-        // ==========================================
         let highlightWords = new Set();
         async function initCloudHighlights() {
             const cacheKey = 'bio_remote_hl_words';
@@ -426,42 +423,46 @@ ${htmlBody}
             } catch(e) { console.error("Cloud highlight sync failed", e); }
         }
 
-        function applyHighlightsToDOM() {
-            if(highlightWords.size === 0) return;
-            const words = document.querySelectorAll('.tm-word');
-            words.forEach(span => {
-                const word = span.textContent.trim().toLowerCase();
-                if(highlightWords.has(word)) {
-                    span.classList.add('is-highlight');
-                }
-            });
-        }
-
         // ==========================================
-        // 核心内置：高级词典与TTS引擎 (升级代理和防卡死设计)
+        // 核心内置：高级代理降级轮询引擎
         // ==========================================
         const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
         const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
         
-        // 优化：采用双通道代理回退机制，优先极速 corsproxy，彻底兼容翻墙和弱网
         const GM_xmlhttpRequest = (opt) => {
             let url = opt.url;
+            
             if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
-                const proxy1 = 'https://corsproxy.io/?' + encodeURIComponent(url);
-                const proxy2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [
+                    url, 
+                    \`https://api.codetabs.com/v1/proxy?quest=\${encodeURIComponent(url)}\`,
+                    \`https://corsproxy.io/?\${encodeURIComponent(url)}\`,
+                    \`https://api.allorigins.win/raw?url=\${encodeURIComponent(url)}\`
+                ];
                 
-                fetch(proxy1, { headers: opt.headers || {} })
-                .then(async r => {
-                    if (!r.ok) throw new Error('Proxy1 failed');
-                    let t = ''; try { t = await r.text(); } catch(err){}
-                    if(opt.onload) opt.onload({status: r.status, responseText: t});
-                }).catch(err => {
-                    fetch(proxy2, { headers: opt.headers || {} })
+                let currentProxyIdx = 0;
+                
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) {
+                        if(opt.onerror) opt.onerror(new Error('All proxy nodes blocked'));
+                        return;
+                    }
+                    const fetchUrl = proxies[currentProxyIdx++];
+                    fetch(fetchUrl, { headers: opt.headers || {} })
                     .then(async r => {
-                        let t = ''; try { t = await r.text(); } catch(err2){}
-                        if(opt.onload) opt.onload({status: r.status, responseText: t});
-                    }).catch(err3 => { if(opt.onerror) opt.onerror(err3); });
-                });
+                        let t = ''; 
+                        try { t = await r.text(); } catch(err){}
+                        
+                        if (!r.ok || t.includes('Cloudflare') || t.includes('<title>Just a moment...</title>')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    })
+                    .catch(e => { tryNext(); });
+                };
+                
+                tryNext();
                 return;
             }
 
@@ -490,17 +491,21 @@ ${htmlBody}
 
             let cefrStaticCache = {}; 
             function initCEFRStaticDict() {
-                GM_xmlhttpRequest({
-                    method: "GET", url: "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
-                    onload: (res) => {
-                        if (res.status === 200) {
-                            try {
-                                const data = JSON.parse(res.responseText);
-                                if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
-                            } catch (e) {}
-                        }
-                    }
-                });
+                const staticUrls = [
+                    "https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    "https://ghproxy.net/https://raw.githubusercontent.com/winterdl/oxford-5000-vocabulary-audio-definition/main/data/oxford_5000.json"
+                ];
+                let idx = 0;
+                const tryFetch = () => {
+                    if (idx >= staticUrls.length) return;
+                    fetch(staticUrls[idx++])
+                    .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+                    .then(data => {
+                        if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                    }).catch(tryFetch);
+                };
+                tryFetch();
             }
 
             function fetchCEFR(word) {
@@ -555,10 +560,15 @@ ${htmlBody}
                         onload: (res) => {
                             let result = { stars: 0, tags: [] };
                             try {
-                                if (res.status === 200) {
-                                    const data = JSON.parse(res.responseText);
-                                    if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
-                                    if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) result.stars = data.collins.collins_entries[0].star || 0;
+                                const data = JSON.parse(res.responseText);
+                                if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
+                                
+                                if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) {
+                                    const starStr = data.collins.collins_entries[0].star;
+                                    if (starStr) {
+                                        const parsedNum = parseInt(String(starStr).replace(/[^0-9]/g, ''), 10);
+                                        result.stars = isNaN(parsedNum) ? 0 : parsedNum;
+                                    }
                                 }
                             } catch (e) {}
                             resolve(result);
@@ -627,7 +637,6 @@ ${htmlBody}
                     tagsHtml += \`</div>\`;
                 }
                 
-                // 确保快速渲染时容错处理 transData 可能存在的 undefined 情况
                 const basicTrans = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
                 let html = \`<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">\${originalWord}</span>\${ipaText ? \`<span class="dict-ipa">\${ipaText}</span>\` : ''}<span class="dict-speaker-btn" data-word="\${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>\${tagsHtml}<div class="dict-basic-trans">\${basicTrans}</div></div>\`;
                 
@@ -642,7 +651,7 @@ ${htmlBody}
                     });
                     html += \`</div>\`;
                 } else if (!basicTrans) { 
-                    html += \`<div style="padding:5px; color:#666; font-size:13px;">加载中或无释义...</div>\`; 
+                    html += \`<div style="padding:5px; color:#666; font-size:13px;">无释义结果...</div>\`; 
                 }
                 return html;
             }
@@ -677,25 +686,16 @@ ${htmlBody}
                             const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">极速查询中...</div>';
                             instance.setContent(loadingDiv);
                             
-                            // 优化：采用异步分步渲染 (Progressive Rendering)。
-                            // 让无跨域限制的 Google 翻译和 API.dev 音标瞬间渲染，不被有道/剑桥代理慢拖累
                             const pTrans = fetchTranslation(word).catch(() => [[['API Error']]]);
                             const pPhon = fetchPhonetics(word).catch(() => null);
                             const pLevel = fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] }));
                             const pCefr = fetchCEFRWithTimeout(word).catch(() => null);
 
-                            // 第一阶段：瞬间渲染基础翻译与音标
-                            Promise.all([pTrans, pPhon]).then(([transData, ipaText]) => {
-                                const resultData = { transData, ipaText, levelData: null, cefrLevel: null };
+                            // 【核心修改点：取消分步渲染，全部数据拿到后一次性渲染】
+                            Promise.all([pTrans, pPhon, pLevel, pCefr]).then(([transData, ipaText, levelData, cefrLevel]) => {
+                                const resultData = { transData, ipaText, levelData, cefrLevel };
+                                saveToGlobalCache(wordKey, resultData);
                                 if (instance.state.isVisible) renderContent(resultData);
-
-                                // 第二阶段：无感获取星级和标签(含Collins)，获取后静默追加UI
-                                Promise.all([pLevel, pCefr]).then(([levelData, cefrLevel]) => {
-                                    resultData.levelData = levelData;
-                                    resultData.cefrLevel = cefrLevel;
-                                    saveToGlobalCache(wordKey, resultData);
-                                    if (instance.state.isVisible) renderContent(resultData);
-                                });
                             });
                         }
                     }
