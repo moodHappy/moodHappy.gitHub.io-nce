@@ -330,7 +330,6 @@
     <script>
         // UI 控制及记忆功能
         const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
-        // 修改此处：barHidden默认为true，dictEnabled默认为false，highlightEnabled默认为false，blurEnabled默认为true
         let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: false, barHidden: true, highlightEnabled: false, blurEnabled: true };
         
         const bar = document.getElementById('top-bar');
@@ -363,7 +362,6 @@
             if (prefs.blurEnabled) {
                 document.body.classList.add('global-blur-enabled');
                 blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
-                // 开启模糊功能时，强制将所有中文段落恢复模糊状态
                 document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
             } else {
                 document.body.classList.remove('global-blur-enabled');
@@ -387,14 +385,12 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             applyPrefs();
-            // 恢复阅读位置
             const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
             if (savedScroll) {
                 setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
             }
         });
 
-        // 监听并保存阅读位置 (加入防抖)
         let scrollTimer;
         window.addEventListener('scroll', () => {
             if (scrollTimer) clearTimeout(scrollTimer);
@@ -445,15 +441,31 @@
         }
 
         // ==========================================
-        // 核心内置：高级词典与TTS引擎
+        // 核心内置：高级词典与TTS引擎 (支持翻墙极速解析)
         // ==========================================
         const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
         const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        
+        // 【升级版】智能跨域请求，彻底解决翻墙状态下有道/剑桥词典加载慢的问题
         const GM_xmlhttpRequest = (opt) => {
             let url = opt.url;
             if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
-                url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                const attemptFetch = async () => {
+                    // 1. 直连尝试 (适配本身具备跨域环境的浏览器/插件，0延迟)
+                    try { let r1 = await fetch(url, { headers: opt.headers || {} }); return { status: r1.status, responseText: await r1.text() }; } catch(e) {}
+                    // 2. 极速 Cloudflare 代理 (完美适配翻墙节点，极速响应)
+                    try { let r2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(url), { headers: opt.headers || {} }); return { status: r2.status, responseText: await r2.text() }; } catch(e) {}
+                    // 3. 兜底代理 (针对部分特定网络环境)
+                    try { let r3 = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), { headers: opt.headers || {} }); return { status: r3.status, responseText: await r3.text() }; } catch(e) {}
+                    throw new Error('All proxy fallbacks failed');
+                };
+                attemptFetch()
+                    .then(data => { if(opt.onload) opt.onload(data); })
+                    .catch(err => { if(opt.onerror) opt.onerror(err); });
+                return;
             }
+            
+            // 谷歌翻译及音标等本身支持跨域的接口，保持直连
             fetch(url, { headers: opt.headers || {} })
             .then(async r => {
                 let t = ''; try { t = await r.text(); } catch(err){}
@@ -508,7 +520,7 @@
                     });
                 });
             }
-            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 2500)) ]); }
 
             function fetchTranslation(text) {
                 return new Promise((resolve, reject) => {
@@ -582,7 +594,6 @@
                     acceptNode: function(currentNode) {
                         const parent = currentNode.parentNode;
                         if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
-                        // 不包裹中文段落，防止点击查词和模糊点击冲突
                         if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
                         
                         const text = currentNode.nodeValue;
@@ -678,7 +689,7 @@
                 const container = document.getElementById('content-container');
                 if(container) wrapTextNodesToWord(container);
                 setupTippyDelegate();
-                initCloudHighlights(); // 初始化并打上红字高亮
+                initCloudHighlights(); 
             }, 500);
 
         })();
