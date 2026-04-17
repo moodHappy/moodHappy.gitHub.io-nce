@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>沉浸式英中双语正文</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* 注入的主题样式 */
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+
+        /* ----- 增强工具栏与阅读器样式 ----- */
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        #content-container { transition: font-size 0.2s; }
+
+        /* ----- 核心：中文段落模糊滤镜 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
+
+        /* ----- 生词云端高亮红色核心样式 ----- */
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+
+        /* ----- 词典弹窗核心样式 ----- */
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 14px; line-height: 1.4; max-width: 280px; min-width: 200px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 18px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 13px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 18px; height: 18px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; }
+        .dict-tag.cefr-A1 { background: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
+        .dict-tag.cefr-A2 { background: #E0F2F1; color: #00695C; border-color: #B2DFDB; }
+        .dict-tag.cefr-B1 { background: #FFF8E1; color: #F57F17; border-color: #FFECB3; }
+        .dict-tag.cefr-B2 { background: #FFF3E0; color: #E65100; border-color: #FFE0B2; }
+        .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
+        .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
+        .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
+        .dict-pos-block { margin-bottom: 4px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body class="bar-hidden global-blur-enabled">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#E5E5EA; color:#1C1C1E;" onclick="toggleHighlight()">高亮: 关</button>
+            <button id="dict-btn" class="reader-btn" style="background:#E5E5EA; color:#1C1C1E;" onclick="toggleDict()">查词: 关</button>
+        </div>
+    </div>
+
+    <div id="content-container">
+    <h1>沉浸式英中双语正文</h1>
+    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">
+        <a href="https://www.bbc.com/news/articles/cly9z8w4q55o" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>
+    </div>
+    <p>Trapped miner rescued from flooded Mexican tunnel after 14 days</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">被困14天后，墨西哥矿工从被淹没的隧道中获救</p>
+    <p>Mexican army divers have rescued a miner from a flooded underground tunnel two weeks after he was first trapped.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">墨西哥军队潜水员从一条被淹没的地下隧道中救出了一名矿工，此时距离他最初被困已经过去了整整两周。</p>
+    <p>Francisco Zapata Nájera, 42, was stuck 300m (985ft) below ground after an embankment collapsed at the gold mine in the northern Mexican state of Sinaloa.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">42岁的弗朗西斯科·萨帕塔·纳赫拉（Francisco Zapata Nájera）被困在地下300米（985英尺）处，此前墨西哥北部锡那罗亚州的一座金矿发生了路堤坍塌。</p>
+    <p>Video of the rescue shows him standing in waist-deep water, telling his rescuers that he never lost faith during his ordeal.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">救援视频显示，他站在齐腰深的水中，告诉救援人员在这次磨难中他从未失去信念。</p>
+    <p>The search continues for another miner who is still missing.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">对另一名仍下落不明的矿工的搜救工作仍在继续。</p>
+    <p>Twenty-five workers were inside the gold mine when the tailings dam - a structure which holds mining waste - burst on 25 March.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">3月25日，尾矿坝（一种容纳采矿废料的结构）溃坝时，有25名工人在金矿内。</p>
+    <p>Twenty-one managed to get out, but four were trapped.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">其中21人成功逃生，但有4人被困。</p>
+    <p>José Alejandro Cástulo was rescued after five days under ground, and another miner died, but it took rescuers a full 13 days to locate Francisco Zapata.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">何塞·亚历杭德罗·卡斯图洛（José Alejandro Cástulo）在地下被困五天后获救，另一名矿工不幸遇难，而救援人员花了整整13天的时间才找到弗朗西斯科·萨帕塔。</p>
+    <p>Following more than 300 hours of searching, divers finally spotted the blinking of the miner's torch light, which Zapata had turned on and off to alert them to his location.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">经过300多个小时的搜寻，潜水员终于发现了矿工手电筒的闪烁光，这是萨帕塔通过不断开关手电筒来提醒他们自己的位置。</p>
+    <p>"How are you, how are you?" rescuers asked as they reached him.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“你怎么样，你感觉怎么样？”救援人员找到他时问道。</p>
+    <p>Once they had identified themselves as specialised military divers, they tell the miner that "your torchlight helped us a lot".</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在表明自己是专业的军事潜水员后，他们告诉这位矿工：“你的手电筒帮了我们大忙。”</p>
+    <p>"It guided us," one of the divers added.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“它为我们指明了方向，”其中一名潜水员补充道。</p>
+    <p>"I didn't lose faith, I didn't lose faith," Zapata told his rescuers.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“我没有失去信念，我没有失去信念，”萨帕塔告诉他的救援人员。</p>
+    <p>While Zapata appears visibly relieved in the footage, his ordeal was not yet over.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">虽然萨帕塔在视频中看起来明显松了一口气，但他的磨难还没有结束。</p>
+    <p>Due to the flooding in the tunnel leading to his location, the divers could not immediately extract him.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">由于通往他所在位置的隧道被水淹没，潜水员无法立即将他救出。</p>
+    <p>Instead, they left him behind with water, cans of tuna and energy bars - and a promise to return soon.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">因此，他们给他留下了水、金枪鱼罐头和能量棒，并承诺很快就会回来救他。</p>
+    <p>After 20 more hours in which the rescue teams used pumps to lower the water level in the flooded tunnels, Zapata could finally be taken to the surface.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">救援队使用水泵降低了被淹隧道的水位，在又等待了20个小时后，萨帕塔终于被带到了地面。</p>
+    <p>Wrapped in a thermal blanket and sitting on an electric cart he emerged from the mine on Wednesday and was taken by helicopter to hospital, where he was able to reunite with his family.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">周三，他裹着保温毯，坐在电动车上从矿井里出来，随后被直升机送往医院，在那里他得以与家人团聚。</p>
+    <p>Doctors said he was frail but stable and would receive the necessary treatment.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">医生表示他身体虚弱但情况稳定，将接受必要的治疗。</p>
+    <p>Mexican President Claudia Sheinbaum praised the Mexican army and Zapata's faith and resilience, which she said had made the "astounding rescue" possible.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">墨西哥总统克劳迪娅·辛鲍姆（Claudia Sheinbaum）赞扬了墨西哥军队以及萨帕塔的信念和顽强，她表示正是这些让这场“惊人的救援”成为可能。</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: false, barHidden: true, highlightEnabled: false, blurEnabled: true };
+        
+        const bar = document.getElementById('top-bar');
+        const content = document.getElementById('content-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const blurBtn = document.getElementById('blur-btn');
+
+        function applyPrefs() {
+            content.style.fontSize = prefs.font + 'em';
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled');
+                blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
+                document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
+            } else {
+                document.body.classList.remove('global-blur-enabled');
+                blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "#E5E5EA"; blurBtn.style.color = "#1C1C1E";
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar') || e.target.classList.contains('zh-para')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
+        function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
+            if (savedScroll) {
+                setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
+            }
+        });
+
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY + '_scroll', window.scrollY);
+            }, 300);
+        });
+
+        // ==========================================
+        // 云端红字高亮引擎 (修复被墙和死缓存问题)
+        // ==========================================
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; // 升级缓存Key，强制清空被墙时的假网页缓存
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                // 加入抗封锁代理轮询，应对国内 raw.githubusercontent 污染
+                const urls = [
+                    'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/two.txt',
+                    'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/two.txt',
+                    'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/two.txt'
+                ];
+                
+                let text = '';
+                for (let u of urls) {
+                    try {
+                        const res = await fetch(u);
+                        if (res.ok) {
+                            text = await res.text();
+                            // 严格防假墙验证，防止存入 Cloudflare 报错网页
+                            if (text && !text.includes('<html') && !text.includes('Cloudflare')) {
+                                break;
+                            }
+                        }
+                    } catch (err) {}
+                }
+
+                if (!text) throw new Error("所有高亮词库源均无法访问");
+
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) {
+                    highlightWords = new Set(arr);
+                    localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                    applyHighlightsToDOM();
+                }
+            } catch(e) { console.error("Cloud highlight sync failed", e); }
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = document.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) {
+                    span.classList.add('is-highlight');
+                }
+            });
+        }
+
+        // ==========================================
+        // 核心内置：高级代理降级轮询引擎
+        // ==========================================
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [
+                    url, 
+                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+                ];
+                
+                let currentProxyIdx = 0;
+                
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) {
+                        if(opt.onerror) opt.onerror(new Error('All proxy nodes blocked'));
+                        return;
+                    }
+                    const fetchUrl = proxies[currentProxyIdx++];
+                    fetch(fetchUrl, { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; 
+                        try { t = await r.text(); } catch(err){}
+                        
+                        if (!r.ok || t.includes('Cloudflare') || t.includes('<title>Just a moment...</title>')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    })
+                    .catch(e => { tryNext(); });
+                };
+                
+                tryNext();
+                return;
+            }
+
+            fetch(url, { headers: opt.headers || {} })
+            .then(async r => {
+                let t = ''; try { t = await r.text(); } catch(err){}
+                if(opt.onload) opt.onload({status: r.status, responseText: t});
+            }).catch(err => { if(opt.onerror) opt.onerror(err); });
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                const staticUrls = [
+                    "https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    "https://ghproxy.net/https://raw.githubusercontent.com/winterdl/oxford-5000-vocabulary-audio-definition/main/data/oxford_5000.json"
+                ];
+                let idx = 0;
+                const tryFetch = () => {
+                    if (idx >= staticUrls.length) return;
+                    fetch(staticUrls[idx++])
+                    .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+                    .then(data => {
+                        if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                    }).catch(tryFetch);
+                };
+                tryFetch();
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\s*([A-C][1-2])\s*<\/span>/i);
+                                if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+
+            function fetchTranslation(text) {
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`,
+                        onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error('error')); }, onerror: reject
+                    });
+                });
+            }
+
+            function fetchPhonetics(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const data = JSON.parse(res.responseText);
+                                if (data && data.length > 0) {
+                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
+                                    resolve(pObj.text || null); return;
+                                }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+
+            function fetchWordLevel(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            let result = { stars: 0, tags: [] };
+                            try {
+                                const data = JSON.parse(res.responseText);
+                                if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
+                                
+                                if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) {
+                                    const starStr = data.collins.collins_entries[0].star;
+                                    if (starStr) {
+                                        const parsedNum = parseInt(String(starStr).replace(/[^0-9]/g, ''), 10);
+                                        result.stars = isNaN(parsedNum) ? 0 : parsedNum;
+                                    }
+                                }
+                            } catch (e) {}
+                            resolve(result);
+                        }, onerror: () => resolve({ stars: 0, tags: [] })
+                    });
+                });
+            }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function initAudioPlayer() {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); globalAudioPlayer.style.display = 'none'; document.body.appendChild(globalAudioPlayer); }
+            }
+            function playTTS(apiIndex, text, voice, btn) {
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                const params = new URLSearchParams();
+                if (api.type === "read-aloud") { params.append("text", text); params.append("voiceName", voice); } 
+                else { params.append("t", text); params.append("v", voice); params.append("r", "0"); params.append("p", "0"); }
+                globalAudioPlayer.src = `${api.url}?${params.toString()}`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'A']);
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(currentNode) {
+                        const parent = currentNode.parentNode;
+                        if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
+                        
+                        const text = currentNode.nodeValue;
+                        if (!text.trim() || !/\b[a-zA-Z'-]+\b/.test(text)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+
+                const nodesToWrap = []; let currNode;
+                while ((currNode = walker.nextNode())) { nodesToWrap.push(currNode); }
+
+                nodesToWrap.forEach(textNode => {
+                    const text = textNode.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) textNode.parentNode.replaceChild(fragment, textNode);
+                });
+            }
+
+            function formatDictData(originalWord, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || (levelData.tags && levelData.tags.length > 0)))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += `<span class="dict-tag">${tag}</span>`; });
+                    tagsHtml += `</div>`;
+                }
+                
+                const basicTrans = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${originalWord}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basicTrans}</div></div>`;
+                
+                const dictEntries = transData ? transData[1] : null;
+                if (dictEntries && dictEntries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    dictEntries.forEach(entry => {
+                        const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
+                        html += `<div class="dict-pos-block"><span class="dict-pos-tag">${pos}.</span><ul class="dict-def-list">`;
+                        displayDefs.forEach(def => { html += `<li class="dict-def-item">${def}</li>`; });
+                        html += `</ul></div>`;
+                    });
+                    html += `</div>`;
+                } else if (!basicTrans) { 
+                    html += `<div style="padding:5px; color:#666; font-size:13px;">无释义结果...</div>`; 
+                }
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(document.body, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+
+                        const word = instance.reference.innerText.trim();
+                        const wordKey = word.toLowerCase();
+
+                        const renderContent = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const contentDiv = document.createElement('div'); contentDiv.className = 'dict-popup'; contentDiv.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => { contentDiv.addEventListener(evt, e => e.stopPropagation(), { capture: true }); });
+                            const btn = contentDiv.querySelector('.dict-speaker-btn');
+                            if (btn) {
+                                btn.addEventListener('click', (e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const text = btn.getAttribute('data-word');
+                                    if (!text || btn.classList.contains('playing')) return;
+                                    playTTS(0, text.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn);
+                                });
+                            }
+                            instance.setContent(contentDiv);
+                        };
+
+                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
+                        else {
+                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">极速查询中...</div>';
+                            instance.setContent(loadingDiv);
+                            
+                            const pTrans = fetchTranslation(word).catch(() => [[['API Error']]]);
+                            const pPhon = fetchPhonetics(word).catch(() => null);
+                            const pLevel = fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] }));
+                            const pCefr = fetchCEFRWithTimeout(word).catch(() => null);
+
+                            Promise.all([pTrans, pPhon, pLevel, pCefr]).then(([transData, ipaText, levelData, cefrLevel]) => {
+                                const resultData = { transData, ipaText, levelData, cefrLevel };
+                                saveToGlobalCache(wordKey, resultData);
+                                if (instance.state.isVisible) renderContent(resultData);
+                            });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initAudioPlayer();
+                initCEFRStaticDict();
+                const container = document.getElementById('content-container');
+                if(container) wrapTextNodesToWord(container);
+                setupTippyDelegate();
+                initCloudHighlights(); 
+            }, 500);
+
+        })();
+    </script>
+</body>
+</html>
