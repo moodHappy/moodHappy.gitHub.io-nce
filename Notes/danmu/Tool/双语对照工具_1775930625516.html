@@ -296,19 +296,10 @@
             });
         }
 
-        // --- 字典引擎部分 ---
+        // --- 全新异步字典引擎 ---
         const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
         const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
         const GM_addStyle = (css) => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); };
-        
-        const GM_xmlhttpRequest = (opt) => {
-            let url = opt.url;
-            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) { url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url); }
-            fetch(url, { headers: opt.headers || {} }).then(async r => {
-                let t = ''; try { t = await r.text(); } catch(err){}
-                if(opt.onload) opt.onload({status: r.status, responseText: t});
-            }).catch(err => { if(opt.onerror) opt.onerror(err); });
-        };
 
         (function() {
             const ttsConfig = {
@@ -336,9 +327,9 @@
                 .dict-speaker-btn svg { width: 18px; height: 18px; pointer-events: none; }
                 .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
                 
-                .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;}
-                .dict-tag { background: #F0F4F8; color: #476582; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
-                .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; }
+                .dict-tags-row { margin: 6px 0 2px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 20px;}
+                .dict-tag { background: #F0F4F8; color: #476582; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
+                .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; font-size: 11px; }
                 .dict-tag.cefr-A1 { background: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
                 .dict-tag.cefr-A2 { background: #E0F2F1; color: #00695C; border-color: #B2DFDB; }
                 .dict-tag.cefr-B1 { background: #FFF8E1; color: #F57F17; border-color: #FFECB3; }
@@ -346,12 +337,13 @@
                 .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
                 .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
 
-                .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
+                .dict-basic-trans { font-size: 15px; color: #333; margin-top: 6px; margin-bottom: 6px; }
+                .dict-details { border-top: 1px dashed #eee; padding-top: 6px; }
                 .dict-pos-block { margin-bottom: 4px; }
-                .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+                .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 13px; margin-right: 4px; }
                 .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
-                .dict-def-item { display: inline; }
-                .dict-def-item::after { content: "; "; color: #999; }
+                .dict-def-item { display: inline; font-size: 14px;}
+                .dict-def-item::after { content: "； "; color: #999; }
                 .dict-def-item:last-child::after { content: ""; }
                 .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; }
                 @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
@@ -369,81 +361,11 @@
 
             let cefrStaticCache = {}; 
             function initCEFRStaticDict() {
-                GM_xmlhttpRequest({
-                    method: "GET", url: "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
-                    onload: (res) => {
-                        if (res.status === 200) {
-                            try {
-                                const data = JSON.parse(res.responseText);
-                                if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
-                            } catch (e) {}
-                        }
-                    }
-                });
-            }
-
-            function fetchCEFR(word) {
-                return new Promise((resolve) => {
-                    const w = word.toLowerCase();
-                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
-                    GM_xmlhttpRequest({
-                        method: "GET", url: \`https://dictionary.cambridge.org/dictionary/english/\${encodeURIComponent(w)}\`,
-                        onload: (res) => {
-                            if (res.status === 200) {
-                                const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\\s*([A-C][1-2])\\s*<\\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\\s*([A-C][1-2])\\s*<\\/span>/i);
-                                if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; }
-                            }
-                            resolve(null);
-                        }, onerror: () => resolve(null)
-                    });
-                });
-            }
-            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
-
-            function fetchTranslation(text) {
-                return new Promise((resolve, reject) => {
-                    GM_xmlhttpRequest({
-                        method: "GET", url: \`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=\${encodeURIComponent(text)}\`,
-                        onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error('error')); }, onerror: reject
-                    });
-                });
-            }
-
-            function fetchPhonetics(text) {
-                return new Promise((resolve) => {
-                    GM_xmlhttpRequest({
-                        method: "GET", url: \`https://api.dictionaryapi.dev/api/v2/entries/en/\${encodeURIComponent(text)}\`,
-                        onload: (res) => {
-                            if (res.status === 200) {
-                                const data = JSON.parse(res.responseText);
-                                if (data && data.length > 0) {
-                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
-                                    resolve(pObj.text || null); return;
-                                }
-                            }
-                            resolve(null);
-                        }, onerror: () => resolve(null)
-                    });
-                });
-            }
-
-            function fetchWordLevel(text) {
-                return new Promise((resolve) => {
-                    GM_xmlhttpRequest({
-                        method: "GET", url: \`https://dict.youdao.com/jsonapi?q=\${encodeURIComponent(text)}\`,
-                        onload: (res) => {
-                            let result = { stars: 0, tags: [] };
-                            try {
-                                if (res.status === 200) {
-                                    const data = JSON.parse(res.responseText);
-                                    if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
-                                    if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) result.stars = data.collins.collins_entries[0].star || 0;
-                                }
-                            } catch (e) {}
-                            resolve(result);
-                        }, onerror: () => resolve({ stars: 0, tags: [] })
-                    });
-                });
+                fetch("https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json")
+                    .then(r => r.json())
+                    .then(data => {
+                        if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                    }).catch(()=>{});
             }
 
             let globalAudioPlayer = null;
@@ -493,29 +415,62 @@
                 });
             }
 
-            function formatDictData(originalWord, data) {
-                const { transData, ipaText, levelData, cefrLevel } = data;
+            function formatDictData(data) {
+                const { word, transData, ipaText, levelData, cefrLevel, isLoadingTrans, isLoadingLevel } = data;
+                
                 let tagsHtml = '';
                 if (cefrLevel || (levelData && (levelData.stars > 0 || (levelData.tags && levelData.tags.length > 0)))) {
                     tagsHtml = \`<div class="dict-tags-row">\`;
-                    if (levelData && levelData.stars > 0) tagsHtml += \`<span class="dict-tag star-tag">\${'★'.repeat(levelData.stars)}\${'☆'.repeat(5 - levelData.stars)}</span>\`;
+                    if (levelData && levelData.stars > 0) {
+                        tagsHtml += \`<span class="dict-tag star-tag">\${'★'.repeat(levelData.stars)}\${'☆'.repeat(5 - levelData.stars)}</span>\`;
+                    }
                     if (cefrLevel) tagsHtml += \`<span class="dict-tag cefr-\${cefrLevel}">CEFR \${cefrLevel}</span>\`;
-                    if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += \`<span class="dict-tag">\${tag}</span>\`; });
+                    if (levelData && levelData.tags) {
+                        levelData.tags.forEach(tag => { tagsHtml += \`<span class="dict-tag">\${tag}</span>\`; });
+                    }
                     tagsHtml += \`</div>\`;
+                } else if (isLoadingLevel) {
+                    tagsHtml = \`<div class="dict-tags-row"><span style="color:#999; font-size:11px;">获取词频星级中...</span></div>\`;
                 }
-                let html = \`<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">\${originalWord}</span>\${ipaText ? \`<span class="dict-ipa">\${ipaText}</span>\` : ''}<span class="dict-speaker-btn" data-word="\${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>\${tagsHtml}<div class="dict-basic-trans">\${transData[0] && transData[0][0] ? transData[0][0][0] : ''}</div></div>\`;
-                const dictEntries = transData[1];
-                if (dictEntries && dictEntries.length > 0) {
-                    html += \`<div class="dict-details">\`;
-                    dictEntries.forEach(entry => {
-                        const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
-                        html += \`<div class="dict-pos-block"><span class="dict-pos-tag">\${pos}.</span><ul class="dict-def-list">\`;
-                        displayDefs.forEach(def => { html += \`<li class="dict-def-item">\${def}</li>\`; });
-                        html += \`</ul></div>\`;
-                    });
-                    html += \`</div>\`;
-                } else if (!(transData[0] && transData[0][0])) { html += \`<div style="padding:5px">No definition found.</div>\`; }
-                return html;
+
+                let mainTrans = '', dictDetails = '';
+
+                if (isLoadingTrans) {
+                    mainTrans = \`<div class="dict-loading">🔍 极速翻译中...</div>\`;
+                } else if (transData && transData[0] && transData[0][0]) {
+                    mainTrans = \`<div class="dict-basic-trans">\${transData[0][0][0]}</div>\`;
+                    const dictEntries = transData[1];
+                    if (dictEntries && dictEntries.length > 0) {
+                        dictDetails += \`<div class="dict-details">\`;
+                        dictEntries.forEach(entry => {
+                            const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
+                            dictDetails += \`<div class="dict-pos-block"><span class="dict-pos-tag">\${pos}.</span><ul class="dict-def-list">\`;
+                            displayDefs.forEach(def => { dictDetails += \`<li class="dict-def-item">\${def}</li>\`; });
+                            dictDetails += \`</ul></div>\`;
+                        });
+                        dictDetails += \`</div>\`;
+                    }
+                } else {
+                    mainTrans = \`<div class="dict-basic-trans" style="color:#999">未找到释义</div>\`;
+                }
+
+                return \`
+                <div class="dict-header-row">
+                    <div class="dict-word-line">
+                        <span class="dict-head-word">\${word}</span>
+                        \${ipaText ? \`<span class="dict-ipa">\${ipaText}</span>\` : ''}
+                        <span class="dict-speaker-btn" data-word="\${word.replace(/"/g, '&quot;')}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                        </span>
+                    </div>
+                    \${tagsHtml}
+                </div>
+                \${mainTrans}
+                \${dictDetails}
+                \`;
             }
 
             function setupTippyDelegate() {
@@ -527,10 +482,16 @@
                         const word = instance.reference.innerText.trim();
                         const wordKey = word.toLowerCase();
 
-                        const renderContent = (data) => {
+                        let currentData = { word, transData: null, ipaText: '', levelData: { stars: 0, tags: [] }, cefrLevel: null, isLoadingTrans: true, isLoadingLevel: true };
+
+                        const updatePopup = () => {
                             if (instance.reference.innerText.trim() !== word) return;
-                            const contentDiv = document.createElement('div'); contentDiv.className = 'dict-popup'; contentDiv.innerHTML = formatDictData(word, data);
+                            const contentDiv = document.createElement('div');
+                            contentDiv.className = 'dict-popup';
+                            contentDiv.innerHTML = formatDictData(currentData);
+                            
                             ['mousedown', 'touchstart', 'click'].forEach(evt => { contentDiv.addEventListener(evt, e => e.stopPropagation(), { capture: true }); });
+                            
                             const btn = contentDiv.querySelector('.dict-speaker-btn');
                             if (btn) {
                                 btn.addEventListener('click', (e) => {
@@ -543,17 +504,54 @@
                             instance.setContent(contentDiv);
                         };
 
-                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
-                        else {
-                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">🔍 正在查询...</div>';
-                            instance.setContent(loadingDiv);
-                            Promise.all([
-                                fetchTranslation(word).catch(() => [[['API Error']]]), fetchPhonetics(word).catch(() => null),
-                                fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] })), fetchCEFRWithTimeout(word).catch(() => null)
-                            ]).then(([transData, ipaText, levelData, cefrLevel]) => {
-                                const resultData = { transData, ipaText, levelData, cefrLevel };
-                                saveToGlobalCache(wordKey, resultData); renderContent(resultData);
-                            });
+                        if (globalResultCache[wordKey]) { 
+                            currentData = { ...globalResultCache[wordKey], word, isLoadingTrans: false, isLoadingLevel: false };
+                            updatePopup(); return; 
+                        }
+
+                        updatePopup(); // 立即渲染骨架和Loading
+
+                        // 1. 获取 Google 翻译 (翻墙极快通道)
+                        fetch(\`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=\${encodeURIComponent(word)}\`)
+                            .then(r => r.json())
+                            .then(data => { currentData.transData = data; currentData.isLoadingTrans = false; updatePopup(); checkCache(); })
+                            .catch(() => { currentData.transData = [[['API Error']]]; currentData.isLoadingTrans = false; updatePopup(); });
+
+                        // 2. 获取纯正音标
+                        fetch(\`https://api.dictionaryapi.dev/api/v2/entries/en/\${encodeURIComponent(word)}\`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data && data.length > 0) {
+                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
+                                    if(pObj.text) { currentData.ipaText = pObj.text; updatePopup(); }
+                                }
+                            }).catch(() => {});
+
+                        // 3. 获取有道星级和标签 (双稳定代理通道)
+                        const youdaoUrl = \`https://dict.youdao.com/jsonapi?q=\${encodeURIComponent(word)}\`;
+                        fetch(\`https://api.codetabs.com/v1/proxy?quest=\${encodeURIComponent(youdaoUrl)}\`)
+                            .then(r => r.ok ? r.json() : Promise.reject())
+                            .catch(() => fetch(\`https://corsproxy.io/?\${encodeURIComponent(youdaoUrl)}\`).then(r => r.json())) // 备用代理
+                            .then(data => {
+                                if(data.ec && data.ec.exam_type) currentData.levelData.tags = data.ec.exam_type;
+                                // 提取 Collins 星级
+                                if(data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) {
+                                    currentData.levelData.stars = data.collins.collins_entries[0].star || 0;
+                                }
+                                if(!currentData.ipaText && data.simple && data.simple.word && data.simple.word[0] && data.simple.word[0].ukphone) {
+                                    currentData.ipaText = \`/\${data.simple.word[0].ukphone}/\`;
+                                }
+                                currentData.isLoadingLevel = false; updatePopup(); checkCache();
+                            }).catch(() => { currentData.isLoadingLevel = false; updatePopup(); });
+
+                        // 4. 获取静态 CEFR
+                        if(cefrStaticCache[wordKey]) { currentData.cefrLevel = cefrStaticCache[wordKey]; updatePopup(); }
+
+                        function checkCache() {
+                            if(!currentData.isLoadingTrans && !currentData.isLoadingLevel) {
+                                const cacheData = { transData: currentData.transData, ipaText: currentData.ipaText, levelData: currentData.levelData, cefrLevel: currentData.cefrLevel };
+                                saveToGlobalCache(wordKey, cacheData);
+                            }
                         }
                     }
                 });
