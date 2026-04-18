@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Orbán's era was over in a flash and Hungary's next PM is a man in a hurry</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* 注入的主题样式 */
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+
+        /* ----- 增强工具栏与阅读器样式 ----- */
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        #content-container { transition: font-size 0.2s; }
+
+        /* ----- 核心：中文段落模糊滤镜 ----- */
+        .zh-para { transition: filter 0.3s ease, opacity 0.3s ease; }
+        .global-blur-enabled .zh-para { cursor: pointer; }
+        .global-blur-enabled .zh-para.blurred { filter: blur(0.35em); opacity: 0.5; user-select: none; }
+        .global-blur-enabled .zh-para.blurred:hover { filter: blur(0.2em); opacity: 0.7; }
+
+        /* ----- 生词云端高亮红色核心样式 ----- */
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+
+        /* ----- 词典弹窗核心样式 ----- */
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 14px; line-height: 1.4; max-width: 280px; min-width: 200px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 18px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 13px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 18px; height: 18px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 2px 4px; }
+        .dict-tag.cefr-A1 { background: #E8F5E9; color: #2E7D32; border-color: #C8E6C9; }
+        .dict-tag.cefr-A2 { background: #E0F2F1; color: #00695C; border-color: #B2DFDB; }
+        .dict-tag.cefr-B1 { background: #FFF8E1; color: #F57F17; border-color: #FFECB3; }
+        .dict-tag.cefr-B2 { background: #FFF3E0; color: #E65100; border-color: #FFE0B2; }
+        .dict-tag.cefr-C1 { background: #FCE4EC; color: #C2185B; border-color: #F8BBD0; }
+        .dict-tag.cefr-C2 { background: #F3E5F5; color: #7B1FA2; border-color: #E1BEE7; }
+        .dict-basic-trans { font-size: 14px; color: #444; margin-top: 4px; }
+        .dict-pos-block { margin-bottom: 4px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 12px; margin-right: 4px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 13px; padding: 5px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body class="bar-hidden global-blur-enabled">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="blur-btn" class="reader-btn" style="background:#AF52DE; color:white;" onclick="toggleBlur()">模糊: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#E5E5EA; color:#1C1C1E;" onclick="toggleHighlight()">高亮: 关</button>
+            <button id="dict-btn" class="reader-btn" style="background:#E5E5EA; color:#1C1C1E;" onclick="toggleDict()">查词: 关</button>
+        </div>
+    </div>
+
+    <div id="content-container">
+    <h1>Orbán's era was over in a flash and Hungary's next PM is a man in a hurry</h1>
+    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">
+        <a href="https://www.bbc.com/news/articles/c4g40npz37lo" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>
+    </div>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">欧尔班时代瞬间结束，匈牙利下一任总理迫不及待</p>
+    <p>Péter Magyar and his victorious Tisza party have wasted no time preparing for the transfer of power in Hungary after their dramatic landslide defeat of Viktor Orbán last Sunday.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在上周日以戏剧性的压倒性优势击败维克多·欧尔班后，彼得·马扎尔和他获胜的蒂萨党毫不迟疑地准备在匈牙利进行权力交接。</p>
+    <p>They won 52% of the vote to put an end to his party's 16 years of continuous rule, which translates into 140 seats in the 199-seat National Assembly.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他们赢得了52%的选票，结束了其政党长达16年的连续统治，这转化为199个国民议会席位中的140席。</p>
+    <p>Orbán's Fidesz have slumped from 135 to 53 seats.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">欧尔班领导的青年民主主义者联盟（青民盟）席位从135席骤降至53席。</p>
+    <p>The count will be finalised on Saturday - including recounts in closely tied constituencies, and votes cast abroad.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">计票工作将于周六结束——包括对票数接近的选区的重新计票以及海外投票。</p>
+    <p>Magyar has won a pledge from President Tamás Sulyok to bring forward the formation of the new parliament to the week beginning 4 May. Parliament can then elect the new government.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">马扎尔已获得总统塔马什·舒尤克的承诺，将新一届议会的组建提前至5月4日开始的那一周。随后议会可以选举新政府。</p>
+    <p>He also gave combative interviews to public service TV and radio, which have largely ignored or attacked him for the past two years.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他还接受了公共服务电视台和广播电台充满火药味的采访，在过去两年里，这些媒体在很大程度上忽视或攻击他。</p>
+    <p>He has promised to pass laws to suspend their news programmes, until impartial editors can be appointed.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他承诺将通过法律暂停他们的新闻节目，直到任命公正的编辑。</p>
+    <p>All this will take time.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">所有这些都需要时间。</p>
+    <p>Armed with a so-called super-majority of more than two-thirds of seats in parliament, he also plans retroactively to limit the number of terms a prime minister can serve to two.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">凭借在议会中超过三分之二席位的所谓“绝对多数”，他还计划追溯性地将总理的任期限制为两届。</p>
+    <p>Viktor Orbán has already served five. If that goes through, Magyar could slam the door on Orbán's return.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">维克多·欧尔班已经连任了五届。如果该法案获得通过，马扎尔可能会彻底堵死欧尔班复出的路。</p>
+    <p>It was not until late on Thursday that Orbán finally broke his silence after Sunday's defeat, in an interview on the Patrióta YouTube channel.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">直到周四晚些时候，欧尔班才终于打破了周日败选后的沉默，接受了Patrióta YouTube频道的采访。</p>
+    <p>"This is the end of an era," said Hungary's beaten leader. "We must bear this defeat with dignity."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“这是一个时代的结束，”这位被击败的匈牙利领导人说。“我们必须有尊严地承受这次失败。”</p>
+    <p>Orbán visited the Hungarian president this week, but avoided reporters by slipping in through a side entrance.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">欧尔班本周拜访了匈牙利总统，但他从侧门溜进去以避开记者。</p>
+    <p>He spoke of feeling "pain and emptiness" about the defeat, taking full personal responsibility for what happened. But he offered no analysis of the main mistakes of his campaign, other than the failure to finish the Russian-designed Paks 2 nuclear power station, which is running six years behind schedule.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他谈到对失败感到“痛苦和空虚”，并对所发生的事情承担全部个人责任。但他没有分析竞选活动的主要错误，除了未能完成俄罗斯设计的保克什2期核电站（该项目已落后计划六年）。</p>
+    <p>A meeting of the top leadership of Fidesz is scheduled for 28 April, ahead of a party congress in June.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">青民盟最高领导层会议定于4月28日举行，在6月的党代会之前。</p>
+    <p>In the interview, Orbán said he would continue to lead Fidesz if he was re-elected, but added the party needed "a complete renewal".</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在采访中，欧尔班表示如果能连任党魁，他将继续领导青民盟，但补充说该党需要“全面彻底的更新”。</p>
+    <p>Of the rump of 53 seats Fidesz will occupy in the new Parliament, only 10 are from individual constituencies, and the rest are from the party lists.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在青民盟新议会中残存的53个席位中，只有10个来自个人选区，其余均来自政党名单。</p>
+    <p>Many of the new deputies on the party lists should be replaced, as they were not suited to working in opposition, he said. There have already been some calls for change, in a party where dissent is rarely expressed in public.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他说，政党名单上的许多新代表应该被替换，因为他们不适合在反对党工作。在这个很少公开表达异议的政党中，已经出现了一些要求变革的呼声。</p>
+    <p>"I think [Orbán] does not have to resign at the moment," said András Cser-Palkovics, Fidesz mayor of the western city of Székesfehérvár. "He should wait for the national caucus and then start assessing [the result]. Then we should have a leadership election."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“我认为[欧尔班]目前不必辞职，”西部城市塞克什白堡的青民盟市长András Cser-Palkovics说。“他应该等待全国党团会议，然后开始评估[结果]。之后我们应该举行一次领导层选举。”</p>
+    <p>There is no obvious successor to Orbán in the party, and none with his skill or charm at integrating different opinions and ambitions.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">党内没有明显的欧尔班继任者，也没有人具备他那种整合不同意见和雄心的技巧或魅力。</p>
+    <p>US and British advisers criticised the main Fidesz campaign slogan "the safe choice", because it would alienate young voters.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">美英顾问批评了青民盟的主要竞选口号“安全的选择”，因为这会疏远年轻选民。</p>
+    <p>But it was hard for a party in power for so long, to present itself to the voters as the party of change, one source told the BBC.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">但一位消息人士告诉英国广播公司（BBC），对于一个掌权如此之久的政党来说，很难向选民展示自己是寻求变革的政党。</p>
+    <p>In response, two younger politicians, Foreign Minister Péter Szijjártó, 47, and Transport Minister János Lázár, 51, often appeared at Orbán's rallies. But rather than reinvigorating the party, their dynamism just made its leader seem old and tired.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">作为回应，两位年轻的政治家——47岁的外交部长彼得·西雅尔多和51岁的交通部长亚诺什·拉扎尔——经常出现在欧尔班的集会上。但他们的活力并没有重振该党，反而让其领导人显得年迈疲惫。</p>
+    <p>Orbán will be 63 next month, but the wear and tear of 38 years in frontline politics are obvious to even his hardcore supporters.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">欧尔班下个月将满63岁，但38年政治前线生涯的磨损甚至连他的铁杆支持者都显而易见。</p>
+    <p>There is a mood of fear and recrimination in the governing party.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">执政党内弥漫着恐惧和相互指责的情绪。</p>
+    <p>Rumours of imminent arrests for corruption swirl around Budapest. On social media, Tisza supporters are impatient for those who grew rich illegally under the previous government to be held to account.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">即将因腐败被捕的谣言在布达佩斯四处流传。在社交媒体上，蒂萨党的支持者迫不及待地要求对那些在前政府治下非法致富的人进行追责。</p>
+    <p>Péter Magyar is leading the chorus.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">彼得·马扎尔正在带头高呼。</p>
+    <p>"My message to Fidesz leaders and their stooges: It's no use playing the innocent little ballet girl now, and acting as if nothing happened," he posted on Facebook. "We know what you've done to our beloved homeland and the Hungarian people. And don't doubt for a single moment that 'you will reap what you sow'."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">“我给青民盟领导人及其傀儡的信息：现在装作无辜的小芭蕾舞女演员，假装什么都没发生过是没有用的，”他在脸书上发帖称。“我们知道你们对我们深爱的祖国和匈牙利人民做了什么。绝对不要怀疑‘种瓜得瓜，种豆得豆’。”</p>
+    <p>In downtown Budapest, just about every single Fidesz poster has been defaced. On many, the word, Vége - the end - has been spray-painted. Others have been ripped, and redecorated with expletives.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在布达佩斯市中心，几乎每一张青民盟的海报都被污损了。许多海报上被喷上了“Vége”——意为结束——的字样。其他的被撕破，并被粗话重新涂鸦。</p>
+    <p>The party's sudden fall from grace in the eyes of the population, even of some erstwhile supporters, has been spectacular.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">该党在民众（甚至是一些昔日支持者）眼中突然跌落神坛，其程度令人咋舌。</p>
+    <p>The tough tone of the incoming Tisza leaders appears to be both emotional and tactical.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">即将上任的蒂萨党领导人的强硬语调似乎兼具情感和战术考量。</p>
+    <p>They are taking revenge for the campaign of demonisation which the government-controlled Central European Press and Media Foundation (Kesma) has orchestrated against them and against Magyar personally. Kesma includes 476 titles, of which around 50 are primarily news outlets.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他们正在对政府控制的中欧新闻和媒体基金会（Kesma）针对他们及马扎尔本人精心策划的妖魔化运动进行报复。Kesma拥有476家出版物，其中约50家主要是新闻机构。</p>
+    <p>One of the first problems Tisza faces is to stop money being taken out of the country by businessmen close to the ruling party. Dubai is a favourite destination of Hungarian oligarchs.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">蒂萨党面临的首要问题之一是阻止与执政党关系密切的商人将资金转移出境。迪拜是匈牙利寡头最喜欢的目的地。</p>
+    <p>Another is to prevent the destruction of evidence of corruption, for example in government ministries.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">另一个问题是防止销毁腐败证据，例如在政府部委中。</p>
+    <p>While papers are shredded in some offices, two Tisza insiders told the BBC, officials are offering Tisza pen drives with digital copies, in exchange for keeping their jobs, or immunity from prosecution.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">两名蒂萨党内部人士告诉BBC，虽然一些办公室正在粉碎文件，但官员们正在向蒂萨党提供装有数字副本的U盘，以换取保住工作或免受起诉。</p>
+    <p>In the week before the election, as opinion polls consistently predicted a big opposition majority, Tisza claims dozens of contracts were signed with favoured companies, committing the state to future IT, research, construction and other projects.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在大选前的一周里，随着民意调查一致预测反对派将获得大胜，蒂萨党声称政府与受青睐的公司签署了数十份合同，使国家承诺未来进行IT、研究、建筑和其他项目。</p>
+    <p>With their new, two-thirds majority, they will be able to pass laws to restore checks and balances eroded or destroyed by Fidesz in the past 16 years.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">凭借其新的三分之二多数席位，他们将能够通过法律来恢复过去16年中被青民盟削弱或破坏的制衡机制。</p>
+    <p>In his campaign, Magyar promised to establish an office to recover stolen state assets.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">在竞选中，马扎尔承诺建立一个办公室来追回被盗的国家资产。</p>
+    <p>This week, he repeated his promise to join the Luxembourg-based European Public Prosecutor's Office (EPPO). That would help prove to the EU that he is eager to fight corruption, but it only has the power to investigate the misuse of EU funds.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">本周，他重申了加入总部位于卢森堡的欧洲检察官办公室（EPPO）的承诺。这将有助于向欧盟证明他渴望打击腐败，但这该机构仅有权调查欧盟资金的滥用情况。</p>
+    <p>He has also held talks with Zsolt Hernádi, CEO of MOL, the Hungarian energy giant, which operates two refineries in Hungary and Slovakia, on which both countries depend.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">他还与匈牙利能源巨头MOL的首席执行官Zsolt Hernádi举行了会谈，该公司在匈牙利和斯洛伐克运营两家炼油厂，两国都依赖这两家炼油厂。</p>
+    <p>The urgent restoration of oil supplies through the Druzhba (Friendship) pipeline from Russia across Ukraine, is one of the few subjects on which Magyar and Viktor Orbán agree. It has been closed down since late January, but Ukrainian President Volodymyr Zelensky said this week the oil could start flowing by the end of the month.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">紧急恢复通过从俄罗斯穿过乌克兰的“友谊”管道供应石油，是马扎尔和维克多·欧尔班达成共识的少数几个问题之一。该管道自1月底以来一直关闭，但乌克兰总统弗拉基米尔·泽连斯基本周表示，石油可能会在本月底前开始流动。</p>
+    <p>Hungary's incoming prime minister says he wants to diversify Hungary's oil supplies, especially by making better use of an alternative pipeline from the Croatian island of Krk.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">匈牙利即将上任的总理表示，他希望实现匈牙利石油供应的多元化，特别是通过更好地利用来自克罗地亚克尔克岛的替代管道。</p>
+    <p>Almost three-quarters of 18-29 year-olds are estimated to have backed Tisza, and a former Hungarian ambassador to the US under Orbán, Réka Szemerkényi, told the BBC she was impressed by the messages that Hungary's younger generation had conveyed to their new leaders.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">据估计，近四分之三的18至29岁年轻人都支持蒂萨党。曾在欧尔班执政期间担任匈牙利驻美大使的Réka Szemerkényi告诉BBC，她对匈牙利年轻一代向其新领导人传达的信息印象深刻。</p>
+    <p>"'Ria, Ria Hungaria', meaning we love our country," was one, said Szemerkényi, now at the Equilibrium Institute in Budapest. "Then the chants of 'Europa', and the third I heard repeatedly was 'Russians go home'. These three together are like a foreign policy agenda."</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">现就职于布达佩斯均衡研究所的Szemerkényi说：“其中一个是‘Ria, Ria Hungaria’，意思是‘我们爱我们的国家’。” “接着是高呼‘欧洲’，我反复听到的第三个是‘俄罗斯人滚回家’。这三个口号加在一起就像是一份外交政策议程。”</p>
+    <p>On Friday, a high level delegation from European Commission President Ursula von der Leyen's office arrived in Budapest for informal talks with Tisza officials, led by Péter Magyar.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">周五，欧盟委员会主席乌尔苏拉·冯德莱恩办公室的一个高级代表团抵达布达佩斯，与由彼得·马扎尔率领的蒂萨党官员进行非正式会谈。</p>
+    <p>To access €17bn (£15bn) in EU funds, withheld from the Orbán government, his new government will need to meet 27 criteria - on independence of the judiciary, tackling corruption, and liberating the media from government control.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">为了获得被扣留的、原本拨给欧尔班政府的170亿欧元（150亿英镑）欧盟资金，他的新政府将需要满足27项标准——包括司法独立、打击腐败以及使媒体摆脱政府控制。</p>
+    <p>Hungary's economy is in a deep slump, and Magyar and his team know they will have to hit the ground running.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">匈牙利经济陷入深度衰退，马扎尔及其团队深知他们必须迅速进入状态并立即采取行动。</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">✅ 精读表达（值得你积累）</p>
+    <p>1. landslide</p>
+    <p>EN: an election in which a particular victorious candidate or party receives an overwhelming mass of votes</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">释义: 压倒性的胜利（或失败）</p>
+    <p>Example: Péter Magyar and his victorious Tisza party have wasted no time preparing for the transfer of power in Hungary after their dramatic landslide defeat of Viktor Orbán.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">中文: 在以压倒性优势击败维克多·欧尔班后，彼得·马扎尔及其获胜的蒂萨党毫不迟疑地准备在匈牙利进行权力交接。</p>
+    <p>2. slump</p>
+    <p>EN: to fall heavily or suddenly; to decline significantly</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">释义: 骤降 / 暴跌 / 大幅减少</p>
+    <p>Example: Orbán's Fidesz have slumped from 135 to 53 seats.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">中文: 欧尔班领导的青年民主主义者联盟的席位从135席骤降至53席。</p>
+    <p>3. slam the door on</p>
+    <p>EN: to refuse to consider an idea or plan; to prevent something from happening</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">释义: 彻底关上……的大门 / 拒之门外 / 杜绝……的可能性</p>
+    <p>Example: If that goes through, Magyar could slam the door on Orbán's return.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">中文: 如果该法案获得通过，马扎尔可能会彻底堵死欧尔班复出的路。</p>
+    <p>4. fall from grace</p>
+    <p>EN: a loss of status, respect, or prestige</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">释义: 失宠 / 失去声望 / 跌落神坛</p>
+    <p>Example: The party's sudden fall from grace in the eyes of the population, even of some erstwhile supporters, has been spectacular.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">中文: 该党在民众（甚至是一些昔日支持者）眼中突然跌落神坛，其程度令人咋舌。</p>
+    <p>5. hit the ground running</p>
+    <p>EN: to immediately work hard and successfully at a new activity</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">释义: 迅速进入状态 / 立即全心投入工作 / 马上采取行动</p>
+    <p>Example: Hungary's economy is in a deep slump, and Magyar and his team know they will have to hit the ground running.</p>
+    <p class="zh-para blurred" onclick="if(document.body.classList.contains('global-blur-enabled')) this.classList.toggle('blurred')">中文: 匈牙利经济陷入深度衰退，马扎尔及其团队深知他们必须迅速进入状态并立即采取行动。</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { font: 1.0, dictEnabled: false, barHidden: true, highlightEnabled: false, blurEnabled: true };
+        
+        const bar = document.getElementById('top-bar');
+        const content = document.getElementById('content-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const blurBtn = document.getElementById('blur-btn');
+
+        function applyPrefs() {
+            content.style.fontSize = prefs.font + 'em';
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+
+            if (prefs.blurEnabled) {
+                document.body.classList.add('global-blur-enabled');
+                blurBtn.innerText = "模糊: 开"; blurBtn.style.background = "#AF52DE"; blurBtn.style.color = "#fff";
+                document.querySelectorAll('.zh-para').forEach(el => el.classList.add('blurred'));
+            } else {
+                document.body.classList.remove('global-blur-enabled');
+                blurBtn.innerText = "模糊: 关"; blurBtn.style.background = "#E5E5EA"; blurBtn.style.color = "#1C1C1E";
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar') || e.target.classList.contains('zh-para')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); }
+        function toggleBlur() { prefs.blurEnabled = !prefs.blurEnabled; applyPrefs(); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            const savedScroll = localStorage.getItem(STORAGE_KEY + '_scroll');
+            if (savedScroll) {
+                setTimeout(() => window.scrollTo(0, parseFloat(savedScroll)), 150);
+            }
+        });
+
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY + '_scroll', window.scrollY);
+            }, 300);
+        });
+
+        // ==========================================
+        // 云端红字高亮引擎 (修复被墙和死缓存问题)
+        // ==========================================
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; // 升级缓存Key，强制清空被墙时的假网页缓存
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                // 加入抗封锁代理轮询，应对国内 raw.githubusercontent 污染
+                const urls = [
+'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
+                ];
+                
+                let text = '';
+                for (let u of urls) {
+                    try {
+                        const res = await fetch(u);
+                        if (res.ok) {
+                            text = await res.text();
+                            // 严格防假墙验证，防止存入 Cloudflare 报错网页
+                            if (text && !text.includes('<html') && !text.includes('Cloudflare')) {
+                                break;
+                            }
+                        }
+                    } catch (err) {}
+                }
+
+                if (!text) throw new Error("所有高亮词库源均无法访问");
+
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) {
+                    highlightWords = new Set(arr);
+                    localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                    applyHighlightsToDOM();
+                }
+            } catch(e) { console.error("Cloud highlight sync failed", e); }
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = document.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) {
+                    span.classList.add('is-highlight');
+                }
+            });
+        }
+
+        // ==========================================
+        // 核心内置：高级代理降级轮询引擎
+        // ==========================================
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [
+                    url, 
+                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+                ];
+                
+                let currentProxyIdx = 0;
+                
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) {
+                        if(opt.onerror) opt.onerror(new Error('All proxy nodes blocked'));
+                        return;
+                    }
+                    const fetchUrl = proxies[currentProxyIdx++];
+                    fetch(fetchUrl, { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; 
+                        try { t = await r.text(); } catch(err){}
+                        
+                        if (!r.ok || t.includes('Cloudflare') || t.includes('<title>Just a moment...</title>')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    })
+                    .catch(e => { tryNext(); });
+                };
+                
+                tryNext();
+                return;
+            }
+
+            fetch(url, { headers: opt.headers || {} })
+            .then(async r => {
+                let t = ''; try { t = await r.text(); } catch(err){}
+                if(opt.onload) opt.onload({status: r.status, responseText: t});
+            }).catch(err => { if(opt.onerror) opt.onerror(err); });
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                const staticUrls = [
+                    "https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    "https://cdn.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json",
+                    "https://ghproxy.net/https://raw.githubusercontent.com/winterdl/oxford-5000-vocabulary-audio-definition/main/data/oxford_5000.json"
+                ];
+                let idx = 0;
+                const tryFetch = () => {
+                    if (idx >= staticUrls.length) return;
+                    fetch(staticUrls[idx++])
+                    .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+                    .then(data => {
+                        if (Array.isArray(data)) { data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }
+                    }).catch(tryFetch);
+                };
+                tryFetch();
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\s*([A-C][1-2])\s*<\/span>/i);
+                                if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+
+            function fetchTranslation(text) {
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`,
+                        onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error('error')); }, onerror: reject
+                    });
+                });
+            }
+
+            function fetchPhonetics(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            if (res.status === 200) {
+                                const data = JSON.parse(res.responseText);
+                                if (data && data.length > 0) {
+                                    const pObj = data[0].phonetics.find(p => p.text) || data[0];
+                                    resolve(pObj.text || null); return;
+                                }
+                            }
+                            resolve(null);
+                        }, onerror: () => resolve(null)
+                    });
+                });
+            }
+
+            function fetchWordLevel(text) {
+                return new Promise((resolve) => {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`,
+                        onload: (res) => {
+                            let result = { stars: 0, tags: [] };
+                            try {
+                                const data = JSON.parse(res.responseText);
+                                if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type;
+                                
+                                if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) {
+                                    const starStr = data.collins.collins_entries[0].star;
+                                    if (starStr) {
+                                        const parsedNum = parseInt(String(starStr).replace(/[^0-9]/g, ''), 10);
+                                        result.stars = isNaN(parsedNum) ? 0 : parsedNum;
+                                    }
+                                }
+                            } catch (e) {}
+                            resolve(result);
+                        }, onerror: () => resolve({ stars: 0, tags: [] })
+                    });
+                });
+            }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function initAudioPlayer() {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); globalAudioPlayer.style.display = 'none'; document.body.appendChild(globalAudioPlayer); }
+            }
+            function playTTS(apiIndex, text, voice, btn) {
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                const params = new URLSearchParams();
+                if (api.type === "read-aloud") { params.append("text", text); params.append("voiceName", voice); } 
+                else { params.append("t", text); params.append("v", voice); params.append("r", "0"); params.append("p", "0"); }
+                globalAudioPlayer.src = `${api.url}?${params.toString()}`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const ignoreTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'A']);
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(currentNode) {
+                        const parent = currentNode.parentNode;
+                        if (!parent || ignoreTags.has(parent.nodeName.toUpperCase()) || parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        if (parent.closest('.zh-para')) return NodeFilter.FILTER_REJECT;
+                        
+                        const text = currentNode.nodeValue;
+                        if (!text.trim() || !/\b[a-zA-Z'-]+\b/.test(text)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+
+                const nodesToWrap = []; let currNode;
+                while ((currNode = walker.nextNode())) { nodesToWrap.push(currNode); }
+
+                nodesToWrap.forEach(textNode => {
+                    const text = textNode.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) textNode.parentNode.replaceChild(fragment, textNode);
+                });
+            }
+
+            function formatDictData(originalWord, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || (levelData.tags && levelData.tags.length > 0)))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(tag => { tagsHtml += `<span class="dict-tag">${tag}</span>`; });
+                    tagsHtml += `</div>`;
+                }
+                
+                const basicTrans = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${originalWord}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${originalWord.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basicTrans}</div></div>`;
+                
+                const dictEntries = transData ? transData[1] : null;
+                if (dictEntries && dictEntries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    dictEntries.forEach(entry => {
+                        const pos = entry[0]; const displayDefs = entry[1].slice(0, 3);
+                        html += `<div class="dict-pos-block"><span class="dict-pos-tag">${pos}.</span><ul class="dict-def-list">`;
+                        displayDefs.forEach(def => { html += `<li class="dict-def-item">${def}</li>`; });
+                        html += `</ul></div>`;
+                    });
+                    html += `</div>`;
+                } else if (!basicTrans) { 
+                    html += `<div style="padding:5px; color:#666; font-size:13px;">无释义结果...</div>`; 
+                }
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(document.body, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: 320,
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+
+                        const word = instance.reference.innerText.trim();
+                        const wordKey = word.toLowerCase();
+
+                        const renderContent = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const contentDiv = document.createElement('div'); contentDiv.className = 'dict-popup'; contentDiv.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => { contentDiv.addEventListener(evt, e => e.stopPropagation(), { capture: true }); });
+                            const btn = contentDiv.querySelector('.dict-speaker-btn');
+                            if (btn) {
+                                btn.addEventListener('click', (e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const text = btn.getAttribute('data-word');
+                                    if (!text || btn.classList.contains('playing')) return;
+                                    playTTS(0, text.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn);
+                                });
+                            }
+                            instance.setContent(contentDiv);
+                        };
+
+                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } 
+                        else {
+                            const loadingDiv = document.createElement('div'); loadingDiv.className = 'dict-popup'; loadingDiv.innerHTML = '<div class="dict-loading">极速查询中...</div>';
+                            instance.setContent(loadingDiv);
+                            
+                            const pTrans = fetchTranslation(word).catch(() => [[['API Error']]]);
+                            const pPhon = fetchPhonetics(word).catch(() => null);
+                            const pLevel = fetchWordLevel(word).catch(() => ({ stars: 0, tags: [] }));
+                            const pCefr = fetchCEFRWithTimeout(word).catch(() => null);
+
+                            Promise.all([pTrans, pPhon, pLevel, pCefr]).then(([transData, ipaText, levelData, cefrLevel]) => {
+                                const resultData = { transData, ipaText, levelData, cefrLevel };
+                                saveToGlobalCache(wordKey, resultData);
+                                if (instance.state.isVisible) renderContent(resultData);
+                            });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initAudioPlayer();
+                initCEFRStaticDict();
+                const container = document.getElementById('content-container');
+                if(container) wrapTextNodesToWord(container);
+                setupTippyDelegate();
+                initCloudHighlights(); 
+            }, 500);
+
+        })();
+    </script>
+</body>
+</html>
