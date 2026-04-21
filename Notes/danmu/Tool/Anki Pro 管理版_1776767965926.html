@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>English Mastery Suite (Archive & Anki)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/icon/Phrase.png">
+
+    <style>
+        /* =========================================
+           1. 全局共享变量 & 基础重置
+           ========================================= */
+        :root { 
+            --bg-body: #f0f2f5; --bg-card: #ffffff; 
+            --text-primary: #1a1a1a; --text-secondary: #65676b; 
+            --accent-color: #2563eb; --border-color: #e4e6eb; 
+            --danger-color: #ef4444;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05); 
+            --shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.12);
+            /* Anki Specific Colors */
+            --color-again: #ff5252; --color-hard: #ffab40;
+            --color-good: #69f0ae; --color-easy: #40c4ff;
+            --color-error: #ef4444;
+        }
+        @media (prefers-color-scheme: dark) { 
+            :root { 
+                --bg-body: #18191a; --bg-card: #242526; 
+                --text-primary: #e4e6eb; --text-secondary: #b0b3b8; 
+                --accent-color: #60a5fa; --border-color: #3e4042; 
+                --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2); 
+                --shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.4); 
+                --color-good: #00e676; 
+            } 
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-primary); margin: 0; padding: 0; transition: background 0.3s; }
+
+        /* 模式切换按钮 */
+        #mode-toggle-btn {
+            position: fixed; bottom: 30px; right: 30px; z-index: 9999;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--accent-color); color: white;
+            border: none; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s, background 0.2s;
+        }
+        #mode-toggle-btn:hover { transform: scale(1.1) rotate(180deg); }
+        #mode-toggle-btn.hidden-btn { display: none !important; }
+
+        .app-section { display: none; }
+        .app-section.active { display: block; }
+
+        /* =========================================
+           2. V1: Archive List Mode Specific CSS
+           ========================================= */
+        #app-v1 { padding: 40px 20px; min-height: 100vh; overflow-y: auto; }
+        .v1-container { max-width: 1000px; margin: 0 auto; position: relative; }
+        .v1-header { text-align: center; margin-bottom: 30px; position: relative; }
+        .v1-header h1 { font-family: 'Merriweather', serif; margin-bottom: 10px; }
+        .v1-settings-btn {
+            position: absolute; top: 0; right: 0;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 50%; width: 40px; height: 40px;
+            cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Modal & Form */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 100;
+            display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal {
+            background: var(--bg-card); padding: 30px; border-radius: 16px;
+            width: 90%; max-width: 400px;
+            box-shadow: var(--shadow-hover); border: 1px solid var(--border-color);
+            max-height: 90vh; overflow-y: auto;
+            display: flex; flex-direction: column;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: var(--text-secondary); }
+        .form-group input[type="text"], .form-group input[type="password"] {
+            width: 100%; padding: 10px; border-radius: 8px;
+            border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary);
+        }
+        .switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; }
+        .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .btn-save { background: var(--accent-color); color: white; }
+
+        /* V1 Components */
+        .v1-controls { background: var(--bg-card); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 30px; }
+        .v1-controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .v1-months-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px; }
+        .month-btn { padding: 8px 0; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; }
+        .month-btn:hover { background: var(--bg-body); color: var(--text-primary); }
+        .month-btn.active { background: var(--accent-color); color: white; }
+        .search-box { display: flex; gap: 10px; background: var(--bg-card); padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .search-input { flex-grow: 1; border: none; background: transparent; font-size: 16px; color: var(--text-primary); outline: none; }
+        .search-btn { background-color: var(--accent-color); color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
+
+        .v1-notes-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media(min-width: 768px) { .v1-notes-grid { grid-template-columns: repeat(2, 1fr); } }
+        .v1-note-card { background: var(--bg-card); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); display: flex; flex-direction: column; position: relative; transition: all 0.3s; }
+        .v1-note-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); border-color: var(--accent-color); }
+        .v1-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 12px; }
+        .v1-word { font-family: 'Merriweather', serif; font-size: 1.4rem; font-weight: 700; margin: 0; flex-grow: 1; }
+        .v1-meaning { font-size: 1rem; line-height: 1.6; white-space: pre-wrap; margin-bottom: 35px; flex-grow: 1; }
+        .v1-source { padding-top: 15px; border-top: 1px solid var(--border-color); font-size: 0.85rem; }
+        .v1-source a { color: var(--text-secondary); text-decoration: none; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .v1-delete-btn { position: absolute; bottom: 20px; right: 20px; opacity: 0; transition: all 0.2s; display: none; background:transparent; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;}
+        .v1-note-card:hover .v1-delete-btn { opacity: 1; }
+        .tts-btn-simple { background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; transition: color 0.2s; }
+        .tts-btn-simple:hover, .tts-btn-simple.playing { color: var(--accent-color); }
+
+        /* =========================================
+           3. V2: Anki Pro Mode Specific CSS
+           ========================================= */
+        body.mode-anki { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+
+        #app-v2 { 
+            width: 100%; max-width: 600px; margin: 0 auto; 
+            padding: 15px 20px; height: 100vh;
+            display: flex; flex-direction: column; 
+            box-sizing: border-box;
+        }
+
+        .v2-header { flex-shrink: 0; text-align: center; margin-bottom: 15px; position: relative; padding-top: 15px; transition: margin 0.3s;}
+        body.mode-anki.hide-archive .v2-header { margin-bottom: 5px; }
+
+        .v2-header h1 { font-family: 'Merriweather', serif; margin: 0 0 8px 0; font-size: 1.8rem; font-weight: 700; }
+        .v2-header-actions { position: absolute; right: 0; top: 15px; }
+        .v2-icon-btn { background: var(--bg-card); border: 1px solid var(--border-color); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        /* New Stats Styling */
+        #v2-deck-stats { 
+            font-size: 0.9rem; color: var(--text-secondary); 
+            background: rgba(0,0,0,0.03); display: inline-block;
+            padding: 4px 12px; border-radius: 20px;
+        }
+
+        .v2-controls { background: var(--bg-card); padding: 15px 20px; border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 20px; flex-shrink: 0; display: block; }
+        .v2-controls.hidden { display: none !important; }
+
+        /* V2 Card Stage */
+        #v2-card-stage { 
+            perspective: 1000px; position: relative; flex: 1; 
+            display: flex; flex-direction: column; justify-content: flex-end; 
+            padding-bottom: 10vh; transition: all 0.3s; 
+        }
+
+        body.mode-anki.hide-archive #v2-card-stage { 
+            justify-content: flex-start; 
+            padding-top: 10px; 
+            padding-bottom: 5vh; 
+        }
+
+        .v2-card { 
+            background: var(--bg-card); border-radius: 24px; padding: 30px 24px; 
+            border: 1px solid var(--border-color); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08);
+            width: 100%; min-height: 45vh; 
+            display: flex; flex-direction: column; align-items: center;
+            position: relative; cursor: pointer; user-select: none;
+        }
+        .v2-delete-card-btn { 
+            position: absolute; top: 20px; left: 20px; background: transparent; border: none; font-size: 1.2rem; opacity: 0.3; cursor: pointer; 
+            transition: all 0.2s;
+        }
+        .v2-delete-card-btn:hover { opacity: 1; color: var(--danger-color); transform: scale(1.1); }
+
+        .v2-word { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; text-align: center; line-height: 1.2;}
+        .v2-source { font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 4px 10px; border-radius: 12px; margin-bottom: 25px; text-decoration: none; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        .v2-source:hover { background: rgba(0,0,0,0.06); color: var(--accent-color); }
+
+        .v2-meaning { 
+            font-size: 1.15rem; line-height: 1.6; text-align: center; min-height: 100px; width: 100%;
+            display: flex; align-items: center; justify-content: center; white-space: pre-wrap;
+            background: var(--bg-body); border-radius: 16px; padding: 20px; 
+            filter: blur(10px); opacity: 0.7; transition: all 0.3s;
+        }
+        .v2-meaning.revealed { filter: none; opacity: 1; background: transparent; padding: 10px 0; min-height: auto; margin-bottom: 20px; cursor: text; user-select: text;}
+
+        .v2-tts-container { margin-top: auto; margin-bottom: 20px; height: 60px; display: flex; align-items: center; justify-content: center; z-index: 10;}
+        .v2-tts-btn { background: transparent; border: none; width: 64px; height: 64px; color: var(--accent-color); cursor: pointer; transition: transform 0.2s; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        .v2-tts-btn:hover { transform: scale(1.15); filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3)); }
+        .v2-tts-btn.playing { animation: breathe 1.5s infinite ease-in-out; pointer-events: none; }
+        .v2-tts-btn.error { color: var(--color-error); animation: shake 0.5s both; }
+
+        @keyframes breathe { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        .v2-anki-controls { 
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-top: 10px;
+            opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s;
+        }
+        .v2-meaning.revealed ~ .v2-anki-controls { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+        .anki-btn { 
+            padding: 12px 5px; border-radius: 12px; border: none; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; 
+            background: var(--bg-body); color: var(--text-secondary);
+            position: relative; overflow: hidden;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .anki-btn:active { transform: scale(0.95); }
+        .anki-btn span:first-child { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+        .anki-btn span:last-child { font-size: 0.75rem; opacity: 0.8; }
+        .anki-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; }
+        .btn-again::after { background: var(--color-again); } 
+        .btn-hard::after { background: var(--color-hard); } 
+        .btn-good::after { background: var(--color-good); } 
+        .btn-easy::after { background: var(--color-easy); }
+
+        /* Finished State UI */
+        .finished-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; text-align: center; color: var(--text-secondary);
+            animation: fadeIn 0.5s ease;
+        }
+        .finished-icon { font-size: 80px; margin-bottom: 20px; animation: bounce 2s infinite; }
+        .finished-title { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+        .finished-desc { font-size: 1rem; margin-bottom: 40px; color: var(--text-secondary); }
+        .btn-sync-large {
+            background: var(--accent-color); color: white; border: none;
+            padding: 14px 40px; border-radius: 12px; font-size: 1rem; font-weight: 600;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); cursor: pointer; 
+            transition: transform 0.2s, background 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-sync-large:hover { background: #1d4ed8; }
+        .btn-sync-large:active { transform: scale(0.95); }
+
+        /* Settings Extras */
+        .tts-config-item { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+        .tts-row { display: flex; gap: 5px; margin-bottom: 5px; }
+        .tts-row input { flex: 1; padding: 6px; font-size: 0.85rem; }
+        .sync-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-sync-action { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer; font-weight: 600; font-size: 0.9rem; display:flex; align-items:center; justify-content:center; gap:6px;}
+        .btn-sync-action:active { transform: scale(0.98); }
+
+        /* Utils */
+        .status-msg { text-align: center; padding: 40px; color: var(--text-secondary); }
+        .spin { animation: spin 1s infinite linear; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body class="mode-v1">
+
+    <button id="mode-toggle-btn" title="Switch View">🔄</button>
+
+    <div id="app-v1" class="app-section active">
+        <div class="modal-overlay" id="v1-modal">
+            <div class="modal">
+                <h2>⚙️ Archive 配置</h2>
+                <div class="form-group"><label>GitHub User</label><input type="text" class="shared-gh-user"></div>
+                <div class="form-group"><label>GitHub Repo</label><input type="text" class="shared-gh-repo"></div>
+                <div class="form-group"><label>Path (Notes/Notes/)</label><input type="text" id="v1-gh-path" value="Notes/Notes/"></div>
+                <div class="form-group"><label>Token</label><input type="password" class="shared-gh-token" placeholder="ghp_..."></div>
+                <div class="switch-container">
+                    <label>启用删除按钮</label>
+                    <label class="switch"><input type="checkbox" id="v1-show-delete"><span class="slider"></span></label>
+                </div>
+                <div class="switch-container">
+                    <label>显示切换按钮</label>
+                    <label class="switch"><input type="checkbox" id="v1-show-switch"><span class="slider"></span></label>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-cancel" onclick="AppV1.closeSettings()">取消</button>
+                    <button class="btn btn-save" onclick="SharedConfig.saveFromUI('v1')">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="v1-container">
+            <header class="v1-header">
+                <button class="v1-settings-btn" onclick="AppV1.openSettings()" title="设置">⚙️</button>
+                <h1>English Phrases Archive</h1>
+                <div style="color:var(--text-secondary); font-size:0.9rem">Vocabulary & Context List</div>
+            </header>
+
+            <div class="search-box">
+                <input type="text" id="v1-search-input" class="search-input" placeholder="全库搜索 (Search all)...">
+                <button class="search-btn" onclick="AppV1.performSearch()">搜 索</button>
+            </div>
+
+            <div class="v1-controls">
+                <div class="v1-controls-header">
+                    <span style="font-weight:600;">📅 浏览归档</span>
+                    <select id="v1-year-select" style="padding:6px; border-radius:6px; border:1px solid var(--border-color)"></select>
+                </div>
+                <div class="v1-months-grid" id="v1-month-container"></div>
+            </div>
+
+            <div id="v1-notes-grid" class="v1-notes-grid">
+                <div class="status-msg"><div class="spin"></div> 正在加载数据...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-v2" class="app-section">
+        <div class="modal-overlay" id="v2-modal">
+            <div class="modal">
+                <h2>⚙️ Anki 设置</h2>
+                <div class="switch-container">
+                    <label>显示月份面板</label>
+                    <label class="switch"><input type="checkbox" id="v2-show-panel"><span class="slider"></span></label>
+                </div>
+                <div class="switch-container">
+                    <label>启用云端删除</label>
+                    <label class="switch"><input type="checkbox" id="v2-enable-delete"><span class="slider"></span></label>
+                </div>
+                <div class="switch-container">
+                    <label>显示切换按钮</label>
+                    <label class="switch"><input type="checkbox" id="v2-show-switch"><span class="slider"></span></label>
+                </div>
+                <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
+                <div class="form-group"><label>TTS 语音源配置</label><div id="v2-tts-list"></div><button class="btn btn-cancel" style="width:100%; border-style:dashed" onclick="AppV2.addTTSConfig()">+ 添加源</button></div>
+                <hr style="border:0; border-top:1px solid var(--border-color); margin:15px 0;">
+                <div class="form-group"><label>GitHub User</label><input type="text" class="shared-gh-user"></div>
+                <div class="form-group"><label>GitHub Repo</label><input type="text" class="shared-gh-repo"></div>
+                <div class="form-group"><label>Token</label><input type="password" class="shared-gh-token"></div>
+                <div class="form-group">
+                    <label>云端同步 (anki_data.json)</label>
+                    <div class="sync-row">
+                        <button class="btn-sync-action" onclick="AppV2.syncDown(this)"><span>⬇️</span> 从云端下载</button>
+                        <button class="btn-sync-action" style="color:var(--accent-color); border-color:var(--accent-color)" onclick="AppV2.syncUp(this)"><span>☁️</span> 上传进度</button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-cancel" onclick="AppV2.closeSettings()">取消</button>
+                    <button class="btn btn-save" onclick="SharedConfig.saveFromUI('v2')">保存并刷新</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="v2-header">
+            <div class="v2-header-actions"><button class="v2-icon-btn" onclick="AppV2.openSettings()">⚙️</button></div>
+            <h1>Anki Pro</h1>
+            <div id="v2-deck-stats">--</div>
+        </div>
+
+        <div class="v2-controls" id="v2-controls-panel">
+            <div class="v1-controls-header">
+                <span style="font-weight:600">📅 归档</span>
+                <select id="v2-year-select" style="padding:6px; border-radius:6px; border:1px solid var(--border-color)"></select>
+            </div>
+            <div class="v1-months-grid" id="v2-month-container"></div>
+        </div>
+
+        <div id="v2-card-stage">
+            <div class="status-msg">⏳ 准备卡组中...</div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 0. Shared Configuration & Utils
+        // ============================================
+        const SharedConfig = {
+            data: {
+                user: localStorage.getItem('gh_user') || 'moodHappy',
+                repo: localStorage.getItem('gh_repo') || 'HelloWorld',
+                token: localStorage.getItem('gh_token') || '',
+                showSwitchBtn: localStorage.getItem('gh_show_switch') !== 'false',
+                pathV1: localStorage.getItem('gh_path') || 'Notes/Notes/',
+                showDeleteV1: localStorage.getItem('gh_show_delete') === 'true',
+                ttsList: JSON.parse(localStorage.getItem('gh_tts_list') || '[]'),
+                enableDeleteV2: localStorage.getItem('gh_enable_delete_v2') === 'true',
+                showPanelV2: localStorage.getItem('gh_show_archive_panel') !== 'false'
+            },
+
+            defaultTTS: [
+                { url: 'https://read-aloud-bay.vercel.app/api/synthesis?text={text}&voiceName=en-US-JennyNeural&rate=0&pitch=0&volume=100', token: '' },
+                { url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={text}', token: '' }
+            ],
+
+            init() {
+                if(this.data.ttsList.length === 0) this.data.ttsList = this.defaultTTS;
+            },
+
+            saveFromUI(source) {
+                const inputs = document.querySelectorAll(source === 'v1' ? '#v1-modal input' : '#v2-modal input');
+                const userInp = document.querySelectorAll('.shared-gh-user');
+                const repoInp = document.querySelectorAll('.shared-gh-repo');
+                const tokenInp = document.querySelectorAll('.shared-gh-token');
+
+                const activeUser = source === 'v1' ? userInp[0].value : userInp[1].value;
+                const activeRepo = source === 'v1' ? repoInp[0].value : repoInp[1].value;
+                const activeToken = source === 'v1' ? tokenInp[0].value : tokenInp[1].value;
+
+                this.data.user = activeUser.trim();
+                this.data.repo = activeRepo.trim();
+                this.data.token = activeToken.trim();
+
+                localStorage.setItem('gh_user', this.data.user);
+                localStorage.setItem('gh_repo', this.data.repo);
+                localStorage.setItem('gh_token', this.data.token);
+
+                const v1Switch = document.getElementById('v1-show-switch');
+                const v2Switch = document.getElementById('v2-show-switch');
+
+                if(source === 'v1' && v1Switch) this.data.showSwitchBtn = v1Switch.checked;
+                if(source === 'v2' && v2Switch) this.data.showSwitchBtn = v2Switch.checked;
+
+                localStorage.setItem('gh_show_switch', this.data.showSwitchBtn);
+                ModeManager.updateBtnState();
+
+                if(source === 'v1') {
+                    this.data.pathV1 = document.getElementById('v1-gh-path').value.trim();
+                    if(this.data.pathV1 && !this.data.pathV1.endsWith('/')) this.data.pathV1 += '/';
+                    this.data.showDeleteV1 = document.getElementById('v1-show-delete').checked;
+                    localStorage.setItem('gh_path', this.data.pathV1);
+                    localStorage.setItem('gh_show_delete', this.data.showDeleteV1);
+                    AppV1.closeSettings(); AppV1.start();
+                } else {
+                    this.data.showPanelV2 = document.getElementById('v2-show-panel').checked;
+                    this.data.enableDeleteV2 = document.getElementById('v2-enable-delete').checked;
+                    this.data.ttsList = AppV2.scrapeTTS();
+                    localStorage.setItem('gh_show_archive_panel', this.data.showPanelV2);
+                    localStorage.setItem('gh_enable_delete_v2', this.data.enableDeleteV2);
+                    localStorage.setItem('gh_tts_list', JSON.stringify(this.data.ttsList));
+                    AppV2.closeSettings(); AppV2.applySettings(); AppV2.start();
+                }
+                alert("设置已保存");
+            },
+
+            fillInputs() {
+                document.querySelectorAll('.shared-gh-user').forEach(el => el.value = this.data.user);
+                document.querySelectorAll('.shared-gh-repo').forEach(el => el.value = this.data.repo);
+                document.querySelectorAll('.shared-gh-token').forEach(el => el.value = this.data.token);
+                if(document.getElementById('v1-show-switch')) document.getElementById('v1-show-switch').checked = this.data.showSwitchBtn;
+                if(document.getElementById('v2-show-switch')) document.getElementById('v2-show-switch').checked = this.data.showSwitchBtn;
+            }
+        };
+
+        let REMOTE_CONFIG = null;
+        let LATEST_SHA = 'master';
+
+        // ============================================
+        // 1. App Logic: Version 1 (Archive)
+        // ============================================
+        const AppV1 = {
+            viewYear: null,
+            viewMonth: null,
+
+            init() {
+                this.notesGrid = document.getElementById('v1-notes-grid');
+                this.yearSelect = document.getElementById('v1-year-select');
+                this.monthContainer = document.getElementById('v1-month-container');
+                this.searchInput = document.getElementById('v1-search-input');
+                document.getElementById('v1-show-delete').checked = SharedConfig.data.showDeleteV1;
+                document.getElementById('v1-gh-path').value = SharedConfig.data.pathV1;
+            },
+
+            async start() {
+                if(!REMOTE_CONFIG) await Loader.loadConfig();
+                if(!REMOTE_CONFIG) return;
+
+                this.yearSelect.innerHTML = '';
+                const start = REMOTE_CONFIG.startYear || 2025;
+                const total = REMOTE_CONFIG.totalYears || 30;
+                for(let y = start; y < start+total; y++) {
+                    let opt = document.createElement('option'); opt.value = y; opt.text = `${y}年`; this.yearSelect.appendChild(opt);
+                }
+                const today = new Date();
+                this.yearSelect.value = (today.getFullYear() >= start) ? today.getFullYear() : start;
+                this.yearSelect.onchange = (e) => this.renderMonths(parseInt(e.target.value));
+                this.renderMonths(parseInt(this.yearSelect.value));
+
+                setTimeout(() => {
+                    const m = today.getMonth() + 1;
+                    const btn = this.monthContainer.querySelector(`button[data-m="${m}"]`);
+                    if(btn) btn.click(); else this.monthContainer.firstChild?.click();
+                }, 100);
+            },
+
+            renderMonths(year) {
+                this.monthContainer.innerHTML = '';
+                for(let m=1; m<=12; m++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'month-btn'; btn.innerText = `${m}月`; btn.dataset.m = m;
+                    btn.onclick = () => {
+                        this.searchInput.value = '';
+                        this.monthContainer.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.fetchNotes(year, m);
+                    };
+                    this.monthContainer.appendChild(btn);
+                }
+            },
+
+            async fetchNotes(year, month) {
+                this.viewYear = year; this.viewMonth = month;
+                this.notesGrid.innerHTML = `<div class="status-msg"><div class="spin"></div> 加载 ${year}-${month}...</div>`;
+                try {
+                    const url = REMOTE_CONFIG.getUrl(year, month);
+                    const res = await fetch(url);
+                    if(res.status === 404) throw new Error("本月无数据");
+                    const data = await res.json();
+                    this.renderCards(data);
+                } catch(e) {
+                    this.notesGrid.innerHTML = `<div class="status-msg">${e.message === '本月无数据' ? '📭 本月暂无内容' : '⚠️ 加载失败'}</div>`;
+                }
+            },
+
+            renderCards(items, isSearch = false) {
+                this.notesGrid.innerHTML = '';
+                items.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
+                if(SharedConfig.data.showDeleteV1 && SharedConfig.data.token) {
+                    const style = document.createElement('style');
+                    style.innerHTML = `.v1-delete-btn { display: block !important; }`;
+                    this.notesGrid.appendChild(style);
+                }
+
+                items.forEach(item => {
+                    const card = document.createElement('div'); card.className = 'v1-note-card';
+                    const safeText = item.text.replace(/'/g, "\\'");
+                    const sourceUrl = item.url ? `${item.url}#:~:text=${encodeURIComponent(item.text)}` : '#';
+
+                    card.innerHTML = `
+                        <div class="v1-card-header">
+                            <div class="v1-word">${item.text}</div>
+                            <button class="tts-btn-simple" onclick="AppV1.playTTS(this, '${safeText}')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                            </button>
+                        </div>
+                        <div class="v1-meaning">${item.note}</div>
+                        <div class="v1-source"><a href="${sourceUrl}" target="_blank">${item.pageTitle || 'Source'}</a></div>
+                        ${(!isSearch && SharedConfig.data.showDeleteV1) ? `<button class="v1-delete-btn" onclick="AppV1.deleteNote('${item.id}')">🗑️ 删除</button>` : ''}
+                    `;
+                    this.notesGrid.appendChild(card);
+                });
+            },
+
+            playTTS(btn, text) {
+                if(btn.classList.contains('playing')) return;
+                document.querySelectorAll('.tts-btn-simple').forEach(b => b.classList.remove('playing'));
+                btn.classList.add('playing');
+                AppV2.playTTSChain(text, () => btn.classList.remove('playing'));
+            },
+
+            async performSearch() {
+                const q = this.searchInput.value.trim().toLowerCase();
+                if(!q) return;
+                this.notesGrid.innerHTML = `<div class="status-msg"><div class="spin"></div> 全局搜索 "${q}"...</div>`;
+
+                const results = [];
+                const promises = [];
+                const start = REMOTE_CONFIG.startYear;
+                const end = new Date().getFullYear();
+
+                for(let y=start; y<=end; y++) {
+                    for(let m=1; m<=12; m++) {
+                        promises.push(fetch(REMOTE_CONFIG.getUrl(y,m)).then(r=>r.ok?r.json():[]).then(data => {
+                            if(Array.isArray(data)) {
+                                data.forEach(d => {
+                                    if((d.text||'').toLowerCase().includes(q) || (d.note||'').toLowerCase().includes(q)) results.push(d);
+                                });
+                            }
+                        }));
+                    }
+                }
+                await Promise.all(promises);
+                if(results.length) this.renderCards(results, true);
+                else this.notesGrid.innerHTML = `<div class="status-msg">🔍 未找到 "${q}"</div>`;
+            },
+
+            async deleteNote(id) {
+                if(!confirm("确定要从 GitHub 删除吗？")) return;
+                if(!SharedConfig.data.token) return alert("请在设置中配置 Token");
+
+                const fileName = REMOTE_CONFIG.getFileName(this.viewYear, this.viewMonth);
+                const apiUrl = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/${SharedConfig.data.pathV1}${fileName}`;
+
+                try {
+                    const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${SharedConfig.data.token}`}});
+                    if(!getRes.ok) throw new Error("Fetch Failed");
+                    const fileData = await getRes.json();
+                    const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+                    const newContent = content.filter(i => i.id !== id);
+                    if(newContent.length === content.length) throw new Error("ID not found");
+
+                    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(newContent, null, 2))));
+                    await fetch(apiUrl, {
+                        method: 'PUT',
+                        headers: {'Authorization': `token ${SharedConfig.data.token}`, 'Content-Type':'application/json'},
+                        body: JSON.stringify({ message: `Delete ${id}`, content: b64, sha: fileData.sha })
+                    });
+                    alert("删除成功");
+                    this.fetchNotes(this.viewYear, this.viewMonth);
+                } catch(e) { alert(e.message); }
+            },
+
+            openSettings() { SharedConfig.fillInputs(); document.getElementById('v1-modal').style.display = 'flex'; },
+            closeSettings() { document.getElementById('v1-modal').style.display = 'none'; }
+        };
+
+        // ============================================
+        // 2. App Logic: Version 2 (Anki - RESTORED)
+        // ============================================
+        const AppV2 = {
+            db: JSON.parse(localStorage.getItem('anki_db_v2') || '{}'),
+            blacklist: JSON.parse(localStorage.getItem('anki_deleted_ids') || '[]'),
+            queue: [],
+            totalMonthCount: 0,
+            currentCard: null,
+            audio: null,
+            viewYear: null,
+            viewMonth: null,
+
+            init() {
+                this.stage = document.getElementById('v2-card-stage');
+                this.yearSelect = document.getElementById('v2-year-select');
+                this.monthContainer = document.getElementById('v2-month-container');
+                this.statsEl = document.getElementById('v2-deck-stats');
+                this.applySettings();
+
+                document.addEventListener('keydown', (e) => {
+                    if(document.body.classList.contains('mode-anki') && !document.getElementById('v2-modal').offsetParent) {
+                        if(e.key === ' ' || e.key === 'Enter') {
+                            const el = document.querySelector('.v2-meaning');
+                            if(el && !el.classList.contains('revealed')) el.classList.add('revealed');
+                        }
+                        if(document.querySelector('.v2-meaning.revealed')) {
+                            if(e.key==='1') this.answer(1); if(e.key==='2') this.answer(2);
+                            if(e.key==='3') this.answer(3); if(e.key==='4') this.answer(4);
+                        }
+                    }
+                });
+            },
+
+            applySettings() {
+                const controls = document.getElementById('v2-controls-panel');
+                const body = document.body;
+                if(SharedConfig.data.showPanelV2) {
+                    controls.classList.remove('hidden'); body.classList.remove('hide-archive');
+                } else {
+                    controls.classList.add('hidden'); body.classList.add('hide-archive');
+                }
+                document.getElementById('v2-show-panel').checked = SharedConfig.data.showPanelV2;
+                document.getElementById('v2-enable-delete').checked = SharedConfig.data.enableDeleteV2;
+            },
+
+            async start() {
+                if(!REMOTE_CONFIG) await Loader.loadConfig();
+
+                this.yearSelect.innerHTML = '';
+                const start = REMOTE_CONFIG.startYear || 2025;
+                const total = REMOTE_CONFIG.totalYears || 30;
+                for(let y=start; y<start+total; y++) {
+                    let opt = document.createElement('option'); opt.value = y; opt.text = `${y}年`; this.yearSelect.appendChild(opt);
+                }
+                const today = new Date();
+                this.yearSelect.value = (today.getFullYear() >= start) ? today.getFullYear() : start;
+                this.yearSelect.onchange = (e) => this.renderMonths(parseInt(e.target.value));
+                this.renderMonths(parseInt(this.yearSelect.value));
+
+                setTimeout(() => {
+                    const m = today.getMonth() + 1;
+                    const btn = this.monthContainer.querySelector(`button[data-m="${m}"]`);
+                    if(btn) btn.click(); else this.monthContainer.firstChild?.click();
+                }, 100);
+            },
+
+            renderMonths(year) {
+                this.monthContainer.innerHTML = '';
+                for(let m=1; m<=12; m++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'month-btn'; btn.innerText = `${m}月`; btn.dataset.m = m;
+                    btn.onclick = () => {
+                        this.monthContainer.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.loadDeck(year, m);
+                    };
+                    this.monthContainer.appendChild(btn);
+                }
+            },
+
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            },
+
+            async loadDeck(year, month) {
+                this.viewYear = year; this.viewMonth = month;
+                this.stage.innerHTML = `<div class="status-msg"><div class="spin"></div> 加载 ${year}年${month}月...</div>`;
+                this.statsEl.innerText = "正在获取...";
+
+                try {
+                    const res = await fetch(REMOTE_CONFIG.getUrl(year, month));
+                    if(!res.ok) throw new Error();
+                    const data = await res.json();
+
+                    // Filter Blacklist
+                    const items = data.filter(i => !this.blacklist.includes(i.id));
+                    items.forEach(i => { i._year = year; i._month = month; });
+
+                    const uniqueItems = Array.from(new Map(items.map(item => [item.id, item])).values());
+                    this.totalMonthCount = uniqueItems.length;
+
+                    // === RESTORED LOGIC: STRICT ORDERING ===
+                    const learning = [];
+                    const review = [];
+                    const newCards = [];
+                    const now = Date.now();
+
+                    uniqueItems.forEach(item => {
+                        const s = this.getCardState(item.id);
+                        if (s.dueDate > now) return; 
+
+                        if (s.state === 'learning') learning.push(item);
+                        else if (s.state === 'review') review.push(item);
+                        else newCards.push(item);
+                    });
+
+                    this.shuffle(learning);
+                    this.shuffle(review);
+                    this.shuffle(newCards);
+
+                    // Priority: Learning > Review > New
+                    this.queue = [...learning, ...review, ...newCards];
+
+                    this.updateStats(); 
+                    this.renderCard();
+
+                } catch(e) {
+                    this.totalMonthCount = 0;
+                    this.queue = [];
+                    this.updateStats();
+                    this.stage.innerHTML = `<div class="status-msg">📭 本月暂无卡片</div>`;
+                }
+            },
+
+            updateStats() {
+                // RESTORED LOGIC: Stats based on state, not just list length
+                const newCount = this.queue.filter(item => this.getCardState(item.id).state === 'new').length;
+                const reviewCount = this.queue.length - newCount;
+                this.statsEl.innerText = `${this.viewYear}年${this.viewMonth}月 | 待复习: ${reviewCount} | 新卡: ${newCount} | 总计: ${this.totalMonthCount}`;
+            },
+
+            renderCard() {
+                this.updateStats();
+
+                if(this.queue.length === 0) {
+                    this.stage.innerHTML = `
+                        <div class="finished-state">
+                            <div class="finished-icon">🎉</div>
+                            <div class="finished-title">今日任务完成！</div>
+                            <div class="finished-desc">当前月份已无待复习卡片。</div>
+                            <button class="btn-sync-large" onclick="AppV2.syncUp(this)">
+                                ☁️ 立即同步
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const item = this.queue[0];
+                this.currentCard = item;
+
+                // Use preview logic
+                const times = {
+                    again: this.calc(item.id, 1).timeText,
+                    hard:  this.calc(item.id, 2).timeText,
+                    good:  this.calc(item.id, 3).timeText,
+                    easy:  this.calc(item.id, 4).timeText
+                };
+
+                const safeText = item.text.replace(/'/g, "\\'");
+                const deleteHtml = SharedConfig.data.enableDeleteV2 ? `<button class="v2-delete-card-btn" onclick="AppV2.deleteCard()" title="云端删除">🗑️</button>` : '';
+
+                this.stage.innerHTML = `
+                    <div class="v2-card" onclick="this.querySelector('.v2-meaning').classList.add('revealed')">
+                        ${deleteHtml}
+                        <div class="v2-word">${item.text}</div>
+                        <a href="${item.url || '#'}" target="_blank" class="v2-source" onclick="event.stopPropagation()">${item.pageTitle || 'Source'}</a>
+                        <div class="v2-meaning">${item.note}</div>
+                        
+                        <div class="v2-tts-container">
+                            <button class="v2-tts-btn" onclick="event.stopPropagation(); AppV2.playTTS(this, '${safeText}')">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="v2-anki-controls" onclick="event.stopPropagation()">
+                            <button class="anki-btn btn-again" onclick="AppV2.answer(1)"><span>重来</span><span>${times.again}</span></button>
+                            <button class="anki-btn btn-hard" onclick="AppV2.answer(2)"><span>困难</span><span>${times.hard}</span></button>
+                            <button class="anki-btn btn-good" onclick="AppV2.answer(3)"><span>良好</span><span>${times.good}</span></button>
+                            <button class="anki-btn btn-easy" onclick="AppV2.answer(4)"><span>简单</span><span>${times.easy}</span></button>
+                        </div>
+                    </div>
+                `;
+            },
+
+            getCardState(id) {
+                if(!this.db[id]) {
+                    this.db[id] = { state: 'new', step: 0, interval: 0, easeFactor: 2.5, dueDate: 0, lastModified: 0 };
+                }
+                // === RESTORED: SANITY CHECK ===
+                if (typeof this.db[id].easeFactor !== 'number' || isNaN(this.db[id].easeFactor)) this.db[id].easeFactor = 2.5;
+                if (typeof this.db[id].lastModified === undefined) this.db[id].lastModified = 0;
+                return this.db[id];
+            },
+
+            // === RESTORED LOGIC: CALC FUNCTION ===
+            calc(id, rating) {
+                const originalCard = this.getCardState(id);
+                let card = JSON.parse(JSON.stringify(originalCard));
+
+                // Sanity Check Inside Calc
+                if (typeof card.easeFactor !== 'number' || isNaN(card.easeFactor) || card.easeFactor < 1.3) {
+                    card.easeFactor = 2.5;
+                }
+                if (typeof card.interval !== 'number' || isNaN(card.interval)) {
+                    card.interval = 1;
+                }
+
+                let nextIntervalMin = 0;
+
+                if (rating === 1) { 
+                    card.step = 0; card.state = 'learning'; nextIntervalMin = 1; 
+                    card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+                } else if (card.state === 'new' || card.state === 'learning') {
+                    if (rating === 2) nextIntervalMin = 6; 
+                    else if (rating === 3) { 
+                        if (card.step === 0) { card.step = 1; nextIntervalMin = 10; } 
+                        else { card.state = 'review'; card.interval = 1; nextIntervalMin = 1440; } 
+                    } else if (rating === 4) { 
+                        card.state = 'review'; card.interval = 4; nextIntervalMin = 5760; 
+                    } 
+                } else { 
+                    // Review State
+                    if (rating === 2) { 
+                        card.interval = Math.max(1, Math.floor(card.interval * 1.2)); 
+                        card.easeFactor -= 0.15; 
+                    } else if (rating === 3) { 
+                        card.interval = Math.floor(card.interval * card.easeFactor); 
+                    } else if (rating === 4) { 
+                        card.interval = Math.floor(card.interval * card.easeFactor * 1.3); 
+                        card.easeFactor += 0.15; 
+                    }
+                    nextIntervalMin = card.interval * 1440;
+                    if(card.easeFactor < 1.3) card.easeFactor = 1.3;
+                }
+
+                // 4:00 AM Logic
+                if (nextIntervalMin < 1440) {
+                    card.dueDate = Date.now() + (nextIntervalMin * 60 * 1000);
+                } else {
+                    const daysToAdd = Math.round(nextIntervalMin / 1440);
+                    const targetDate = new Date();
+                    targetDate.setDate(targetDate.getDate() + daysToAdd);
+                    targetDate.setHours(4, 0, 0, 0);
+                    if (targetDate.getTime() <= Date.now()) {
+                         targetDate.setDate(targetDate.getDate() + 1);
+                    }
+                    card.dueDate = targetDate.getTime();
+                }
+
+                card.lastModified = Date.now(); 
+
+                // Time Text Formatting
+                let timeText;
+                if (nextIntervalMin < 60) timeText = nextIntervalMin + 'm';
+                else if (nextIntervalMin < 1440) timeText = Math.round(nextIntervalMin / 60) + 'h';
+                else if (nextIntervalMin < 43200) timeText = Math.round(nextIntervalMin / 1440) + 'd';
+                else if (nextIntervalMin < 525600) timeText = Math.round(nextIntervalMin / 43200) + 'mo';
+                else timeText = Math.round(nextIntervalMin / 525600) + 'y';
+
+                return { card, timeText };
+            },
+
+            answer(rating) {
+                if(this.audio) { this.audio.pause(); this.audio=null; }
+                const item = this.queue[0];
+                const result = this.calc(item.id, rating);
+                this.db[item.id] = result.card; 
+                localStorage.setItem('anki_db_v2', JSON.stringify(this.db));
+
+                const cardEl = document.querySelector('.v2-card');
+                if(cardEl) { cardEl.style.transform = 'translateY(-20px)'; cardEl.style.opacity = '0'; }
+
+                setTimeout(() => {
+                    this.queue.shift();
+                    if(rating === 1) this.queue.push(item);
+                    this.renderCard();
+                }, 200);
+            },
+
+            async syncDown(btn) {
+                if(!SharedConfig.data.token) return alert("Missing Token");
+                const old = btn.innerHTML; btn.innerHTML = '<span class="spin">🔄</span>...'; btn.disabled=true;
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/Notes/anki_data.json`, {
+                        headers: {'Authorization': `token ${SharedConfig.data.token}`}
+                    });
+                    if(!res.ok) throw new Error("Sync Failed");
+                    const data = await res.json();
+                    const cloudDB = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+                    let count = 0;
+                    for(let id in cloudDB) {
+                        if(this.blacklist.includes(id)) continue;
+                        if(!this.db[id] || (cloudDB[id].lastModified || 0) > (this.db[id].lastModified || 0)) {
+                            this.db[id] = cloudDB[id]; count++;
+                        }
+                    }
+                    localStorage.setItem('anki_db_v2', JSON.stringify(this.db));
+                    btn.innerHTML = `✅ ${count}`;
+                    setTimeout(() => location.reload(), 1000);
+                } catch(e) { alert(e.message); btn.innerHTML = "❌"; setTimeout(()=>btn.innerHTML=old,2000); btn.disabled=false; }
+            },
+            async syncUp(btn) {
+                if(!SharedConfig.data.token) return alert("请先在设置中配置 Token");
+
+                const oldText = btn ? btn.innerHTML : ''; 
+                // 修改：按钮文字不带 spin 类，去掉转动效果
+                if(btn) { btn.innerHTML = '☁️ Syncing...'; btn.disabled=true; }
+
+                // Note: Saved badge logic removed per request
+
+                try {
+                    const url = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/Notes/anki_data.json`;
+                    let sha = null;
+                    try { const r = await fetch(url, {headers: {'Authorization': `token ${SharedConfig.data.token}`}}); if(r.ok) sha = (await r.json()).sha; } catch(e){}
+
+                    this.blacklist.forEach(id => delete this.db[id]);
+                    const content = btoa(unescape(encodeURIComponent(JSON.stringify(this.db))));
+
+                    const res = await fetch(url, {
+                        method: 'PUT',
+                        headers: {'Authorization': `token ${SharedConfig.data.token}`, 'Content-Type': 'application/json'},
+                        body: JSON.stringify({ message: 'Update Progress', content: content, sha: sha })
+                    });
+                    if(!res.ok) throw new Error("Upload Failed");
+
+                    if(btn) { btn.innerHTML = "✅ 成功"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
+                } catch(e) {
+                    if(btn) { btn.innerHTML = "❌ 失败"; setTimeout(()=> { btn.innerHTML=oldText; btn.disabled=false; }, 2000); }
+                }
+            },
+
+            async deleteCard() {
+                if(!confirm("从云端永久删除？")) return;
+                const item = this.queue[0];
+                this.blacklist.push(item.id);
+                delete this.db[item.id];
+                localStorage.setItem('anki_deleted_ids', JSON.stringify(this.blacklist));
+                localStorage.setItem('anki_db_v2', JSON.stringify(this.db));
+
+                const fileName = REMOTE_CONFIG.getFileName(item._year, item._month);
+                const apiUrl = `https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/contents/${SharedConfig.data.pathV1}${fileName}`;
+
+                try {
+                    const r = await fetch(apiUrl, {headers: {'Authorization': `token ${SharedConfig.data.token}`}});
+                    if(r.ok) {
+                        const d = await r.json();
+                        const c = JSON.parse(decodeURIComponent(escape(atob(d.content))));
+                        const nc = c.filter(x => x.id !== item.id);
+                        const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(nc, null, 2))));
+                        await fetch(apiUrl, {
+                            method: 'PUT',
+                            headers: {'Authorization': `token ${SharedConfig.data.token}`, 'Content-Type':'application/json'},
+                            body: JSON.stringify({message: `Delete ${item.id}`, content: b64, sha: d.sha})
+                        });
+                    }
+                } catch(e) { console.error(e); }
+
+                this.syncUp();
+                this.queue.shift();
+                this.totalMonthCount--; // Decrement visual total
+                this.renderCard();
+            },
+
+            playTTS(btn, text) {
+                if(this.audio) { this.audio.pause(); this.audio = null; }
+                document.querySelectorAll('.v2-tts-btn, .tts-btn-simple').forEach(b => b.classList.remove('playing'));
+                btn.classList.add('playing');
+                this.playTTSChain(text, () => btn.classList.remove('playing'));
+            },
+            playTTSChain(text, onEnd, idx = 0) {
+                if(idx >= SharedConfig.data.ttsList.length) { 
+                     // All failed
+                     const btn = document.querySelector('.v2-tts-btn.playing');
+                     if(btn) { btn.classList.remove('playing'); btn.classList.add('error'); setTimeout(()=>btn.classList.remove('error'), 1000); }
+                     onEnd(); 
+                     return; 
+                }
+                const cfg = SharedConfig.data.ttsList[idx];
+                if(!cfg.url) { this.playTTSChain(text, onEnd, idx+1); return; }
+
+                let url = cfg.url.replace('{text}', encodeURIComponent(text));
+                if(cfg.token && !url.includes('token=')) url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(cfg.token);
+
+                const audio = new Audio(url);
+                this.audio = audio;
+                audio.onended = onEnd;
+                audio.onerror = () => { console.log('TTS Fail', idx); this.playTTSChain(text, onEnd, idx+1); };
+                audio.play().catch(e => audio.onerror());
+            },
+
+            scrapeTTS() {
+                const list = [];
+                document.querySelectorAll('#v2-tts-list .tts-config-item').forEach(el => {
+                    list.push({
+                        url: el.querySelector('.inp-url').value.trim(),
+                        token: el.querySelector('.inp-token').value.trim()
+                    });
+                });
+                return list.length ? list : SharedConfig.defaultTTS;
+            },
+            addTTSConfig(data = {url:'', token:''}) {
+                const div = document.createElement('div'); div.className = 'tts-config-item';
+                div.innerHTML = `
+                    <div class="tts-row"><input type="text" class="inp-url" placeholder="URL" value="${data.url}"></div>
+                    <div class="tts-row"><input type="text" class="inp-token" placeholder="Token (Optional)" value="${data.token}"><button class="btn-mini" onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:transparent; cursor:pointer">🗑️</button></div>
+                `;
+                document.getElementById('v2-tts-list').appendChild(div);
+            },
+
+            openSettings() {
+                SharedConfig.fillInputs(); 
+                document.getElementById('v2-tts-list').innerHTML = '';
+                SharedConfig.data.ttsList.forEach(t => this.addTTSConfig(t));
+                document.getElementById('v2-modal').style.display = 'flex';
+            },
+            closeSettings() { document.getElementById('v2-modal').style.display = 'none'; }
+        };
+
+        const Loader = {
+            async loadConfig() {
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${SharedConfig.data.user}/${SharedConfig.data.repo}/commits/master`);
+                    if(res.ok) LATEST_SHA = (await res.json()).sha;
+                } catch(e) {}
+
+                const scriptUrl = `https://cdn.jsdelivr.net/gh/${SharedConfig.data.user}/${SharedConfig.data.repo}@${LATEST_SHA}/Notes/Phrases_note.js`;
+                return new Promise(resolve => {
+                    const script = document.createElement('script');
+                    script.src = scriptUrl;
+                    script.onload = () => {
+                        REMOTE_CONFIG = (typeof NotesConfig !== 'undefined') ? NotesConfig : ((typeof NewsConfig !== 'undefined') ? NewsConfig : null);
+                        if(REMOTE_CONFIG) REMOTE_CONFIG.repoBaseUrl = `https://cdn.jsdelivr.net/gh/${SharedConfig.data.user}/${SharedConfig.data.repo}@${LATEST_SHA}/${SharedConfig.data.pathV1}`;
+                        resolve(REMOTE_CONFIG);
+                    };
+                    script.onerror = () => { alert("Config Load Failed"); resolve(null); };
+                    document.head.appendChild(script);
+                });
+            }
+        };
+
+        const ModeManager = {
+            mode: 'v1',
+            toggleBtn: document.getElementById('mode-toggle-btn'),
+
+            init() {
+                this.toggleBtn.onclick = () => this.switchMode();
+                this.updateBtnState();
+                const savedMode = localStorage.getItem('app_mode') || 'v1';
+                this.switchMode(savedMode);
+            },
+
+            updateBtnState() {
+                if(SharedConfig.data.showSwitchBtn) {
+                    this.toggleBtn.classList.remove('hidden-btn');
+                } else {
+                    this.toggleBtn.classList.add('hidden-btn');
+                }
+            },
+
+            switchMode(target) {
+                if(!target) target = (this.mode === 'v1') ? 'v2' : 'v1';
+                this.mode = target;
+                localStorage.setItem('app_mode', this.mode);
+                document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
+
+                if(target === 'v1') {
+                    document.body.classList.remove('mode-anki');
+                    document.body.classList.add('mode-v1');
+                    document.getElementById('app-v1').classList.add('active');
+                    AppV1.init(); AppV1.start();
+                } else {
+                    document.body.classList.remove('mode-v1');
+                    document.body.classList.add('mode-anki');
+                    document.getElementById('app-v2').classList.add('active');
+                    AppV2.init(); AppV2.start();
+                }
+            }
+        };
+
+        SharedConfig.init();
+        ModeManager.init();
+
+    </script>
+</body>
+</html>
