@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>传记排版 & 源码推送 (全能学习版)</title>
+    <title>传记排版 & 源码推送 (全能学习增强版)</title>
     <link rel="icon" type="image/png" href="./icon/converter_biography.png">
     <link rel="apple-touch-icon" href="./icon/converter_biography.png">
     <style>
@@ -131,6 +131,11 @@
 
         <input type="url" id="originalLink" placeholder="🔗 选填：在此粘贴原文链接 (如 https://...)" autocomplete="off">
 
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="publishDateInput" placeholder="📅 选填：发布时间 (如 2026/2/6 18:55:19)" autocomplete="off" style="flex: 1;">
+            <button class="btn-secondary" onclick="setNowDate()" style="padding: 0 16px; border-radius: 8px; white-space: nowrap;" title="获取当前系统时间作为发布日期">🕒 现在</button>
+        </div>
+
         <textarea id="inputText" class="input-area" autocomplete="off" spellcheck="false" placeholder="在此粘贴双语对照文本..."></textarea>
 
         <div class="action-bar">
@@ -197,20 +202,34 @@
     const INITIAL_PATH = "Notes/Articles";
 
     const premiumThemes = [
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FAFAFA; color: #2C2C2C; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #EEEEEE; padding-bottom: 20px; color: #111111; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F8F4E6; color: #4A3F35; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; color: #2C241B; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFFFFF; color: #333333; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #E0E0E0; padding-bottom: 20px; color: #000000; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
-        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 1.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FAFAFA; color: #2C2C2C; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #EEEEEE; padding-bottom: 20px; color: #111111; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F8F4E6; color: #4A3F35; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #D5CBBB; padding-bottom: 20px; color: #2C241B; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFFFFF; color: #333333; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #E0E0E0; padding-bottom: 20px; color: #000000; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`,
+        `body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #FFF7F8; color: #4A3B42; } h1 { text-align: center; font-size: 2.2em; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #F0D8DE; padding-bottom: 20px; color: #6E4A55; } p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }`
     ];
 
     window.onload = () => { 
         if (!localStorage.getItem('gh_token')) openTokenSettings(); 
     };
 
+    function setNowDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        
+        document.getElementById('publishDateInput').value = `${year}/${month}/${date} ${hours}:${minutes}:${seconds}`;
+        showToast('🕒 已填入当前系统时间');
+    }
+
     function generateHTML() {
         const input = document.getElementById('inputText').value.trim();
         const originalLink = document.getElementById('originalLink').value.trim(); 
+        const publishDate = document.getElementById('publishDateInput').value.trim();
 
         if (!input) { showToast('⚠️ 纯文本框为空'); return; }
 
@@ -230,8 +249,14 @@
 
         let htmlBody = `    <h1>${articleTitle}</h1>\n`;
 
+        // 如果用户填写了自定义日期，则直接优雅地渲染在标题正下方（匹配灰色低调小字样式）
+        if (publishDate) {
+            htmlBody += `    <div style="text-align: center; margin-top: -0.3em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">发布时间：${publishDate}</div>\n`;
+        }
+
         if (originalLink) {
-            htmlBody += `    <div style="text-align: center; margin-top: -0.5em; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
+            const marginTop = publishDate ? "-0.8em" : "-0.5em";
+            htmlBody += `    <div style="text-align: center; margin-top: ${marginTop}; margin-bottom: 2em; font-size: 0.9em; opacity: 0.8;">\n        <a href="${originalLink}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor;">🔗 阅读原文</a>\n    </div>\n`;
         }
 
         htmlBody += bodyLines.map(p => {
@@ -401,7 +426,7 @@ ${htmlBody}
         // ==========================================
         let highlightWords = new Set();
         async function initCloudHighlights() {
-            const cacheKey = 'bio_remote_hl_words_v2'; // 升级缓存Key，强制清空被墙时的假网页缓存
+            const cacheKey = 'bio_remote_hl_words_v2'; 
             const cached = localStorage.getItem(cacheKey);
             const now = Date.now();
             
@@ -417,11 +442,10 @@ ${htmlBody}
             }
 
             try {
-                // 加入抗封锁代理轮询，应对国内 raw.githubusercontent 污染
                 const urls = [
-'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
-'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
-'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
+                    'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
                 ];
                 
                 let text = '';
@@ -430,7 +454,6 @@ ${htmlBody}
                         const res = await fetch(u);
                         if (res.ok) {
                             text = await res.text();
-                            // 严格防假墙验证，防止存入 Cloudflare 报错网页
                             if (text && !text.includes('<html') && !text.includes('Cloudflare')) {
                                 break;
                             }
@@ -755,12 +778,11 @@ ${htmlBody}
         document.getElementById('outputText').value = fullHtml;
 
         const safeTitle = articleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
-
         const fileNameInput = document.getElementById('inlineFileName');
         fileNameInput.removeAttribute('readonly');
         fileNameInput.value = safeTitle;
 
-        showToast('✨ 转换成功');
+        showToast('✨ 转换成功 (含发布时间样式)');
     }
 
     function generateDateFileName() {
