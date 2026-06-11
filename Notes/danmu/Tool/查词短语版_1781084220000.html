@@ -297,15 +297,19 @@
     const STORE_NAME = 'json_data';
     const DB_VERSION = 3; 
     const PHRASE_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/main/json_data/Phrases.json';
-    const QUEUE_KEY = 'anki_phrase_queue'; 
+    const QUEUE_KEY = 'anki_phrase_keys_only'; 
 
     // 状态管理
     let store = {
-        data: [],          // 全量离线短语数据
-        currentList: [],   // 当前正在被测/渲染的列表数据 (解耦)
-        learningQueue: [], // 集中攻克真实队列数据
-        ankiIndex: 0       // 当前卡片在 currentList 中的绝对索引值
+        data: [],          
+        currentList: [],   
+        learningQueue: [], 
+        ankiIndex: 0       
     };
+
+    // 动画锁与中文输入法（IME）判定锁
+    let isNavigating = false;
+    let isComposing = false; 
 
     const UI = {
         input: document.getElementById('searchInput'),
@@ -364,15 +368,12 @@
     window.addEventListener('DOMContentLoaded', initApp);
 
     async function initApp() {
-        // 加载持久化的集中攻克数据
-        const savedQueue = localStorage.getItem(QUEUE_KEY);
-        if(savedQueue) {
-            try { store.learningQueue = JSON.parse(savedQueue); } catch(e){ store.learningQueue = []; }
-        }
-        updateQueueButtonsUI(); 
-
-        // 默认展现集中攻克列表
-        renderQueueList();
+        // 挂载中文输入法特殊复合锁，阻断多余性能空耗
+        UI.input.addEventListener('compositionstart', () => { isComposing = true; });
+        UI.input.addEventListener('compositionend', (e) => { 
+            isComposing = false; 
+            triggerSearch(e.target.value);
+        });
 
         try {
             const db = await openDB();
@@ -414,17 +415,44 @@
                 setTimeout(() => UI.dbStatusLine.style.display = 'none', 3000);
             }
 
+            loadSavedQueue();
+            renderQueueList();
+
         } catch (err) {
             console.error(err);
             UI.dbStatusLine.style.display = 'block';
             UI.dbStatusLine.style.background = '#ff4d4d';
             UI.dbStatusLine.style.color = '#fff';
             UI.dbStatusLine.innerText = `数据同步失败，请检查网络。`;
+            
+            loadSavedQueue();
+            renderQueueList();
         }
 
         window.addEventListener('popstate', (event) => {
             if (UI.ankiView.classList.contains('active')) closeAnkiView(false);
         });
+    }
+
+    function loadSavedQueue() {
+        const savedKeys = localStorage.getItem(QUEUE_KEY);
+        store.learningQueue = [];
+        if (savedKeys) {
+            try {
+                const keys = JSON.parse(savedKeys);
+                if (Array.isArray(keys)) {
+                    keys.forEach(word => {
+                        const matched = store.data.find(d => d.word === word);
+                        if (matched) {
+                            store.learningQueue.push(JSON.parse(JSON.stringify(matched)));
+                        }
+                    });
+                }
+            } catch (e) {
+                store.learningQueue = [];
+            }
+        }
+        updateQueueButtonsUI();
     }
 
     // --- 4. 核心队列状态同步引擎 ---
@@ -435,7 +463,6 @@
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
-        // 同步卡片视图中右上角星星的状态
         if (UI.ankiView.classList.contains('active')) {
             const currentItem = store.currentList[store.ankiIndex];
             if (currentItem) {
@@ -445,16 +472,13 @@
         }
     }
 
-    // 全局统一的数据增删入口，绝不通过外部直接裁剪数组
     function toggleQueue(safeWord, elementId) {
         const word = decodeURIComponent(safeWord);
         const qIndex = store.learningQueue.findIndex(q => q.word === word);
 
         if (qIndex >= 0) {
-            // 已存在则移除
             store.learningQueue.splice(qIndex, 1); 
         } else {
-            // 不存在则寻找并追加深拷贝对象
             let targetItem = store.data.find(i => i.word === word);
             if (!targetItem) {
                 targetItem = store.currentList.find(i => i.word === word);
@@ -464,11 +488,11 @@
             }
         }
 
-        // 持久化同步
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(store.learningQueue));
+        const keysToSave = store.learningQueue.map(q => q.word);
+        localStorage.setItem(QUEUE_KEY, JSON.stringify(keysToSave));
+        
         updateQueueButtonsUI();
 
-        // 刷新列表单条 HTML 状态
         if (elementId) {
             const el = document.getElementById(elementId);
             if (el) {
@@ -479,14 +503,12 @@
             }
         }
 
-        // 如果用户在空搜索框状态下更新数据，实时刷新首页的“集中攻克”列表
         if (!UI.input.value.trim() && !UI.ankiView.classList.contains('active')) {
             renderQueueList();
         }
     }
 
     function renderQueueList() {
-        // 彻底切断直接引用，防止被其他模式污染
         store.currentList = JSON.parse(JSON.stringify(store.learningQueue));
         if (store.currentList.length === 0) {
             UI.emptyState.style.display = 'flex';
@@ -498,7 +520,6 @@
         }
     }
 
-    // 卡片模式右上角加星/去星触发
     function toggleCurrentAnkiQueue() {
         const currentItem = store.currentList[store.ankiIndex];
         if (currentItem) {
@@ -517,17 +538,21 @@
 
     function startRandomReview() {
         if(store.data.length === 0) return alert('数据尚未加载完毕，请稍候');
-        
-        // 深拷贝切断指针引用，防止随意改动影响主数据集
         const shuffled = JSON.parse(JSON.stringify(store.data)).sort(() => 0.5 - Math.random());
         store.currentList = shuffled.slice(0, 50); 
         openAnkiMode(0);
     }
 
-    // --- 5. 搜索功能与 HTML 模板重绘 ---
+    // --- 5. 搜索功能与 IME 优化解析 ---
     let searchTimeout;
     UI.input.addEventListener('input', (e) => {
-        const val = e.target.value.trim().toLowerCase();
+        // 如果拼音输入法还挂在天空中未落地，死锁直接弹回，绝不往下消耗资源
+        if (isComposing) return; 
+        triggerSearch(e.target.value);
+    });
+
+    function triggerSearch(inputText) {
+        const val = inputText.trim().toLowerCase();
         UI.clearBtn.style.display = val ? 'flex' : 'none';
 
         if (!val) {
@@ -551,8 +576,8 @@
                 return;
             }
             executeRender(store.currentList);
-        }, 200);
-    });
+        }, 150); // 调优至 150ms 反馈手感最佳
+    }
 
     UI.clearBtn.addEventListener('click', () => {
         UI.input.value = '';
@@ -588,7 +613,7 @@
         }
     }
 
-    // --- 6. Anki 翻牌子核心逻辑 ---
+    // --- 6. Anki 卡片交互逻辑（带动画锁拦截机制） ---
     function openAnkiMode(index) {
         if(store.currentList.length === 0) return;
         store.ankiIndex = index;
@@ -601,14 +626,12 @@
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
         
-        // 彻底复原翻页动画
         UI.ankiCard.style.transition = 'none';
         UI.ankiCard.classList.remove('is-flipped');
         
         if(!UI.input.value.trim()) {
             renderQueueList();
         } else {
-            // 如果是在搜索视图中点进去的卡片，回来时重算正确的按钮高亮
             executeRender(store.currentList);
         }
 
@@ -616,19 +639,30 @@
     }
 
     function flipCard() {
+        // 如果卡片自身正在执行切页位移，拦截一切点击事件，彻底防止诡异翻面
+        if (isNavigating) return; 
         UI.ankiCard.classList.toggle('is-flipped');
     }
 
     function navCard(direction) {
+        if (isNavigating) return; // 拦截高频连点
+
         const newIndex = store.ankiIndex + direction;
-        // 边界强制拦截，防止死锁崩溃
         if (newIndex >= 0 && newIndex < store.currentList.length) {
+            isNavigating = true; // 加锁
+            
             UI.ankiCard.style.transition = 'none';
             UI.ankiCard.classList.remove('is-flipped');
-            void UI.ankiCard.offsetWidth; // 触发 reflow 重置动画
-            UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+            void UI.ankiCard.offsetWidth; // 触发 reflow 重绘
+            
+            UI.ankiCard.style.transition = 'transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1)';
             store.ankiIndex = newIndex;
             updateAnkiCardUI();
+            
+            // 400ms位移完成后自动开锁释放点击权限
+            setTimeout(() => {
+                isNavigating = false;
+            }, 400);
         }
     }
 
