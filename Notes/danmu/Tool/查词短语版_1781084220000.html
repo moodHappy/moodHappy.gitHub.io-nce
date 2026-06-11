@@ -19,7 +19,7 @@
         /* --- 1. 全局变量与重置 --- */
         :root {
             --primary: #2c3e50;
-            --accent: #16a085; /* 为了和词汇版区分，短语版采用了稍微偏绿的主题色 */
+            --accent: #16a085; 
             --bg-body: #f4f7f6;
             --bg-card: #ffffff;
             --text-main: #2d3436;
@@ -60,7 +60,7 @@
         }
 
         .header-action-row {
-            height: 48px; display: flex; align-items: center; padding: 0 16px 10px; gap: 12px;
+            height: 48px; display: flex; align-items: center; padding: 0 16px 10px; gap: 8px;
         }
 
         .search-wrapper {
@@ -85,9 +85,10 @@
         /* 功能按钮 */
         .action-btn {
             flex: 1; height: 38px; border: none; border-radius: 12px;
-            background: var(--bg-body); color: var(--primary); font-weight: 600; font-size: 14px;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
+            background: var(--bg-body); color: var(--primary); font-weight: 600; font-size: 13px;
+            display: flex; align-items: center; justify-content: center; gap: 4px;
             box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;
+            white-space: nowrap; padding: 0 4px;
         }
         .action-btn:active { background: #dfe6e9; transform: scale(0.96); }
         .action-btn.highlight { color: #d35400; background: #fff8f0; box-shadow: inset 0 0 0 1px #e67e22; }
@@ -197,6 +198,19 @@
         .md-content { font-size: 16px; line-height: 1.6; color: #333; margin-top: 16px;}
         .md-content strong { color: var(--accent); }
 
+        /* 针对例句引用的 Markdown 样式优化 */
+        .md-content blockquote {
+            margin: 12px 0 0 0;
+            padding: 10px 14px;
+            background: #f8f9fa;
+            border-left: 4px solid var(--accent);
+            border-radius: 0 6px 6px 0;
+            color: #555;
+            font-size: 15px;
+        }
+        .md-content blockquote p { margin: 0 0 8px 0; }
+        .md-content blockquote p:last-child { margin: 0; }
+
         /* 底部操作栏 */
         .anki-controls {
             padding: 16px 20px calc(16px + var(--safe-bottom)); flex-shrink: 0;
@@ -226,7 +240,8 @@
         </div>
         <div class="header-action-row">
             <button class="action-btn" onclick="startRandomReview()">🎲 随便测测</button>
-            <button class="action-btn" id="queueBtn" onclick="startQueueReview()">⭐️ 集中攻克 (0)</button>
+            <button class="action-btn" id="queueBtn" onclick="startQueueReview()">⭐️ 集中 (0)</button>
+            <button class="action-btn" id="recentBtn" onclick="showRecent()">🕒 最近学习</button>
         </div>
     </div>
 
@@ -274,19 +289,21 @@
 
 <script>
     // --- 1. 配置 ---
-    // 更改了 DB_NAME 防止与现有的单词库冲突
     const DB_NAME = 'PhraseDB';
     const STORE_NAME = 'json_data';
-    const DB_VERSION = 1;
+    // 【重要修改】版本号升级为 3，强制刷新本地 IndexedDB 缓存
+    const DB_VERSION = 3; 
     const PHRASE_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/main/json_data/Phrases.json';
-    const QUEUE_KEY = 'anki_phrase_queue'; // 独立的 LocalStorage Key
+    const QUEUE_KEY = 'anki_phrase_queue'; 
+    const RECENT_KEY = 'anki_phrase_recent'; 
 
     // 状态管理
     let store = {
-        data: [],          // 全量短语数据
-        currentList: [],   // 当前列表 (搜索结果 或 队列)
-        learningQueue: [], // 学习队列
-        ankiIndex: 0       // Anki 模式卡片索引
+        data: [],          
+        currentList: [],   
+        learningQueue: [], 
+        recentList: [],    
+        ankiIndex: 0       
     };
 
     const UI = {
@@ -315,7 +332,10 @@
             const req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = e => {
                 const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+                if (db.objectStoreNames.contains(STORE_NAME)) {
+                    db.deleteObjectStore(STORE_NAME);
+                }
+                db.createObjectStore(STORE_NAME);
             };
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
@@ -349,6 +369,12 @@
         }
         updateQueueUI(); 
 
+        // 读取最近学习历史
+        const savedRecent = localStorage.getItem(RECENT_KEY);
+        if(savedRecent) {
+            try { store.recentList = JSON.parse(savedRecent); } catch(e){}
+        }
+
         try {
             const db = await openDB();
             let localData = await getIDBData(db, 'all_phrases');
@@ -357,16 +383,27 @@
                 store.data = localData;
                 UI.syncStatus.innerText = `准备就绪。离线加载了 ${store.data.length} 个短语。`;
             } else {
-                UI.syncStatus.innerText = "首次加载，正在拉取全量短语库，请稍候...";
-                
+                UI.syncStatus.innerText = "正在拉取全量短语库(含例句)，请稍候...";
+
                 const res = await fetch(PHRASE_URL);
                 if (!res.ok) throw new Error("Network response was not ok");
-                
+
                 const jsonData = await res.json();
-                
-                // 将 phrase 和 meaning 映射为旧架构熟悉的 word, content, previewText
+
+                // 【重要修改】使用 Markdown 的引用空行强制切分段落
                 const parsedData = jsonData.filter(item => item && item.phrase).map(item => {
-                    let mdContent = `**释义:** \n${item.meaning}\n\n`;
+                    let mdContent = `**释义:** ${item.meaning}\n\n`;
+
+                    if (item.example_en) {
+                        mdContent += `**例句:**\n> ${item.example_en}\n`;
+                        if (item.example_zh) {
+                            // 使用 "> \n> " 在引用块内部生成独立的段落 (p 标签)
+                            mdContent += `> \n> *${item.example_zh}*\n\n`;
+                        } else {
+                            mdContent += `\n`;
+                        }
+                    }
+
                     return { 
                         word: item.phrase, 
                         content: mdContent, 
@@ -378,6 +415,11 @@
                 store.data = parsedData;
                 UI.syncStatus.innerText = `同步完成！共 ${store.data.length} 个短语已离线存储。`;
             }
+
+            if (store.recentList.length > 0) {
+                setTimeout(showHome, 600);
+            }
+
         } catch (err) {
             console.error(err);
             UI.syncStatus.innerText = `数据同步失败，请检查网络。`;
@@ -388,15 +430,44 @@
         });
     }
 
+    // --- 最近学习逻辑 ---
+    function addToRecent(item) {
+        if (!item) return;
+        store.recentList = store.recentList.filter(i => i.word !== item.word);
+        store.recentList.unshift(item);
+        if (store.recentList.length > 50) store.recentList.pop();
+        localStorage.setItem(RECENT_KEY, JSON.stringify(store.recentList));
+    }
+
+    function showRecent() {
+        UI.input.value = '';
+        UI.clearBtn.style.display = 'none';
+        if (store.recentList.length === 0) {
+            alert('暂无最近学习记录，快去测几个短语吧！');
+            return;
+        }
+        renderList(store.recentList, '🕒 最近学习记录');
+    }
+
+    function showHome() {
+        UI.input.value = '';
+        UI.clearBtn.style.display = 'none';
+        if (store.recentList.length > 0) {
+            renderList(store.recentList, '🕒 最近学习记录');
+        } else {
+            UI.emptyState.style.display = 'flex';
+            UI.resultList.style.display = 'none';
+        }
+    }
+
     // --- 4. 学习队列逻辑 ---
     function updateQueueUI() {
         const count = store.learningQueue.length;
-        UI.queueBtn.innerText = `⭐️ 集中攻克 (${count})`;
+        UI.queueBtn.innerText = `⭐️ 集中 (${count})`; 
 
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
-        // 同步 Anki 卡片内的星星状态
         if (UI.ankiView.classList.contains('active')) {
             const currentItem = store.currentList[store.ankiIndex];
             if (currentItem) {
@@ -411,13 +482,12 @@
         const index = store.learningQueue.findIndex(q => q.word === word);
 
         if (index >= 0) {
-            store.learningQueue.splice(index, 1); // 移出队列
+            store.learningQueue.splice(index, 1); 
         } else {
             const item = store.data.find(i => i.word === word);
-            if (item) store.learningQueue.push(item); // 加入队列
+            if (item) store.learningQueue.push(item); 
         }
 
-        // 存入 LocalStorage 持久化
         localStorage.setItem(QUEUE_KEY, JSON.stringify(store.learningQueue));
         updateQueueUI();
 
@@ -449,7 +519,7 @@
     function startRandomReview() {
         if(store.data.length === 0) return alert('数据尚未加载完毕，请稍候');
         const shuffled = [...store.data].sort(() => 0.5 - Math.random());
-        store.currentList = shuffled.slice(0, 50); // 随机抽取50个测试
+        store.currentList = shuffled.slice(0, 50); 
         openAnkiMode(0);
     }
 
@@ -460,8 +530,7 @@
         UI.clearBtn.style.display = val ? 'flex' : 'none';
 
         if (!val) {
-            UI.emptyState.style.display = 'flex';
-            UI.resultList.style.display = 'none';
+            showHome();
             return;
         }
 
@@ -476,14 +545,11 @@
     });
 
     UI.clearBtn.addEventListener('click', () => {
-        UI.input.value = '';
+        showHome();
         UI.input.focus();
-        UI.clearBtn.style.display = 'none';
-        UI.emptyState.style.display = 'flex';
-        UI.resultList.style.display = 'none';
     });
 
-    function renderList(list) {
+    function renderList(list, title = '') {
         store.currentList = list;
         UI.emptyState.style.display = 'none';
         UI.resultList.style.display = 'block';
@@ -493,8 +559,13 @@
             return;
         }
 
+        let html = '';
+        if (title) {
+            html += `<div style="padding: 4px 4px 12px; font-size: 14px; font-weight: 600; color: #a4b0be;">${title}</div>`;
+        }
+
         const displayList = list.slice(0, 100);
-        UI.resultList.innerHTML = displayList.map((item, index) => {
+        html += displayList.map((item, index) => {
             const preview = item.previewText.slice(0, 40) + (item.previewText.length > 40 ? '...' : '');
             const safeWord = encodeURIComponent(item.word);
             const inQueue = store.learningQueue.some(q => q.word === item.word);
@@ -515,8 +586,10 @@
         }).join('');
 
         if (list.length > 100) {
-            UI.resultList.innerHTML += `<div style="text-align:center; padding:10px; font-size:12px; color:#ccc;">还有 ${list.length - 100} 条未显示...</div>`;
+            html += `<div style="text-align:center; padding:10px; font-size:12px; color:#ccc;">还有 ${list.length - 100} 条未显示...</div>`;
         }
+
+        UI.resultList.innerHTML = html;
     }
 
     // --- 6. Anki 卡片交互 ---
@@ -530,7 +603,13 @@
 
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
-        if(UI.input.value.trim() !== '') renderList(store.currentList);
+        if(UI.input.value.trim() !== '') {
+            renderList(store.currentList);
+        } else if (store.recentList.length > 0) {
+            renderList(store.recentList, '🕒 最近学习记录');
+        } else {
+            showHome();
+        }
         if (triggerHistory && history.state && history.state.page === 'anki') history.back();
     }
 
@@ -553,6 +632,8 @@
     function updateAnkiCardUI() {
         const item = store.currentList[store.ankiIndex];
         if (!item) return;
+
+        addToRecent(item);
 
         UI.frontWord.innerText = item.word;
         UI.backWord.innerText = item.word;
