@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="format-detection" content="telephone=no">
+
+    <title>终极词汇笔记 (三合一)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3389/3389081.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3389/3389081.png">
+
+    <style>
+        /* --- 1. 全局变量与重置 --- */
+        :root {
+            --primary: #222f3e;
+            --accent: #2e86de;
+            --bg-body: #f4f7f6;
+            --bg-card: #ffffff;
+            --text-main: #2d3436;
+            --text-sub: #7f8c8d;
+            --shadow: 0 8px 24px rgba(0,0,0,0.08);
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 2. 顶部导航与模块切换 --- */
+        .app-header {
+            padding-top: var(--safe-top);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            z-index: 100;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 分段控制器 (Tab) */
+        .tab-container {
+            display: flex; padding: 10px 16px 5px; gap: 8px;
+        }
+        .tab-btn {
+            flex: 1; height: 36px; border-radius: 8px; font-size: 14px; font-weight: 600;
+            background: #f1f2f6; color: #576574; border: none; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .tab-btn.active {
+            background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(34, 47, 62, 0.2);
+        }
+
+        .header-search-row { height: 50px; display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+        .header-action-row { height: 48px; display: flex; align-items: center; padding: 0 16px 10px; gap: 12px; }
+
+        .search-wrapper { flex: 1; position: relative; display: flex; align-items: center; }
+        .search-icon { position: absolute; left: 12px; color: #b2bec3; font-size: 16px; }
+
+        input#searchInput {
+            width: 100%; height: 40px; padding: 0 36px; border: none; border-radius: 20px;
+            background: #e8ecef; font-size: 16px; color: var(--primary); transition: all 0.3s;
+        }
+        input#searchInput:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent); }
+
+        .clear-btn {
+            position: absolute; right: 0; width: 36px; height: 100%;
+            display: none; align-items: center; justify-content: center;
+            color: #999; font-size: 14px; cursor: pointer;
+        }
+
+        /* 功能按钮 */
+        .action-btn {
+            flex: 1; height: 38px; border: none; border-radius: 12px;
+            background: var(--bg-body); color: var(--primary); font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;
+        }
+        .action-btn:active { background: #dfe6e9; transform: scale(0.96); }
+        .action-btn.highlight { color: #d35400; background: #fff8f0; box-shadow: inset 0 0 0 1px #e67e22; }
+
+        /* --- 3. 主内容区 --- */
+        .main-scroll-area {
+            flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+            padding: 16px 16px calc(20px + var(--safe-bottom));
+        }
+
+        .empty-state {
+            display: none; flex-direction: column; align-items: center; justify-content: center; height: 60%; text-align: center;
+        }
+        .app-name { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+        .app-subtitle { font-size: 14px; color: var(--text-sub); }
+
+        .result-list { display: block; }
+
+        .word-card {
+            background: var(--bg-card); border-radius: 12px; padding: 12px 16px;
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .word-card:active { background: #fafafa; }
+
+        .card-main { flex: 1; min-width: 0; margin-right: 12px; cursor: pointer; }
+        .card-word { font-size: 17px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+        .card-preview { font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .queue-action {
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; cursor: pointer; transition: transform 0.2s; border-radius: 50%;
+            background: #f1f2f6; flex-shrink: 0;
+        }
+        .queue-action:active { transform: scale(1.1); background: #dfe4ea; }
+        .queue-action.in-queue { background: #fff8f0; }
+
+        /* --- 4. Anki 卡片模式 --- */
+        #ankiView {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #eef2f5; z-index: 200; display: flex; flex-direction: column;
+            transform: translate3d(100%, 0, 0);
+            transition: transform 0.35s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        #ankiView.active { transform: translate3d(0, 0, 0); }
+
+        .anki-nav {
+            padding-top: var(--safe-top); height: calc(50px + var(--safe-top));
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: space-between;
+            padding-left: 10px; padding-right: 16px; flex-shrink: 0;
+        }
+
+        .nav-side { width: 80px; display: flex; align-items: center; }
+        .nav-side.right { justify-content: flex-end; }
+        .back-btn { background: transparent; border: none; font-size: 16px; color: var(--accent); display: flex; align-items: center; font-weight: 500; padding: 10px; cursor: pointer; }
+        .anki-progress { font-size: 14px; font-weight: 600; color: #a4b0be; text-align: center; flex: 1; }
+        .star-btn { background: transparent; border: none; font-size: 22px; cursor: pointer; padding: 10px; transition: transform 0.2s; }
+        .star-btn:active { transform: scale(1.2); }
+
+        .anki-scene { flex: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; padding: 20px; }
+        .anki-card { width: 100%; max-width: 400px; height: 60vh; max-height: 500px; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+        .anki-card.is-flipped { transform: rotateY(180deg); }
+
+        .anki-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px;
+            background: #fff; box-shadow: var(--shadow); display: flex; flex-direction: column;
+            padding: 30px 24px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+        }
+        .anki-face--front { align-items: center; justify-content: center; text-align: center; }
+        .front-word { font-size: 32px; font-weight: 800; color: var(--primary); word-break: break-word;}
+        .tap-hint { margin-top: 30px; font-size: 14px; color: #ced6e0; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        .anki-face--back { transform: rotateY(180deg); display: block;}
+        .back-word { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px; border-bottom: 2px solid #f1f2f6; padding-bottom: 12px;}
+
+        /* Markdown 内容统一样式 */
+        .md-content { font-size: 16px; line-height: 1.6; color: #333; margin-top: 16px;}
+        .md-content strong { color: var(--accent); }
+        .md-content blockquote { margin: 12px 0 0 0; padding: 10px 14px; background: #f8f9fa; border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; color: #555; font-size: 15px;}
+        .md-content blockquote p { margin: 0 0 8px 0; }
+        .md-content blockquote p:last-child { margin: 0; }
+        .md-content .phonetic { font-family: "Lucida Sans Unicode", sans-serif; color: #636e72; font-size: 15px;}
+
+        .anki-controls {
+            padding: 16px 20px calc(16px + var(--safe-bottom)); flex-shrink: 0;
+            display: flex; justify-content: space-between; gap: 16px; background: #fff;
+        }
+        .ctrl-btn { flex: 1; height: 50px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; background: #f1f2f6; color: var(--primary); transition: background 0.2s; cursor: pointer; }
+        .ctrl-btn:active { background: #dfe4ea; transform: scale(0.98); }
+        .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .ctrl-btn.primary { background: var(--accent); color: #fff; }
+        .ctrl-btn.primary:active { background: #117a65; }
+
+        .global-status-bar {
+            background: #eccc68; color: #222f3e; font-size: 12px; font-weight: 600;
+            text-align: center; padding: 4px 10px; display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <div id="dbStatusLine" class="global-status-bar">正在初始化系统...</div>
+        
+        <div class="tab-container">
+            <button class="tab-btn active" data-mode="phrase">常用短语</button>
+            <button class="tab-btn" data-mode="gpt">GPT 生词</button>
+            <button class="tab-btn" data-mode="dict">全量词典</button>
+        </div>
+
+        <div class="header-search-row">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="在[常用短语]中搜索..." autocomplete="off">
+                <div class="clear-btn" id="clearBtn">✕</div>
+            </div>
+        </div>
+        <div class="header-action-row">
+            <button class="action-btn" onclick="startRandomReview()">🎲 随便测测</button>
+            <button class="action-btn" id="queueBtn" onclick="startQueueReview()">⭐️ 集中攻克 (0)</button>
+        </div>
+    </div>
+
+    <div class="main-scroll-area">
+        <div id="emptyState" class="empty-state">
+            <div style="font-size: 60px; margin-bottom: 20px;">⭐️</div>
+            <div class="app-name">集中攻克队列为空</div>
+            <div class="app-subtitle" id="syncStatus">请通过上方搜索框查找并点击 ➕ 号添加</div>
+        </div>
+        <div id="resultList" class="result-list"></div>
+    </div>
+
+    <div id="ankiView">
+        <div class="anki-nav">
+            <div class="nav-side">
+                <button class="back-btn" onclick="closeAnkiView()">
+                    <span style="font-size: 22px; margin-right: 4px; margin-top:-2px;">‹</span> 返回
+                </button>
+            </div>
+            <div class="anki-progress" id="ankiProgress">1 / 10</div>
+            <div class="nav-side right">
+                <button class="star-btn" id="ankiStarBtn" onclick="toggleCurrentAnkiQueue()">☆</button>
+            </div>
+        </div>
+
+        <div class="anki-scene">
+            <div class="anki-card" id="ankiCard" onclick="flipCard()">
+                <div class="anki-face anki-face--front">
+                    <div class="front-word" id="frontWord">Word</div>
+                    <div class="tap-hint">点击翻转卡片</div>
+                </div>
+                <div class="anki-face anki-face--back">
+                    <div class="back-word" id="backWord">Word</div>
+                    <div id="backContent" class="md-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="anki-controls">
+            <button class="ctrl-btn" id="btnPrev" onclick="navCard(-1)">‹ 忘了</button>
+            <button class="ctrl-btn primary" id="btnNext" onclick="navCard(1)">记住了 ›</button>
+        </div>
+    </div>
+
+<script>
+    // --- 1. 三大模块配置与状态隔离 ---
+    const CONFIG = {
+        phrase: {
+            url: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/main/json_data/Phrases.json',
+            qKey: 'anki_phrase_queue',
+            dbName: 'PhraseDB', storeName: 'json_data', version: 3,
+            placeholder: '在[常用短语]中搜索并加入队列...'
+        },
+        gpt: {
+            url: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/gptwords.json',
+            qKey: 'anki_gptwords_queue', cacheKey: 'gptwords_cache_v1',
+            placeholder: '在[GPT生词]中搜索并加入队列...'
+        },
+        dict: {
+            baseUrl: 'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@main/json_data/',
+            qKey: 'anki_dict_queue',
+            dbName: 'DictDB', storeName: 'json_chunks', version: 1,
+            placeholder: '在[全量词典]中搜索并加入队列...'
+        }
+    };
+
+    let activeMode = 'phrase'; 
+    let stores = {
+        phrase: { data: [], currentList: [], learningQueue: [], ankiIndex: 0 },
+        gpt:    { data: [], currentList: [], learningQueue: [], ankiIndex: 0 },
+        dict:   { data: [], currentList: [], learningQueue: [], ankiIndex: 0 }
+    };
+
+    const UI = {
+        tabs: document.querySelectorAll('.tab-btn'),
+        input: document.getElementById('searchInput'),
+        clearBtn: document.getElementById('clearBtn'),
+        emptyState: document.getElementById('emptyState'),
+        resultList: document.getElementById('resultList'),
+        queueBtn: document.getElementById('queueBtn'),
+        dbStatusLine: document.getElementById('dbStatusLine'),
+        
+        ankiView: document.getElementById('ankiView'),
+        ankiCard: document.getElementById('ankiCard'),
+        frontWord: document.getElementById('frontWord'),
+        backWord: document.getElementById('backWord'),
+        backContent: document.getElementById('backContent'),
+        ankiProgress: document.getElementById('ankiProgress'),
+        ankiStarBtn: document.getElementById('ankiStarBtn'),
+        btnPrev: document.getElementById('btnPrev'),
+        btnNext: document.getElementById('btnNext')
+    };
+
+    // --- 2. 通用 IndexedDB 封装 ---
+    function openDB(name, version, storeName) {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(name, version);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(storeName)) db.createObjectStore(storeName);
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    function getIDBData(db, storeName, key) {
+        return new Promise(resolve => {
+            const req = db.transaction(storeName, 'readonly').objectStore(storeName).get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve(null);
+        });
+    }
+
+    function putIDBData(db, storeName, key, data) {
+        return new Promise(resolve => {
+            const req = db.transaction(storeName, 'readwrite').objectStore(storeName).put(data, key);
+            req.onsuccess = () => resolve(true);
+            req.onerror = () => resolve(false);
+        });
+    }
+
+    // --- 3. 初始化与并发数据加载 ---
+    window.addEventListener('DOMContentLoaded', initApp);
+
+    async function initApp() {
+        ['phrase', 'gpt', 'dict'].forEach(mode => {
+            const saved = localStorage.getItem(CONFIG[mode].qKey);
+            if(saved) { try { stores[mode].learningQueue = JSON.parse(saved); } catch(e){} }
+        });
+
+        UI.tabs.forEach(tab => {
+            tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+        });
+
+        switchMode('phrase'); 
+
+        loadPhraseData();
+        loadGPTData();
+        loadDictData();
+
+        window.addEventListener('popstate', (event) => {
+            if (UI.ankiView.classList.contains('active')) closeAnkiView(false);
+        });
+    }
+
+    function switchMode(mode) {
+        activeMode = mode;
+        
+        UI.tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.mode === mode);
+        });
+
+        UI.input.value = '';
+        UI.clearBtn.style.display = 'none';
+        UI.input.placeholder = CONFIG[mode].placeholder;
+
+        if(mode === 'phrase') document.documentElement.style.setProperty('--accent', '#16a085');
+        else if(mode === 'gpt') document.documentElement.style.setProperty('--accent', '#2e86de');
+        else document.documentElement.style.setProperty('--accent', '#8e44ad');
+
+        updateQueueUI();
+        renderQueueList();
+    }
+
+    // --- 数据加载器 ---
+    async function loadPhraseData() {
+        try {
+            const db = await openDB(CONFIG.phrase.dbName, CONFIG.phrase.version, CONFIG.phrase.storeName);
+            let localData = await getIDBData(db, CONFIG.phrase.storeName, 'all_phrases');
+            if (localData && localData.length > 0) { stores.phrase.data = localData; return; }
+
+            const res = await fetch(CONFIG.phrase.url);
+            const jsonData = await res.json();
+            const parsedData = jsonData.filter(i => i && i.phrase).map(item => {
+                let md = `**释义:** ${item.meaning}\n\n`;
+                if (item.example_en) {
+                    md += `**例句:**\n> ${item.example_en}\n`;
+                    if (item.example_zh) md += `> \n> *${item.example_zh}*\n\n`;
+                }
+                return { word: item.phrase, content: md, previewText: item.meaning || '' };
+            });
+            await putIDBData(db, CONFIG.phrase.storeName, 'all_phrases', parsedData);
+            stores.phrase.data = parsedData;
+        } catch (e) { console.error("Phrase load failed", e); }
+    }
+
+    async function loadGPTData() {
+        try {
+            const cached = localStorage.getItem(CONFIG.gpt.cacheKey);
+            if (cached) { stores.gpt.data = JSON.parse(cached); }
+
+            const res = await fetch(CONFIG.gpt.url);
+            const text = await res.text();
+            let rawData = [];
+            try { rawData = JSON.parse(text); } catch (e) {
+                rawData = text.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch(err){ return null; } }).filter(i => i);
+            }
+            if (!Array.isArray(rawData)) rawData = [rawData];
+
+            const parsedData = rawData.map(item => {
+                const md = item.content || '';
+                const preview = md.replace(/[#*`\[\]>-]/g, ' ').replace(/\n/g, ' ').trim();
+                return { word: item.word || 'Unknown', content: md, previewText: preview };
+            });
+
+            if (JSON.stringify(parsedData) !== JSON.stringify(stores.gpt.data)) {
+                stores.gpt.data = parsedData;
+                localStorage.setItem(CONFIG.gpt.cacheKey, JSON.stringify(parsedData));
+            }
+        } catch (e) { console.error("GPT load failed", e); }
+    }
+
+    async function loadDictData() {
+        const fileNames = [];
+        for (let i = 0; i <= 9; i++) fileNames.push(`${i}.json`);
+        for (let i = 97; i <= 122; i++) fileNames.push(`${String.fromCharCode(i)}.json`);
+        fileNames.push('-.json', '..json', "'.json"); 
+
+        try {
+            const db = await openDB(CONFIG.dict.dbName, CONFIG.dict.version, CONFIG.dict.storeName);
+            let combined = [];
+            let allLoaded = true;
+
+            for (let name of fileNames) {
+                const chunk = await getIDBData(db, CONFIG.dict.storeName, name);
+                if (chunk && chunk.length > 0) combined.push(...chunk);
+                else { allLoaded = false; break; }
+            }
+
+            if (allLoaded && combined.length > 0) { stores.dict.data = combined; return; }
+
+            UI.dbStatusLine.style.display = 'block';
+            UI.dbStatusLine.innerText = "后台正在缓存 60MB 全量词典，请稍候...";
+            combined = [];
+
+            const fetchPromises = fileNames.map(async (fileName) => {
+                const safeName = encodeURIComponent(fileName.replace('.json', '')) + '.json';
+                try {
+                    const res = await fetch(CONFIG.dict.baseUrl + safeName);
+                    if (!res.ok) return [];
+                    const jsonData = await res.json();
+                    const parsedData = jsonData.filter(i => i && i.w).map(item => {
+                        let md = "";
+                        if (item.p) md += `**发音:** <span class="phonetic">/${item.p}/</span>\n\n`;
+                        if (item.t) md += `**释义:** \n${item.t}\n\n`;
+                        if (item.d) md += `**用法:** \n${item.d}\n\n`;
+                        return { word: item.w, content: md, previewText: item.t || item.d || '' };
+                    });
+                    await putIDBData(db, CONFIG.dict.storeName, fileName, parsedData);
+                    return parsedData;
+                } catch(e) { return []; }
+            });
+
+            const results = await Promise.all(fetchPromises);
+            for(let arr of results) combined.push(...arr);
+            
+            if(combined.length > 0) {
+                stores.dict.data = combined;
+                UI.dbStatusLine.innerText = "🎉 全量词典缓存完成！";
+                setTimeout(() => UI.dbStatusLine.style.display = 'none', 3000);
+            }
+        } catch (e) { 
+            console.error("Dict load failed", e); 
+            UI.dbStatusLine.style.display = 'none';
+        }
+    }
+
+    // --- 4. 动态路由逻辑 ---
+    function getActiveStore() { return stores[activeMode]; }
+
+    function updateQueueUI() {
+        const s = getActiveStore();
+        const count = s.learningQueue.length;
+        UI.queueBtn.innerText = `⭐️ 集中攻克 (${count})`;
+
+        if (count > 0) UI.queueBtn.classList.add('highlight');
+        else UI.queueBtn.classList.remove('highlight');
+
+        // 终极修复：彻底干掉 `&& UI.ankiView.classList.contains('active')`。
+        // 不管界面是否处于显示状态，只要卡片数据更新了，星星按钮必须无脑同步它的真实状态。
+        const currentItem = s.currentList[s.ankiIndex];
+        if (currentItem) {
+            const inQueue = s.learningQueue.some(q => q.word === currentItem.word);
+            UI.ankiStarBtn.innerText = inQueue ? '⭐️' : '☆';
+        }
+    }
+
+    function toggleQueue(safeWord, elementId) {
+        const s = getActiveStore();
+        const word = decodeURIComponent(safeWord);
+        const index = s.learningQueue.findIndex(q => q.word === word);
+
+        if (index >= 0) {
+            s.learningQueue.splice(index, 1);
+        } else {
+            const item = s.data.find(i => i.word === word) || s.currentList.find(i => i.word === word);
+            if (item) s.learningQueue.push(item);
+        }
+
+        localStorage.setItem(CONFIG[activeMode].qKey, JSON.stringify(s.learningQueue));
+        updateQueueUI();
+
+        if (elementId) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                const inQueue = index < 0;
+                el.innerText = inQueue ? '⭐️' : '➕';
+                if(inQueue) el.classList.add('in-queue');
+                else el.classList.remove('in-queue');
+            }
+        }
+    }
+
+    function renderQueueList() {
+        const s = getActiveStore();
+        s.currentList = [...s.learningQueue];
+        if (s.currentList.length === 0) {
+            UI.emptyState.style.display = 'flex';
+            UI.resultList.style.display = 'none';
+        } else {
+            UI.emptyState.style.display = 'none';
+            UI.resultList.style.display = 'block';
+            executeRender(s.currentList);
+        }
+    }
+
+    function toggleCurrentAnkiQueue() {
+        const s = getActiveStore();
+        const currentItem = s.currentList[s.ankiIndex];
+        if (currentItem) toggleQueue(encodeURIComponent(currentItem.word), null);
+    }
+
+    function startQueueReview() {
+        const s = getActiveStore();
+        if (s.learningQueue.length === 0) return alert('当前频道学习队列为空！\n请先搜索并添加内容。');
+        s.currentList = [...s.learningQueue];
+        openAnkiMode(0);
+    }
+
+    function startRandomReview() {
+        const s = getActiveStore();
+        if(s.data.length === 0) return alert('当前频道数据尚未加载完毕，请稍候');
+        const shuffled = [...s.data].sort(() => 0.5 - Math.random());
+        s.currentList = shuffled.slice(0, 50);
+        openAnkiMode(0);
+    }
+
+    // --- 5. 搜索与渲染 ---
+    let searchTimeout;
+    UI.input.addEventListener('input', (e) => {
+        const val = e.target.value.trim().toLowerCase();
+        UI.clearBtn.style.display = val ? 'flex' : 'none';
+
+        if (!val) { renderQueueList(); return; }
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const s = getActiveStore();
+            const filtered = s.data.filter(item => 
+                (item.word && item.word.toLowerCase().includes(val)) ||
+                (item.previewText && item.previewText.toLowerCase().includes(val))
+            );
+
+            s.currentList = filtered;
+            UI.emptyState.style.display = 'none';
+            UI.resultList.style.display = 'block';
+
+            if (filtered.length === 0) {
+                UI.resultList.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">无匹配结果</div>`;
+                return;
+            }
+            executeRender(filtered);
+        }, 200);
+    });
+
+    UI.clearBtn.addEventListener('click', () => {
+        UI.input.value = '';
+        UI.input.focus();
+        UI.clearBtn.style.display = 'none';
+        renderQueueList();
+    });
+
+    function executeRender(list) {
+        const s = getActiveStore();
+        const displayList = list.slice(0, 100);
+        UI.resultList.innerHTML = displayList.map((item, index) => {
+            const preview = item.previewText.slice(0, 40) + (item.previewText.length > 40 ? '...' : '');
+            const safeWord = encodeURIComponent(item.word).replace(/'/g, "%27");
+            const inQueue = s.learningQueue.some(q => q.word === item.word);
+            const btnId = `qbtn_${index}`;
+
+            return `
+                <div class="word-card">
+                    <div class="card-main" onclick="openAnkiMode(${index})">
+                        <div class="card-word">${item.word}</div>
+                        <div class="card-preview">${preview}</div>
+                    </div>
+                    <div class="queue-action ${inQueue ? 'in-queue' : ''}" id="${btnId}" 
+                         onclick="toggleQueue('${safeWord}', '${btnId}')">
+                        ${inQueue ? '⭐️' : '➕'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (list.length > 100) {
+            UI.resultList.innerHTML += `<div style="text-align:center; padding:10px; font-size:12px; color:#ccc;">还有 ${list.length - 100} 条未显示...</div>`;
+        }
+    }
+
+    // --- 6. Anki 卡片交互 ---
+    function openAnkiMode(index) {
+        const s = getActiveStore();
+        if (!s.currentList || s.currentList.length === 0) return;
+
+        UI.ankiCard.style.transition = 'none';
+        UI.ankiCard.classList.remove('is-flipped');
+        void UI.ankiCard.offsetWidth; 
+        UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+
+        s.ankiIndex = index;
+        updateAnkiCardUI();
+        UI.ankiView.classList.add('active');
+        UI.input.blur();
+        history.pushState({ page: 'anki' }, null, '');
+    }
+
+    function closeAnkiView(triggerHistory = true) {
+        UI.ankiView.classList.remove('active');
+        const s = getActiveStore();
+        
+        if(!UI.input.value.trim()) renderQueueList();
+        else executeRender(s.currentList);
+
+        if (triggerHistory && history.state && history.state.page === 'anki') history.back();
+    }
+
+    function flipCard() { UI.ankiCard.classList.toggle('is-flipped'); }
+
+    let isNavigating = false;
+    function navCard(direction) {
+        if (isNavigating) return;
+        const s = getActiveStore();
+        const newIndex = s.ankiIndex + direction;
+        
+        if (newIndex >= 0 && newIndex < s.currentList.length) {
+            isNavigating = true;
+
+            UI.ankiCard.style.transition = 'none';
+            UI.ankiCard.classList.remove('is-flipped');
+            void UI.ankiCard.offsetWidth; 
+            UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+            
+            s.ankiIndex = newIndex;
+            updateAnkiCardUI();
+
+            setTimeout(() => { isNavigating = false; }, 100);
+        }
+    }
+
+    function updateAnkiCardUI() {
+        const s = getActiveStore();
+        const item = s.currentList[s.ankiIndex];
+        if (!item) return;
+
+        UI.frontWord.innerText = item.word;
+        UI.backWord.innerText = item.word;
+        UI.backContent.innerHTML = item.content ? marked.parse(item.content) : '<p>无详细信息</p>';
+
+        UI.ankiProgress.innerText = `${s.ankiIndex + 1} / ${s.currentList.length}`;
+        UI.btnPrev.disabled = (s.ankiIndex === 0);
+        UI.btnNext.disabled = (s.ankiIndex === s.currentList.length - 1);
+
+        const backFace = document.querySelector('.anki-face--back');
+        if(backFace) backFace.scrollTop = 0;
+
+        updateQueueUI();
+    }
+</script>
+</body>
+</html>
