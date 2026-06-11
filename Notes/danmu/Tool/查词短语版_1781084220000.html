@@ -197,7 +197,6 @@
         .md-content { font-size: 16px; line-height: 1.6; color: #333; margin-top: 16px;}
         .md-content strong { color: var(--accent); }
 
-        /* 针对例句引用的 Markdown 样式优化 */
         .md-content blockquote {
             margin: 12px 0 0 0;
             padding: 10px 14px;
@@ -225,7 +224,6 @@
         .ctrl-btn.primary { background: var(--accent); color: #fff; }
         .ctrl-btn.primary:active { background: #117a65; }
 
-        /* 全局状态通知小条 */
         .global-status-bar {
             background: #eccc68; color: #222f3e; font-size: 12px; font-weight: 600;
             text-align: center; padding: 4px 10px; display: none;
@@ -268,7 +266,7 @@
             </div>
             <div class="anki-progress" id="ankiProgress">1 / 10</div>
             <div class="nav-side right">
-                <button class="star-btn" id="ankiStarBtn" onclick="toggleCurrentAnkiQueue()">⭐️</button>
+                <button class="star-btn" id="ankiStarBtn" onclick="toggleCurrentAnkiQueue()">☆</button>
             </div>
         </div>
 
@@ -297,19 +295,14 @@
     const STORE_NAME = 'json_data';
     const DB_VERSION = 3; 
     const PHRASE_URL = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/main/json_data/Phrases.json';
-    const QUEUE_KEY = 'anki_phrase_keys_only'; 
+    const QUEUE_KEY = 'anki_phrase_queue'; 
 
-    // 状态管理
     let store = {
         data: [],          
         currentList: [],   
         learningQueue: [], 
         ankiIndex: 0       
     };
-
-    // 动画锁与中文输入法（IME）判定锁
-    let isNavigating = false;
-    let isComposing = false; 
 
     const UI = {
         input: document.getElementById('searchInput'),
@@ -320,7 +313,6 @@
         queueBtn: document.getElementById('queueBtn'),
         dbStatusLine: document.getElementById('dbStatusLine'),
 
-        // Anki UI
         ankiView: document.getElementById('ankiView'),
         ankiCard: document.getElementById('ankiCard'),
         frontWord: document.getElementById('frontWord'),
@@ -332,7 +324,7 @@
         btnNext: document.getElementById('btnNext')
     };
 
-    // --- 2. IndexedDB 封装 ---
+    // --- 2. IndexedDB 微型封装 ---
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -364,16 +356,16 @@
         });
     }
 
-    // --- 3. 初始化加载 ---
+    // --- 3. 初始化与下载数据 ---
     window.addEventListener('DOMContentLoaded', initApp);
 
     async function initApp() {
-        // 挂载中文输入法特殊复合锁，阻断多余性能空耗
-        UI.input.addEventListener('compositionstart', () => { isComposing = true; });
-        UI.input.addEventListener('compositionend', (e) => { 
-            isComposing = false; 
-            triggerSearch(e.target.value);
-        });
+        const savedQueue = localStorage.getItem(QUEUE_KEY);
+        if(savedQueue) {
+            try { store.learningQueue = JSON.parse(savedQueue); } catch(e){}
+        }
+        updateQueueUI(); 
+        renderQueueList();
 
         try {
             const db = await openDB();
@@ -415,18 +407,12 @@
                 setTimeout(() => UI.dbStatusLine.style.display = 'none', 3000);
             }
 
-            loadSavedQueue();
-            renderQueueList();
-
         } catch (err) {
             console.error(err);
             UI.dbStatusLine.style.display = 'block';
             UI.dbStatusLine.style.background = '#ff4d4d';
             UI.dbStatusLine.style.color = '#fff';
             UI.dbStatusLine.innerText = `数据同步失败，请检查网络。`;
-            
-            loadSavedQueue();
-            renderQueueList();
         }
 
         window.addEventListener('popstate', (event) => {
@@ -434,82 +420,58 @@
         });
     }
 
-    function loadSavedQueue() {
-        const savedKeys = localStorage.getItem(QUEUE_KEY);
-        store.learningQueue = [];
-        if (savedKeys) {
-            try {
-                const keys = JSON.parse(savedKeys);
-                if (Array.isArray(keys)) {
-                    keys.forEach(word => {
-                        const matched = store.data.find(d => d.word === word);
-                        if (matched) {
-                            store.learningQueue.push(JSON.parse(JSON.stringify(matched)));
-                        }
-                    });
-                }
-            } catch (e) {
-                store.learningQueue = [];
-            }
-        }
-        updateQueueButtonsUI();
-    }
-
-    // --- 4. 核心队列状态同步引擎 ---
-    function updateQueueButtonsUI() {
+    // --- 4. 集中攻克队列逻辑 ---
+    function updateQueueUI() {
         const count = store.learningQueue.length;
         UI.queueBtn.innerText = `⭐️ 集中攻克 (${count})`; 
 
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
-        if (UI.ankiView.classList.contains('active')) {
-            const currentItem = store.currentList[store.ankiIndex];
-            if (currentItem) {
-                const inQueue = store.learningQueue.some(q => q.word === currentItem.word);
-                UI.ankiStarBtn.innerText = inQueue ? '⭐️' : '☆';
-            }
+        // 修复2：不管 ankiView 有没有展开，只要 currentList 存在且指针有效，就更新星星状态
+        const currentItem = store.currentList[store.ankiIndex];
+        if (currentItem) {
+            const inQueue = store.learningQueue.some(q => q.word === currentItem.word);
+            UI.ankiStarBtn.innerText = inQueue ? '⭐️' : '☆';
         }
     }
 
     function toggleQueue(safeWord, elementId) {
         const word = decodeURIComponent(safeWord);
-        const qIndex = store.learningQueue.findIndex(q => q.word === word);
+        const index = store.learningQueue.findIndex(q => q.word === word);
 
-        if (qIndex >= 0) {
-            store.learningQueue.splice(qIndex, 1); 
+        if (index >= 0) {
+            store.learningQueue.splice(index, 1); 
         } else {
-            let targetItem = store.data.find(i => i.word === word);
-            if (!targetItem) {
-                targetItem = store.currentList.find(i => i.word === word);
-            }
-            if (targetItem) {
-                store.learningQueue.push(JSON.parse(JSON.stringify(targetItem)));
-            }
+            const item = store.data.find(i => i.word === word);
+            const fallbackItem = item || store.currentList.find(i => i.word === word);
+            if (fallbackItem) store.learningQueue.push(fallbackItem); 
         }
 
-        const keysToSave = store.learningQueue.map(q => q.word);
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(keysToSave));
-        
-        updateQueueButtonsUI();
+        localStorage.setItem(QUEUE_KEY, JSON.stringify(store.learningQueue));
+        updateQueueUI();
 
         if (elementId) {
             const el = document.getElementById(elementId);
             if (el) {
-                const nowInQueue = store.learningQueue.some(q => q.word === word);
-                el.innerText = nowInQueue ? '⭐️' : '➕';
-                if(nowInQueue) el.classList.add('in-queue');
+                const inQueue = index < 0; 
+                el.innerText = inQueue ? '⭐️' : '➕';
+                if(inQueue) el.classList.add('in-queue');
                 else el.classList.remove('in-queue');
             }
         }
 
-        if (!UI.input.value.trim() && !UI.ankiView.classList.contains('active')) {
-            renderQueueList();
+        // 修复3：核心逻辑！在 Anki 视图正在背单词期间，绝对不允许重新渲染底层列表！
+        // 否则会直接把正在背诵的 currentList 覆盖掉，导致所有词彻底错乱、跳词和消失。
+        if (!UI.ankiView.classList.contains('active')) {
+            if (!UI.input.value.trim()) {
+                renderQueueList();
+            }
         }
     }
 
     function renderQueueList() {
-        store.currentList = JSON.parse(JSON.stringify(store.learningQueue));
+        store.currentList = [...store.learningQueue];
         if (store.currentList.length === 0) {
             UI.emptyState.style.display = 'flex';
             UI.resultList.style.display = 'none';
@@ -522,9 +484,7 @@
 
     function toggleCurrentAnkiQueue() {
         const currentItem = store.currentList[store.ankiIndex];
-        if (currentItem) {
-            toggleQueue(encodeURIComponent(currentItem.word), null);
-        }
+        if (currentItem) toggleQueue(encodeURIComponent(currentItem.word), null);
     }
 
     function startQueueReview() {
@@ -532,27 +492,21 @@
             alert('当前学习队列为空！\n请先通过搜索，点击短语右侧的 ➕ 号添加。');
             return;
         }
-        store.currentList = JSON.parse(JSON.stringify(store.learningQueue));
+        store.currentList = [...store.learningQueue];
         openAnkiMode(0);
     }
 
     function startRandomReview() {
         if(store.data.length === 0) return alert('数据尚未加载完毕，请稍候');
-        const shuffled = JSON.parse(JSON.stringify(store.data)).sort(() => 0.5 - Math.random());
+        const shuffled = [...store.data].sort(() => 0.5 - Math.random());
         store.currentList = shuffled.slice(0, 50); 
         openAnkiMode(0);
     }
 
-    // --- 5. 搜索功能与 IME 优化解析 ---
+    // --- 5. 搜索与渲染 ---
     let searchTimeout;
     UI.input.addEventListener('input', (e) => {
-        // 如果拼音输入法还挂在天空中未落地，死锁直接弹回，绝不往下消耗资源
-        if (isComposing) return; 
-        triggerSearch(e.target.value);
-    });
-
-    function triggerSearch(inputText) {
-        const val = inputText.trim().toLowerCase();
+        const val = e.target.value.trim().toLowerCase();
         UI.clearBtn.style.display = val ? 'flex' : 'none';
 
         if (!val) {
@@ -567,7 +521,7 @@
                 (item.previewText && item.previewText.toLowerCase().includes(val))
             );
 
-            store.currentList = JSON.parse(JSON.stringify(filtered));
+            store.currentList = filtered;
             UI.emptyState.style.display = 'none';
             UI.resultList.style.display = 'block';
 
@@ -575,9 +529,9 @@
                 UI.resultList.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">无匹配结果</div>`;
                 return;
             }
-            executeRender(store.currentList);
-        }, 150); // 调优至 150ms 反馈手感最佳
-    }
+            executeRender(filtered);
+        }, 200);
+    });
 
     UI.clearBtn.addEventListener('click', () => {
         UI.input.value = '';
@@ -613,9 +567,8 @@
         }
     }
 
-    // --- 6. Anki 卡片交互逻辑（带动画锁拦截机制） ---
+    // --- 6. Anki 卡片交互 ---
     function openAnkiMode(index) {
-        if(store.currentList.length === 0) return;
         store.ankiIndex = index;
         updateAnkiCardUI();
         UI.ankiView.classList.add('active');
@@ -626,43 +579,26 @@
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
         
-        UI.ankiCard.style.transition = 'none';
-        UI.ankiCard.classList.remove('is-flipped');
-        
-        if(!UI.input.value.trim()) {
-            renderQueueList();
-        } else {
-            executeRender(store.currentList);
-        }
+        // 退出背诵界面时，这里会安全地恢复底层列表
+        if(!UI.input.value.trim()) renderQueueList();
+        else executeRender(store.currentList);
 
         if (triggerHistory && history.state && history.state.page === 'anki') history.back();
     }
 
     function flipCard() {
-        // 如果卡片自身正在执行切页位移，拦截一切点击事件，彻底防止诡异翻面
-        if (isNavigating) return; 
         UI.ankiCard.classList.toggle('is-flipped');
     }
 
     function navCard(direction) {
-        if (isNavigating) return; // 拦截高频连点
-
         const newIndex = store.ankiIndex + direction;
         if (newIndex >= 0 && newIndex < store.currentList.length) {
-            isNavigating = true; // 加锁
-            
             UI.ankiCard.style.transition = 'none';
             UI.ankiCard.classList.remove('is-flipped');
-            void UI.ankiCard.offsetWidth; // 触发 reflow 重绘
-            
-            UI.ankiCard.style.transition = 'transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1)';
+            void UI.ankiCard.offsetWidth; 
+            UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
             store.ankiIndex = newIndex;
             updateAnkiCardUI();
-            
-            // 400ms位移完成后自动开锁释放点击权限
-            setTimeout(() => {
-                isNavigating = false;
-            }, 400);
         }
     }
 
@@ -681,7 +617,7 @@
         const backFace = document.querySelector('.anki-face--back');
         if(backFace) backFace.scrollTop = 0;
 
-        updateQueueButtonsUI(); 
+        updateQueueUI(); 
     }
 </script>
 </body>
