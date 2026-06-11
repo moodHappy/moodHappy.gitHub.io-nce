@@ -60,7 +60,7 @@
         }
 
         .header-action-row {
-            height: 48px; display: flex; align-items: center; padding: 0 16px 10px; gap: 12px;
+            height: 48px; display: flex; align-items: center; padding: 0 16px 10px; gap: 8px; /* 缩小间距以容纳三个按钮 */
         }
 
         .search-wrapper {
@@ -85,9 +85,10 @@
         /* 功能按钮 (随机 & 队列) */
         .action-btn {
             flex: 1; height: 38px; border: none; border-radius: 12px;
-            background: var(--bg-body); color: var(--primary); font-weight: 600; font-size: 14px;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
+            background: var(--bg-body); color: var(--primary); font-weight: 600; font-size: 13px;
+            display: flex; align-items: center; justify-content: center; gap: 4px;
             box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;
+            white-space: nowrap; padding: 0 4px;
         }
         .action-btn:active { background: #dfe6e9; transform: scale(0.96); }
         .action-btn.highlight { color: #e1b12c; background: #fffdf3; box-shadow: inset 0 0 0 1px #f5cd79; }
@@ -233,7 +234,8 @@
         </div>
         <div class="header-action-row">
             <button class="action-btn" onclick="startRandomReview()">🎲 随便测测</button>
-            <button class="action-btn" id="queueBtn" onclick="startQueueReview()">⭐️ 集中攻克 (0)</button>
+            <button class="action-btn" id="queueBtn" onclick="startQueueReview()">⭐️ 集中 (0)</button>
+            <button class="action-btn" id="recentBtn" onclick="showRecent()">🕒 最近学习</button>
         </div>
     </div>
 
@@ -284,14 +286,16 @@
     const CONFIG = {
         url: 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/gptwords.json',
         cacheKey: 'gptwords_cache_v1',
-        queueKey: 'anki_gptwords_queue' // 独立的学习队列存储键
+        queueKey: 'anki_gptwords_queue',
+        recentKey: 'anki_gptwords_recent' // 新增：独立的最近学习记录本地存储键
     };
 
     // 状态管理
     let store = {
         data: [],          // 全量格式化后的数据
-        currentList: [],   // 当前列表 (搜索结果 或 队列)
+        currentList: [],   // 当前列表 (搜索结果 或 队列 或 最近学习)
         learningQueue: [], // 学习队列
+        recentList: [],    // 最近学习队列
         ankiIndex: 0       // Anki 模式卡片索引
     };
 
@@ -326,6 +330,12 @@
             try { store.learningQueue = JSON.parse(savedQueue); } catch(e){}
         }
         updateQueueUI(); 
+
+        // 读取持久化的最近学习历史
+        const savedRecent = localStorage.getItem(CONFIG.recentKey);
+        if(savedRecent) {
+            try { store.recentList = JSON.parse(savedRecent); } catch(e){}
+        }
 
         // 尝试加载缓存
         const cached = localStorage.getItem(CONFIG.cacheKey);
@@ -372,10 +382,18 @@
                 localStorage.setItem(CONFIG.cacheKey, JSON.stringify(formattedData));
                 UI.syncStatus.innerText = `网络同步完成，共 ${store.data.length} 条记录。`;
             }
+
+            // 数据加载或更新后，如果有最近学习记录，展示首页记录区
+            if (store.recentList.length > 0) {
+                setTimeout(showHome, 600); // 延迟展示防闪烁
+            }
+
         } catch (err) {
             console.log('Background sync failed or offline', err);
             if (store.data.length === 0) {
                 UI.syncStatus.innerText = '加载失败，请检查网络。';
+            } else if (store.recentList.length > 0) {
+                setTimeout(showHome, 600);
             }
         }
 
@@ -384,10 +402,44 @@
         });
     }
 
+    // --- 新增：最近学习逻辑 ---
+    function addToRecent(item) {
+        if (!item) return;
+        // 过滤掉已存在的相同单词，防止重复
+        store.recentList = store.recentList.filter(i => i.word !== item.word);
+        // 添加到头部
+        store.recentList.unshift(item);
+        // 限制只保存最近 50 条
+        if (store.recentList.length > 50) store.recentList.pop();
+        // 保存本地
+        localStorage.setItem(CONFIG.recentKey, JSON.stringify(store.recentList));
+    }
+
+    function showRecent() {
+        UI.input.value = '';
+        UI.clearBtn.style.display = 'none';
+        if (store.recentList.length === 0) {
+            alert('暂无最近学习记录，快去测几个单词吧！');
+            return;
+        }
+        renderList(store.recentList, '🕒 最近学习记录');
+    }
+
+    function showHome() {
+        UI.input.value = '';
+        UI.clearBtn.style.display = 'none';
+        if (store.recentList.length > 0) {
+            renderList(store.recentList, '🕒 最近学习记录');
+        } else {
+            UI.emptyState.style.display = 'flex';
+            UI.resultList.style.display = 'none';
+        }
+    }
+
     // --- 2. 学习队列逻辑 ---
     function updateQueueUI() {
         const count = store.learningQueue.length;
-        UI.queueBtn.innerText = `⭐️ 集中攻克 (${count})`;
+        UI.queueBtn.innerText = `⭐️ 集中 (${count})`;
 
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
@@ -455,8 +507,7 @@
         UI.clearBtn.style.display = val ? 'flex' : 'none';
 
         if (!val) {
-            UI.emptyState.style.display = 'flex';
-            UI.resultList.style.display = 'none';
+            showHome();
             return;
         }
 
@@ -471,14 +522,11 @@
     });
 
     UI.clearBtn.addEventListener('click', () => {
-        UI.input.value = '';
+        showHome();
         UI.input.focus();
-        UI.clearBtn.style.display = 'none';
-        UI.emptyState.style.display = 'flex';
-        UI.resultList.style.display = 'none';
     });
 
-    function renderList(list) {
+    function renderList(list, title = '') {
         store.currentList = list;
         UI.emptyState.style.display = 'none';
         UI.resultList.style.display = 'block';
@@ -488,8 +536,13 @@
             return;
         }
 
+        let html = '';
+        if (title) {
+            html += `<div style="padding: 4px 4px 12px; font-size: 14px; font-weight: 600; color: #a4b0be;">${title}</div>`;
+        }
+
         const displayList = list.slice(0, 100);
-        UI.resultList.innerHTML = displayList.map((item, index) => {
+        html += displayList.map((item, index) => {
             const preview = item.previewText.slice(0, 40) + (item.previewText.length > 40 ? '...' : '');
             const safeWord = encodeURIComponent(item.word);
             const inQueue = store.learningQueue.some(q => q.word === item.word);
@@ -510,8 +563,10 @@
         }).join('');
 
         if (list.length > 100) {
-            UI.resultList.innerHTML += `<div style="text-align:center; padding:10px; font-size:12px; color:#ccc;">还有 ${list.length - 100} 条未显示...</div>`;
+            html += `<div style="text-align:center; padding:10px; font-size:12px; color:#ccc;">还有 ${list.length - 100} 条未显示...</div>`;
         }
+        
+        UI.resultList.innerHTML = html;
     }
 
     // --- 4. Anki 卡片交互 ---
@@ -525,7 +580,14 @@
 
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
-        if(UI.input.value.trim() !== '') renderList(store.currentList);
+        // 关闭 Anki 模式时，如果要保持原来的视图更新
+        if(UI.input.value.trim() !== '') {
+            renderList(store.currentList);
+        } else if (store.recentList.length > 0) {
+            renderList(store.recentList, '🕒 最近学习记录');
+        } else {
+            showHome();
+        }
         if (triggerHistory && history.state && history.state.page === 'anki') history.back();
     }
 
@@ -548,6 +610,9 @@
     function updateAnkiCardUI() {
         const item = store.currentList[store.ankiIndex];
         if (!item) return;
+
+        // 一展示卡片，就将其加入“最近学习”记录中
+        addToRecent(item);
 
         UI.frontWord.innerText = item.word;
         UI.backWord.innerText = item.word;
