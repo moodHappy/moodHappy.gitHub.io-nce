@@ -82,7 +82,6 @@
             color: #999; font-size: 14px; cursor: pointer;
         }
 
-        /* 功能按钮 */
         .action-btn {
             flex: 1; height: 38px; border: none; border-radius: 12px;
             background: var(--bg-body); color: var(--primary); font-weight: 600; font-size: 14px;
@@ -105,7 +104,6 @@
 
         .app-name { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
         .app-subtitle { font-size: 14px; color: var(--text-sub); }
-        .status-text { font-size: 12px; color: #b2bec3; margin-top: 12px; padding: 0 20px;}
 
         .result-list { display: block; }
 
@@ -120,7 +118,6 @@
         .card-word { font-size: 17px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
         .card-preview { font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 队列操作按钮 */
         .queue-action {
             width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
             font-size: 18px; cursor: pointer; transition: transform 0.2s; border-radius: 50%;
@@ -150,7 +147,7 @@
 
         .back-btn {
             background: transparent; border: none; font-size: 16px;
-            color: var(--accent); display: flex; align-items: center; font-weight: 500; padding: 10px;
+            color: var(--accent); display: flex; align-items: center; font-weight: 500; padding: 10px; cursor: pointer;
         }
 
         .anki-progress { font-size: 14px; font-weight: 600; color: #a4b0be; text-align: center; flex: 1; }
@@ -161,7 +158,6 @@
         }
         .star-btn:active { transform: scale(1.2); }
 
-        /* 3D 卡片场景 */
         .anki-scene {
             flex: 1; display: flex; align-items: center; justify-content: center;
             perspective: 1000px; padding: 20px;
@@ -183,14 +179,12 @@
             padding: 30px 24px; overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
 
-        /* 正面样式 */
         .anki-face--front { align-items: center; justify-content: center; text-align: center; }
         .front-word { font-size: 32px; font-weight: 800; color: var(--primary); word-break: break-word;}
         .tap-hint { margin-top: 30px; font-size: 14px; color: #ced6e0; animation: pulse 2s infinite; }
 
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* 背面样式 */
         .anki-face--back { transform: rotateY(180deg); display: block;}
         .back-word { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px; border-bottom: 2px solid #f1f2f6; padding-bottom: 12px;}
 
@@ -209,7 +203,6 @@
         .md-content blockquote p { margin: 0 0 8px 0; }
         .md-content blockquote p:last-child { margin: 0; }
 
-        /* 底部操作栏 */
         .anki-controls {
             padding: 16px 20px calc(16px + var(--safe-bottom)); flex-shrink: 0;
             display: flex; justify-content: space-between; gap: 16px; background: #fff;
@@ -428,7 +421,6 @@
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
-        // 修复2：不管 ankiView 有没有展开，只要 currentList 存在且指针有效，就更新星星状态
         const currentItem = store.currentList[store.ankiIndex];
         if (currentItem) {
             const inQueue = store.learningQueue.some(q => q.word === currentItem.word);
@@ -451,6 +443,8 @@
         localStorage.setItem(QUEUE_KEY, JSON.stringify(store.learningQueue));
         updateQueueUI();
 
+        // 核心修复2：只更新对应 DOM 的样式，绝不触发 renderQueueList 全局重绘。
+        // 这样不仅解决了性能问题，你在列表里删词时，词也不会瞬间消失，给了反悔的机会。
         if (elementId) {
             const el = document.getElementById(elementId);
             if (el) {
@@ -458,14 +452,6 @@
                 el.innerText = inQueue ? '⭐️' : '➕';
                 if(inQueue) el.classList.add('in-queue');
                 else el.classList.remove('in-queue');
-            }
-        }
-
-        // 修复3：核心逻辑！在 Anki 视图正在背单词期间，绝对不允许重新渲染底层列表！
-        // 否则会直接把正在背诵的 currentList 覆盖掉，导致所有词彻底错乱、跳词和消失。
-        if (!UI.ankiView.classList.contains('active')) {
-            if (!UI.input.value.trim()) {
-                renderQueueList();
             }
         }
     }
@@ -544,7 +530,10 @@
         const displayList = list.slice(0, 100);
         UI.resultList.innerHTML = displayList.map((item, index) => {
             const preview = item.previewText.slice(0, 40) + (item.previewText.length > 40 ? '...' : '');
-            const safeWord = encodeURIComponent(item.word);
+            
+            // 核心修复1：解决截图里的 "fall on one's knees" 这类带单引号导致的 HTML 语法闭合错误！
+            const safeWord = encodeURIComponent(item.word).replace(/'/g, "%27");
+            
             const inQueue = store.learningQueue.some(q => q.word === item.word);
             const btnId = `qbtn_${index}`;
 
@@ -569,6 +558,7 @@
 
     // --- 6. Anki 卡片交互 ---
     function openAnkiMode(index) {
+        if (!store.currentList || store.currentList.length === 0) return;
         store.ankiIndex = index;
         updateAnkiCardUI();
         UI.ankiView.classList.add('active');
@@ -579,7 +569,7 @@
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
         
-        // 退出背诵界面时，这里会安全地恢复底层列表
+        // 当真正退出复习界面时，如果搜索框为空，安全刷新列表清理刚才删除的词
         if(!UI.input.value.trim()) renderQueueList();
         else executeRender(store.currentList);
 
@@ -590,15 +580,27 @@
         UI.ankiCard.classList.toggle('is-flipped');
     }
 
+    let isNavigating = false; // 核心修复3：增加导航锁，防手贱连点导致动画乱套
     function navCard(direction) {
+        if (isNavigating) return;
+        
         const newIndex = store.ankiIndex + direction;
         if (newIndex >= 0 && newIndex < store.currentList.length) {
+            isNavigating = true;
+            
             UI.ankiCard.style.transition = 'none';
             UI.ankiCard.classList.remove('is-flipped');
+            
+            // 强制触发一次重绘
             void UI.ankiCard.offsetWidth; 
+            
+            // 恢复动画并切换数据
             UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
             store.ankiIndex = newIndex;
             updateAnkiCardUI();
+            
+            // 释放锁，稍微给点延迟保证动画平滑
+            setTimeout(() => { isNavigating = false; }, 100);
         }
     }
 
