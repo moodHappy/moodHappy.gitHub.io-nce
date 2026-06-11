@@ -301,10 +301,10 @@
 
     // 状态管理
     let store = {
-        data: [],          
-        currentList: [],   
-        learningQueue: [], 
-        ankiIndex: 0       
+        data: [],          // 全量离线短语数据
+        currentList: [],   // 当前正在被测/渲染的列表数据 (解耦)
+        learningQueue: [], // 集中攻克真实队列数据
+        ankiIndex: 0       // 当前卡片在 currentList 中的绝对索引值
     };
 
     const UI = {
@@ -328,7 +328,7 @@
         btnNext: document.getElementById('btnNext')
     };
 
-    // --- 2. IndexedDB 微型封装 ---
+    // --- 2. IndexedDB 封装 ---
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -360,18 +360,18 @@
         });
     }
 
-    // --- 3. 初始化与下载数据 ---
+    // --- 3. 初始化加载 ---
     window.addEventListener('DOMContentLoaded', initApp);
 
     async function initApp() {
-        // 读取持久化的学习队列
+        // 加载持久化的集中攻克数据
         const savedQueue = localStorage.getItem(QUEUE_KEY);
         if(savedQueue) {
-            try { store.learningQueue = JSON.parse(savedQueue); } catch(e){}
+            try { store.learningQueue = JSON.parse(savedQueue); } catch(e){ store.learningQueue = []; }
         }
-        updateQueueUI(); 
+        updateQueueButtonsUI(); 
 
-        // 进入页面直接展现集中攻克列表视图
+        // 默认展现集中攻克列表
         renderQueueList();
 
         try {
@@ -392,7 +392,6 @@
 
                 const parsedData = jsonData.filter(item => item && item.phrase).map(item => {
                     let mdContent = `**释义:** ${item.meaning}\n\n`;
-
                     if (item.example_en) {
                         mdContent += `**例句:**\n> ${item.example_en}\n`;
                         if (item.example_zh) {
@@ -401,7 +400,6 @@
                             mdContent += `\n`;
                         }
                     }
-
                     return { 
                         word: item.phrase, 
                         content: mdContent, 
@@ -429,14 +427,15 @@
         });
     }
 
-    // --- 4. 集中攻克队列逻辑 ---
-    function updateQueueUI() {
+    // --- 4. 核心队列状态同步引擎 ---
+    function updateQueueButtonsUI() {
         const count = store.learningQueue.length;
         UI.queueBtn.innerText = `⭐️ 集中攻克 (${count})`; 
 
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
+        // 同步卡片视图中右上角星星的状态
         if (UI.ankiView.classList.contains('active')) {
             const currentItem = store.currentList[store.ankiIndex];
             if (currentItem) {
@@ -446,39 +445,49 @@
         }
     }
 
+    // 全局统一的数据增删入口，绝不通过外部直接裁剪数组
     function toggleQueue(safeWord, elementId) {
         const word = decodeURIComponent(safeWord);
-        const index = store.learningQueue.findIndex(q => q.word === word);
+        const qIndex = store.learningQueue.findIndex(q => q.word === word);
 
-        if (index >= 0) {
-            store.learningQueue.splice(index, 1); 
+        if (qIndex >= 0) {
+            // 已存在则移除
+            store.learningQueue.splice(qIndex, 1); 
         } else {
-            const item = store.data.find(i => i.word === word);
-            const fallbackItem = item || store.currentList.find(i => i.word === word);
-            if (fallbackItem) store.learningQueue.push(fallbackItem); 
+            // 不存在则寻找并追加深拷贝对象
+            let targetItem = store.data.find(i => i.word === word);
+            if (!targetItem) {
+                targetItem = store.currentList.find(i => i.word === word);
+            }
+            if (targetItem) {
+                store.learningQueue.push(JSON.parse(JSON.stringify(targetItem)));
+            }
         }
 
+        // 持久化同步
         localStorage.setItem(QUEUE_KEY, JSON.stringify(store.learningQueue));
-        updateQueueUI();
+        updateQueueButtonsUI();
 
+        // 刷新列表单条 HTML 状态
         if (elementId) {
             const el = document.getElementById(elementId);
             if (el) {
-                const inQueue = index < 0; 
-                el.innerText = inQueue ? '⭐️' : '➕';
-                if(inQueue) el.classList.add('in-queue');
+                const nowInQueue = store.learningQueue.some(q => q.word === word);
+                el.innerText = nowInQueue ? '⭐️' : '➕';
+                if(nowInQueue) el.classList.add('in-queue');
                 else el.classList.remove('in-queue');
             }
         }
 
-        // 如果处于空输入检索状态，用户增删词时，实时刷新当前列表
-        if (!UI.input.value.trim()) {
+        // 如果用户在空搜索框状态下更新数据，实时刷新首页的“集中攻克”列表
+        if (!UI.input.value.trim() && !UI.ankiView.classList.contains('active')) {
             renderQueueList();
         }
     }
 
     function renderQueueList() {
-        store.currentList = [...store.learningQueue];
+        // 彻底切断直接引用，防止被其他模式污染
+        store.currentList = JSON.parse(JSON.stringify(store.learningQueue));
         if (store.currentList.length === 0) {
             UI.emptyState.style.display = 'flex';
             UI.resultList.style.display = 'none';
@@ -489,9 +498,12 @@
         }
     }
 
+    // 卡片模式右上角加星/去星触发
     function toggleCurrentAnkiQueue() {
         const currentItem = store.currentList[store.ankiIndex];
-        if (currentItem) toggleQueue(encodeURIComponent(currentItem.word), null);
+        if (currentItem) {
+            toggleQueue(encodeURIComponent(currentItem.word), null);
+        }
     }
 
     function startQueueReview() {
@@ -499,18 +511,20 @@
             alert('当前学习队列为空！\n请先通过搜索，点击短语右侧的 ➕ 号添加。');
             return;
         }
-        store.currentList = [...store.learningQueue];
+        store.currentList = JSON.parse(JSON.stringify(store.learningQueue));
         openAnkiMode(0);
     }
 
     function startRandomReview() {
         if(store.data.length === 0) return alert('数据尚未加载完毕，请稍候');
-        const shuffled = [...store.data].sort(() => 0.5 - Math.random());
+        
+        // 深拷贝切断指针引用，防止随意改动影响主数据集
+        const shuffled = JSON.parse(JSON.stringify(store.data)).sort(() => 0.5 - Math.random());
         store.currentList = shuffled.slice(0, 50); 
         openAnkiMode(0);
     }
 
-    // --- 5. 搜索与渲染 ---
+    // --- 5. 搜索功能与 HTML 模板重绘 ---
     let searchTimeout;
     UI.input.addEventListener('input', (e) => {
         const val = e.target.value.trim().toLowerCase();
@@ -527,8 +541,8 @@
                 (item.word && item.word.toLowerCase().includes(val)) ||
                 (item.previewText && item.previewText.toLowerCase().includes(val))
             );
-            
-            store.currentList = filtered;
+
+            store.currentList = JSON.parse(JSON.stringify(filtered));
             UI.emptyState.style.display = 'none';
             UI.resultList.style.display = 'block';
 
@@ -536,7 +550,7 @@
                 UI.resultList.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">无匹配结果</div>`;
                 return;
             }
-            executeRender(filtered);
+            executeRender(store.currentList);
         }, 200);
     });
 
@@ -574,8 +588,9 @@
         }
     }
 
-    // --- 6. Anki 卡片交互 ---
+    // --- 6. Anki 翻牌子核心逻辑 ---
     function openAnkiMode(index) {
+        if(store.currentList.length === 0) return;
         store.ankiIndex = index;
         updateAnkiCardUI();
         UI.ankiView.classList.add('active');
@@ -585,9 +600,18 @@
 
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
-        if(!UI.input.value.trim()) renderQueueList();
-        else executeRender(store.currentList);
         
+        // 彻底复原翻页动画
+        UI.ankiCard.style.transition = 'none';
+        UI.ankiCard.classList.remove('is-flipped');
+        
+        if(!UI.input.value.trim()) {
+            renderQueueList();
+        } else {
+            // 如果是在搜索视图中点进去的卡片，回来时重算正确的按钮高亮
+            executeRender(store.currentList);
+        }
+
         if (triggerHistory && history.state && history.state.page === 'anki') history.back();
     }
 
@@ -597,10 +621,11 @@
 
     function navCard(direction) {
         const newIndex = store.ankiIndex + direction;
+        // 边界强制拦截，防止死锁崩溃
         if (newIndex >= 0 && newIndex < store.currentList.length) {
             UI.ankiCard.style.transition = 'none';
             UI.ankiCard.classList.remove('is-flipped');
-            void UI.ankiCard.offsetWidth; 
+            void UI.ankiCard.offsetWidth; // 触发 reflow 重置动画
             UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
             store.ankiIndex = newIndex;
             updateAnkiCardUI();
@@ -622,9 +647,8 @@
         const backFace = document.querySelector('.anki-face--back');
         if(backFace) backFace.scrollTop = 0;
 
-        updateQueueUI(); 
+        updateQueueButtonsUI(); 
     }
-
 </script>
 </body>
 </html>
