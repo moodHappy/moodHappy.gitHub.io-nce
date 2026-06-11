@@ -150,7 +150,7 @@
 
         .back-btn {
             background: transparent; border: none; font-size: 16px;
-            color: var(--accent); display: flex; align-items: center; font-weight: 500; padding: 10px;
+            color: var(--accent); display: flex; align-items: center; font-weight: 500; padding: 10px; cursor: pointer;
         }
 
         .anki-progress { font-size: 14px; font-weight: 600; color: #a4b0be; text-align: center; flex: 1; }
@@ -262,7 +262,7 @@
             </div>
             <div class="anki-progress" id="ankiProgress">1 / 10</div>
             <div class="nav-side right">
-                <button class="star-btn" id="ankiStarBtn" onclick="toggleCurrentAnkiQueue()">⭐️</button>
+                <button class="star-btn" id="ankiStarBtn" onclick="toggleCurrentAnkiQueue()">☆</button>
             </div>
         </div>
 
@@ -404,12 +404,10 @@
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
-        if (UI.ankiView.classList.contains('active')) {
-            const currentItem = store.currentList[store.ankiIndex];
-            if (currentItem) {
-                const inQueue = store.learningQueue.some(q => q.word === currentItem.word);
-                UI.ankiStarBtn.innerText = inQueue ? '⭐️' : '☆';
-            }
+        const currentItem = store.currentList[store.ankiIndex];
+        if (currentItem) {
+            const inQueue = store.learningQueue.some(q => q.word === currentItem.word);
+            UI.ankiStarBtn.innerText = inQueue ? '⭐️' : '☆';
         }
     }
 
@@ -428,6 +426,7 @@
         localStorage.setItem(CONFIG.queueKey, JSON.stringify(store.learningQueue));
         updateQueueUI();
 
+        // 修复：只更新DOM样式，绝不触发 renderQueueList 全局重绘。防列表坍塌、防复习错乱。
         if (elementId) {
             const el = document.getElementById(elementId);
             if (el) {
@@ -436,11 +435,6 @@
                 if(inQueue) el.classList.add('in-queue');
                 else el.classList.remove('in-queue');
             }
-        }
-
-        // 如果用户未开启搜索，在集中攻克列表增删词时，实时刷新主视图
-        if (!UI.input.value.trim()) {
-            renderQueueList();
         }
     }
 
@@ -518,7 +512,10 @@
         const displayList = list.slice(0, 100);
         UI.resultList.innerHTML = displayList.map((item, index) => {
             const preview = item.previewText.slice(0, 40) + (item.previewText.length > 40 ? '...' : '');
-            const safeWord = encodeURIComponent(item.word);
+            
+            // 修复：处理单引号等字符，防止 HTML 属性解析截断报错。
+            const safeWord = encodeURIComponent(item.word).replace(/'/g, "%27");
+            
             const inQueue = store.learningQueue.some(q => q.word === item.word);
             const btnId = `qbtn_${index}`;
 
@@ -543,6 +540,14 @@
 
     // --- 4. Anki 卡片交互 ---
     function openAnkiMode(index) {
+        if (!store.currentList || store.currentList.length === 0) return;
+
+        // 修复：强制剥离翻转状态，保证每次打开肯定是卡片正面
+        UI.ankiCard.style.transition = 'none';
+        UI.ankiCard.classList.remove('is-flipped');
+        void UI.ankiCard.offsetWidth; 
+        UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+
         store.ankiIndex = index;
         updateAnkiCardUI();
         UI.ankiView.classList.add('active');
@@ -564,15 +569,23 @@
     }
 
     // 切卡
+    let isNavigating = false; // 修复：防止极速连点造成的卡片重叠、动画撕裂
     function navCard(direction) {
+        if (isNavigating) return;
+
         const newIndex = store.ankiIndex + direction;
         if (newIndex >= 0 && newIndex < store.currentList.length) {
+            isNavigating = true;
+
             UI.ankiCard.style.transition = 'none';
             UI.ankiCard.classList.remove('is-flipped');
             void UI.ankiCard.offsetWidth; 
             UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+            
             store.ankiIndex = newIndex;
             updateAnkiCardUI();
+
+            setTimeout(() => { isNavigating = false; }, 100);
         }
     }
 
