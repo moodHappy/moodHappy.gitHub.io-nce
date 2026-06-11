@@ -443,8 +443,6 @@
         localStorage.setItem(QUEUE_KEY, JSON.stringify(store.learningQueue));
         updateQueueUI();
 
-        // 核心修复2：只更新对应 DOM 的样式，绝不触发 renderQueueList 全局重绘。
-        // 这样不仅解决了性能问题，你在列表里删词时，词也不会瞬间消失，给了反悔的机会。
         if (elementId) {
             const el = document.getElementById(elementId);
             if (el) {
@@ -531,7 +529,6 @@
         UI.resultList.innerHTML = displayList.map((item, index) => {
             const preview = item.previewText.slice(0, 40) + (item.previewText.length > 40 ? '...' : '');
             
-            // 核心修复1：解决截图里的 "fall on one's knees" 这类带单引号导致的 HTML 语法闭合错误！
             const safeWord = encodeURIComponent(item.word).replace(/'/g, "%27");
             
             const inQueue = store.learningQueue.some(q => q.word === item.word);
@@ -559,6 +556,15 @@
     // --- 6. Anki 卡片交互 ---
     function openAnkiMode(index) {
         if (!store.currentList || store.currentList.length === 0) return;
+
+        // 【终极修复4：入场前强制剥离翻转状态】
+        // 取消过渡动画，瞬间去掉 is-flipped 类，然后重绘，再加回动画。
+        // 彻底解决不管上次在正面还是背面退出的，再次进入永远保证卡片朝前！
+        UI.ankiCard.style.transition = 'none';
+        UI.ankiCard.classList.remove('is-flipped');
+        void UI.ankiCard.offsetWidth; 
+        UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+
         store.ankiIndex = index;
         updateAnkiCardUI();
         UI.ankiView.classList.add('active');
@@ -569,7 +575,6 @@
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
         
-        // 当真正退出复习界面时，如果搜索框为空，安全刷新列表清理刚才删除的词
         if(!UI.input.value.trim()) renderQueueList();
         else executeRender(store.currentList);
 
@@ -580,7 +585,7 @@
         UI.ankiCard.classList.toggle('is-flipped');
     }
 
-    let isNavigating = false; // 核心修复3：增加导航锁，防手贱连点导致动画乱套
+    let isNavigating = false;
     function navCard(direction) {
         if (isNavigating) return;
         
@@ -591,15 +596,12 @@
             UI.ankiCard.style.transition = 'none';
             UI.ankiCard.classList.remove('is-flipped');
             
-            // 强制触发一次重绘
             void UI.ankiCard.offsetWidth; 
             
-            // 恢复动画并切换数据
             UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
             store.ankiIndex = newIndex;
             updateAnkiCardUI();
             
-            // 释放锁，稍微给点延迟保证动画平滑
             setTimeout(() => { isNavigating = false; }, 100);
         }
     }
