@@ -106,10 +106,10 @@
         /* --- 3. 主内容区 --- */
         .main-scroll-area {
             flex: 1; 
-            min-height: 0; /* 核心修复：防止 flex 子项撑破容器导致 Edge 无法滚动 */
+            min-height: 0; 
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch;
-            overscroll-behavior-y: contain; /* 防止链式滚动导致的滑动卡顿 */
+            overscroll-behavior-y: contain; 
             padding: 16px 16px calc(20px + var(--safe-bottom));
         }
 
@@ -177,11 +177,20 @@
         .tap-hint { margin-top: 30px; font-size: 14px; color: #ced6e0; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        .anki-face--back { transform: rotateY(180deg); display: block;}
-        .back-word { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px; border-bottom: 2px solid #f1f2f6; padding-bottom: 12px;}
+        .anki-face--back { transform: rotateY(180deg); display: flex; flex-direction: column;}
+        
+        /* 背面标题区和复制按钮的新样式 */
+        .back-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; border-bottom: 2px solid #f1f2f6; padding-bottom: 12px; flex-shrink: 0;}
+        .back-word { font-size: 24px; font-weight: 700; color: var(--primary); word-break: break-word;}
+        .copy-btn {
+            background: #f1f2f6; border: none; padding: 6px 10px; border-radius: 6px;
+            font-size: 13px; color: var(--accent); cursor: pointer; font-weight: 600;
+            transition: all 0.2s; display: none; flex-shrink: 0; margin-left: 12px;
+        }
+        .copy-btn:active { background: #dfe4ea; transform: scale(0.95); }
 
         /* Markdown 内容统一样式 */
-        .md-content { font-size: 16px; line-height: 1.6; color: #333; margin-top: 16px;}
+        .md-content { flex: 1; font-size: 16px; line-height: 1.6; color: #333; margin-top: 4px; overflow-y: auto;}
         .md-content strong { color: var(--accent); }
         .md-content blockquote { margin: 12px 0 0 0; padding: 10px 14px; background: #f8f9fa; border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; color: #555; font-size: 15px;}
         .md-content blockquote p { margin: 0 0 8px 0; }
@@ -257,7 +266,10 @@
                     <div class="tap-hint">点击翻转卡片</div>
                 </div>
                 <div class="anki-face anki-face--back">
-                    <div class="back-word" id="backWord">Word</div>
+                    <div class="back-header">
+                        <div class="back-word" id="backWord">Word</div>
+                        <button id="copyBackBtn" class="copy-btn" onclick="copyCardContent(event)">📋 复制</button>
+                    </div>
                     <div id="backContent" class="md-content"></div>
                 </div>
             </div>
@@ -315,7 +327,8 @@
         ankiProgress: document.getElementById('ankiProgress'),
         ankiStarBtn: document.getElementById('ankiStarBtn'),
         btnPrev: document.getElementById('btnPrev'),
-        btnNext: document.getElementById('btnNext')
+        btnNext: document.getElementById('btnNext'),
+        copyBackBtn: document.getElementById('copyBackBtn') // 绑定复制按钮
     };
 
     // --- 2. 通用 IndexedDB 封装 ---
@@ -520,7 +533,6 @@
             s.learningQueue.splice(index, 1);
         } else {
             const item = s.data.find(i => i.word === word) || s.currentList.find(i => i.word === word);
-            // 改为 unshift：新加入的数据会插入到数组最前面（置顶）
             if (item) s.learningQueue.unshift(item); 
         }
 
@@ -681,6 +693,10 @@
             s.ankiIndex = newIndex;
             updateAnkiCardUI();
 
+            // 翻页后重置复制按钮状态
+            UI.copyBackBtn.innerText = '📋 复制';
+            UI.copyBackBtn.style.color = 'var(--accent)';
+
             setTimeout(() => { isNavigating = false; }, 100);
         }
     }
@@ -698,10 +714,77 @@
         UI.btnPrev.disabled = (s.ankiIndex === 0);
         UI.btnNext.disabled = (s.ankiIndex === s.currentList.length - 1);
 
+        // 仅在 GPT 生词模式下显示复制按钮
+        UI.copyBackBtn.style.display = (activeMode === 'gpt') ? 'block' : 'none';
+
         const backFace = document.querySelector('.anki-face--back');
         if(backFace) backFace.scrollTop = 0;
 
         updateQueueUI();
+    }
+
+    // --- 7. 复制背面内容功能 ---
+    function copyCardContent(event) {
+        // 阻止事件冒泡，防止触发外层卡片的 flipCard() 点击翻转事件
+        event.stopPropagation(); 
+        
+        const s = getActiveStore();
+        const item = s.currentList[s.ankiIndex];
+        if (!item) return;
+
+        // 组合单词和背面的原始 Markdown 内容进行复制
+        const textToCopy = `${item.word}\n\n${item.content || '无详细信息'}`;
+
+        const successCallback = () => {
+            UI.copyBackBtn.innerText = '✅ 已复制';
+            UI.copyBackBtn.style.color = '#27ae60';
+            setTimeout(() => {
+                // 如果用户没有翻页，2秒后恢复原状
+                if (UI.copyBackBtn.innerText === '✅ 已复制') {
+                    UI.copyBackBtn.innerText = '📋 复制';
+                    UI.copyBackBtn.style.color = 'var(--accent)';
+                }
+            }, 2000);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(successCallback).catch(err => {
+                console.error('Clipboard API 失败，尝试后备方案', err);
+                fallbackCopyTextToClipboard(textToCopy, successCallback);
+            });
+        } else {
+            fallbackCopyTextToClipboard(textToCopy, successCallback);
+        }
+    }
+
+    function fallbackCopyTextToClipboard(text, cb) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // 确保不会触发滚动条跳动
+        textArea.style.position = "fixed";
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.width = "2em";
+        textArea.style.height = "2em";
+        textArea.style.padding = "0";
+        textArea.style.border = "none";
+        textArea.style.outline = "none";
+        textArea.style.boxShadow = "none";
+        textArea.style.background = "transparent";
+        
+        document.body.appendChild(textArea);
+        textArea.focus(); 
+        textArea.select();
+        try {
+            if(document.execCommand('copy')) {
+                cb();
+            }
+        } catch (err) {
+            console.error('后备复制方案失败', err);
+            alert("复制失败，请手动选择文本进行复制");
+        }
+        document.body.removeChild(textArea);
     }
 </script>
 </body>
