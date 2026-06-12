@@ -31,13 +31,20 @@
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
+        /* 修复 Edge 滚动问题：引入 html, body 统一高度，并使用动态视口 dvh */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            height: 100dvh; 
+            overflow: hidden;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-body);
             color: var(--text-main);
-            margin: 0;
-            height: 100vh;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
@@ -98,7 +105,11 @@
 
         /* --- 3. 主内容区 --- */
         .main-scroll-area {
-            flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+            flex: 1; 
+            min-height: 0; /* 核心修复：防止 flex 子项撑破容器导致 Edge 无法滚动 */
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain; /* 防止链式滚动导致的滑动卡顿 */
             padding: 16px 16px calc(20px + var(--safe-bottom));
         }
 
@@ -197,7 +208,7 @@
 
     <div class="app-header">
         <div id="dbStatusLine" class="global-status-bar">正在初始化系统...</div>
-        
+
         <div class="tab-container">
             <button class="tab-btn active" data-mode="phrase">常用短语</button>
             <button class="tab-btn" data-mode="gpt">GPT 生词</button>
@@ -295,7 +306,7 @@
         resultList: document.getElementById('resultList'),
         queueBtn: document.getElementById('queueBtn'),
         dbStatusLine: document.getElementById('dbStatusLine'),
-        
+
         ankiView: document.getElementById('ankiView'),
         ankiCard: document.getElementById('ankiCard'),
         frontWord: document.getElementById('frontWord'),
@@ -362,7 +373,7 @@
 
     function switchMode(mode) {
         activeMode = mode;
-        
+
         UI.tabs.forEach(tab => {
             tab.classList.toggle('active', tab.dataset.mode === mode);
         });
@@ -470,7 +481,7 @@
 
             const results = await Promise.all(fetchPromises);
             for(let arr of results) combined.push(...arr);
-            
+
             if(combined.length > 0) {
                 stores.dict.data = combined;
                 UI.dbStatusLine.innerText = "🎉 全量词典缓存完成！";
@@ -493,8 +504,6 @@
         if (count > 0) UI.queueBtn.classList.add('highlight');
         else UI.queueBtn.classList.remove('highlight');
 
-        // 终极修复：彻底干掉 `&& UI.ankiView.classList.contains('active')`。
-        // 不管界面是否处于显示状态，只要卡片数据更新了，星星按钮必须无脑同步它的真实状态。
         const currentItem = s.currentList[s.ankiIndex];
         if (currentItem) {
             const inQueue = s.learningQueue.some(q => q.word === currentItem.word);
@@ -511,7 +520,8 @@
             s.learningQueue.splice(index, 1);
         } else {
             const item = s.data.find(i => i.word === word) || s.currentList.find(i => i.word === word);
-            if (item) s.learningQueue.push(item);
+            // 改为 unshift：新加入的数据会插入到数组最前面（置顶）
+            if (item) s.learningQueue.unshift(item); 
         }
 
         localStorage.setItem(CONFIG[activeMode].qKey, JSON.stringify(s.learningQueue));
@@ -645,7 +655,7 @@
     function closeAnkiView(triggerHistory = true) {
         UI.ankiView.classList.remove('active');
         const s = getActiveStore();
-        
+
         if(!UI.input.value.trim()) renderQueueList();
         else executeRender(s.currentList);
 
@@ -659,7 +669,7 @@
         if (isNavigating) return;
         const s = getActiveStore();
         const newIndex = s.ankiIndex + direction;
-        
+
         if (newIndex >= 0 && newIndex < s.currentList.length) {
             isNavigating = true;
 
@@ -667,7 +677,7 @@
             UI.ankiCard.classList.remove('is-flipped');
             void UI.ankiCard.offsetWidth; 
             UI.ankiCard.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
-            
+
             s.ankiIndex = newIndex;
             updateAnkiCardUI();
 
