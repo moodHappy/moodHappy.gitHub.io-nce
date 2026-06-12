@@ -328,7 +328,7 @@
         ankiStarBtn: document.getElementById('ankiStarBtn'),
         btnPrev: document.getElementById('btnPrev'),
         btnNext: document.getElementById('btnNext'),
-        copyBackBtn: document.getElementById('copyBackBtn') // 绑定复制按钮
+        copyBackBtn: document.getElementById('copyBackBtn')
     };
 
     // --- 2. 通用 IndexedDB 封装 ---
@@ -693,7 +693,6 @@
             s.ankiIndex = newIndex;
             updateAnkiCardUI();
 
-            // 翻页后重置复制按钮状态
             UI.copyBackBtn.innerText = '📋 复制';
             UI.copyBackBtn.style.color = 'var(--accent)';
 
@@ -714,7 +713,6 @@
         UI.btnPrev.disabled = (s.ankiIndex === 0);
         UI.btnNext.disabled = (s.ankiIndex === s.currentList.length - 1);
 
-        // 仅在 GPT 生词模式下显示复制按钮
         UI.copyBackBtn.style.display = (activeMode === 'gpt') ? 'block' : 'none';
 
         const backFace = document.querySelector('.anki-face--back');
@@ -723,23 +721,23 @@
         updateQueueUI();
     }
 
-    // --- 7. 复制背面内容功能 ---
+    // --- 7. 复制背面内容功能 (带正则清理空行) ---
     function copyCardContent(event) {
-        // 阻止事件冒泡，防止触发外层卡片的 flipCard() 点击翻转事件
         event.stopPropagation(); 
         
         const s = getActiveStore();
         const item = s.currentList[s.ankiIndex];
         if (!item) return;
 
-        // 组合单词和背面的原始 Markdown 内容进行复制
-        const textToCopy = `${item.word}\n\n${item.content || '无详细信息'}`;
+        // 【核心修复】：利用正则将连续的大于等于2个的换行符（及其之间的空格）统一替换为2个换行符（即1个空行）
+        const rawContent = item.content || '无详细信息';
+        const cleanContent = rawContent.replace(/(\r?\n\s*){2,}/g, '\n\n');
+        const textToCopy = `${item.word}\n\n${cleanContent}`.trim();
 
         const successCallback = () => {
             UI.copyBackBtn.innerText = '✅ 已复制';
             UI.copyBackBtn.style.color = '#27ae60';
             setTimeout(() => {
-                // 如果用户没有翻页，2秒后恢复原状
                 if (UI.copyBackBtn.innerText === '✅ 已复制') {
                     UI.copyBackBtn.innerText = '📋 复制';
                     UI.copyBackBtn.style.color = 'var(--accent)';
@@ -761,7 +759,6 @@
         const textArea = document.createElement("textarea");
         textArea.value = text;
         
-        // 确保不会触发滚动条跳动
         textArea.style.position = "fixed";
         textArea.style.top = "0";
         textArea.style.left = "0";
