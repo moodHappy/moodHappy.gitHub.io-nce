@@ -15,7 +15,7 @@
     <h2>自动化清理工具</h2>
     <p><small>输入或粘贴内容后，结果将自动生成：</small></p>
     <textarea id="inputBox" oninput="processText()" placeholder="请粘贴文本..."></textarea>
-    
+
     <button id="copyBtn" onclick="copyResult()">一键复制结果</button>
 
     <h3>处理结果：</h3>
@@ -24,7 +24,7 @@
     <script>
         function processText() {
             let input = document.getElementById('inputBox').value;
-            
+
             // 1. 自动过滤：截断三个及以上连续换行符
             const cutIndex = input.search(/\n{3,}/);
             if (cutIndex !== -1) {
@@ -32,9 +32,19 @@
             }
 
             // 2. 自动清洗：删除 # 和 *
-            const cleaned = input.replace(/[#*]/g, '');
-            
-            // 3. 实时显示
+            let cleaned = input.replace(/[#*]/g, '');
+
+            // 3. 中文标题自动换行并去除括号
+            // 匹配逻辑：匹配任意前置空格 + 全/半角括号 + 内部含有中文字符的内容
+            // 替换逻辑：将其替换为换行符 + 括号内的内容
+            cleaned = cleaned.replace(/[ \t]*[\(（]([\u4e00-\u9fa5][^()（）]*)[\)）]/g, '\n$1');
+
+            // 4. 去除所有剩余的括号，但保留内部内容
+            // 匹配逻辑：全/半角括号及其内部的所有内容
+            // 替换逻辑：只保留括号内的内容
+            cleaned = cleaned.replace(/[\(（](.*?)[\)）]/g, '$1');
+
+            // 5. 实时显示
             document.getElementById('output').innerText = cleaned;
         }
 
