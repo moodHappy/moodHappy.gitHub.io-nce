@@ -217,14 +217,12 @@
             localStorage.setItem('cleanerKeywords', JSON.stringify(keywords));
         }
 
-        // 刷新下拉菜单显示
         function loadKeywordsToSelect() {
             const keywords = getSavedKeywords();
             const select = document.getElementById('keywordSelect');
-            select.innerHTML = ''; // 清空所有选项
+            select.innerHTML = ''; 
             
             if (keywords.length === 0) {
-                // 如果没有词条，显示一个无法选中的占位符
                 const option = document.createElement('option');
                 option.value = "";
                 option.text = "暂无词条";
@@ -233,7 +231,6 @@
                 option.hidden = true;
                 select.add(option);
             } else {
-                // 如果有词条，全部填充进去，并默认选中第一个
                 keywords.forEach(kw => {
                     const option = document.createElement('option');
                     option.value = kw;
@@ -263,7 +260,6 @@
             const modal = document.getElementById('settingsModal');
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('show'), 10);
-            
             document.getElementById('gearIcon').classList.remove('show');
             clearTimeout(gearTimer);
         }
@@ -284,9 +280,8 @@
                 if (!keywords.includes(keyword)) {
                     keywords.push(keyword);
                     saveKeywords(keywords);
-                    loadKeywordsToSelect(); // 刷新菜单
+                    loadKeywordsToSelect(); 
                 }
-                // 让下拉菜单立刻显示刚刚添加的这个词
                 document.getElementById('keywordSelect').value = keyword; 
                 input.value = ''; 
                 processText();
@@ -307,41 +302,48 @@
                 keywords = keywords.filter(kw => kw !== keyword);
                 saveKeywords(keywords);
                 loadKeywordsToSelect(); 
-                processText(); // 删了词条后，重新处理一下现有文本
+                processText(); 
             }
         }
 
-        // --- 核心处理逻辑 (全自动拦截网) ---
+        // --- 核心处理逻辑 ---
         function processText() {
             let inputBox = document.getElementById('inputBox');
             let input = inputBox.value;
 
-            // 获取本地保存的所有关键词，多词条同时生效
+            // 1. 全自动截断网
             const keywords = getSavedKeywords();
             let earliestIndex = -1;
-
             for (const keyword of keywords) {
                 const idx = input.indexOf(keyword);
                 if (idx !== -1) {
                     if (earliestIndex === -1 || idx < earliestIndex) {
-                        earliestIndex = idx; // 找最靠前出现的那个词砍
+                        earliestIndex = idx;
                     }
                 }
             }
-
             if (earliestIndex !== -1) {
                 input = input.substring(0, earliestIndex);
                 inputBox.value = input; 
             }
 
+            // 2. 截断三个及以上连续换行符
             const cutIndex = input.search(/\n{3,}/);
             if (cutIndex !== -1) {
                 input = input.substring(0, cutIndex);
             }
 
+            // 3. 基础去符号
             let cleaned = input.replace(/[#*]/g, '');
-            cleaned = cleaned.replace(/[ \t]*[\(（]([\u4e00-\u9fa5][^()（）]*)[\)）]/g, '\n$1');
-            cleaned = cleaned.replace(/[\(（](.*?)[\)）]/g, '$1');
+
+            // 4. 精准打击：去除 Chapter 紧跟的括号，将其余正文括号保留
+            // 规则A：匹配 "Chapter X" 及其紧跟的括号（兼容跨行情况）
+            cleaned = cleaned.replace(/(Chapter[^\n(（]+)[\s\r\n]*[\(（]([^()（）]+)[\)）]/gi, '$1\n$2');
+            
+            // 规则B：兜底，直接匹配段首的 (第X章/节...)，防止有的时候没带英文 Chapter
+            cleaned = cleaned.replace(/(^|\n)[\s\t]*[\(（](第[\u4e00-\u9fa50-9百千万零]+[章回节][^()（）]*)[\)）]/g, '$1$2');
+
+            // 取消了原先无差别抹除所有括号的代码，确保后面正文里的 (xxx) 安然无恙。
 
             document.getElementById('output').innerText = cleaned;
         }
@@ -364,14 +366,12 @@
             }
         }
 
-        // PC端监听双击鼠标左键
         outputDiv.addEventListener('dblclick', function(e) {
             e.preventDefault();
             window.getSelection().removeAllRanges();
             copyResult();
         });
 
-        // 移动端监听单指连续两次点击
         let lastTap = 0;
         outputDiv.addEventListener('touchend', function(e) {
             const currentTime = new Date().getTime();
