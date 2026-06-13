@@ -2,62 +2,352 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>实时文本清理工具</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本清理工具</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-        textarea { width: 100%; height: 200px; margin-bottom: 10px; display: block; box-sizing: border-box; }
-        button { padding: 10px 20px; cursor: pointer; margin-bottom: 20px; }
-        #output { border: 1px solid #ccc; padding: 10px; background: #f9f9f9; white-space: pre-wrap; min-height: 50px; }
+        /* 现代化极简全局设置 */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            padding: 40px 20px; 
+            max-width: 800px; 
+            margin: auto; 
+            background-color: #fafafa;
+            color: #333;
+        }
+        
+        /* 顶部标题行 (绝对居中 + 绝对定位齿轮) */
+        .header-container {
+            position: relative;
+            text-align: center;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 40px;
+        }
+        .header-container h2 { 
+            margin: 0; 
+            color: #111827; 
+            font-weight: 600; 
+            user-select: none; /* 防止双击时选中文字 */
+            cursor: default;
+        }
+        
+        /* 齿轮图标样式与动画（默认完全隐藏） */
+        .gear-icon {
+            position: absolute;
+            right: 0;
+            cursor: pointer;
+            color: #9ca3af;
+            width: 24px;
+            height: 24px;
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .gear-icon:hover { color: #4b5563; transform: rotate(30deg); }
+        .gear-icon.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        
+        /* 卡片式布局 */
+        .card { 
+            background: #ffffff; 
+            padding: 24px; 
+            border-radius: 12px; 
+            border: 1px solid #f3f4f6;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            margin-bottom: 24px; 
+        }
+        
+        /* 表单与输出元素 */
+        textarea { 
+            width: 100%; 
+            height: 250px; 
+            display: block; 
+            box-sizing: border-box; 
+            font-family: inherit;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #f9fafb;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        textarea:focus { 
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
+            background-color: #ffffff;
+        }
+        
+        #output { 
+            border: 1px solid #e5e7eb; 
+            padding: 16px; 
+            background-color: #f9fafb; 
+            white-space: pre-wrap; 
+            min-height: 120px; 
+            border-radius: 8px; 
+            font-size: 15px;
+            line-height: 1.6;
+            color: #1f2937;
+            cursor: pointer;
+            transition: background-color 0.3s ease; /* 用于复制成功的颜色过渡 */
+        }
+
+        /* 模态框设置中心 */
+        .modal-overlay {
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(2px);
+            align-items: center; 
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content {
+            background: white; 
+            padding: 24px; 
+            border-radius: 16px; 
+            width: 90%; 
+            max-width: 360px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: translateY(10px);
+            transition: transform 0.2s ease;
+        }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
+        
+        /* 模态框内元素 */
+        .flex-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+        .flex-row:last-child { margin-bottom: 0; }
+        input[type="text"], select { 
+            padding: 10px 14px; 
+            box-sizing: border-box; 
+            border: 1px solid #e5e7eb; 
+            font-size: 14px; 
+            border-radius: 8px; 
+            background-color: #f9fafb;
+            outline: none;
+            transition: all 0.2s;
+        }
+        input[type="text"] { flex-grow: 1; }
+        input[type="text"]:focus { 
+            border-color: #3b82f6; 
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
+        }
+        select { flex-grow: 1; cursor: pointer; }
+        button { 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            font-weight: 500;
+            transition: all 0.2s ease; 
+            white-space: nowrap;
+        }
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: #6b7280; color: white; }
+        .btn-secondary:hover { background-color: #4b5563; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
     </style>
 </head>
 <body>
 
-    <h2>自动化清理工具</h2>
-    <p><small>输入或粘贴内容后，结果将自动生成：</small></p>
-    <textarea id="inputBox" oninput="processText()" placeholder="请粘贴文本..."></textarea>
+    <div class="header-container">
+        <h2 ondblclick="showGear()">文本清理工具</h2>
+        
+        <div id="gearIcon" class="gear-icon" onclick="openSettings()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </div>
+    </div>
 
-    <button id="copyBtn" onclick="copyResult()">一键复制结果</button>
+    <div class="card">
+        <div id="output"></div>
+    </div>
 
-    <h3>处理结果：</h3>
-    <div id="output"></div>
+    <div class="card">
+        <textarea id="inputBox" oninput="processText()"></textarea>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 20px 0; text-align: center; color: #374151;">规则设置</h3>
+            
+            <div class="flex-row">
+                <input type="text" id="newKeyword" onkeypress="handleEnter(event)">
+                <button class="btn-primary" onclick="addKeyword()">添加词条</button>
+            </div>
+
+            <div class="flex-row">
+                <select id="keywordSelect">
+                    <option value="" disabled selected hidden></option>
+                </select>
+                <button class="btn-danger" onclick="removeKeyword()">移除词条</button>
+            </div>
+
+            <div style="text-align: center; margin-top: 24px;">
+                <button class="btn-secondary" style="width: 100%;" onclick="closeSettings()">完成设置</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        function processText() {
-            let input = document.getElementById('inputBox').value;
+        // --- 齿轮显示与隐藏逻辑 ---
+        let gearTimer;
 
-            // 1. 自动过滤：截断三个及以上连续换行符
+        function showGear() {
+            const gear = document.getElementById('gearIcon');
+            gear.classList.add('show');
+            
+            clearTimeout(gearTimer);
+            gearTimer = setTimeout(() => {
+                gear.classList.remove('show');
+            }, 5000); // 5秒后自动隐藏
+        }
+
+        // --- 弹窗控制逻辑 ---
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+            
+            // 打开设置时立即隐藏背后的齿轮
+            document.getElementById('gearIcon').classList.remove('show');
+            clearTimeout(gearTimer);
+        }
+
+        function closeSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 200);
+        }
+
+        // --- 动态添加/移除关键词 ---
+        function addKeyword() {
+            const input = document.getElementById('newKeyword');
+            const keyword = input.value.trim();
+            
+            if (keyword) {
+                const select = document.getElementById('keywordSelect');
+                let exists = false;
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === keyword) {
+                        exists = true; break;
+                    }
+                }
+                if (!exists) {
+                    const option = document.createElement('option');
+                    option.value = keyword;
+                    option.text = keyword;
+                    select.add(option);
+                }
+                select.value = keyword; 
+                input.value = ''; 
+                processText();
+            }
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                addKeyword();
+            }
+        }
+
+        function removeKeyword() {
+            const select = document.getElementById('keywordSelect');
+            if (select.value) { 
+                select.remove(select.selectedIndex);
+                select.value = ""; 
+            }
+        }
+
+        // --- 核心处理逻辑 ---
+        function processText() {
+            let inputBox = document.getElementById('inputBox');
+            let input = inputBox.value;
+
+            const select = document.getElementById('keywordSelect');
+            const options = select.options;
+            let earliestIndex = -1;
+
+            for (let i = 0; i < options.length; i++) {
+                const keyword = options[i].value;
+                if (!keyword) continue; 
+                const idx = input.indexOf(keyword);
+                if (idx !== -1) {
+                    if (earliestIndex === -1 || idx < earliestIndex) {
+                        earliestIndex = idx;
+                    }
+                }
+            }
+
+            if (earliestIndex !== -1) {
+                input = input.substring(0, earliestIndex);
+                inputBox.value = input; 
+            }
+
             const cutIndex = input.search(/\n{3,}/);
             if (cutIndex !== -1) {
                 input = input.substring(0, cutIndex);
             }
 
-            // 2. 自动清洗：删除 # 和 *
             let cleaned = input.replace(/[#*]/g, '');
-
-            // 3. 中文标题自动换行并去除括号
-            // 匹配逻辑：匹配任意前置空格 + 全/半角括号 + 内部含有中文字符的内容
-            // 替换逻辑：将其替换为换行符 + 括号内的内容
             cleaned = cleaned.replace(/[ \t]*[\(（]([\u4e00-\u9fa5][^()（）]*)[\)）]/g, '\n$1');
-
-            // 4. 去除所有剩余的括号，但保留内部内容
-            // 匹配逻辑：全/半角括号及其内部的所有内容
-            // 替换逻辑：只保留括号内的内容
             cleaned = cleaned.replace(/[\(（](.*?)[\)）]/g, '$1');
 
-            // 5. 实时显示
             document.getElementById('output').innerText = cleaned;
         }
 
+        // --- 双指单击复制逻辑 ---
+        const outputDiv = document.getElementById('output');
+
         async function copyResult() {
-            const output = document.getElementById('output').innerText;
-            if (!output) return;
+            const outputText = outputDiv.innerText;
+            if (!outputText) return; // 如果没有内容就不执行
+            
             try {
-                await navigator.clipboard.writeText(output);
-                alert('已复制到剪贴板！');
+                await navigator.clipboard.writeText(outputText);
+                
+                // 视觉反馈：背景闪现浅绿色
+                outputDiv.style.backgroundColor = '#d1fae5'; // 浅绿
+                setTimeout(() => {
+                    outputDiv.style.backgroundColor = '#f9fafb'; // 恢复原色
+                }, 800); 
             } catch (err) {
-                alert('复制失败。');
+                console.error('复制失败', err);
             }
         }
+
+        // 监听触控板右键/双指点击 (PC端)
+        outputDiv.addEventListener('contextmenu', function(e) {
+            e.preventDefault(); // 阻止浏览器默认的右键菜单
+            copyResult();
+        });
+
+        // 监听触屏双指轻点 (移动端)
+        outputDiv.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault(); 
+                copyResult();
+            }
+        });
     </script>
 </body>
 </html>
