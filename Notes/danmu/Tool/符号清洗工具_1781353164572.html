@@ -15,7 +15,7 @@
             color: #333;
         }
         
-        /* 顶部标题行 (绝对居中 + 绝对定位齿轮) */
+        /* 顶部标题行 */
         .header-container {
             position: relative;
             text-align: center;
@@ -33,7 +33,7 @@
             cursor: default;
         }
         
-        /* 齿轮图标样式与动画（默认完全隐藏） */
+        /* 齿轮图标样式与动画 */
         .gear-icon {
             position: absolute;
             right: 0;
@@ -98,7 +98,7 @@
             color: #1f2937;
             cursor: pointer;
             transition: background-color 0.3s ease; 
-            user-select: none; /* 防止双击时文字变蓝，影响美观 */
+            user-select: none; 
         }
 
         /* 模态框设置中心 */
@@ -196,9 +196,7 @@
             </div>
 
             <div class="flex-row">
-                <select id="keywordSelect">
-                    <option value="" disabled selected hidden></option>
-                </select>
+                <select id="keywordSelect"></select>
                 <button class="btn-danger" onclick="removeKeyword()">移除词条</button>
             </div>
 
@@ -219,20 +217,33 @@
             localStorage.setItem('cleanerKeywords', JSON.stringify(keywords));
         }
 
+        // 刷新下拉菜单显示
         function loadKeywordsToSelect() {
             const keywords = getSavedKeywords();
             const select = document.getElementById('keywordSelect');
-            // 清空除占位符以外的选项
-            select.innerHTML = '<option value="" disabled selected hidden></option>';
-            keywords.forEach(kw => {
+            select.innerHTML = ''; // 清空所有选项
+            
+            if (keywords.length === 0) {
+                // 如果没有词条，显示一个无法选中的占位符
                 const option = document.createElement('option');
-                option.value = kw;
-                option.text = kw;
+                option.value = "";
+                option.text = "暂无词条";
+                option.disabled = true;
+                option.selected = true;
+                option.hidden = true;
                 select.add(option);
-            });
+            } else {
+                // 如果有词条，全部填充进去，并默认选中第一个
+                keywords.forEach(kw => {
+                    const option = document.createElement('option');
+                    option.value = kw;
+                    option.text = kw;
+                    select.add(option);
+                });
+                select.value = keywords[0]; 
+            }
         }
 
-        // 初始化加载数据
         window.onload = function() {
             loadKeywordsToSelect();
         };
@@ -248,7 +259,6 @@
             }, 5000);
         }
 
-        // --- 弹窗控制逻辑 ---
         function openSettings() {
             const modal = document.getElementById('settingsModal');
             modal.style.display = 'flex';
@@ -264,7 +274,7 @@
             setTimeout(() => modal.style.display = 'none', 200);
         }
 
-        // --- 动态添加/移除关键词 (关联本地存储) ---
+        // --- 动态添加/移除关键词 ---
         function addKeyword() {
             const input = document.getElementById('newKeyword');
             const keyword = input.value.trim();
@@ -274,8 +284,9 @@
                 if (!keywords.includes(keyword)) {
                     keywords.push(keyword);
                     saveKeywords(keywords);
-                    loadKeywordsToSelect(); // 刷新下拉菜单
+                    loadKeywordsToSelect(); // 刷新菜单
                 }
+                // 让下拉菜单立刻显示刚刚添加的这个词
                 document.getElementById('keywordSelect').value = keyword; 
                 input.value = ''; 
                 processText();
@@ -295,15 +306,17 @@
                 let keywords = getSavedKeywords();
                 keywords = keywords.filter(kw => kw !== keyword);
                 saveKeywords(keywords);
-                loadKeywordsToSelect(); // 刷新下拉菜单
+                loadKeywordsToSelect(); 
+                processText(); // 删了词条后，重新处理一下现有文本
             }
         }
 
-        // --- 核心处理逻辑 ---
+        // --- 核心处理逻辑 (全自动拦截网) ---
         function processText() {
             let inputBox = document.getElementById('inputBox');
             let input = inputBox.value;
 
+            // 获取本地保存的所有关键词，多词条同时生效
             const keywords = getSavedKeywords();
             let earliestIndex = -1;
 
@@ -311,7 +324,7 @@
                 const idx = input.indexOf(keyword);
                 if (idx !== -1) {
                     if (earliestIndex === -1 || idx < earliestIndex) {
-                        earliestIndex = idx;
+                        earliestIndex = idx; // 找最靠前出现的那个词砍
                     }
                 }
             }
@@ -342,8 +355,6 @@
             
             try {
                 await navigator.clipboard.writeText(outputText);
-                
-                // 视觉反馈：背景闪现浅绿色
                 outputDiv.style.backgroundColor = '#d1fae5'; 
                 setTimeout(() => {
                     outputDiv.style.backgroundColor = '#f9fafb'; 
@@ -356,7 +367,6 @@
         // PC端监听双击鼠标左键
         outputDiv.addEventListener('dblclick', function(e) {
             e.preventDefault();
-            // 清除双击导致的文字默认全选，保持UI整洁
             window.getSelection().removeAllRanges();
             copyResult();
         });
@@ -366,7 +376,6 @@
         outputDiv.addEventListener('touchend', function(e) {
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTap;
-            // 两次点击间隔小于500毫秒则判断为双击
             if (tapLength < 500 && tapLength > 0) {
                 e.preventDefault(); 
                 copyResult();
