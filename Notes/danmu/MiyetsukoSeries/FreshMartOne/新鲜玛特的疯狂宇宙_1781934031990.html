@@ -446,174 +446,8 @@
         });
     </script>
     
-        <!-- 悬浮保存按钮 (默认隐藏) -->
-    <div id="github-save-btn" style="display: none; position: fixed; bottom: 30px; right: 30px; background: rgb(34, 34, 34); color: rgb(255, 255, 255); padding: 15px 25px; border-radius: 8px; cursor: pointer; font-weight: 900; box-shadow: rgb(139, 0, 0) 4px 4px 0px; z-index: 9999; transition: 0.2s; border: 2px solid rgb(139, 0, 0); transform: none; pointer-events: none;">⏳ 同步中...</div>
 
-    <!-- GitHub 同步与编辑控制脚本 -->
-    <script>
-        // ==========================================
-        // ⚠️ GitHub 仓库信息 
-        // ==========================================
-        const GITHUB_OWNER = 'moodHappy'; 
-        const GITHUB_REPO = 'moodHappy.gitHub.io-nce';     
-        const FILE_PATH = 'Notes/danmu/MiyetsukoSeries/FreshMartOne/新鲜玛特的疯狂宇宙_1781934031990.html';        
-        // ==========================================
-
-        const saveBtn = document.getElementById('github-save-btn');
-        const editableElements = document.querySelectorAll('.title, .ep p, .score');
-
-        // ==========================================
-        // 1. 初始化交互样式 (解决评分区域看不见的问题)
-        // ==========================================
-        editableElements.forEach(el => {
-            el.addEventListener('focus', () => {
-                el.style.backgroundColor = '#fffacd';
-                el.style.outline = '2px dashed #8b0000';
-                // 如果是评分区域，强制把字变深色
-                if (el.classList.contains('score')) {
-                    el.style.color = '#8b0000';
-                }
-            });
-            el.addEventListener('blur', () => {
-                // 清理内联样式，保持代码干净
-                el.style.backgroundColor = '';
-                el.style.outline = '';
-                if (el.classList.contains('score')) {
-                    el.style.color = '';
-                }
-            });
-        });
-
-        // ==========================================
-        // 2. 阅读模式 vs 编辑模式 切换机制
-        // ==========================================
-        function toggleEditMode() {
-            const isEditing = saveBtn.style.display === 'block';
-            
-            if (!isEditing) {
-                // 进入编辑模式
-                saveBtn.style.display = 'block';
-                document.body.style.border = '6px solid #228b22'; 
-                editableElements.forEach(el => el.setAttribute('contenteditable', 'true'));
-            } else {
-                // 退出编辑模式 (恢复安全的滑动状态)
-                saveBtn.style.display = 'none';
-                document.body.style.border = '6px solid #8b0000';
-                editableElements.forEach(el => {
-                    el.blur(); // 强制失去焦点关闭键盘
-                    el.removeAttribute('contenteditable');
-                });
-            }
-        }
-
-        // 移动端：双指点击屏幕切换模式
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                e.preventDefault(); 
-                toggleEditMode();
-            }
-        }, { passive: false });
-
-        // 电脑端：Alt (Option) + 双击左键切换模式
-        document.addEventListener('dblclick', (e) => {
-            if (e.altKey) {
-                window.getSelection().removeAllRanges();
-                toggleEditMode();
-            }
-        });
-
-        // ==========================================
-        // 3. 按钮特效与 GitHub 同步逻辑
-        // ==========================================
-        saveBtn.addEventListener('mousedown', () => saveBtn.style.transform = 'translate(2px, 2px)');
-        saveBtn.addEventListener('mouseup', () => saveBtn.style.transform = 'none');
-
-        function encodeBase64(str) {
-            const bytes = new TextEncoder().encode(str);
-            const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
-            return btoa(binString);
-        }
-
-        saveBtn.addEventListener('click', async () => {
-            let token = localStorage.getItem('github_pat');
-            
-            if (!token) {
-                token = prompt('请输入你的 GitHub Personal Access Token (仅首次需要):');
-                if (!token) return;
-                localStorage.setItem('github_pat', token);
-            }
-
-            saveBtn.innerText = '⏳ 同步中...';
-            saveBtn.style.pointerEvents = 'none';
-
-            try {
-                const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-                
-                const getRes = await fetch(apiUrl, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (getRes.status === 401) {
-                    localStorage.removeItem('github_pat');
-                    throw new Error('Token 无效，请刷新重新输入。');
-                }
-                
-                const getJson = await getRes.json();
-                const fileSha = getJson.sha;
-
-                // 提交前，强制安全退出编辑模式，确保获取到的 HTML 干净无污染
-                if (saveBtn.style.display === 'block') {
-                    toggleEditMode(); 
-                }
-                
-                const currentHTML = document.documentElement.outerHTML;
-
-                const putRes = await fetch(apiUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: '📝 更新宇宙档案', 
-                        content: encodeBase64(`<!DOCTYPE html>\n${currentHTML}`),
-                        sha: fileSha
-                    })
-                });
-
-                if (putRes.ok) {
-                    alert('🎉 宇宙档案同步成功！');
-                } else {
-                    const errData = await putRes.json();
-                    throw new Error(errData.message);
-                }
-
-            } catch (error) {
-                console.error(error);
-                alert('保存失败：\n' + error.message);
-                // 失败了恢复编辑状态
-                toggleEditMode();
-            } finally {
-                saveBtn.innerText = '🚀 同步提交到 GitHub';
-                saveBtn.style.pointerEvents = 'auto';
-            }
-        });
-    </script>
-
-    <div id="expansion-panel" style="display: none; margin: 40px auto 120px auto; max-width: 90%; background: #fff; padding: 20px; border: 4px dashed #228b22; border-radius: 12px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
-        <h3 style="margin-top: 0; color: #228b22; letter-spacing: 1px;">🛠️ 宇宙扩容管理中心</h3>
-        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
-            <div style="display: flex; gap: 10px; width: 100%; justify-content: center;">
-                <input type="text" id="season-name" placeholder="输入季名 (如:第 XXI 部)" style="flex: 1; max-width: 200px; padding: 12px; border: 2px solid #222; border-radius: 6px; font-size: 1rem; outline: none;">
-                <button id="add-season-btn" style="background: #8b0000; color: #fff; border: none; padding: 12px 20px; cursor: pointer; border-radius: 6px; font-weight: 900; font-size: 1rem; white-space: nowrap;">➕ 新增整季</button>
-            </div>
-            <button id="delete-season-btn" style="background: #444; color: #ffcccc; border: none; padding: 12px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; max-width: 320px;">🗑️ 删除最末季 (危险)</button>
-        </div>
-    </div>
-
-    <div id="github-save-btn" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: 900; font-size: 1.1rem; box-shadow: 0 6px 0px #8b0000; z-index: 9999; border: 2px solid #8b0000; white-space: nowrap;">
-        🚀 同步提交到 GitHub
-    </div>
+    
 
     <script>
         // ==========================================
@@ -624,8 +458,8 @@
         const FILE_PATH = 'Notes/danmu/MiyetsukoSeries/FreshMartOne/新鲜玛特的疯狂宇宙_1781934031990.html';        
         // ==========================================
 
+        const controlCenter = document.getElementById('edit-control-center');
         const saveBtn = document.getElementById('github-save-btn');
-        const panel = document.getElementById('expansion-panel');
 
         // 1. 初始化所有可编辑元素
         const getEditableElements = () => document.querySelectorAll('.title, .ep p, .score');
@@ -644,25 +478,15 @@
             });
         });
 
-        // 2. 模式切换机制 (核心触发逻辑)
+        // 2. 模式切换机制 (控制整个合体面板显示/隐藏)
         function toggleEditMode() {
-            const isEditing = saveBtn.style.display === 'block';
+            const isEditing = controlCenter.style.display === 'block';
             if (!isEditing) {
-                // 开启编辑：显示按钮、面板，边框变绿
-                saveBtn.style.display = 'block';
-                panel.style.display = 'block';
+                controlCenter.style.display = 'block';
                 document.body.style.border = '6px solid #228b22'; 
                 getEditableElements().forEach(el => el.setAttribute('contenteditable', 'true'));
-                
-                // 给移动端用户一个贴心提示
-                if(window.innerWidth < 768 && !window.editPromptShown) {
-                    alert('进入编辑模式！\n添加/删除章节的面板已放置在【网页最底端】，滑到底即可看见。');
-                    window.editPromptShown = true;
-                }
             } else {
-                // 关闭编辑：隐藏按钮、面板，恢复红框
-                saveBtn.style.display = 'none';
-                panel.style.display = 'none';
+                controlCenter.style.display = 'none';
                 document.body.style.border = '6px solid #8b0000';
                 getEditableElements().forEach(el => {
                     el.blur();
@@ -671,7 +495,7 @@
             }
         }
 
-        // 手势触发
+        // 手势触发：双指轻触 / Alt+双击
         document.addEventListener('touchstart', (e) => { 
             if (e.touches.length === 2) { 
                 e.preventDefault(); 
@@ -686,7 +510,7 @@
             } 
         });
 
-        // 3. 批量新增整季 (自动加到面板上方)
+        // 3. 批量新增整季
         document.getElementById('add-season-btn').addEventListener('click', () => {
             const sName = document.getElementById('season-name').value;
             if (!sName) return alert('请先输入季名！');
@@ -696,9 +520,9 @@
             }
             const newSeasonHtml = `<div class="season-divider">${sName} (第??-??章)</div><div class="container" style="display: grid;">${epTemplate}</div>`;
             
-            // 将新内容插入到 expansion-panel 的正前方
-            panel.insertAdjacentHTML('beforebegin', newSeasonHtml);
-            alert('添加成功！正在刷新以绑定最新代码...');
+            // 插入到整个页面的最后，控制台前面
+            controlCenter.insertAdjacentHTML('beforebegin', newSeasonHtml);
+            alert('添加成功！正在刷新以绑定编辑功能...');
             location.reload();
         });
 
@@ -710,7 +534,7 @@
             const lastDivider = dividers[dividers.length - 1];
             const lastContainer = lastDivider.nextElementSibling;
             
-            if (confirm(`⚠️ 危险操作预警！\n\n确定要删除【${lastDivider.innerText}】及里面的所有章节吗？\n确认删除后请点击 "同步提交到 GitHub" 保存！`)) {
+            if (confirm(`⚠️ 确定删除【${lastDivider.innerText}】吗？\n确认删除后请点击 "同步提交到 GitHub" 保存！`)) {
                 lastDivider.remove();
                 if (lastContainer && lastContainer.classList.contains('container')) {
                     lastContainer.remove();
@@ -718,10 +542,15 @@
             }
         });
 
-        // 5. 纯净代码提取
+        // 5. 纯净代码提取 (防污染核心)
         function getPurifiedHTML() {
             const clone = document.documentElement.cloneNode(true);
-            clone.querySelectorAll('#github-save-btn, #expansion-panel').forEach(el => el.remove());
+            
+            // 把这整个合体控制台连根拔起删掉，不留痕迹
+            const cc = clone.querySelector('#edit-control-center');
+            if(cc) cc.remove();
+            
+            // 清理插件垃圾
             clone.querySelectorAll('[id^="anki-"], #tts-plus-root, relingo-app, [data-relingo-block], [data-relin-paragraph], script[src*="extension"]').forEach(el => el.remove());
             clone.querySelector('body').style.border = '6px solid #8b0000';
             clone.querySelectorAll('.title, .ep p, .score').forEach(el => {
@@ -734,10 +563,10 @@
         }
 
         // 6. 按压动效与 GitHub 同步
-        saveBtn.addEventListener('mousedown', () => saveBtn.style.boxShadow = '0 2px 0px #8b0000', saveBtn.style.transform = 'translate(-50%, 4px)');
-        saveBtn.addEventListener('mouseup', () => saveBtn.style.boxShadow = '0 6px 0px #8b0000', saveBtn.style.transform = 'translateX(-50%)');
-        saveBtn.addEventListener('touchstart', () => saveBtn.style.boxShadow = '0 2px 0px #8b0000', saveBtn.style.transform = 'translate(-50%, 4px)');
-        saveBtn.addEventListener('touchend', () => saveBtn.style.boxShadow = '0 6px 0px #8b0000', saveBtn.style.transform = 'translateX(-50%)');
+        saveBtn.addEventListener('mousedown', () => { saveBtn.style.boxShadow = '0 0px 0px #8b0000'; saveBtn.style.transform = 'translateY(4px)'; });
+        saveBtn.addEventListener('mouseup', () => { saveBtn.style.boxShadow = '0 4px 0px #8b0000'; saveBtn.style.transform = 'translateY(0)'; });
+        saveBtn.addEventListener('touchstart', () => { saveBtn.style.boxShadow = '0 0px 0px #8b0000'; saveBtn.style.transform = 'translateY(4px)'; });
+        saveBtn.addEventListener('touchend', () => { saveBtn.style.boxShadow = '0 4px 0px #8b0000'; saveBtn.style.transform = 'translateY(0)'; });
 
         saveBtn.addEventListener('click', async () => {
             let token = localStorage.getItem('github_pat');
@@ -746,7 +575,7 @@
                 if (!token) return;
                 localStorage.setItem('github_pat', token);
             }
-            saveBtn.innerText = '⏳ 净化代码并同步中...';
+            saveBtn.innerText = '⏳ 净化并同步中...';
             saveBtn.style.pointerEvents = 'none';
             try {
                 const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
@@ -764,22 +593,21 @@
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: '📝 更新宇宙档案 (实底面板)',
+                        message: '📝 更新宇宙档案 (合体面板)',
                         content: btoa(unescape(encodeURIComponent(cleanHTML))),
                         sha: fileSha
                     })
                 });
                 if (putRes.ok) {
                     alert('🎉 同步成功！');
-                    if (saveBtn.style.display === 'block') toggleEditMode(); 
+                    if (controlCenter.style.display === 'block') toggleEditMode(); 
                 } else {
                     const err = await putRes.json();
                     throw new Error(err.message || '保存失败');
                 }
             } catch (e) { 
                 alert('发生错误: ' + e.message); 
-                saveBtn.style.display = 'block'; 
-                panel.style.display = 'block'; 
+                controlCenter.style.display = 'block'; 
             }
             finally { 
                 saveBtn.innerText = '🚀 同步提交到 GitHub'; 
@@ -787,6 +615,7 @@
             }
         });
     </script>
+
 
 
 
