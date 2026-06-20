@@ -600,23 +600,24 @@
         });
     </script>
 
-    <div id="github-save-btn" style="display: none; position: fixed; bottom: 30px; right: 30px; background: #222; color: #fff; padding: 15px 25px; border-radius: 8px; cursor: pointer; font-weight: 900; box-shadow: 4px 4px 0px #8b0000; z-index: 9999; transition: all 0.2s; border: 2px solid #8b0000;">
-        🚀 同步提交到 GitHub
+    <div id="expansion-panel" style="display: none; margin: 40px auto 120px auto; max-width: 90%; background: #fff; padding: 20px; border: 4px dashed #228b22; border-radius: 12px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; color: #228b22; letter-spacing: 1px;">🛠️ 宇宙扩容管理中心</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+            <div style="display: flex; gap: 10px; width: 100%; justify-content: center;">
+                <input type="text" id="season-name" placeholder="输入季名 (如:第 XXI 部)" style="flex: 1; max-width: 200px; padding: 12px; border: 2px solid #222; border-radius: 6px; font-size: 1rem; outline: none;">
+                <button id="add-season-btn" style="background: #8b0000; color: #fff; border: none; padding: 12px 20px; cursor: pointer; border-radius: 6px; font-weight: 900; font-size: 1rem; white-space: nowrap;">➕ 新增整季</button>
+            </div>
+            <button id="delete-season-btn" style="background: #444; color: #ffcccc; border: none; padding: 12px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; width: 100%; max-width: 320px;">🗑️ 删除最末季 (危险)</button>
+        </div>
     </div>
 
-    <div id="expansion-panel" style="display: none; position: fixed; bottom: 100px; right: 30px; background: #fff; padding: 15px; border: 3px solid #8b0000; z-index: 9998; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-        <div style="margin-bottom: 10px;">
-            <input type="text" id="season-name" placeholder="例如：第 XXI 部" style="width: 120px; padding: 5px;">
-            <button id="add-season-btn" style="background: #8b0000; color: #fff; border: none; padding: 5px 10px; cursor: pointer;">批量新增整季</button>
-        </div>
-        <div style="text-align: right;">
-            <button id="delete-season-btn" style="background: #555; color: #ffcccc; border: none; padding: 5px 10px; cursor: pointer;">🗑️ 删除最末季</button>
-        </div>
+    <div id="github-save-btn" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: 900; font-size: 1.1rem; box-shadow: 0 6px 0px #8b0000; z-index: 9999; border: 2px solid #8b0000; white-space: nowrap;">
+        🚀 同步提交到 GitHub
     </div>
 
     <script>
         // ==========================================
-        // ⚠️ 请在这里填入你的 GitHub 仓库信息 ⚠️
+        // ⚠️ GitHub 仓库配置
         // ==========================================
         const GITHUB_OWNER = 'moodHappy'; 
         const GITHUB_REPO = 'moodHappy.gitHub.io-nce';     
@@ -643,15 +644,23 @@
             });
         });
 
-        // 2. 模式切换机制
+        // 2. 模式切换机制 (核心触发逻辑)
         function toggleEditMode() {
             const isEditing = saveBtn.style.display === 'block';
             if (!isEditing) {
+                // 开启编辑：显示按钮、面板，边框变绿
                 saveBtn.style.display = 'block';
                 panel.style.display = 'block';
                 document.body.style.border = '6px solid #228b22'; 
                 getEditableElements().forEach(el => el.setAttribute('contenteditable', 'true'));
+                
+                // 给移动端用户一个贴心提示
+                if(window.innerWidth < 768 && !window.editPromptShown) {
+                    alert('进入编辑模式！\n添加/删除章节的面板已放置在【网页最底端】，滑到底即可看见。');
+                    window.editPromptShown = true;
+                }
             } else {
+                // 关闭编辑：隐藏按钮、面板，恢复红框
                 saveBtn.style.display = 'none';
                 panel.style.display = 'none';
                 document.body.style.border = '6px solid #8b0000';
@@ -662,10 +671,22 @@
             }
         }
 
-        document.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { e.preventDefault(); toggleEditMode(); } }, { passive: false });
-        document.addEventListener('dblclick', (e) => { if (e.altKey) { window.getSelection().removeAllRanges(); toggleEditMode(); } });
+        // 手势触发
+        document.addEventListener('touchstart', (e) => { 
+            if (e.touches.length === 2) { 
+                e.preventDefault(); 
+                toggleEditMode(); 
+            } 
+        }, { passive: false });
+        
+        document.addEventListener('dblclick', (e) => { 
+            if (e.altKey) { 
+                window.getSelection().removeAllRanges(); 
+                toggleEditMode(); 
+            } 
+        });
 
-        // 3. 批量新增整季
+        // 3. 批量新增整季 (自动加到面板上方)
         document.getElementById('add-season-btn').addEventListener('click', () => {
             const sName = document.getElementById('season-name').value;
             if (!sName) return alert('请先输入季名！');
@@ -674,12 +695,14 @@
                 epTemplate += `<div class="ep"><div class="score">?.?分</div><div class="title">第??章：[标题占位符]</div><p>[内容占位符]</p></div>`;
             }
             const newSeasonHtml = `<div class="season-divider">${sName} (第??-??章)</div><div class="container" style="display: grid;">${epTemplate}</div>`;
-            document.body.insertAdjacentHTML('beforeend', newSeasonHtml);
-            alert('添加成功，页面即将刷新以绑定编辑功能...');
+            
+            // 将新内容插入到 expansion-panel 的正前方
+            panel.insertAdjacentHTML('beforebegin', newSeasonHtml);
+            alert('添加成功！正在刷新以绑定最新代码...');
             location.reload();
         });
 
-        // 4. 删除最末季 (带防误触)
+        // 4. 删除最末季
         document.getElementById('delete-season-btn').addEventListener('click', () => {
             const dividers = document.querySelectorAll('.season-divider');
             if (dividers.length === 0) return alert('页面上已经没有内容可以删除了！');
@@ -687,9 +710,7 @@
             const lastDivider = dividers[dividers.length - 1];
             const lastContainer = lastDivider.nextElementSibling;
             
-            const confirmMsg = `⚠️ 危险操作预警！\n\n你确定要删除【${lastDivider.innerText}】以及它里面的所有章节吗？\n删除后如果不想要了，别忘了点击右下角的“同步提交”更新到云端！`;
-            
-            if (confirm(confirmMsg)) {
+            if (confirm(`⚠️ 危险操作预警！\n\n确定要删除【${lastDivider.innerText}】及里面的所有章节吗？\n确认删除后请点击 "同步提交到 GitHub" 保存！`)) {
                 lastDivider.remove();
                 if (lastContainer && lastContainer.classList.contains('container')) {
                     lastContainer.remove();
@@ -697,19 +718,11 @@
             }
         });
 
-        // 5. 纯净代码提取引擎 (防污染核心)
+        // 5. 纯净代码提取
         function getPurifiedHTML() {
-            // 在内存中克隆整个网页，不影响当前页面显示
             const clone = document.documentElement.cloneNode(true);
-            
-            // a. 删掉我们的操作面板
             clone.querySelectorAll('#github-save-btn, #expansion-panel').forEach(el => el.remove());
-            
-            // b. 删掉各种插件的注入垃圾 (包括但不限于 Anki, Relingo, TTS)
-            // 你可以随时在这里增加新的插件标签特征
             clone.querySelectorAll('[id^="anki-"], #tts-plus-root, relingo-app, [data-relingo-block], [data-relin-paragraph], script[src*="extension"]').forEach(el => el.remove());
-            
-            // c. 抹除网页编辑时残留的内联样式和属性
             clone.querySelector('body').style.border = '6px solid #8b0000';
             clone.querySelectorAll('.title, .ep p, .score').forEach(el => {
                 el.removeAttribute('contenteditable');
@@ -717,11 +730,15 @@
                 el.style.outline = '';
                 el.style.color = '';
             });
-            
             return `<!DOCTYPE html>\n${clone.outerHTML}`;
         }
 
-        // 6. GitHub 同步逻辑
+        // 6. 按压动效与 GitHub 同步
+        saveBtn.addEventListener('mousedown', () => saveBtn.style.boxShadow = '0 2px 0px #8b0000', saveBtn.style.transform = 'translate(-50%, 4px)');
+        saveBtn.addEventListener('mouseup', () => saveBtn.style.boxShadow = '0 6px 0px #8b0000', saveBtn.style.transform = 'translateX(-50%)');
+        saveBtn.addEventListener('touchstart', () => saveBtn.style.boxShadow = '0 2px 0px #8b0000', saveBtn.style.transform = 'translate(-50%, 4px)');
+        saveBtn.addEventListener('touchend', () => saveBtn.style.boxShadow = '0 6px 0px #8b0000', saveBtn.style.transform = 'translateX(-50%)');
+
         saveBtn.addEventListener('click', async () => {
             let token = localStorage.getItem('github_pat');
             if (!token) {
@@ -734,28 +751,43 @@
             try {
                 const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
                 const getRes = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${token}` } });
-                const fileSha = (await getRes.json()).sha;
                 
-                // 使用提纯后的 HTML 代码
+                if (getRes.status === 401) {
+                    localStorage.removeItem('github_pat');
+                    throw new Error('Token 无效，请重新输入。');
+                }
+                
+                const fileSha = (await getRes.json()).sha;
                 const cleanHTML = getPurifiedHTML();
                 
                 const putRes = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: '📝 更新宇宙档案 (已净化插件垃圾)',
+                        message: '📝 更新宇宙档案 (实底面板)',
                         content: btoa(unescape(encodeURIComponent(cleanHTML))),
                         sha: fileSha
                     })
                 });
                 if (putRes.ok) {
-                    alert('🎉 纯净版源码同步成功！');
-                    if (saveBtn.style.display === 'block') toggleEditMode(); // 成功后退出编辑模式
-                } else throw new Error('保存失败');
-            } catch (e) { alert(e.message); saveBtn.style.display = 'block'; panel.style.display = 'block'; }
-            finally { saveBtn.innerText = '🚀 同步提交到 GitHub'; saveBtn.style.pointerEvents = 'auto'; }
+                    alert('🎉 同步成功！');
+                    if (saveBtn.style.display === 'block') toggleEditMode(); 
+                } else {
+                    const err = await putRes.json();
+                    throw new Error(err.message || '保存失败');
+                }
+            } catch (e) { 
+                alert('发生错误: ' + e.message); 
+                saveBtn.style.display = 'block'; 
+                panel.style.display = 'block'; 
+            }
+            finally { 
+                saveBtn.innerText = '🚀 同步提交到 GitHub'; 
+                saveBtn.style.pointerEvents = 'auto'; 
+            }
         });
     </script>
+
 
 
     
