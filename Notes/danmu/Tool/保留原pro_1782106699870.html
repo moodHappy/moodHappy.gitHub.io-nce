@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>保留原 Max - 全局清洗版</title>
+    <title>保留原 Max - 全自动清理版</title>
     <style>
         :root {
             --primary-color: #3b82f6;
@@ -134,12 +134,15 @@
             border-color: var(--primary-color);
         }
 
-        /* 独立双开关布局 */
+        /* 独立开关布局 */
         .switches-group {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             flex-wrap: wrap;
             margin-top: 4px;
+            padding: 6px 0;
+            border-top: 1px dashed #cbd5e1;
+            border-bottom: 1px dashed #cbd5e1;
         }
 
         .switch-container {
@@ -156,8 +159,8 @@
         .switch {
             position: relative;
             display: inline-block;
-            width: 42px;
-            height: 24px;
+            width: 40px;
+            height: 22px;
         }
 
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -165,12 +168,12 @@
         .slider {
             position: absolute; cursor: pointer;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #cbd5e1; transition: .2s; border-radius: 24px;
+            background-color: #cbd5e1; transition: .2s; border-radius: 22px;
         }
 
         .slider:before {
             position: absolute; content: "";
-            height: 18px; width: 18px; left: 3px; bottom: 3px;
+            height: 16px; width: 16px; left: 3px; bottom: 3px;
             background-color: white; transition: .2s;
             border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
@@ -180,8 +183,6 @@
 
         /* ========= 全局清洗规则区域 ========= */
         .cleaner-section {
-            padding-top: 12px;
-            border-top: 1px dashed var(--border-color);
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -316,14 +317,20 @@
                 <label>开始标记 <input type="text" id="start-marker"></label>
                 <label>结束标记 <input type="text" id="end-marker"></label>
             </div>
+            
+            <!-- 开关选项组 -->
             <div class="switches-group">
                 <label class="switch-container">
                     <div class="switch"><input type="checkbox" id="keep-start" checked><span class="slider"></span></div>
-                    保留开始标记
+                    保留开始
                 </label>
                 <label class="switch-container">
                     <div class="switch"><input type="checkbox" id="keep-end" checked><span class="slider"></span></div>
-                    保留结束标记
+                    保留结束
+                </label>
+                <label class="switch-container" title="将多余的空白行合并为单行紧凑排版">
+                    <div class="switch"><input type="checkbox" id="remove-empty-lines" checked><span class="slider"></span></div>
+                    自动去除空行
                 </label>
             </div>
 
@@ -377,7 +384,8 @@
             start: "📝 Vocabulary Highlight（学习笔记）",
             end: "---",
             keepStart: true,
-            keepEnd: true
+            keepEnd: true,
+            removeEmptyLines: true
         };
 
         // 页面加载时初始化
@@ -417,6 +425,8 @@
                 document.getElementById('end-marker').value = preset.end;
                 document.getElementById('keep-start').checked = preset.keepStart;
                 document.getElementById('keep-end').checked = preset.keepEnd;
+                // 兼容老版本预设：如果不存在 removeEmptyLines 字段，默认勾选
+                document.getElementById('remove-empty-lines').checked = preset.removeEmptyLines !== false;
             }
         }
 
@@ -429,7 +439,8 @@
                 start: document.getElementById('start-marker').value,
                 end: document.getElementById('end-marker').value,
                 keepStart: document.getElementById('keep-start').checked,
-                keepEnd: document.getElementById('keep-end').checked
+                keepEnd: document.getElementById('keep-end').checked,
+                removeEmptyLines: document.getElementById('remove-empty-lines').checked
             };
 
             const existingIndex = presets.findIndex(p => p.name === newPreset.name);
@@ -488,7 +499,6 @@
             globalCleanRules.push({ target: '', replacement: '' });
             saveCleanRules();
             renderCleanerRules();
-            // 自动滚动到最新的一条
             const container = document.getElementById('rules-container');
             setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
         }
@@ -518,8 +528,10 @@
             const input = document.getElementById('input-text').value;
             const startMarker = document.getElementById('start-marker').value;
             const endMarker = document.getElementById('end-marker').value;
+            
             const keepStart = document.getElementById('keep-start').checked;
             const keepEnd = document.getElementById('keep-end').checked;
+            const removeEmptyLines = document.getElementById('remove-empty-lines').checked;
 
             if (!input.trim()) { alert("请先粘贴需要提取的原始文本。"); return; }
             if (!startMarker) { alert("请输入开始标记！"); return; }
@@ -531,19 +543,28 @@
             const endIndex = endMarker ? contentAfterMarker.indexOf(endMarker) : -1;
             
             let extracted = endIndex !== -1 ? contentAfterMarker.substring(0, endIndex) : contentAfterMarker;
+            
+            // 基础去首尾空白
             extracted = extracted.trim();
 
+            // ---- 执行全局符号清洗 ----
+            globalCleanRules.forEach(rule => {
+                if (rule.target) {
+                    extracted = extracted.split(rule.target).join(rule.replacement);
+                }
+            });
+
+            // ---- 执行去除多余空行 ----
+            if (removeEmptyLines) {
+                // 正则说明：匹配换行符，其后跟着任意空白字符(包括空格、换行)，然后再跟着至少一个换行符
+                // 统一替换为一个单换行符，从而消除所有多余的空白行
+                extracted = extracted.replace(/\n\s*\n+/g, '\n');
+            }
+
+            // 拼装最终结果
             let finalOutput = extracted;
             if (keepStart) finalOutput = startMarker + "\n\n" + finalOutput;
             if (keepEnd && endIndex !== -1 && endMarker) finalOutput = finalOutput + "\n\n" + endMarker;
-
-            // ---- 执行全局清洗 ----
-            globalCleanRules.forEach(rule => {
-                if (rule.target) {
-                    // 使用 split.join 实现全局所有匹配项的替换/删除，避免正则特殊字符报错
-                    finalOutput = finalOutput.split(rule.target).join(rule.replacement);
-                }
-            });
 
             document.getElementById('output-text').value = finalOutput;
             document.getElementById('output-text').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
