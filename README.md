@@ -3,7 +3,7 @@
 # **NCE Notes**  
 ## **目录**
 
-[临时文章](https://github.com/moodHappy/moodHappy.gitHub.io-nce/tree/main/Notes%2Fdanmu)
+[美悦子系列](https://github.com/moodHappy/moodHappy.gitHub.io-nce/tree/main/Notes%2Fdanmu%2FMiyetsukoSeries)
 
 [CW.md](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/Fiction%2FCW.md
 )
