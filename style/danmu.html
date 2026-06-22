@@ -41,22 +41,33 @@
 
         /* Header */
         header { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid var(--border); background: #fff; }
-        h1 { margin: 0; font-size: 18px; font-weight: 700; }
+        h1 { margin: 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 
-        .header-actions { display: flex; gap: 10px; }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        
+        /* 统一按钮和下拉框的尺寸 */
         .icon-btn {
             background: #f6f8fa; border: 1px solid var(--border);
-            border-radius: 6px; padding: 6px 12px; 
-            font-size: 14px; color: var(--text-main); cursor: pointer;
-            transition: all 0.2s; text-decoration: none; display: flex; align-items: center;
+            border-radius: 6px; padding: 0 12px; height: 34px; box-sizing: border-box;
+            font-size: 14px; color: var(--text-main); cursor: pointer; margin: 0;
+            transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
         }
         .icon-btn:hover { background: #eaeef2; }
         .icon-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
+        /* Sort Select */
+        .sort-select {
+            background: #f6f8fa; border: 1px solid var(--border);
+            border-radius: 6px; padding: 0 8px; height: 34px; box-sizing: border-box; margin: 0;
+            font-size: 13px; color: var(--text-main); cursor: pointer;
+            outline: none; transition: all 0.2s; font-family: inherit;
+        }
+        .sort-select:hover { background: #eaeef2; }
+
         /* Breadcrumb */
         .breadcrumb {
             background: #f3f4f6; padding: 12px 15px; border-bottom: 1px solid var(--border);
-            font-size: 14px; overflow-x: auto; white-space: nowrap; display: flex; align-items: center;
+            font-size: 14px; overflow-x: auto; white-space: nowrap; display: none; align-items: center;
         }
         .breadcrumb-item { color: var(--primary); text-decoration: none; font-weight: 500; padding: 2px 4px; border-radius: 4px; }
         .breadcrumb-item:hover { background: rgba(9, 105, 218, 0.1); }
@@ -89,6 +100,9 @@
         }
         .drag-handle:active { cursor: grabbing; }
         .selection-mode .drag-handle { display: none; /* 多选模式下隐藏拖动按钮 */ }
+        /* 非自定义排序模式下隐藏拖动按钮 */
+        body:not(.sort-mode-custom) .drag-handle { display: none; }
+        
         .sortable-ghost { opacity: 0.5; background: #e6f6ff !important; border: 1px dashed var(--primary); }
 
         .mark-btn { margin-right: 10px; font-size: 18px; cursor: pointer; filter: grayscale(1); opacity: 0.2; transition: all 0.2s; z-index: 5; }
@@ -163,8 +177,18 @@
 
 <div class="container">
     <header>
-        <h1>📚 英语笔记管理</h1>
+        <h1>
+            <span style="cursor: pointer; user-select: none;" onclick="handleDirClick(event, config.rootPath)" title="返回主页">🏠</span> 
+            笔记
+        </h1>
         <div class="header-actions">
+            <select id="sort-select" class="sort-select" onchange="changeSortMode()">
+                <option value="custom">☰ 拖拽排序</option>
+                <option value="time_desc">📅 时间降序</option>
+                <option value="time_asc">📅 时间升序</option>
+                <option value="name_desc">🔤 名称降序</option>
+                <option value="name_asc">🔤 名称升序</option>
+            </select>
             <button id="batch-btn" class="icon-btn" onclick="toggleBatchMode()">
                 <span>✅ 选择</span>
             </button>
@@ -279,6 +303,7 @@
     let selectedFilesMap = new Map(); 
 
     // 排序相关状态
+    let currentSortMode = localStorage.getItem('gh_sort_mode') || 'custom';
     let sortableInstance = null;
     let currentSortSha = null;
 
@@ -310,6 +335,11 @@
     // --- 核心初始化 ---
     async function init() {
         config = getConfig();
+        
+        // 初始化排序UI状态
+        document.getElementById('sort-select').value = currentSortMode;
+        document.body.classList.add(`sort-mode-${currentSortMode}`);
+
         const urlParams = new URLSearchParams(window.location.search);
         const startPath = urlParams.get('path') || config.rootPath;
         await loadPath(startPath, false);
@@ -318,6 +348,19 @@
             if (event.state && event.state.path) loadPath(event.state.path, false);
             else loadPath(config.rootPath, false);
         });
+    }
+
+    // --- 切换排序模式 ---
+    function changeSortMode() {
+        const oldMode = currentSortMode;
+        currentSortMode = document.getElementById('sort-select').value;
+        localStorage.setItem('gh_sort_mode', currentSortMode);
+        
+        document.body.classList.remove(`sort-mode-${oldMode}`);
+        document.body.classList.add(`sort-mode-${currentSortMode}`);
+        
+        // 重新加载并应用排序
+        loadPath(currentPath, false);
     }
 
     // --- GitHub API 封装 ---
@@ -380,7 +423,6 @@
                 if(item.type === 'dir') {
                     items.push(item);
                 } else if(item.name.match(/\.(html|json)$/)) {
-                    // 核心修复1：双重正则解析，同时兼容含有旧时间戳以及纯净数字日期的文件名
                     let ts = 0;
                     let dateStr = '';
 
@@ -404,28 +446,43 @@
                 }
             }
 
-            // 1. 默认排序：文件夹在前，按名字倒序；文件在后，按时间戳降序(如果时间戳一样按名字降序)
-            let defaultDirs = items.filter(i => i.type === 'dir').sort((a,b) => b.name.localeCompare(a.name));
-            let defaultFiles = items.filter(i => i.type !== 'dir').sort((a,b) => {
-                if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
-                return b.name.localeCompare(a.name);
-            });
-            let combined = [...defaultDirs, ...defaultFiles];
+            // --- 排序核心逻辑 ---
+            let dirs = items.filter(i => i.type === 'dir');
+            let files = items.filter(i => i.type !== 'dir');
 
-            // 2. 自定义排序覆盖
-            if (sortOrder && Array.isArray(sortOrder) && sortOrder.length > 0) {
+            // 1. 根据当前选择的排序模式进行排序
+            if (currentSortMode === 'time_desc') {
+                files.sort((a,b) => (b.timestamp - a.timestamp) || b.name.localeCompare(a.name));
+                dirs.sort((a,b) => b.name.localeCompare(a.name));
+            } else if (currentSortMode === 'time_asc') {
+                files.sort((a,b) => (a.timestamp - b.timestamp) || a.name.localeCompare(b.name));
+                dirs.sort((a,b) => a.name.localeCompare(b.name));
+            } else if (currentSortMode === 'name_desc') {
+                files.sort((a,b) => b.name.localeCompare(a.name));
+                dirs.sort((a,b) => b.name.localeCompare(a.name));
+            } else if (currentSortMode === 'name_asc') {
+                files.sort((a,b) => a.name.localeCompare(b.name));
+                dirs.sort((a,b) => a.name.localeCompare(b.name));
+            } else {
+                // custom (默认)：按时间戳降序
+                files.sort((a,b) => {
+                    if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+                    return b.name.localeCompare(a.name);
+                });
+                dirs.sort((a,b) => b.name.localeCompare(a.name));
+            }
+
+            let combined = [...dirs, ...files];
+
+            // 2. 自定义排序覆盖 (仅在 custom 模式且有有效排序文件时应用)
+            if (currentSortMode === 'custom' && sortOrder && Array.isArray(sortOrder) && sortOrder.length > 0) {
                 combined.sort((a, b) => {
                     const indexA = sortOrder.indexOf(a.name);
                     const indexB = sortOrder.indexOf(b.name);
 
-                    // 如果都在拖拽列表里，按列表里相对位置排
                     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-
-                    // 核心修复2：如果A是新文件(不在列表)，B在列表，强制让新文件A排在B前面(置顶)
                     if (indexA === -1 && indexB !== -1) return -1;
                     if (indexA !== -1 && indexB === -1) return 1;
-
-                    // 都不在排序表中的，保持上面计算好的默认降序顺序
                     return 0; 
                 });
             }
@@ -521,7 +578,6 @@
                 if (isSelected && isBatchMode) itemClass += " selected";
                 if (isMarked) itemClass += " marked";
 
-                // 核心UI优化：干净地移除文件后缀名显示
                 let cleanName = item.name.replace(/_\d{13}\.(html|json)$/, '').replace(/\.(html|json)$/i, '').replace(/_/g, ' ');
                 const realUrl = `https://${config.user}.github.io/${config.repo}/${item.path}`;
 
@@ -547,14 +603,17 @@
         listEl.appendChild(ul);
 
         if (sortableInstance) sortableInstance.destroy();
-        sortableInstance = new Sortable(ul, {
-            handle: '.drag-handle', 
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: function () {
-                saveSortOrder(); 
-            }
-        });
+        // 只有在自定义排序模式下，才启用拖拽功能
+        if (currentSortMode === 'custom') {
+            sortableInstance = new Sortable(ul, {
+                handle: '.drag-handle', 
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function () {
+                    saveSortOrder(); 
+                }
+            });
+        }
     }
 
     // --- 标记切换功能 ---
@@ -798,7 +857,17 @@
 
     function renderBreadcrumb(path) {
         const c = document.getElementById('breadcrumb');
-        let html = `<a href="?path=${config.rootPath}" class="breadcrumb-item" onclick="handleDirClick(event, '${config.rootPath}')">🏠</a>`;
+        
+        // 核心修改：如果是根目录，完全隐藏整个面包屑导航栏
+        if (path === config.rootPath) {
+            c.style.display = 'none';
+            c.innerHTML = '';
+            return;
+        }
+        
+        // 如果不是根目录，显示面包屑
+        c.style.display = 'flex';
+        let html = `<a href="?path=${config.rootPath}" class="breadcrumb-item" onclick="handleDirClick(event, '${config.rootPath}')">主页</a>`;
 
         if (path !== config.rootPath) {
             const parts = path.substring(config.rootPath.length).split('/').filter(p=>p);
