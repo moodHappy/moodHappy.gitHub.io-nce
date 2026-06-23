@@ -13,7 +13,7 @@
         .season-divider:hover { background: #3c3c3c; color: #ffcccc; box-shadow: -8px 8px 0px #ffcccc; }
         .season-divider:nth-of-type(even) { transform: rotate(2deg); box-shadow: 6px 6px 0px #d2691e, 10px 10px 20px rgba(0,0,0,0.5); }
         .container { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; transition: all 0.3s ease; }
-        .ep { position: relative; background: #e0d0b0; padding: 18px; border: 3px solid #7a3e1a; border-style: ridge; box-shadow: 5px 5px 0px #1a1a1a; transition: all 0.1s; overflow: hidden; }
+        .ep { position: relative; background: #e0d0b0; padding: 18px; border: 3px solid #7a3e1a; border-style: ridge; box-shadow: 5px 5px 0px #1a1a1a; transition: all 0.1s; overflow: hidden; cursor: pointer; }
         .ep:hover { background: #c04000; box-shadow: 10px 10px 0px #500000, 15px 15px 30px rgba(0,0,0,0.7); z-index: 10; transform: scale(1.05) !important; }
         .ep:nth-child(even) { transform: rotate(3deg); }
         .ep:nth-child(odd) { transform: rotate(-3deg); }
@@ -182,6 +182,69 @@
         const saveBtn = document.getElementById('github-save-btn');
         const engineScript = document.getElementById('core-engine');
 
+        // ==========================================
+        // ✨ 新增：中文标题解析器 (支持混合输入)
+        // ==========================================
+        function chnToNumber(chnStr) {
+            if (/^\d+$/.test(chnStr)) return parseInt(chnStr, 10);
+            const chnNumChar = { 零:0, 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9 };
+            let s = chnStr.replace(/零/g, '');
+            let h = 0, t = 0, o = 0;
+            if (s.includes('百')) {
+                let parts = s.split('百');
+                h = parts[0] === '' || parts[0] === '一' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            if (s.includes('十')) {
+                let parts = s.split('十');
+                t = parts[0] === '' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            if (s) {
+                o = chnNumChar[s] || parseInt(s) || 0;
+            }
+            return h * 100 + t * 10 + o;
+        }
+
+        // ==========================================
+        // ✨ 新增：获取 GitHub 目录文件列表 (带缓存)
+        // ==========================================
+        let directoryCache = null;
+        let isFetchingDir = false;
+
+        async function getDirectoryFiles() {
+            if (directoryCache) return directoryCache;
+            if (isFetchingDir) {
+                while(isFetchingDir) { await new Promise(r => setTimeout(r, 100)); }
+                return directoryCache;
+            }
+            isFetchingDir = true;
+            try {
+                const filePath = document.getElementById('core-engine').getAttribute('data-file-path');
+                const dirPath = filePath ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+                if (!dirPath) throw new Error("尚未绑定 GitHub 路径，请先保存一次！");
+
+                const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${dirPath}`;
+                let headers = {};
+                const token = localStorage.getItem('github_pat');
+                if (token) headers['Authorization'] = `Bearer ${token}`; 
+
+                const res = await fetch(url, { headers });
+                if (res.ok) {
+                    const files = await res.json();
+                    directoryCache = files.map(f => f.name);
+                } else {
+                    console.error("无法拉取目录文件", await res.text());
+                    directoryCache = []; 
+                }
+            } catch (e) {
+                console.error(e);
+                directoryCache = [];
+            }
+            isFetchingDir = false;
+            return directoryCache;
+        }
+
         // 1. 折叠/展开原始逻辑封装
         function bindCollapseEvent(dividers) {
             dividers.forEach(button => {
@@ -246,6 +309,61 @@
             if (e.altKey) { window.getSelection().removeAllRanges(); toggleEditMode(); } 
         });
 
+        // ==========================================
+        // ✨ 新增：卡片点击跳转逻辑 (事件委托 + 模糊匹配)
+        // ==========================================
+        document.addEventListener('click', async (e) => {
+            const isEditing = controls.style.display === 'block';
+            if (isEditing || e.altKey) return; 
+
+            const epCard = e.target.closest('.ep');
+            if (epCard) {
+                const titleEl = epCard.querySelector('.title');
+                if (titleEl) {
+                    const titleText = titleEl.innerText.trim();
+                    
+                    if (titleText.includes('占位符')) {
+                        alert('🚧 该章节暂未更新，敬请期待！');
+                        return;
+                    }
+
+                    const match = titleText.match(/第(.+?)章/);
+                    if (!match) {
+                        alert('无法从标题中解析出章节序号！');
+                        return;
+                    }
+
+                    const chnStr = match[1];
+                    const chapterNum = chnToNumber(chnStr);
+                    const paddedNum = String(chapterNum).padStart(3, '0'); 
+
+                    // 点击反馈样式（匹配暗色废土主题）
+                    const originalBg = epCard.style.backgroundColor;
+                    epCard.style.backgroundColor = '#d2691e';
+                    epCard.style.cursor = 'wait';
+
+                    const files = await getDirectoryFiles();
+
+                    epCard.style.backgroundColor = originalBg;
+                    epCard.style.cursor = 'pointer';
+
+                    if (files.length === 0) {
+                        alert('未能获取到目录文件列表，请检查网络或是否已保存当前主文件。');
+                        return;
+                    }
+
+                    const targetPrefix = `Chapter_${paddedNum}__`;
+                    const targetFile = files.find(f => f.startsWith(targetPrefix));
+
+                    if (targetFile) {
+                        window.location.href = targetFile;
+                    } else {
+                        alert(`🔍 找不到对应的章节文件\n（期望前缀: ${targetPrefix}）`);
+                    }
+                }
+            }
+        });
+
         // 4. 极简增加逻辑
         document.getElementById('simple-add-btn').addEventListener('click', () => {
             const sName = prompt('请输入你要添加的季名\n（例如：第 XXI 部）：');
@@ -285,7 +403,7 @@
             }
         });
 
-        // 6. 白名单重建引擎 (同步更新了纯净版的 CSS)
+        // 6. 白名单重建引擎 (同步更新了纯净版的 CSS - 加入 pointer)
         function getPurifiedHTML() {
             const h1Text = document.querySelector('h1') ? document.querySelector('h1').innerText.replace(/\n/g, '') : '[故事主标题]';
             const subText = document.querySelector('.subtitle') ? document.querySelector('.subtitle').innerText.replace(/\n/g, '') : '—— [故事副标题] ——';
@@ -341,7 +459,7 @@
             htmlBlocks.push('        .season-divider:hover { background: #3c3c3c; color: #ffcccc; box-shadow: -8px 8px 0px #ffcccc; }');
             htmlBlocks.push('        .season-divider:nth-of-type(even) { transform: rotate(2deg); box-shadow: 6px 6px 0px #d2691e, 10px 10px 20px rgba(0,0,0,0.5); }');
             htmlBlocks.push('        .container { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; transition: all 0.3s ease; }');
-            htmlBlocks.push('        .ep { position: relative; background: #e0d0b0; padding: 18px; border: 3px solid #7a3e1a; border-style: ridge; box-shadow: 5px 5px 0px #1a1a1a; transition: all 0.1s; overflow: hidden; }');
+            htmlBlocks.push('        .ep { position: relative; background: #e0d0b0; padding: 18px; border: 3px solid #7a3e1a; border-style: ridge; box-shadow: 5px 5px 0px #1a1a1a; transition: all 0.1s; overflow: hidden; cursor: pointer; }');
             htmlBlocks.push('        .ep:hover { background: #c04000; box-shadow: 10px 10px 0px #500000, 15px 15px 30px rgba(0,0,0,0.7); z-index: 10; transform: scale(1.05) !important; }');
             htmlBlocks.push('        .ep:nth-child(even) { transform: rotate(3deg); }');
             htmlBlocks.push('        .ep:nth-child(odd) { transform: rotate(-3deg); }');
@@ -393,7 +511,7 @@
             const currentSavedPath = engineScript.getAttribute('data-file-path') || '';
             const scriptContent = engineScript.innerHTML;
             htmlBlocks.push('    ');
-            htmlBlocks.push(`    <script id="core-engine" data-file-path="${currentSavedPath}">` + scriptContent + '<' + '/script>');
+            htmlBlocks.push(`    <script id="core-engine" data-file-path="${currentSavedPath}">\n` + scriptContent + '\n    <' + '/script>');
             htmlBlocks.push('</body>');
             htmlBlocks.push('</html>');
 
@@ -455,7 +573,7 @@
                 const cleanHTML = getPurifiedHTML(); 
 
                 const bodyData = {
-                    message: '📝 更新废土生存档案 (隔离路径纯净版)',
+                    message: '📝 更新废土生存档案 (包含动态路由支持)',
                     content: btoa(unescape(encodeURIComponent(cleanHTML)))
                 };
                 if (fileSha) bodyData.sha = fileSha;
