@@ -241,6 +241,17 @@
     };
 
     // =========================================================================
+    // 🛠️ 辅助函数：章节自动补零逻辑
+    // =========================================================================
+    function padChapterNumber(str) {
+        if (!str) return str;
+        // 匹配 "Chapter " 后面跟着的数字，并补全到至少3位
+        return str.replace(/(Chapter\s+)(\d+)/gi, function(match, prefix, num) {
+            return prefix + num.padStart(3, '0');
+        });
+    }
+
+    // =========================================================================
     // 🛠️ 文本清理核心逻辑区 (完美保留光标位置，输入即时截断清理)
     // =========================================================================
     function getSavedKeywords() {
@@ -430,8 +441,20 @@
         let paths = JSON.parse(localStorage.getItem(PATH_HISTORY_KEY)) || [INITIAL_PATH]; paths = paths.filter(item => item !== targetPath); paths.push(targetPath); localStorage.setItem(PATH_HISTORY_KEY, JSON.stringify(paths));
         if (document.getElementById('setAsDefault').checked) { localStorage.setItem(DEFAULT_PATH_KEY, targetPath); }
         try {
-            let baseName = ""; if (customFileName) { baseName = customFileName.replace(/\.html$/i, ''); } 
-            else { let extractedTitle = "未命名网页"; const titleMatch = contentToPush.match(/<title>(.*?)<\/title>/i); const h1Match = contentToPush.match(/<h1>(.*?)<\/h1>/i); if (titleMatch && titleMatch[1]) { extractedTitle = titleMatch[1]; } else if (h1Match && h1Match[1]) { extractedTitle = h1Match[1]; } baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50); }
+            let baseName = ""; 
+            if (customFileName) { 
+                baseName = padChapterNumber(customFileName).replace(/\.html$/i, ''); 
+            } else { 
+                let extractedTitle = "未命名网页"; 
+                const titleMatch = contentToPush.match(/<title>(.*?)<\/title>/i); 
+                const h1Match = contentToPush.match(/<h1>(.*?)<\/h1>/i); 
+                if (titleMatch && titleMatch[1]) { extractedTitle = titleMatch[1]; } 
+                else if (h1Match && h1Match[1]) { extractedTitle = h1Match[1]; } 
+                
+                // 应用补零逻辑
+                extractedTitle = padChapterNumber(extractedTitle);
+                baseName = extractedTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50); 
+            }
             const finalFileName = baseName + '_' + Date.now() + '.html'; const token = localStorage.getItem('gh_token'); const url = 'https://api.github.com/repos/' + GITHUB_USER + '/' + GITHUB_REPO + '/contents/' + targetPath + '/' + finalFileName;
             const base64Content = btoa(unescape(encodeURIComponent(contentToPush)));
             const res = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Auto-push: ' + finalFileName, content: base64Content }) });
@@ -695,7 +718,11 @@
 '</html>';
 
         document.getElementById('outputText').value = fullHtml;
-        const safeTitle = articleTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+        
+        // 应用补零逻辑以显示在UI框内
+        let safeTitle = padChapterNumber(articleTitle);
+        safeTitle = safeTitle.replace(/[\\/:*?"<>|#\s]/g, '_').substring(0, 50);
+        
         const fileNameInput = document.getElementById('inlineFileName');
         fileNameInput.removeAttribute('readonly');
         fileNameInput.value = safeTitle;
