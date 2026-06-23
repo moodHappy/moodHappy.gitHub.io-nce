@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简科幻数字生成器</title>
+    <style>
+        :root {
+            --primary-glow: rgba(0, 255, 255, 0.8);
+            --primary-dim: rgba(0, 255, 255, 0.4);
+            --bg-deep: #000;
+            --font-main: 'OCR A Extended', 'Monospace', monospace;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-deep);
+            color: var(--primary-glow);
+            font-family: var(--font-main);
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at center, transparent 0%, rgba(0, 255, 255, 0.05) 50%, transparent 100%),
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px), 
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
+            background-position: center, 0 0, 0 0;
+            transition: background 0.3s ease;
+        }
+
+        body.generating {
+            background-size: 100% 100%, 20px 20px, 20px 20px;
+        }
+
+        .container {
+            position: relative;
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        input#maxLimit {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: var(--primary-glow);
+            font-family: var(--font-main);
+            font-size: calc(10vw + 20px);
+            text-align: center;
+            outline: none;
+            padding: 20px;
+            box-sizing: border-box;
+            letter-spacing: -5px;
+            text-shadow: 0 0 10px var(--primary-glow);
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        input#maxLimit::placeholder {
+            color: var(--primary-dim);
+            text-shadow: none;
+            font-size: calc(2vw + 10px);
+            letter-spacing: 5px;
+        }
+
+        input#maxLimit:focus {
+            letter-spacing: 0;
+            border-bottom: 2px solid var(--primary-glow);
+            box-shadow: 0 10px 20px -10px var(--primary-glow);
+        }
+
+        input#maxLimit.generating {
+            animation: glitch-color 0.1s infinite, jitter 0.2s infinite;
+            text-shadow: none;
+        }
+
+        input#maxLimit.result {
+            color: #fff;
+            text-shadow: 0 0 20px #fff, 0 0 40px var(--primary-glow);
+            letter-spacing: -2px;
+            cursor: pointer;
+        }
+
+        @keyframes glitch-color {
+            0% { color: #f0f; text-shadow: 2px 0 0 #0ff; }
+            25% { color: #0ff; text-shadow: -2px 0 0 #f0f; }
+            50% { color: #fff; text-shadow: 2px 0 0 #f0f, -2px 0 0 #0ff; }
+            75% { color: #0f0; text-shadow: -2px 0 0 #f0f; }
+            100% { color: #00f; text-shadow: 2px 0 0 #f0f, -2px 0 0 #0ff; }
+        }
+
+        @keyframes jitter {
+            0% { transform: translate(1px, 1px); }
+            10% { transform: translate(-1px, -1px); }
+            20% { transform: translate(-2px, 0px); }
+            30% { transform: translate(0px, 2px); }
+            40% { transform: translate(1px, -1px); }
+            50% { transform: translate(-1px, 2px); }
+            60% { transform: translate(-2px, 1px); }
+            70% { transform: translate(2px, 1px); }
+            80% { transform: translate(-1px, -1px); }
+            90% { transform: translate(1px, 2px); }
+            100% { transform: translate(1px, -1px); }
+        }
+
+        .particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+        }
+        .particle {
+            position: absolute;
+            background: var(--primary-dim);
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: particle-float infinite linear;
+        }
+        @keyframes particle-float {
+            0% { transform: translateY(100vh) translateX(0) scale(1); opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-10vh) translateX(calc(100vw - 100%)) scale(0.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="container">
+        <input type="text" id="maxLimit" placeholder="[ SET MAX LIMIT ]" spellcheck="false" autocomplete="off" onkeydown="handleKey(event)" onclick="resetOrRegenerate()">
+    </div>
+
+    <script>
+        const inputEl = document.getElementById('maxLimit');
+        const particlesEl = document.getElementById('particles');
+        let currentLimit = null;
+        let isResultMode = false;
+
+        function createParticles() {
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                particle.style.width = Math.random() * 5 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.top = Math.random() * 100 + 'vh';
+                particle.style.animationDuration = Math.random() * 5 + 5 + 's';
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                particlesEl.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        function handleKey(e) {
+            if (e.key === 'Enter') {
+                const limitStr = inputEl.value.trim();
+                const limit = parseInt(limitStr);
+
+                // 验证修改：拒绝 0 和负数
+                if (!limitStr || isNaN(limit) || limit <= 0) {
+                    inputEl.style.transition = 'none';
+                    inputEl.style.color = '#ff0000';
+                    inputEl.style.textShadow = '0 0 20px #ff0000';
+                    setTimeout(() => {
+                        inputEl.style.transition = 'all 0.3s ease';
+                        inputEl.style.color = '';
+                        inputEl.style.textShadow = '';
+                        inputEl.value = '';
+                    }, 500);
+                    return;
+                }
+
+                currentLimit = limit;
+                generateNumber();
+            }
+        }
+
+        function generateNumber() {
+            isResultMode = true;
+            inputEl.classList.add('generating');
+            document.body.classList.add('generating');
+            particlesEl.style.filter = 'blur(2px)';
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach(p => p.style.animationDuration = parseFloat(p.style.animationDuration) / 2 + 's');
+
+            let rollInterval = setInterval(() => {
+                // 动画数字生成逻辑修改：1 到 currentLimit
+                let rollNum = Math.floor(Math.random() * currentLimit) + 1;
+                inputEl.value = rollNum.toString().padStart(currentLimit.toString().length, '0');
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(rollInterval);
+                // 最终结果生成逻辑修改：1 到 currentLimit
+                const finalNum = Math.floor(Math.random() * currentLimit) + 1;
+                inputEl.value = finalNum.toString();
+                
+                inputEl.classList.remove('generating');
+                inputEl.classList.add('result');
+                document.body.classList.remove('generating');
+                particlesEl.style.filter = '';
+                particles.forEach(p => p.style.animationDuration = parseFloat(p.style.animationDuration) * 2 + 's');
+            }, 3000);
+        }
+
+        function resetOrRegenerate() {
+            if (isResultMode) {
+                isResultMode = false;
+                inputEl.classList.remove('result');
+                inputEl.value = currentLimit ? currentLimit : ''; 
+                inputEl.placeholder = "[ NEW MAX ]"; 
+                inputEl.focus();
+                const particles = document.querySelectorAll('.particle');
+                particles.forEach(p => p.style.animationDuration = parseFloat(p.style.animationDuration) * 1.5 + 's');
+            }
+        }
+
+        inputEl.addEventListener('focus', () => {
+            if (!isResultMode) inputEl.placeholder = "";
+        });
+        inputEl.addEventListener('blur', () => {
+            if (!isResultMode) inputEl.placeholder = currentLimit ? `[ LIMIT: ${currentLimit} ]` : "[ SET MAX LIMIT ]";
+        });
+    </script>
+</body>
+</html>
