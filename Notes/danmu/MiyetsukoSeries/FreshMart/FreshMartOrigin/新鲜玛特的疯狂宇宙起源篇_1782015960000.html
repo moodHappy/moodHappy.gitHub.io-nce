@@ -30,8 +30,7 @@
     <h1>新鲜玛特的疯狂宇宙<br>起源篇</h1>
     <p class="subtitle">—— 故事的起点 ——</p>
 
-
-        <div class="season-divider">第 1 季 (共 20 章)</div>
+    <div class="season-divider">第 1 季 (共 20 章)</div>
     <div class="container" style="display: grid;">
         <div class="ep"><div class="score">9.2分</div><div class="title">第一章：热浪</div><p>酷热的办公室里，空调故障导致美悦子心烦意乱。当她催促实习生陈默询问维修进度时，藤原走进屋并调侃环境恶劣。美悦子严厉回应，指出十分钟后将有大量货物送达，而装卸区却因叉车损坏而陷入瘫痪。藤原随即收起笑容，意识到情况已演变成一场棘手的灾难。</p></div>
         <div class="ep"><div class="score">8.5分</div><div class="title">第二章：手动搬运</div><p>面对送货车被堵，美悦子指挥陈默拖延时间，随后与藤原亲自上阵推动沉重的叉车。两人在闷热中肩并肩合力推挤，机器发出金属摩擦声并艰难移动。尽管过程极其吃力，但在美悦子与藤原的齐心协力下，装卸区的通道终于开始显露缝隙，眼看危机即将缓解。</p></div>
@@ -215,6 +214,7 @@
 
 
     <script id="core-engine" data-file-path="Notes/danmu/MiyetsukoSeries/FreshMart/FreshMartOrigin/新鲜玛特的疯狂宇宙起源篇_1782015960000.html">
+        // Author: HAL
         // ==========================================
         // ⚠️ GitHub 仓库配置
         // ==========================================
@@ -225,6 +225,80 @@
         const controls = document.getElementById('simple-edit-controls');
         const saveBtn = document.getElementById('github-save-btn');
         const engineScript = document.getElementById('core-engine');
+
+        // ==========================================
+        // ✨ 新增：中文标题解析器 (支持混合输入如：第一百二十5章)
+        // ==========================================
+        function chnToNumber(chnStr) {
+            // 如果纯阿拉伯数字（如 12）
+            if (/^\d+$/.test(chnStr)) return parseInt(chnStr, 10);
+            
+            const chnNumChar = { 零:0, 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9 };
+            let s = chnStr.replace(/零/g, '');
+            let h = 0, t = 0, o = 0;
+            
+            // 解析百位
+            if (s.includes('百')) {
+                let parts = s.split('百');
+                h = parts[0] === '' || parts[0] === '一' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            // 解析十位
+            if (s.includes('十')) {
+                let parts = s.split('十');
+                t = parts[0] === '' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            // 解析个位
+            if (s) {
+                o = chnNumChar[s] || parseInt(s) || 0;
+            }
+            return h * 100 + t * 10 + o;
+        }
+
+        // ==========================================
+        // ✨ 新增：获取 GitHub 目录文件列表 (带缓存)
+        // ==========================================
+        let directoryCache = null;
+        let isFetchingDir = false;
+
+        async function getDirectoryFiles() {
+            if (directoryCache) return directoryCache;
+            if (isFetchingDir) {
+                // 如果正在获取，等待完成
+                while(isFetchingDir) { await new Promise(r => setTimeout(r, 100)); }
+                return directoryCache;
+            }
+            
+            isFetchingDir = true;
+            try {
+                // 根据当前绑定的文件路径推算所在文件夹
+                const filePath = document.getElementById('core-engine').getAttribute('data-file-path');
+                const dirPath = filePath ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+                if (!dirPath) throw new Error("尚未绑定 GitHub 路径，请先保存一次！");
+
+                const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${dirPath}`;
+                
+                let headers = {};
+                const token = localStorage.getItem('github_pat');
+                if (token) headers['Authorization'] = `Bearer ${token}`; // 优先使用 token 防限流
+
+                const res = await fetch(url, { headers });
+                if (res.ok) {
+                    const files = await res.json();
+                    // 仅缓存文件名数组
+                    directoryCache = files.map(f => f.name);
+                } else {
+                    console.error("无法拉取目录文件", await res.text());
+                    directoryCache = []; 
+                }
+            } catch (e) {
+                console.error(e);
+                directoryCache = [];
+            }
+            isFetchingDir = false;
+            return directoryCache;
+        }
 
         // 1. 折叠/展开原始逻辑封装
         function bindCollapseEvent(dividers) {
@@ -291,30 +365,61 @@
         });
 
         // ==========================================
-        // ✨ 新增：卡片点击跳转逻辑 (事件委托)
+        // ✨ 新增：卡片点击跳转逻辑 (事件委托 + 模糊匹配)
         // ==========================================
-        document.addEventListener('click', (e) => {
-            // 如果处于编辑模式，或者按住了 Alt 键 (准备触发双击编辑)，则拦截跳转
+        document.addEventListener('click', async (e) => {
             const isEditing = controls.style.display === 'block';
-            if (isEditing || e.altKey) return; 
+            if (isEditing || e.altKey) return; // 编辑模式或按住Alt键防误触
 
-            // 查找点击目标是否在 .ep 卡片内部
             const epCard = e.target.closest('.ep');
             if (epCard) {
                 const titleEl = epCard.querySelector('.title');
                 if (titleEl) {
                     const titleText = titleEl.innerText.trim();
                     
-                    // 防呆：如果是还没写的占位符章节，阻断跳转并提示
+                    // 拦截占位符章节
                     if (titleText.includes('占位符')) {
                         alert('🚧 该章节暂未更新，敬请期待！');
                         return;
                     }
 
-                    // 动态生成 URL（例如：将 "第一章：热浪" 转化为 "第一章：热浪.html"）
-                    // 只要确保在 GitHub 相同路径下有对应名称的 html 文件即可跳转
-                    const targetUrl = encodeURIComponent(titleText) + '.html';
-                    window.location.href = targetUrl;
+                    // 解析提取章节序号
+                    const match = titleText.match(/第(.+?)章/);
+                    if (!match) {
+                        alert('无法从标题中解析出章节序号！');
+                        return;
+                    }
+
+                    const chnStr = match[1];
+                    const chapterNum = chnToNumber(chnStr);
+                    const paddedNum = String(chapterNum).padStart(3, '0'); // 转换成 001, 144 格式
+
+                    // 过渡动效
+                    const originalBg = epCard.style.backgroundColor;
+                    epCard.style.backgroundColor = '#e0f7fa';
+                    epCard.style.cursor = 'wait';
+
+                    // 拉取对应目录的真实文件列表
+                    const files = await getDirectoryFiles();
+
+                    epCard.style.backgroundColor = originalBg;
+                    epCard.style.cursor = 'pointer';
+
+                    if (files.length === 0) {
+                        alert('未能获取到目录文件列表，请检查网络或是否已保存当前主文件。');
+                        return;
+                    }
+
+                    // 匹配以前缀 "Chapter_XXX__" 开头的文件
+                    const targetPrefix = `Chapter_${paddedNum}__`;
+                    const targetFile = files.find(f => f.startsWith(targetPrefix));
+
+                    if (targetFile) {
+                        // 找到后直接跳转（同级相对路径）
+                        window.location.href = targetFile;
+                    } else {
+                        alert(`🔍 找不到对应的章节文件\n（期望前缀: ${targetPrefix}）`);
+                    }
                 }
             }
         });
@@ -359,7 +464,7 @@
             }
         });
 
-        // 6. 白名单重建引擎 (增加物理烙印路径功能，并同步更新了 .ep 的 pointer 样式)
+        // 6. 白名单重建引擎
         function getPurifiedHTML() {
             const h1Text = document.querySelector('h1') ? document.querySelector('h1').innerText.replace(/\n/g, '') : '[故事主标题]';
             const subText = document.querySelector('.subtitle') ? document.querySelector('.subtitle').innerText.replace(/\n/g, '') : '—— [故事副标题] ——';
@@ -459,7 +564,7 @@
             const currentSavedPath = engineScript.getAttribute('data-file-path') || '';
             const scriptContent = engineScript.innerHTML;
             htmlBlocks.push('    ');
-            htmlBlocks.push(`    <script id="core-engine" data-file-path="${currentSavedPath}">` + scriptContent + '<' + '/script>');
+            htmlBlocks.push(`    <script id="core-engine" data-file-path="${currentSavedPath}">\n` + scriptContent + '\n    <' + '/script>');
             htmlBlocks.push('</body>');
             htmlBlocks.push('</html>');
 
@@ -473,7 +578,6 @@
         saveBtn.addEventListener('touchend', () => { saveBtn.style.boxShadow = '0 4px 0px #8b0000'; saveBtn.style.transform = 'translateX(-50%) translateY(0)'; });
 
         saveBtn.addEventListener('click', async () => {
-            // PAT Token 从 localStorage 拿（全站共享，不需要每个故事都填）
             let token = localStorage.getItem('github_pat');
             if (!token) {
                 token = prompt('请输入 GitHub Token:');
@@ -481,12 +585,10 @@
                 localStorage.setItem('github_pat', token);
             }
 
-            // 文件路径从 HTML 自身的属性里拿（彻底杜绝串台）
             let filePath = engineScript.getAttribute('data-file-path');
             if (!filePath) {
                 filePath = prompt('【初次绑定】请输入此故事要保存的专属 GitHub 路径\n(例如：Notes/danmu/MyNewStory/index.html):');
                 if (!filePath) return;
-                // 将用户输入的路径当场打上烙印
                 engineScript.setAttribute('data-file-path', filePath);
             }
 
@@ -507,13 +609,12 @@
                     }
                 } catch (e) {
                     if(e.message.includes('Token')) throw e;
-                    // 若文件不存在（404），则为新建文件，没有sha值，正常继续
                 }
 
                 const cleanHTML = getPurifiedHTML(); 
 
                 const bodyData = {
-                    message: '📝 更新宇宙档案 (隔离路径版)',
+                    message: '📝 更新宇宙档案 (包含动态路由支持)',
                     content: btoa(unescape(encodeURIComponent(cleanHTML)))
                 };
                 if (fileSha) bodyData.sha = fileSha;
