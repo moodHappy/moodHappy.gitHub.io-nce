@@ -13,7 +13,7 @@
         .season-divider:nth-of-type(even) { transform: rotate(1.5deg); box-shadow: 6px 6px 0px #FF2A00; }
         .season-divider:nth-of-type(even):hover { box-shadow: 6px 6px 0px #0F0F0F; }
         .container { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; transition: all 0.3s ease; }
-        .ep { position: relative; background: #FFF; padding: 15px; border: 3px solid #0F0F0F; box-shadow: 6px 6px 0px #0F0F0F; transition: all 0.1s; }
+        .ep { position: relative; background: #FFF; padding: 15px; border: 3px solid #0F0F0F; box-shadow: 6px 6px 0px #0F0F0F; transition: all 0.1s; cursor: pointer; }
         .ep:hover { background: #00E5FF; box-shadow: 8px 8px 0px #FF2A00; z-index: 10; transform: scale(1.03) !important; border-color: #FF2A00; }
         .ep:nth-child(even) { transform: rotate(2deg); }
         .ep:nth-child(odd) { transform: rotate(-2deg); }
@@ -191,7 +191,7 @@
         <div class="ep"><div class="score">8.6分</div><div class="title">第一百三十五章：岳父的“特殊任务”</div><p>[内容占位符]</p></div>
         <div class="ep"><div class="score">8.9分</div><div class="title">第一百三十六章：人口战略规划师</div><p>[内容占位符]</p></div>
         <div class="ep"><div class="score">8.5分</div><div class="title">第一百三十七章：超市里的“试吃”风波</div><p>[内容占位符]</p></div>
-        <div class="ep"><div class="score">9.0分</div><div class="title">第一百三十八章：终极产品演示</div><p>[内容占位符]</p></div>
+        <div class="ep"><div class="score">9.0分</div><div class="title">第一百三十8章：终极产品演示</div><p>[内容占位符]</p></div>
         <div class="ep"><div class="score">8.7分</div><div class="title">第一百三十九章：卫生间的“私密补课”</div><p>[内容占位符]</p></div>
         <div class="ep"><div class="score">8.8分</div><div class="title">第一百四十章：厕所里的“人口战略升级”</div><p>[内容占位符]</p></div>
         <div class="ep"><div class="score">8.6分</div><div class="title">第一百四十一章：基因的真相</div><p>[内容占位符]</p></div>
@@ -290,6 +290,35 @@
             if (e.altKey) { window.getSelection().removeAllRanges(); toggleEditMode(); } 
         });
 
+        // ==========================================
+        // ✨ 新增：卡片点击跳转逻辑 (事件委托)
+        // ==========================================
+        document.addEventListener('click', (e) => {
+            // 如果处于编辑模式，或者按住了 Alt 键 (准备触发双击编辑)，则拦截跳转
+            const isEditing = controls.style.display === 'block';
+            if (isEditing || e.altKey) return; 
+
+            // 查找点击目标是否在 .ep 卡片内部
+            const epCard = e.target.closest('.ep');
+            if (epCard) {
+                const titleEl = epCard.querySelector('.title');
+                if (titleEl) {
+                    const titleText = titleEl.innerText.trim();
+                    
+                    // 防呆：如果是还没写的占位符章节，阻断跳转并提示
+                    if (titleText.includes('占位符')) {
+                        alert('🚧 该章节暂未更新，敬请期待！');
+                        return;
+                    }
+
+                    // 动态生成 URL（例如：将 "第一章：热浪" 转化为 "第一章：热浪.html"）
+                    // 只要确保在 GitHub 相同路径下有对应名称的 html 文件即可跳转
+                    const targetUrl = encodeURIComponent(titleText) + '.html';
+                    window.location.href = targetUrl;
+                }
+            }
+        });
+
         // 4. 极简增加逻辑 (加入自动随机生成评分)
         document.getElementById('simple-add-btn').addEventListener('click', () => {
             const sName = prompt('请输入你要添加的季名\n（例如：第 XXI 部）：');
@@ -330,7 +359,7 @@
             }
         });
 
-        // 6. 白名单重建引擎 (增加物理烙印路径功能)
+        // 6. 白名单重建引擎 (增加物理烙印路径功能，并同步更新了 .ep 的 pointer 样式)
         function getPurifiedHTML() {
             const h1Text = document.querySelector('h1') ? document.querySelector('h1').innerText.replace(/\n/g, '') : '[故事主标题]';
             const subText = document.querySelector('.subtitle') ? document.querySelector('.subtitle').innerText.replace(/\n/g, '') : '—— [故事副标题] ——';
@@ -385,7 +414,7 @@
             htmlBlocks.push('        .season-divider:nth-of-type(even) { transform: rotate(1.5deg); box-shadow: 6px 6px 0px #FF2A00; }');
             htmlBlocks.push('        .season-divider:nth-of-type(even):hover { box-shadow: 6px 6px 0px #0F0F0F; }');
             htmlBlocks.push('        .container { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; transition: all 0.3s ease; }');
-            htmlBlocks.push('        .ep { position: relative; background: #FFF; padding: 15px; border: 3px solid #0F0F0F; box-shadow: 6px 6px 0px #0F0F0F; transition: all 0.1s; }');
+            htmlBlocks.push('        .ep { position: relative; background: #FFF; padding: 15px; border: 3px solid #0F0F0F; box-shadow: 6px 6px 0px #0F0F0F; transition: all 0.1s; cursor: pointer; }');
             htmlBlocks.push('        .ep:hover { background: #00E5FF; box-shadow: 8px 8px 0px #FF2A00; z-index: 10; transform: scale(1.03) !important; border-color: #FF2A00; }');
             htmlBlocks.push('        .ep:nth-child(even) { transform: rotate(2deg); }');
             htmlBlocks.push('        .ep:nth-child(odd) { transform: rotate(-2deg); }');
