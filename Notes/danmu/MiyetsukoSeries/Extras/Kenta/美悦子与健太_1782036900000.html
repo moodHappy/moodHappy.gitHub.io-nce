@@ -12,7 +12,7 @@
         .season-divider { background: #00d2ff; color: #000; padding: 15px; font-size: 1.4rem; font-weight: 900; text-align: center; letter-spacing: 3px; margin: 60px 0 40px 0; border: 4px solid #000; box-shadow: 6px 6px 0px #000; cursor: pointer; transition: all 0.1s ease; user-select: none; }
         .season-divider:hover { background: #ff0055; color: #fff; transform: translate(2px, 2px); box-shadow: 4px 4px 0px #000; }
         .container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; transition: all 0.3s ease; }
-        .ep { position: relative; background: #fff; padding: 25px 20px; border: 3px solid #000; box-shadow: 6px 6px 0px #000; transition: all 0.1s; }
+        .ep { position: relative; background: #fff; padding: 25px 20px; border: 3px solid #000; box-shadow: 6px 6px 0px #000; transition: all 0.1s; cursor: pointer; }
         .ep:hover { background: #f4f4f0; z-index: 10; transform: translate(4px, 4px) !important; box-shadow: 2px 2px 0px #000; }
         .score { position: absolute; top: -15px; right: -10px; background: #ff0055; color: #fff; font-size: 1rem; font-weight: 900; padding: 4px 12px; border: 3px solid #000; box-shadow: 4px 4px 0px #000; z-index: 2; transform: rotate(5deg); }
         .ep:hover .score { background: #ffde00; color: #000; transform: rotate(0deg); }
@@ -32,7 +32,6 @@
     <h1>美悦子与健太</h1>
     <div style="text-align: center;"><p class="subtitle">—— 番外篇 ——</p></div>
 
-
     <div class="season-divider">第一季 (第1-10章)</div>
     <div class="container" style="display: grid;">
         <div class="ep"><div class="score">8.9分</div><div class="title">第1章：独奏封神</div><p>樱花学园大礼堂内，美悦子一袭素白长裙惊艳登场。她丰盈成熟的身材与纯真面容形成强烈反差，瞬间吸引了全场目光。随着《月光奏鸣曲》缓缓流淌，纯净忧郁的旋律镇住了所有嘈杂，令全校师生沉醉其中。一曲终了，余音绕梁，美悦子凭借这场震撼人心的演出，从普通新生一跃成为学园中不可亵渎的女神。</p></div>
@@ -50,18 +49,15 @@
         <div class="ep"><div class="score">8.5分</div><div class="title">第13章：纯真的好奇</div><p>夏夜林间，草地之上，美悦子展现出对亲密行为既纯真又羞涩的好奇。在健太的引导下，美悦子笨拙却极为认真地学习如何用自己丰盈的双乳取悦对方。感受着那如丝绸般深邃的柔软与温热的摩擦，两人在月色与萤火的见证下，打破了初次结合后的羞怯，以一种全新的方式探索彼此的身体极限。这不仅是感官的极致享受，更是两人在爱情中不断深入、彼此交付身心的又一印记。</p></div>
     </div>
 
-
     <div id="simple-edit-controls" style="display: none; text-align: center; margin: 50px auto 120px auto;">
         <button id="simple-add-btn">＋ 季</button>
         <button id="simple-add-ep-btn">＋ 章</button>
         <button id="simple-del-btn" style="font-size: 22px;">🗑️</button>
     </div>
 
-
     <div id="github-save-btn" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 320px; padding: 15px; font-size: 1.2rem; cursor: pointer; z-index: 10000; text-align: center;">
         ⚡ 轰炸至 GitHub
     </div>
-
 
     <script id="core-engine" data-file-path="Notes/danmu/MiyetsukoSeries/Extras/Kenta/美悦子与健太_1782036900000.html">
         // ==========================================
@@ -74,6 +70,72 @@
         const controls = document.getElementById('simple-edit-controls');
         const saveBtn = document.getElementById('github-save-btn');
         const engineScript = document.getElementById('core-engine');
+
+        // ==========================================
+        // ✨ 新增引擎模块：中文数字解析
+        // ==========================================
+        function chnToNumber(chnStr) {
+            if (/^\d+$/.test(chnStr)) return parseInt(chnStr, 10);
+            const chnNumChar = { 零:0, 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9 };
+            let s = chnStr.replace(/零/g, '');
+            let h = 0, t = 0, o = 0;
+            if (s.includes('百')) {
+                let parts = s.split('百');
+                h = parts[0] === '' || parts[0] === '一' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            if (s.includes('十')) {
+                let parts = s.split('十');
+                t = parts[0] === '' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            if (s) {
+                o = chnNumChar[s] || parseInt(s) || 0;
+            }
+            return h * 100 + t * 10 + o;
+        }
+
+        // ==========================================
+        // ✨ 新增引擎模块：跨层级分卷目录缓存
+        // ==========================================
+        let directoryCache = {}; // 对象存储结构，支持多文件夹缓存
+        let fetchingDirs = {};
+
+        async function getDirectoryFiles(subDir) {
+            if (directoryCache[subDir]) return directoryCache[subDir];
+            if (fetchingDirs[subDir]) {
+                while(fetchingDirs[subDir]) { await new Promise(r => setTimeout(r, 100)); }
+                return directoryCache[subDir];
+            }
+            
+            fetchingDirs[subDir] = true;
+            try {
+                const filePath = document.getElementById('core-engine').getAttribute('data-file-path');
+                const baseDirPath = filePath ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+                if (!baseDirPath) throw new Error("尚未绑定 GitHub 路径，请先保存一次！");
+
+                // 动态拼接目标文件夹路径 (如 .../Kenta/Season 1)
+                const targetApiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${baseDirPath}/${subDir}`;
+                
+                let headers = {};
+                const token = localStorage.getItem('github_pat');
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch(targetApiUrl, { headers });
+                if (res.ok) {
+                    const files = await res.json();
+                    directoryCache[subDir] = files.map(f => f.name);
+                } else {
+                    console.error(`无法拉取子目录 [${subDir}] 的文件列表`, await res.text());
+                    directoryCache[subDir] = []; 
+                }
+            } catch (e) {
+                console.error(e);
+                directoryCache[subDir] = [];
+            }
+            fetchingDirs[subDir] = false;
+            return directoryCache[subDir];
+        }
 
         // ★ 生成 8.0 - 9.5 之间的随机分数
         function getRandomScore() {
@@ -91,9 +153,7 @@
                 if (button.dataset.collapseBound) return;
                 button.dataset.collapseBound = "true";
                 button.addEventListener('click', () => {
-                    // 如果正在编辑模式，点击标题不触发折叠，方便修改文字
                     if (button.getAttribute('contenteditable') === 'true') return;
-
                     const content = button.nextElementSibling;
                     if (content.style.display === "none" || content.style.display === "") {
                         content.style.display = "grid";
@@ -132,7 +192,7 @@
             if (!isEditing) {
                 controls.style.display = 'block';
                 saveBtn.style.display = 'block';
-                document.body.style.border = '4px dashed #ff0055'; /* 编辑模式下粉色虚线边框 */
+                document.body.style.border = '4px dashed #ff0055'; 
                 getEditableElements().forEach(el => el.setAttribute('contenteditable', 'true'));
             } else {
                 controls.style.display = 'none';
@@ -152,6 +212,75 @@
             if (e.altKey) { window.getSelection().removeAllRanges(); toggleEditMode(); } 
         });
 
+        // ==========================================
+        // ✨ 新增核心：精准子文件夹穿透跳转逻辑
+        // ==========================================
+        document.addEventListener('click', async (e) => {
+            const isEditing = controls.style.display === 'block';
+            if (isEditing || e.altKey) return; 
+
+            const epCard = e.target.closest('.ep');
+            if (epCard) {
+                const titleEl = epCard.querySelector('.title');
+                if (titleEl) {
+                    const titleText = titleEl.innerText.trim();
+                    
+                    if (titleText.includes('占位符')) {
+                        alert('🚧 该章节暂未更新，敬请期待！');
+                        return;
+                    }
+
+                    const match = titleText.match(/第(.+?)章/);
+                    if (!match) {
+                        alert('无法从标题中解析出章节序号！');
+                        return;
+                    }
+
+                    // 1. 测算当前卡片所属的季序号 (以确定去哪个文件夹找)
+                    const container = epCard.closest('.container');
+                    const allContainers = Array.from(document.querySelectorAll('.container'));
+                    const seasonNum = allContainers.indexOf(container) + 1; // 1-based index
+                    const targetFolderName = `Season ${seasonNum}`;
+
+                    // 2. 格式化提取出的章节编号 (如 001)
+                    const chnStr = match[1];
+                    const chapterNum = chnToNumber(chnStr);
+                    const paddedNum = String(chapterNum).padStart(3, '0'); 
+
+                    // 3. 动态视觉反馈 (匹配波普风)
+                    const originalBg = epCard.style.backgroundColor;
+                    const originalTransform = epCard.style.transform;
+                    epCard.style.backgroundColor = '#ffde00';
+                    epCard.style.transform = 'translate(6px, 6px)';
+                    epCard.style.cursor = 'wait';
+
+                    // 4. 定向拉取指定文件夹内的文件目录
+                    const files = await getDirectoryFiles(targetFolderName);
+
+                    // 恢复样式
+                    epCard.style.backgroundColor = originalBg;
+                    epCard.style.transform = originalTransform;
+                    epCard.style.cursor = 'pointer';
+
+                    if (files.length === 0) {
+                        alert(`❌ 未能获取到 [${targetFolderName}] 目录的文件列表。\n可能是文件夹尚未创建，或遇到了网络限制。`);
+                        return;
+                    }
+
+                    // 5. 进行文件特征匹配并跨层级跳转
+                    const targetPrefix = `Chapter_${paddedNum}__`;
+                    const targetFile = files.find(f => f.startsWith(targetPrefix));
+
+                    if (targetFile) {
+                        // 相对路径跳转机制: Season X / 目标文件.html
+                        window.location.href = encodeURI(`${targetFolderName}/${targetFile}`);
+                    } else {
+                        alert(`🔍 找不到对应的章节文件\n（期望前缀: ${targetPrefix} 位于 [${targetFolderName}] 目录下）`);
+                    }
+                }
+            }
+        });
+
         // 4. 极简增加 季 逻辑
         document.getElementById('simple-add-btn').addEventListener('click', () => {
             const sName = prompt('请输入你要添加的季名\n（例如：第 XXI 部）：');
@@ -159,7 +288,6 @@
 
             let epTemplate = '';
             for (let i = 1; i <= 10; i++) {
-                // 新增季时自动应用随机分数
                 epTemplate += `<div class="ep"><div class="score">${getRandomScore()}</div><div class="title">第${i}章：[标题占位符]</div><p>[内容占位符]</p></div>`;
             }
             const newSeasonHtml = `<div class="season-divider">${sName} (第1-10章)</div><div class="container" style="display: grid;">${epTemplate}</div>`;
@@ -176,7 +304,7 @@
             allNewEdits.forEach(el => el.setAttribute('contenteditable', 'true'));
         });
 
-        // ★ 5. 极简增加 章 逻辑 (无限添加)
+        // 5. 极简增加 章 逻辑 (无限添加)
         document.getElementById('simple-add-ep-btn').addEventListener('click', () => {
             const containers = document.querySelectorAll('.container');
             if(containers.length === 0) return alert('先加个季啊喂！');
@@ -203,7 +331,6 @@
             bindEditEffects(newEdits);
             newEdits.forEach(el => el.setAttribute('contenteditable', 'true'));
 
-            // 滚动到新增加的章节
             addedEp.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
 
@@ -221,7 +348,7 @@
             }
         });
 
-        // 7. 白名单重建引擎 (已同步更新波普/新粗野样式)
+        // 7. 白名单重建引擎
         function getPurifiedHTML() {
             const h1Text = document.querySelector('h1') ? document.querySelector('h1').innerText.replace(/\n/g, '') : '[野兽档案]';
             const subText = document.querySelector('.subtitle') ? document.querySelector('.subtitle').innerText.replace(/\n/g, '') : '—— [狂放子标题] ——';
@@ -275,7 +402,7 @@
             htmlBlocks.push('        .season-divider { background: #00d2ff; color: #000; padding: 15px; font-size: 1.4rem; font-weight: 900; text-align: center; letter-spacing: 3px; margin: 60px 0 40px 0; border: 4px solid #000; box-shadow: 6px 6px 0px #000; cursor: pointer; transition: all 0.1s ease; user-select: none; }');
             htmlBlocks.push('        .season-divider:hover { background: #ff0055; color: #fff; transform: translate(2px, 2px); box-shadow: 4px 4px 0px #000; }');
             htmlBlocks.push('        .container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; transition: all 0.3s ease; }');
-            htmlBlocks.push('        .ep { position: relative; background: #fff; padding: 25px 20px; border: 3px solid #000; box-shadow: 6px 6px 0px #000; transition: all 0.1s; }');
+            htmlBlocks.push('        .ep { position: relative; background: #fff; padding: 25px 20px; border: 3px solid #000; box-shadow: 6px 6px 0px #000; transition: all 0.1s; cursor: pointer; }');
             htmlBlocks.push('        .ep:hover { background: #f4f4f0; z-index: 10; transform: translate(4px, 4px) !important; box-shadow: 2px 2px 0px #000; }');
             htmlBlocks.push('        .score { position: absolute; top: -15px; right: -10px; background: #ff0055; color: #fff; font-size: 1rem; font-weight: 900; padding: 4px 12px; border: 3px solid #000; box-shadow: 4px 4px 0px #000; z-index: 2; transform: rotate(5deg); }');
             htmlBlocks.push('        .ep:hover .score { background: #ffde00; color: #000; transform: rotate(0deg); }');
@@ -323,7 +450,7 @@
             const currentSavedPath = engineScript.getAttribute('data-file-path') || '';
             const scriptContent = engineScript.innerHTML;
             htmlBlocks.push('    ');
-            htmlBlocks.push(`    <script id="core-engine" data-file-path="${currentSavedPath}">` + scriptContent + '<' + '/script>');
+            htmlBlocks.push(`    <script id="core-engine" data-file-path="${currentSavedPath}">\n` + scriptContent + '\n    <' + '/script>');
             htmlBlocks.push('</body>');
             htmlBlocks.push('</html>');
 
@@ -368,7 +495,7 @@
                 const cleanHTML = getPurifiedHTML(); 
 
                 const bodyData = {
-                    message: '⚡ 更新番外档案 (波普粗野版)',
+                    message: '⚡ 更新番外档案 (包含跨层级路由功能)',
                     content: btoa(unescape(encodeURIComponent(cleanHTML)))
                 };
                 if (fileSha) bodyData.sha = fileSha;
