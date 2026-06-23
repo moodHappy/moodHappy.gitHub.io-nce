@@ -14,7 +14,7 @@
         .season-divider::after { content: '▼'; position: absolute; right: 25px; top: 50%; transform: translateY(-50%); color: #8b0000; font-size: 1rem; transition: 0.3s; }
         .season-divider:hover { background: linear-gradient(90deg, #1a1a1a, #2a2a2a); border-left: 15px solid #d4af37; padding-left: 40px; box-shadow: 0 8px 25px rgba(212, 175, 55, 0.2); }
         .container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 35px; padding: 10px; }
-        .ep { background: #18181c; border: 1px solid #333; border-top: 4px solid #8b0000; padding: 30px 25px 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: all 0.3s ease; position: relative; font-weight: bold; }
+        .ep { background: #18181c; border: 1px solid #333; border-top: 4px solid #8b0000; padding: 30px 25px 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: all 0.3s ease; position: relative; font-weight: bold; cursor: pointer; }
         .ep::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(139,0,0,0.1) 0%, transparent 50%); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 0; }
         .ep:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 0 15px rgba(139,0,0,0.3); border-color: #555; border-top: 4px solid #d4af37; z-index: 10; }
         .ep:hover::before { opacity: 1; }
@@ -357,6 +357,71 @@
         const saveBtn = document.getElementById('github-save-btn');
         const engineScript = document.getElementById('core-engine');
 
+        // ==========================================
+        // ✨ 新增引擎模块：中文数字解析
+        // ==========================================
+        function chnToNumber(chnStr) {
+            if (/^\d+$/.test(chnStr)) return parseInt(chnStr, 10);
+            const chnNumChar = { 零:0, 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9 };
+            let s = chnStr.replace(/零/g, '');
+            let h = 0, t = 0, o = 0;
+            if (s.includes('百')) {
+                let parts = s.split('百');
+                h = parts[0] === '' || parts[0] === '一' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            if (s.includes('十')) {
+                let parts = s.split('十');
+                t = parts[0] === '' ? 1 : (chnNumChar[parts[0]] || parseInt(parts[0]) || 1);
+                s = parts[1];
+            }
+            if (s) {
+                o = chnNumChar[s] || parseInt(s) || 0;
+            }
+            return h * 100 + t * 10 + o;
+        }
+
+        // ==========================================
+        // ✨ 新增引擎模块：跨层级分卷目录缓存
+        // ==========================================
+        let directoryCache = {}; 
+        let fetchingDirs = {};
+
+        async function getDirectoryFiles(subDir) {
+            if (directoryCache[subDir]) return directoryCache[subDir];
+            if (fetchingDirs[subDir]) {
+                while(fetchingDirs[subDir]) { await new Promise(r => setTimeout(r, 100)); }
+                return directoryCache[subDir];
+            }
+            
+            fetchingDirs[subDir] = true;
+            try {
+                const filePath = document.getElementById('core-engine').getAttribute('data-file-path');
+                const baseDirPath = filePath ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+                if (!baseDirPath) throw new Error("尚未绑定 GitHub 路径，请先保存一次！");
+
+                const targetApiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${baseDirPath}/${subDir}`;
+                
+                let headers = {};
+                const token = localStorage.getItem('github_pat');
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch(targetApiUrl, { headers });
+                if (res.ok) {
+                    const files = await res.json();
+                    directoryCache[subDir] = files.map(f => f.name);
+                } else {
+                    console.error(`无法拉取子目录 [${subDir}] 的文件列表`, await res.text());
+                    directoryCache[subDir] = []; 
+                }
+            } catch (e) {
+                console.error(e);
+                directoryCache[subDir] = [];
+            }
+            fetchingDirs[subDir] = false;
+            return directoryCache[subDir];
+        }
+
         function getRandomScore() {
             return (Math.random() * (9.5 - 8.0) + 8.0).toFixed(1) + '分';
         }
@@ -408,7 +473,6 @@
         function toggleEditMode() {
             const isEditing = controls.style.display === 'flex' || controls.style.display === 'block';
             if (!isEditing) {
-                // 强制重置 display，交由 css 媒体查询去处理布局
                 controls.style.display = window.innerWidth <= 768 ? 'flex' : 'block';
                 saveBtn.style.display = 'block';
                 document.body.style.outline = '4px solid #8b0000'; 
@@ -430,6 +494,73 @@
         }, { passive: false });
         document.addEventListener('dblclick', (e) => { 
             if (e.altKey) { window.getSelection().removeAllRanges(); toggleEditMode(); } 
+        });
+
+        // ==========================================
+        // ✨ 新增核心：精准子文件夹穿透跳转逻辑
+        // ==========================================
+        document.addEventListener('click', async (e) => {
+            const isEditing = controls.style.display === 'block' || controls.style.display === 'flex';
+            if (isEditing || e.altKey) return; 
+
+            const epCard = e.target.closest('.ep');
+            if (epCard) {
+                const titleEl = epCard.querySelector('.title');
+                if (titleEl) {
+                    const titleText = titleEl.innerText.trim();
+                    
+                    if (titleText.includes('占位符')) {
+                        alert('🚧 该章节暂未更新，敬请期待！');
+                        return;
+                    }
+
+                    // 兼容带空格的情况，规避“季”的干扰
+                    const match = titleText.match(/第\s*([零一二三四五六七八九十百\d]+)\s*章/);
+                    if (!match) {
+                        alert('无法从标题中解析出章节序号！');
+                        return;
+                    }
+
+                    // 提取文件夹名，例如 "Origin (第1-6章)" -> "Origin"
+                    const container = epCard.closest('.container');
+                    const divider = container.previousElementSibling;
+                    const targetFolderName = divider.innerText.split('(')[0].trim();
+
+                    const chnStr = match[1];
+                    const chapterNum = chnToNumber(chnStr);
+                    const paddedNum = String(chapterNum).padStart(3, '0'); 
+
+                    const originalBg = epCard.style.backgroundColor;
+                    const originalTransform = epCard.style.transform;
+                    const originalBorder = epCard.style.borderColor;
+
+                    epCard.style.backgroundColor = 'rgba(139, 0, 0, 0.4)';
+                    epCard.style.borderColor = '#d4af37';
+                    epCard.style.transform = 'translateY(-4px)';
+                    epCard.style.cursor = 'wait';
+
+                    const files = await getDirectoryFiles(targetFolderName);
+
+                    epCard.style.backgroundColor = originalBg;
+                    epCard.style.borderColor = originalBorder;
+                    epCard.style.transform = originalTransform;
+                    epCard.style.cursor = 'pointer';
+
+                    if (files.length === 0) {
+                        alert(`❌ 未能获取到 [${targetFolderName}] 目录的文件列表。\n可能是文件夹尚未创建，或遇到了网络限制。`);
+                        return;
+                    }
+
+                    const targetPrefix = `Chapter_${paddedNum}__`;
+                    const targetFile = files.find(f => f.startsWith(targetPrefix));
+
+                    if (targetFile) {
+                        window.location.href = encodeURI(`${targetFolderName}/${targetFile}`);
+                    } else {
+                        alert(`🔍 找不到对应的章节文件\n（期望前缀: ${targetPrefix} 位于 [${targetFolderName}] 目录下）`);
+                    }
+                }
+            }
         });
 
         document.getElementById('simple-add-btn').addEventListener('click', () => {
@@ -553,7 +684,7 @@
             htmlBlocks.push('        .season-divider::after { content: \'▼\'; position: absolute; right: 25px; top: 50%; transform: translateY(-50%); color: #8b0000; font-size: 1rem; transition: 0.3s; }');
             htmlBlocks.push('        .season-divider:hover { background: linear-gradient(90deg, #1a1a1a, #2a2a2a); border-left: 15px solid #d4af37; padding-left: 40px; box-shadow: 0 8px 25px rgba(212, 175, 55, 0.2); }');
             htmlBlocks.push('        .container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 35px; padding: 10px; }');
-            htmlBlocks.push('        .ep { background: #18181c; border: 1px solid #333; border-top: 4px solid #8b0000; padding: 30px 25px 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: all 0.3s ease; position: relative; font-weight: bold; }');
+            htmlBlocks.push('        .ep { background: #18181c; border: 1px solid #333; border-top: 4px solid #8b0000; padding: 30px 25px 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: all 0.3s ease; position: relative; font-weight: bold; cursor: pointer; }');
             htmlBlocks.push('        .ep::before { content: \'\'; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(139,0,0,0.1) 0%, transparent 50%); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 0; }');
             htmlBlocks.push('        .ep:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 0 15px rgba(139,0,0,0.3); border-color: #555; border-top: 4px solid #d4af37; z-index: 10; }');
             htmlBlocks.push('        .ep:hover::before { opacity: 1; }');
@@ -663,7 +794,7 @@
                 const cleanHTML = getPurifiedHTML(); 
 
                 const bodyData = {
-                    message: '💥 潜入成功：宇宙档案已重写 (霸气适配版)',
+                    message: '💥 潜入成功：宇宙档案已重写 (霸气适配版包含高级路由)',
                     content: btoa(unescape(encodeURIComponent(cleanHTML)))
                 };
                 if (fileSha) bodyData.sha = fileSha;
