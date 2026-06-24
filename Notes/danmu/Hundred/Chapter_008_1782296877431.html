@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 8</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } 
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } 
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        .content-layer { transition: font-size 0.2s; width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 24px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 28px; height: 28px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 4px 6px; }
+        .dict-basic-trans { font-size: 30px; color: #444; margin-top: 6px; }
+        .dict-pos-block { margin-bottom: 6px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 6px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 24px; padding: 10px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 8 (EN)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>SITTNG IN THE WICKER ROCKING chair with her interrupted work in her lap, Amaranta watched Aureliano, José , his chin covered with foam, stropping his razor to give himself his first shave.</p>
+        <p>His blackheads bled and he cut his upper lip as he tried to shape a mustache blond fuzz when it was all over he looked the same as before, but the laborious process gave Amaranta the feeling that she had begun to grow old at that moment.</p>
+        <p>"You look just like Aureliano when he was your age," she said. "You're a man now."</p>
+        <p>He had been for a long time, ever since that distant day when Amaranta thought he was still a child and continued getting undressed in front of him in the bathroom as she had always done, as she had been used to doing ever since Pilar Ternera had turned him over to her to finish his upbringing.</p>
+        <p>The first time that he saw her the only thing that drew his attention was the deep depression between her breasts.</p>
+        <p>He was so innocent that he asked her what had happened to her and Amaranta pretended to dig into her breasts with the tips of her fingers and answered: "They gave me some terrible cuts."</p>
+        <p>Some time later, when she had recovered from Pietro Crespi's suicide and would bathe with Aureliano José again, he no longer paid attention to the depression but felt a strange trembling at the sight of the splendid breasts with their brown nipples.</p>
+        <p>He kept on examining her, discovering the miracle of her intimacy inch by inch, and he felt his skin tingle as he contemplated the way her skin tingled when it touched the water.</p>
+        <p>Ever since he was a small child he had the custom of leaving his hammock and waking up in Amaranta's bed, because contact with her was a way of overcoming his fear of the dark.</p>
+        <p>But since that day when he became aware of his own nakedness, it was not fear of the dark that drove him to crawl in under her mosquito netting but an urge to feel Amaranta's warm breathing at dawn.</p>
+        <p>Early one morning during the time when she refused Colonel Gerineldo Márquez, Aureli-ano José awoke with the feeling that he could not breathe.</p>
+        <p>He felt Amaranta's fingers searching across his stomach like warm and anxious little caterpillars.</p>
+        <p>Pretending to sleep, he changed his position to make it easier, and then he felt the hand without the black bandage diving like a blind shellfish into the algae of his anxiety.</p>
+        <p>Although they seemed to ignore what both of them knew each one knew that the other knew, from that night on they were yoked together in an inviolable complicity.</p>
+        <p>Aureli-ano José could not get to sleep until he heard the twelve-o'clock waltz on the parlor dock, and the mature maiden whose skin was beginning to grow sad did not have a moments' rest until she felt slip in under her mosquito netting that sleepwalker whom she had raised, not thinking that he would be a palliative for her solitude.</p>
+        <p>Later they not only slept together, naked, exchanging exhausting caresses, but they would also chase each other into the corners of the house and shut themselves up in the bedrooms at any hour of the day in a permanent state of unrelieved excitement.</p>
+        <p>They were almost discovered by &uacute;rsula one afternoon when she went into the granary as they were starting to kiss.</p>
+        <p>"Do you love your aunt a lot?" she asked Aureli-ano José in an innocent way.</p>
+        <p>He answered that he did.</p>
+        <p>"That's good of you," &uacute;rsula concluded and finished measuring the flour for the bread and returned to the kitchen.</p>
+        <p>That episode drew Amaranta out of her delirium.</p>
+        <p>She realized that she had gone too far, that she was no longer playing kissing games with a child, but was floundering about in an autumnal passion, one that was dangerous and had no future, and she cut it off with one stroke.</p>
+        <p>Aureli-ano José, who was then finishing his military training, finally woke up to reality and went to sleep in the barracks.</p>
+        <p>On Saturdays he would go the soldiers to Catarino's store.</p>
+        <p>He was seeking consolation for his abrupt solitude, for his premature adolescence with women who smelled of dead flowers, whom he idealized in the darkness changed into Amaranta by means of the anxious efforts of his imagination.</p>
+        <p>A short time later contradictory news of the war began to come in.</p>
+        <p>While the government itself admitted the progress of the rebellion, the officers in Macondo had confidential reports of the imminence of a negotiated peace.</p>
+        <p>Toward the first of April a special emissary identified himself to Colonel Gerineldo Márquez.</p>
+        <p>He confirmed the fact to him that the leaders of the party had indeed established contact with the rebel leaders in the interior and were on the verge of arranging an armistice in exchange for three cabinet posts for the Liberals, a minority representation in the congress, and a general amnesty for rebels who laid down their arms.</p>
+        <p>The emissary brought a highly confidential order from Colonel Aureli-ano Buend&iacute;a, who was not in agreement with the terms of the armistice.</p>
+        <p>Colonel Gerineldo Márquez was to choose five of his best men and prepare to leave the country with them.</p>
+        <p>The order would be carried out with the strictest secrecy.</p>
+        <p>One week before the agreement was announced, and in the midst of a storm of contradictory rumors, Colonel Aureli-ano Buend&iacute;a ten trusted officers, among them Colonel Roque Carnicero, stealthily arrived in Macondo after midnight, dismissed the garrison, buried their weapons, and destroyed their records.</p>
+        <p>By dawn they had left town, along with Colonel Gerineldo Márquez and his five officers.</p>
+        <p>It was such a quick and secret operation that &uacute;rsula did not find out about it until the last moment, when someone tapped on her bedroom window and whispered, "If you want to see Colonel Aureli-ano Buend&iacute;a, come to the door right now."</p>
+        <p>&uacute;rsula Jumped out of bed and went to the door in her night-gown and she was just able to see the horsemen who were leaving town gallop off in a mute cloud of dust.</p>
+        <p>Only on the following day did she discover that Aureli-ano José had gone with his father.</p>
+        <p>Ten days after a joint communiqué by the government and the opposition announced the end of the war, there was news of the first armed uprising of Colonel Aureli-ano Buend&iacute;a on the western border.</p>
+        <p>His small and poorly armed force was scattered in less than a week.</p>
+        <p>But during that year, while Liberals and Conservatives tried to make the country believe in reconciliation, he attempted seven other revolts.</p>
+        <p>One night he bombarded Riohacha from a schooner and the garrison dragged out of bed and shot the fourteen best-known Liberals in the town as a reprisal.</p>
+        <p>For more than two weeks he held a customs post on the border and from there sent the nation a call to general war.</p>
+        <p>Another of his expectations was lost for three months in the jungle in a mad attempt to cross more than a thousand miles of virgin territory in order to proclaim war on the outskirts of the capital.</p>
+        <p>On one occasion he was lea than fifteen miles away from Macondo and was obliged by government patrols to hide in the mountains, very close to the enchanted region where his father had found the fossil of a Spanish galleon many years before.</p>
+        <p>Visitaci&oacute;n died around that time.</p>
+        <p>She had the pleasure of dying a natural death after having renounced a throne out of fear insomnia, and her last wish was that they should dig up the wages she had saved for more than twenty years under her bed and send the money to Colonel Aureli-ano Buend&iacute;a so that he could go on with the war.</p>
+        <p>But &uacute;rsula did not bother to dig it up because it was rumored in those days that Colonel Aureli-ano Buend&iacute;a had been killed in a landing near the provincial capital.</p>
+        <p>The official announcement-the fourth in less than two years-was considered true for almost six months because nothing further was heard of him.</p>
+        <p>Suddenly, when &uacute;rsula and Amaranta had added new mourning to the past period, unexpected news arrived.</p>
+        <p>Colonel Aureli-ano Buend&iacute;a was alive, but apparently he had stopped harassing the government of his country and had joined with the victorious federalism of other republics of the Caribbean.</p>
+        <p>He would show up under different names farther and farther away from his own country.</p>
+        <p>Later it would be learned that the idea that was working on at the time was the unification of the federalist forms of Central America in order to wipe out conservative regimes from Alaska to Patagonia.</p>
+        <p>The first direct news that &uacute;rsula received from him, several years after his departure, was a wrinkled and faded letter that had arrived, passing through various hands, from Santiago, Cuba.</p>
+        <p>"We've lost him forever," &uacute;rsula exclaimed on reading it.</p>
+        <p>"If he follows this path he'll spend Christmas at the ends of the earth."</p>
+        <p>The person to whom she said it, who was the first to whom she showed the letter, was the Conservative general José Raquel Moncada, mayor of Macondo since the end of the war.</p>
+        <p>"This Aureli-ano," General Moncada commented, "what a pity that he's not a Conservative."</p>
+        <p>He really admired him.</p>
+        <p>Like many Conservative civilians, José Raquel Moncada had waged war in defense of his party and had earned the title of general on the field of battle, even though he was not a military man by profession.</p>
+        <p>On the contrary, like so many of his fellow party members, he was an antimilitarist.</p>
+        <p>He considered military men unprincipled loafers, ambitious plotters, experts in facing down civilians in order to prosper during times of disorder.</p>
+        <p>Intelligent, pleasant, ruddy-faced, a man who liked to eat and watch cockfights, he had been at one time the most feared adversary of Colonel Aureli-ano Buend&iacute;a.</p>
+        <p>He succeeded in imposing his authority over the career officers in a wide sector along the coast.</p>
+        <p>One time when he was forced by strategic circumstances to abandon a strong-hold to the forces of Colonel Aureli-ano Buend&iacute;a, he left two letters for him.</p>
+        <p>In one of them quite long, he invited him to join in a campaign to make war more humane.</p>
+        <p>The other letter was for his wife, who lived in Liberal territory, and he left it with a plea to see that it reached its destination.</p>
+        <p>From then on, even in the bloodiest periods of the war, the two commanders would arrange truces to exchange prisoners.</p>
+        <p>They were pauses with a certain festive atmosphere, which General Moncada took advantage of to teach Colonel Aureli-ano Buend&iacute;a how to play chess.</p>
+        <p>They became great friends.</p>
+        <p>They even came to think about the possibility of coordinating the popular elements of both parties, doing away with the influence of the military men and professional politicians, and setting up a humanitarian regime that would take the best from each doctrine.</p>
+        <p>When the war was over, while Colonel Aureli-ano, Buend&iacute;a was sneaking about through the narrow trails of permanent sub.</p>
+        <p>version, General Moncada was named magistrate of Macondo.</p>
+        <p>He wore civilian clothes, replaced the soldiers with unarmed policemen, enforced the amnesty laws, and helped a few families of Liberals who had been killed in the war.</p>
+        <p>He succeeded in having Macondo raised to the status a municipality and he was therefore its first mayor, and he created an atmosphere confidence that made people think of the war as an absurd nightmare of the past.</p>
+        <p>Father Nicanor, consumed by hepatic fever, was replaced by Father Coronel, whom they called "The Pup," a veteran of the first federalist war.</p>
+        <p>Bruno Crespi, who was married to Amparo Mos.</p>
+        <p>cote, and whose shop of toys and musical instruments continued to prosper, built a theater which Spanish companies included in their Itineraries.</p>
+        <p>It was a vast open-air hall with wooden benches, a velvet curtain with Greek masks, and three box offices in the shape of lions' heads, through whose mouths the tickets were sold.</p>
+        <p>It was also about that time that the school was rebuilt.</p>
+        <p>It was put under the charge Don Melchor Escalona, an old teacher brought from the swamp, who made his lazy students walk on their knees in the lime-coated courtyard and made the students who talked in class eat hot chili with the approval of their parents.</p>
+        <p>Aureli-ano Segundo and José Arcadio Segundo, the willful twins of Santa Sof&iacute;a de la Piedad, were the first to sit in the classroom, with their slates, their chalk, and their aluminum jugs their names on them.</p>
+        <p>Remedios, who inherited her mother's pure beauty, began to be known as Remedios the Beauty.</p>
+        <p>In spite of time, of the superimposed Periods of mourning, and her accumulated afflictions, &uacute;rsula resisted growing old.</p>
+        <p>Aided by Santa Sof&iacute;a de la Piedad, she gave a new drive to her pastry business and in a few years not only recovered the fortune that her son had spent in the war, but she once more stuffed with pure gold the gourds buried in the bedroom.</p>
+        <p>"As long as God gives me life," she would say, "there will always be money in this madhouse."</p>
+        <p>That was how things were when Aureli-ano José deserted the federal troops in Nicaragua, signed on as a crewman on a German ship, and appeared in the kitchen of the house, sturdy as a horse, as dark and long-haired as an Indian, and with a secret determination to marry Amaranta.</p>
+        <p>When Amaranta, saw him come in, even though he said nothing she knew immediately why he had come back.</p>
+        <p>At the table they did not dare look each other in the face.</p>
+        <p>But two weeks after his return, in the presence &uacute;rsula, he set his eyes on hers and said to her, "I always thought a lot about you."</p>
+        <p>Amaranta avoided him.</p>
+        <p>She guarded against chance meetings.</p>
+        <p>She tried not to become separated from Remedios the Beauty.</p>
+        <p>She was ashamed of the blush that covered her cheeks on the day her nephew asked her how long she intended wearing the black bandage on her hand, for she interpreted it as an allusion to her virginity.</p>
+        <p>When he arrived, she barred the door of her bedroom, but she heard his peaceful snoring in the next room for so many nights that she forgot about the precaution.</p>
+        <p>Early one morning, almost two months after his return, she heard him come into the bedroom.</p>
+        <p>Then, instead of fleeing, instead of shouting as she had thought she would, she let herself be saturated with a soft feeling of relaxation.</p>
+        <p>She felt him slip in under the mosquito netting as he had done when he was a child, as he had always done, and she could not repress her cold sweat and the chattering of her teeth when she realized that he was completely naked.</p>
+        <p>"Go away," she whispered, suffocating with curiosity.</p>
+        <p>"Go away or I'll scream."</p>
+        <p>But Aureli-ano José knew then what he had to do, because he was no longer a child but a barracks animal.</p>
+        <p>Starting with that night the dull, inconsequential battles began again and would go on until dawn.</p>
+        <p>"I'm your aunt," Amaranta murmured, spent.</p>
+        <p>"It's almost as if I were your mother, not just because of my age but because the only thing I didn't do for you was nurse you."</p>
+        <p>Aureli-ano would escape at dawn and come back early in the morning on the next day, each time more excited by the proof that she had not barred the door.</p>
+        <p>He had nit stopped desiring her for a single instant.</p>
+        <p>He found her in the dark bedrooms of captured towns, especially in the most abject ones, and he would make her materialize in the smell of dry blood on the bandages of the wounded, in the instantaneous terror of the danger of death, at all times and in all places.</p>
+        <p>He had fled from her in an attempt to wipe out her memory, not only through distance but by means of a muddled fury that his companions at arms took to be boldness, but the more her image wallowed in the dunghill of the war, the more the war resembled Amaranta.</p>
+        <p>That was how he suffered in exile, looking for a way of killing her with, his own death, until he heard some old man tell the tale of the man who had married his aunt, who was also his cousin, and whose son ended up being his own grandfather.</p>
+        <p>"Can a person marry his own aunt?" he asked, startled.</p>
+        <p>"He not only can do that, a soldier answered him.</p>
+        <p>"but we're fighting this war against the priests so that a person can marry his own mother."</p>
+        <p>"It's not just that," Amaranta retorted. "Any children will be born with the tail a pig."</p>
+        <p>Aureli-ano José was deaf to all arguments.</p>
+        <p>"I don't care if they're born as armadillos," he begged.</p>
+        <p>Early one morning, vanquished by the unbearable pain of repressed virility, he went to Catarino's.</p>
+        <p>He found a woman with flaccid breasts, affectionate and cheap, who calmed his stomach for some time.</p>
+        <p>He tried to apply the treatment of disdain to Amaranta.</p>
+        <p>He would see her on the porch working at the sewing machine, which she had learned to operate with admirable skill, and he would not even speak to her.</p>
+        <p>Amaranta felt freed of a reef, and she herself did not understand why she started thinking again at that time about Colonel Gerineldo Márquez, why she remembered with such nostalgia the afternoons of Chinese checkers, and why she even desired him as the man in her bedroom.</p>
+        <p>Aureli-ano, José did not realize how much ground he had lost on, the night he could no longer bear the farce of indifference and went back to Amaranta's room.</p>
+        <p>She rejected him with an inflexible and unmistakable determination, and she barred the door of her bedroom forever.</p>
+        <p>A few months after the return of Aureli-ano José an exuberant woman perfumed jasmine appeared at the house with a boy of five.</p>
+        <p>She stated that he was the son of Colonel Aureli-ano Buend&iacute;a and that she had brought him to &uacute;rsula to be baptized.</p>
+        <p>No one doubted the origins of that nameless child: he looked exactly like the colonel at the time he was taken to see ice for the first time.</p>
+        <p>The woman said that he had been born with his eyes open, looking at people with the judgment of an adult, and that she was frightened by his way of staring at things without blinking.</p>
+        <p>"He's identical," &uacute;rsula said.</p>
+        <p>"The only thing missing is for him to make chairs rock by simply looking at them."</p>
+        <p>They christened him Aureli-ano and with his mother's last name, since the law did not permit a person to bear his father's name until he had recognized him.</p>
+        <p>General Moncada was the godfather.</p>
+        <p>Although Amaranta insisted that he be left so that she could take over his upbringing, his mother was against it.</p>
+        <p>&uacute;rsula at that time did not know about the custom of sending virgins to the bedrooms of soldiers in the same way that hens are turned loose with fine roosters, but in the course of that year she found out: nine more sons of Colonel Aureli-ano Buend&iacute;a were brought to the house to be baptized.</p>
+        <p>The oldest, a strange dark boy with green eyes, who was not at all like his father's family, was over ten years old.</p>
+        <p>They brought children of all ages, all colors, but all males and all with a look of solitude that left no doubt as to the relationship.</p>
+        <p>Only two stood out in the group.</p>
+        <p>One, large for his age, made smithereens out of the flowerpots and china because his hands seemed to have the property of breaking everything they touched.</p>
+        <p>The other was a blond boy with the same light eyes as his mother, whose hair had been left to grow long and curly like that of a woman.</p>
+        <p>He entered the house a great deal familiarity, as if he had been raised there, and he went directly to a chest in &uacute;rsula's bedroom and demanded, "I want the mechanical ballerina."</p>
+        <p>&uacute;rsula was startled.</p>
+        <p>She opened the chest, searched among the ancient and dusty articles left from the days of Melqu&iacute;ades, and wrapped in a pair of stockings she found the mechanical ballerina that Pietro Crespi had brought to the house once and that everyone had forgotten about.</p>
+        <p>In less than twelve years they baptized the name Aureli-ano and the last name of the mother all the sons that the colonel had implanted up and down his theater of war: seven-teen.</p>
+        <p>At first &uacute;rsula would fill their pockets with money and Amaranta tried to have them stay.</p>
+        <p>But they finally limited themselves to giving them presents and serving as godmothers.</p>
+        <p>"We've done our duty by baptizing them," &uacute;rsula would say, jotting down in a ledger the name and address of the motthe place and date of birth the child.</p>
+        <p>"Aureli-ano needs well-kept accounts so that he can decide things when he comes back."</p>
+        <p>During lunch, commenting with General Moncada about that disconcerting proliferation, she expressed the desire for Colonel Aureli-ano Buend&iacute;a to come back someday and gather all of his sons together in the house.</p>
+        <p>What General Moncada knew and what he did not wish to reveal at lunch was that Colonel Aureli-ano Buend&iacute;a was already on his way to head up the most prolonged, radical, and bloody rebellion all those he had started up till then.</p>
+        <p>The situation again became as tense as it had been during the months that preceded the first war.</p>
+        <p>The cockfights, instituted by the mayor himself, were suspended.</p>
+        <p>Captain Aquiles Ricardo, the commander of the garrison, took over the exercise of municipal power.</p>
+        <p>The Liberals looked upon him as a provocateur.</p>
+        <p>"Something terrible is going to happen," &uacute;rsula would say to Aureli-ano José.</p>
+        <p>"Don't go out into the street after six o'clock."</p>
+        <p>The entreaties were useless.</p>
+        <p>Aureli-ano José, just like Arcadio in other times, had ceased to belong to her.</p>
+        <p>It was as if his return home, the possibility of existing without concerning himself with everyday necessities, had awakened in him the lewd and lazy leanings of his uncle José Arcadio.</p>
+        <p>His passion for Amaranta had been extinguished without leaving any scars.</p>
+        <p>He would drift around, playing pool, easing his solitude with occasional women, sacking the hiding places where &uacute;rsula had forgotten her money.</p>
+        <p>He ended up coming home only to change his clothes.</p>
+        <p>"They're all alike," &uacute;rsula lamented.</p>
+        <p>"At first they behave very well, they're obedient and prompt and they don't seem capable killing a fly, but as soon as their beards appear they go to ruin."</p>
+        <p>Unlike Arcadio, who had never known his real origins, he found out that he was the son of Pilar Ternera, who had hung up a hammock so that he could take his siesta in her house.</p>
+        <p>More than mother and son, they were accomplices in solitude.</p>
+        <p>Pilar Ternera had lost the trail of all hope.</p>
+        <p>Her laugh had taken on the tones of an organ, her breasts had succumbed to the tedium of endless caressing, her stomach and her thighs had been the victims of her irrevocable fate as a shared woman, but her heart grew old without bitterness.</p>
+        <p>Fat, talkative, with the airs of a matron in disgrace, she renounced the sterile illusions of her cards and found peace and consolation in other people's loves.</p>
+        <p>In the house where Aureli-ano José took his siesta, the girls from the neighborhood would receive their casual lovers.</p>
+        <p>"Lend me your room, Pilar," they would simply say when they were already inside.</p>
+        <p>"Of course," Pilar would answer.</p>
+        <p>And if anyone was present she would explain-:</p>
+        <p>"I'm happy knowing that people are happy in bed."</p>
+        <p>She never charged for the service.</p>
+        <p>She never refused the favor, just as she never refused the countless men who sought her out, even in the twilight of her maturity, without giving her money or love and only occasionally pleasure.</p>
+        <p>five daughters, who inherited a burning seed, had been lost on the byways of life since adolescence.</p>
+        <p>Of the two sons she managed to raise, one died fighting in the forces of Colonel Aureli-ano Buend&iacute;a and the other was wounded and captured at the age of fourteen when he tried to steal a crate chickens in a town in the swamp.</p>
+        <p>In a certain way, Aureli-ano José was the tall, dark man who had been promised her for half a century by the king of hearts, and like all men sent by the cards he reached her heart when he was already stamped the mark of death.</p>
+        <p>She saw it in the cards.</p>
+        <p>"Don't go out tonight," she told him.</p>
+        <p>"Stay sleep here because Carmelita Montiel is getting tired of asking me to put her in your room."</p>
+        <p>Aureli-ano José did not catch the deep feeling begging that was in the offer.</p>
+        <p>"Tell her to wait for me at midnight" he said.</p>
+        <p>He went to the theater, where a Spanish company was putting on The Dagger of the Fox, which was really Zorzilla's play with the title changed by order of Captain Aquiles Ricardo, because the Liberals called the Conservatives Goths.</p>
+        <p>Only when he handed in his ticket at the door did Aureli-ano José realize that Captain Aquiles Ricardo and two soldiers armed with rifles were searching the audience.</p>
+        <p>"Be careful, captain," Aureli-ano José warned him.</p>
+        <p>"The man hasn't been born yet who can lay hands on me."</p>
+        <p>The captain tried to search him forcibly Aureli-ano José, who was unarmed, began to run.</p>
+        <p>The soldiers disobeyed the order to shoot.</p>
+        <p>"He's a Buend&iacute;a," one of them explained.</p>
+        <p>Blind with rage, the captain then snatched away the rifle, stepped into the center of the street, and took aim."</p>
+        <p>"Cowards!" he shouted. "I only wish it was Colonel Aureli-ano Buend&iacute;a."</p>
+        <p>Carmelita Montiel, a twenty-year-old virgin, had just bathed in orange-blossom water and was strewing rosemary leaves on Pilar Ternera's bed when the shot rang out.</p>
+        <p>Aureli-ano José had been destined to find with her the happiness that Amaranta had denied him, to have seven children, and to die in her arms of old age, but the bullet that entered his back and shattered his chest had been directed by a wrong interpretation of the cards.</p>
+        <p>Captain Aquiles Ricardo, who was really the one destined to die that night, did indeed die, four hours before Aureli-ano José.</p>
+        <p>As won as the shot was heard he was brought down by two simultaneous bullets whose origin was never established and a shout of many voices shook the night.</p>
+        <p>"Long live the Liberal party! Long live Colonel Aure-liano Buend&iacute;a!"</p>
+        <p>At twelve o'clock, when Aureli-ano, José had bled to death and Carmelita Montiel found that the cards showing her future were blank, more than four hundred men had filed past the theater and discharged their revolvers into the abandoned body of Captain Aquiles Ricardo.</p>
+        <p>A patrol had to use a wheelbarrow to carry the body, which was heavy with lead and fell apart like a water-soaked loaf of bread.</p>
+        <p>Actually, Colonel Aureli-ano Buend&iacute;a had been in the country for more than a month.</p>
+        <p>He was preceded by conflicting rumors, supposed to be in the most distant places at the same time, and even General Moncada did not believe in his return until it was officially announced that he had seized two states on the coast.</p>
+        <p>"Congratulations, dear friend," he told &uacute;rsula, showing her the telegram.</p>
+        <p>"You'll soon have him here."</p>
+        <p>&uacute;rsula was worried then for the first time.</p>
+        <p>"And what will you do?" she asked.</p>
+        <p>General Moncada had asked himself that same question many times.</p>
+        <p>At dawn on the first of October Colonel Aureli-ano Buend&iacute;a attacked Macondo with a thousand well--armed men and the garrison received orders to resist to the end.</p>
+        <p>At noon, while General Moncada was lunching with &uacute;rsula, a rebel cannon shot that echoed in the whole town blew the front of the municipal treasury to dust.</p>
+        <p>"They're as well armed as we are," General Moncada sighed, "but besides that they're fighting because they want to."</p>
+        <p>At two o'clock in the afternoon, while the earth trembled with the artillery fire from both sides, he took leave of &uacute;rsula with the certainty that he was fighting a losing battle.</p>
+        <p>"I pray to God that you won't have Aureli-ano in the house tonight," he said.</p>
+        <p>"If it does happen that way, give him an embrace for me, because I don't expect ever to see him again."</p>
+        <p>That night he was captured when he tried to escape from Macondo, after writing a long letter to Colonel Aureli-ano Buend&iacute;a in which he reminded him of their common aim to humanize the war and he wished him a final victory over the corruption of the militarists and the ambitions of the politicians in both parties.</p>
+        <p>On the following day Colonel Aureli-ano Buend&iacute;a had lunch with him in &uacute;rsula's house, where he was being held until a revolutionary court-martial decided his fate.</p>
+        <p>It was a friendly gathering.</p>
+        <p>But while the adversaries forgot the war to remember things of the past, &uacute;rsula had the gloomy feeling that her son was an intruder.</p>
+        <p>She had felt it ever since she saw him come in protected by a noisy military retinue, which turned the bedrooms inside out until they were convinced there was no danger.</p>
+        <p>Colonel Aureli-ano Buend&iacute;a not only accepted it but he gave strict orders that no one should come closer than ten feet, not even &uacute;rsula, while the members of his escort finished placing guards about the house.</p>
+        <p>He was wearing an ordinary denim uniform with no insignia of any kind and high boots with spurs that were caked with mud and dried blood.</p>
+        <p>On his waist he wore a holster with the flap open and his hand, which was always on the butt of the pistol, revealed the same watchful and resolute tension as his look.</p>
+        <p>His head, with deep recessions in the hairline now, seemed to have been baked in a slow oven.</p>
+        <p>His face, tanned by the salt of the Caribbean, had acquired a metallic hardness.</p>
+        <p>He was preserved against imminent old age by a vitality that had something to do the coldness of his insides.</p>
+        <p>He was taller than when he had left, paler and bonier, and he showed the first symptoms of resistance to nostalgia.</p>
+        <p>"Good Lord," &uacute;rsula said to herself.</p>
+        <p>"Now he looks like a man capable of anything."</p>
+        <p>He was.</p>
+        <p>The Aztec shawl that he brought Amaranta, the remembrances he spoke at lunch, the funny stories her told were simple leftovers from his humor of a different time.</p>
+        <p>As soon as the order to bury the dead in a common grave was carried out, he assigned Colonel Roque Carnicero the minion setting up courts--martial and he went ahead with the exhausting task of imposing radical reforms which would not leave a stone of the reestablished Conservative regime in place.</p>
+        <p>"We have to get ahead of the politicians in the party," he said to his aides.</p>
+        <p>"When they open their eyes to reality they'll find accomplished facts."</p>
+        <p>It was then that he decided to review the titles to land that went back a hundred years he discovered the legalized outrages of his brother, José Arcadio.</p>
+        <p>He annulled the registrations with a stroke of the pen.</p>
+        <p>As a last gesture of courtesy, he left his affairs for an hour and visited Rebeca to bring her up to date on what he was determined to do.</p>
+        <p>In the shadows of her house, the solitary widow who at one time had been the confidante of his repressed loves and whose persistence had saved his life was a specter out of the past.</p>
+        <p>Encased in black down to her knuckles, with her heart turned to ash, she scarcely knew anything about the war.</p>
+        <p>Colonel Aureli-ano Buend&iacute;a had the impression that the phosphorescence of her bones was showing through her skin and that she moved in an atmosphere of Saint Elmo's fire, in a stagnant air where one could still note a hidden smell of gunpowder.</p>
+        <p>He began by advising her to moderate the rigor of her mourning, to ventilate the house, to forgive the world for the death of José Arcadio.</p>
+        <p>But Rebeca was already beyond any vanity.</p>
+        <p>After searching for it uselessly in the taste of earth, in, the perfumed letters from Pietro Crespi, in the tempestuous bed of her husband, she had found peace in that house where memories materialized through the strength of implacable evocation and walked like human beings through the cloistered rooms, Leaning back in her wicker rocking chair, looking at Colonel Aureli-ano Buend&iacute;a as if he were the one who looked like a ghost out of the past, Rebeca was not even upset by the news that the lands usurped by José Arcadio would be returned to their rightful owners.</p>
+        <p>"Whatever you decide will be done, Aureli-ano," she sighed. "I always thought and now I have the proof that you're a renegade."</p>
+        <p>The revision of the deeds took place at the same time as the summary courts-martial presided over by Colonel Gerineldo Márquez, which ended with the execution of all officers of the regular army who had been taken prisoner by the revolutionaries.</p>
+        <p>The last court-martial was that of José Raquel Moncada.</p>
+        <p>&uacute;rsula intervened.</p>
+        <p>'"His government was the best we've ever had in Macondo," she told Colonel Aureli-ano Buend&iacute;a.</p>
+        <p>"I don't have to tell you anything about his good heart, about his affection for us, because you know better than anyone."</p>
+        <p>Colonel Aureli-ano Buend&iacute;a gave a disapproving look.</p>
+        <p>"I can't take over the job of administering justice," he replied. "If you have something to say, tell it to the court-martial."</p>
+        <p>&uacute;rsula not only did that she also brought all of the mothers of the revolutionary officers who lived in Macondo to testify.</p>
+        <p>One by one the old women who had been founders of the town, several of whom had taken part in the daring crossing of the mountains, praised the virtues of General Moncada.</p>
+        <p>&uacute;rsula was the last in line.</p>
+        <p>Her gloomy dignity, the weight of her name, the convincing vehemence of her declaration made the scale of justice hesitate for a moment.</p>
+        <p>"You have taken this horrible game very seriously and you have done well- because you are doing your duty," she told the members of the court.</p>
+        <p>"But don't forget that as long as God gives us life we will still be mothers and no matter how revolutionary you may be, we have the right to pull down your pants and give you a whipping at the first sign of disrespect."</p>
+        <p>The court retired to deliberate as those words still echoed in the school that had been turned into a barracks.</p>
+        <p>At midnight General José Raquel Moncada was sentenced to death.</p>
+        <p>Colonel Aureli-ano Buend&iacute;a, in spite of the violent recriminations of &uacute;rsula, refused to commute the sentence.</p>
+        <p>A short while before dawn he visited the condemned man in the room used as a cell.</p>
+        <p>"Remember, old friend," he told him. "I'm not shooting you. It's the revolution that's shooting you."</p>
+        <p>General Moncada did not even get up from the cot when he saw him come in.</p>
+        <p>"Go to hell, friend," he answered.</p>
+        <p>"You know better than I," he said, "that all courts--martial are farces and that you're really paying for the crimes of other people, because this time we're going to win the war at any price.</p>
+        <p>Wouldn't you have done the same in my place?"</p>
+        <p>General Moncada, got up to clean his thick horn-rimmed glasses on his shirttail.</p>
+        <p>"Probably," he said.</p>
+        <p>"But what worries me is not your shooting me, because after all, for people like us it's a natural death."</p>
+        <p>He laid his glasses on the bed and took off his watch and chain.</p>
+        <p>"What worries me," he went on, "is that out of so much hatred for the military, out of fighting them so much and thinking about them so much, you've ended up as bad as they are.</p>
+        <p>And no ideal in life is worth that much baseness."</p>
+        <p>He took off his wedding ring and the medal of the Virgin of Help and put them alongside his glasses- and watch.</p>
+        <p>"At this rate," he concluded, "you'll not only be the most despotic and bloody dictator in our history, but you'll shoot my dear friend &uacute;rsula in an attempt to pacify your conscience."</p>
+        <p>"But I didn't send for you to scold you," he said. "I wanted to ask you the favor of sending these things to my wife."</p>
+        <p>Colonel Aureli-ano Buend&iacute;a put them in his pockets.</p>
+        <p>"Is she still in Manaure?"</p>
+        <p>"She's still in Manaure," General Moncada confirmed, "in the same house behind the church where you sent the letter."</p>
+        <p>"They can bring him out now," he ordered.</p>
+    </div>
+
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">Chapter 8 (ZH)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>阿玛兰妲坐在藤摇椅上，将手中活计搁在膝头，看着奥雷里亚诺·何塞往下巴上涂满泡沫，在皮条上刮着剃刀，准备平生第一次刮胡子。</p>
+        <p>他试着把上唇棕黄的茸毛理成髭须时不慎割破皮肤，粉刺流出血来，而到最后他也没理成个样子，但这番艰苦的努力却让阿玛兰妲觉得自己从这时起便开始老了。</p>
+        <p>“你和你这个年龄时的奥雷里亚诺一模一样，”她说，“你已经是大人了。”</p>
+        <p>其实他早就是了，这可以追溯到已然遥远的一天，阿玛兰妲仍把他当作孩子，在浴室里当着他的面脱下衣服。</p>
+        <p>自从庇拉尔·特尔内拉把孩子托付给她抚养，她一向这样做，已经习惯了。</p>
+        <p>他第一次看到的时候，唯一注意到的是乳房间的深沟。</p>
+        <p>他天真地问这是怎么了，阿玛兰妲装作用指尖在胸前掏挖的样子回答：“挖呀挖呀挖呀就成这样了。”</p>
+        <p>后来，当她从皮埃特罗·克雷斯皮的自杀事件中恢复，又和奥雷里亚诺·何塞一起洗澡，他已经不再注意那深沟，而注目于那紫色乳头和丰硕双峰，感到一阵奇怪的战栗。</p>
+        <p>他继续观察，一点一点发现她隐秘处的神奇，窥看时感到皮肤上汗毛倒竖，就像她的皮肤碰到水时一样。</p>
+        <p>很小的时候他就习惯天亮前离开自己的吊床睡到阿玛兰妲的床上，觉得和她在一起就不会惧怕黑暗。</p>
+        <p>然而从意识到她的裸体那天起，驱使他钻进她蚊帐的不再是对黑暗的恐惧，而是对天明时感受她温暖呼吸的渴望。</p>
+        <p>一天凌晨，就在阿玛兰妲拒绝赫里内勒多·马尔克斯上校的那段日子，奥雷里亚诺·何塞在几近窒息中惊醒，感觉她的手指像滚烫的虫子在焦灼地向他的腹部蠕动。</p>
+        <p>他装作熟睡未醒，调整姿势为她除去一切障碍，随即感到那只未缠黑纱的手宛如失明的软体动物在他饥渴的水藻间潜游。</p>
+        <p>两人都装作不知道双方心知肚明的事实，都装作不知道对方已知情，自那天晚上起被一种不容侵犯的默契紧紧联结在一处。</p>
+        <p>奥雷里亚诺·何塞不听到客厅里时钟午夜报时的华尔兹就无法安眠，而那位容颜开始枯萎的盛年处女没等到梦游人钻进蚊帐也一刻不得安宁。</p>
+        <p>她亲手将他抚养大，未曾想到他有朝一日会成为宽慰自己孤独的良药。</p>
+        <p>他们不仅赤身露体睡在一起，彼此爱抚到精疲力竭，还在家中各个角落互相追逐，随时随刻关在卧室里，沉浸于持久的兴奋中。</p>
+        <p>他们差点儿被乌尔苏拉发现，那天下午她走进谷仓，正撞见他们准备接吻。</p>
+        <p>“你很爱你姑妈？”她毫不知情地问奥雷里亚诺·何塞。</p>
+        <p>他回答说是。</p>
+        <p>“你做得对。”</p>
+        <p>乌尔苏拉评判道，称好做面包的面粉就回了厨房。</p>
+        <p>这一幕让阿玛兰妲从狂热中惊醒。</p>
+        <p>她意识到自己已经走得太远，不是在和孩子玩亲嘴游戏，而是在挑动人过中年危险无望的情火，便决然断绝了关系。</p>
+        <p>奥雷里亚诺·何塞那时快要完成军训，最终接受了现实，搬到军营去睡。</p>
+        <p>每个星期六他都和士兵们去卡塔利诺的店里。</p>
+        <p>他突如其来的孤独，早熟的青春，都在散发着残花味道的女人们身上得到了慰藉。</p>
+        <p>他在黑暗中展开幻想，竭力将她们想象成阿玛兰妲。</p>
+        <p>没过多久，开始传来互相矛盾的战局消息。</p>
+        <p>政府承认叛乱在扩大，但马孔多的军官们却得到内部消息称和议即将达成。</p>
+        <p>四月初，一位特使出现在赫里内勒多·马尔克斯上校面前。</p>
+        <p>特使向他证实，党的领导人确实已经与内陆的起义军取得联系，即将议定停战协定，以此为自由党换取三个部长职位、国会里的少数席位以及对所有放下武器的起义者的大赦。</p>
+        <p>特使同时带来了奥雷里亚诺·布恩迪亚上校的绝密命令，他在命令中表明不赞同停战协定，赫里内勒多·马尔克斯上校应当选出五名最好的手下，作好准备带他们离开国境。</p>
+        <p>命令执行得极其隐秘。</p>
+        <p>协定公布一个星期前，正当彼此矛盾的传言四起的时候，奥雷里亚诺·布恩迪亚上校带领包括罗格·卡尔尼塞罗上校在内的十名亲信军官，夜半时分暗中潜入马孔多，遣散驻军，埋掉武器，毁去文件。</p>
+        <p>天亮时，他们已经和赫里内勒多·马尔克斯上校及其手下五名军官一起离开镇子。</p>
+        <p>这次行动迅速又隐秘，连乌尔苏拉都直到最后一刻才知情，那时有人轻轻敲响她卧室的窗户，低声道：“如果您想看一眼奥雷里亚诺·布恩迪亚上校，现在就去门口。”</p>
+        <p>乌尔苏拉跳下床，穿着睡衣出了门，只隐隐望见一小队骑手在无声的尘烟中离开镇子。</p>
+        <p>到了第二天，她才知道奥雷里亚诺·何塞也随他父亲去了。</p>
+        <p>政府与反对党发布联合声明宣告停战，十天后传来消息说奥雷里亚诺·布恩迪亚上校在西部边境发动了第一场武装起义。</p>
+        <p>他那支人员不足、装备低劣的部队不到一个星期就被击溃。</p>
+        <p>但在这一年，当自由党人和保守党人试图使国人相信和解已经达成，他又组织了另外七次起义。</p>
+        <p>一晚，他从一条纵帆船上炮轰里奥阿查，守军将当地最知名的十四个自由党人从床上拖出来枪决以示报复。</p>
+        <p>他曾占领一处边界关卡半个多月，从那里通电全国宣告发动全面战争。</p>
+        <p>他曾在一次远征中迷失于雨林三个月，异想天开地试图穿越一千五百多公里的原始森林直捣首都近郊。</p>
+        <p>还有一次，他距马孔多不到二十公里，却在政府军巡逻队的威逼下退到山区，趋近他父亲多年前发现西班牙大帆船残骸的着魔之地。</p>
+        <p>比西塔西翁在那段时间去世。</p>
+        <p>她因为对失眠症的恐惧放弃王位，最后得偿所愿，安详离世。</p>
+        <p>她的遗愿是起出埋藏在她床下二十多年的积蓄，寄给奥雷里亚诺·布恩迪亚上校继续战斗。</p>
+        <p>乌尔苏拉并未取出这笔钱，因为那时四处传言奥雷里亚诺·布恩迪亚上校已经死于一次在省城附近的登陆行动中。</p>
+        <p>人们相信了官方通告—那已是不到两年内的第四份—因为六个月里再没有听到他的任何消息。</p>
+        <p>当乌尔苏拉和阿玛兰妲旧丧未除又添新丧，意料之外的消息突然传来。</p>
+        <p>奥雷里亚诺·布恩迪亚上校还活着，但似乎已放弃对本国政府的侵扰，加入了加勒比海其他共和国胜利在望的联邦派军队。</p>
+        <p>他以不同的名字活动，离祖国日益遥远。</p>
+        <p>日后人们将会知道，当时的他一心想要联合中美洲各地的联邦派力量，横扫从阿拉斯加到巴塔哥尼亚的一切保守党政权。</p>
+        <p>他离去几年后，乌尔苏拉第一次收到他的亲笔信，那封信寄自古巴的圣地亚哥，经过多人辗转传递已经皱皱巴巴、字迹模糊。</p>
+        <p>“我们永远失去他了，”乌尔苏拉感叹道，“这样下去他就得在世界尽头过圣诞了。”</p>
+        <p>听她说这话的人，也是她对其出示信件的第一个人，是保守党将军何塞·拉克尔·蒙卡达，战后马孔多的市长。</p>
+        <p>“这个奥雷里亚诺，”蒙卡达将军说，“真可惜他不是保守党。”</p>
+        <p>他的敬佩出自真心。</p>
+        <p>像许多保守党人一样，何塞·拉克尔·蒙卡达为了捍卫自己的党派才参战，并在战场上获得了将军的头衔，但他无意成为职业军人。</p>
+        <p>恰恰相反，他和党内许多同道一样，是反军事主义者。</p>
+        <p>在他看来，军人都是些没有原则的懒虫、野心勃勃的阴谋家，惯于欺压平民乱中牟利。</p>
+        <p>他聪明和善，性格开朗，胃口好，爱斗鸡，一度成为奥雷里亚诺·布恩迪亚上校最可怕的对手。</p>
+        <p>他在沿海广阔区域内的职业军人中建立了自己的权威。</p>
+        <p>曾有一次，他出于战略考虑被迫放弃一座据点让奥雷里亚诺·布恩迪亚上校的军队占领，同时留下了两封信。</p>
+        <p>其中一封很长，他在信中邀请对手共同努力促使战争更人道。</p>
+        <p>另一封写给他身陷自由派占领区的妻子，他请求将信送给她。</p>
+        <p>从那以后，即使在战事最激烈的时期，两位指挥官仍会达成暂时休战的协定来互换战俘。</p>
+        <p>那些战事间歇期洋溢着节庆气息，蒙卡达将军有了机会教奥雷里亚诺·布恩迪亚上校下象棋。</p>
+        <p>他们成了好友。</p>
+        <p>他们甚至考虑过这种可能性：团结两党的民众力量，肃清军人和职业政客的流毒，建立一个汲取了两党理论思想精华的人道主义政府。</p>
+        <p>战争结束后，奥雷里亚诺·布恩迪亚上校铤而走险，不断起事，而蒙卡达将军被任命为马孔多的里正。</p>
+        <p>他脱下军装，以不带武器的警察取代士兵，实行大赦法令，并救助一些阵亡自由党人的家属。</p>
+        <p>他成功让马孔多提升为市，也因此当了第一任市长。</p>
+        <p>他营造出安定的氛围，令战争成为昔日荒诞的噩梦。</p>
+        <p>尼卡诺尔神甫被肝病高热折磨得奄奄一息，已由科罗奈尔神甫取代，后者被人称作“新手”，是第一次联邦战争中的老兵。</p>
+        <p>布鲁诺·克雷斯皮与安帕萝·摩斯科特结了婚，他的玩具乐器店生意蒸蒸日上。</p>
+        <p>他盖了一座剧院，成为许多西班牙剧团的巡演站点。</p>
+        <p>那是一座宏伟的露天大厅，配有木制靠背椅，饰以古希腊面具的天鹅绒大幕。</p>
+        <p>三个售票窗造成狮头形状，从大张的狮口出售戏票。</p>
+        <p>学校也在那一时期重建，由堂梅尔乔·埃斯卡洛纳负责。</p>
+        <p>他是一位从大泽区派来的老教师，让不用功的学生在院中石灰地面上跪着行走，让言语放肆的学生吃辣椒，家长们对此十分满意。</p>
+        <p>奥雷里亚诺第二和何塞·阿尔卡蒂奥第二，桑塔索菲亚·德拉·彼达这对任性的双胞胎儿子，是第一批带着小黑板、粉笔和标有名字的小铝壶坐到教室里的学生。</p>
+        <p>蕾梅黛丝遗传了母亲的美貌，开始被称为美人儿蕾梅黛丝。</p>
+        <p>尽管时光流逝，丧事接二连三，苦痛不断增添，乌尔苏拉却并不显衰老。</p>
+        <p>在桑塔索菲亚·德拉·彼达的帮助下，她将自己的甜食生意推上新的高峰，不仅在短短几年内挣回了儿子消耗于战争中的资财，还用纯金塞满了一个个葫芦埋在卧室里。</p>
+        <p>“只要上帝还让我活着，”她时常这样说，“这个净出疯子的家里就缺不了钱。”</p>
+        <p>就在这时候，奥雷里亚诺·何塞从尼加拉瓜联邦派军队里开了小差，跑到一艘德国船上当水手，最后出现在家中的厨房里。</p>
+        <p>他壮实如马，肤色黝黑，头发浓密，像个印第安人。</p>
+        <p>他怀着秘密的目的回来，一心要和阿玛兰妲结婚。</p>
+        <p>阿玛兰妲见他进来，没等他开口，便明白了他回来的原因。</p>
+        <p>在饭桌上，他们不敢对视。</p>
+        <p>但两个星期后，他当着乌尔苏拉的面盯着她的双眼说：“我一直在想你。”</p>
+        <p>阿玛兰妲躲着他，竭力避免碰面的机会，尽量不与美人儿蕾梅黛丝分开。</p>
+        <p>那天当侄子问她手上的黑纱要戴到什么时候，她脸红了，并因自己脸红而气恼，因为她觉得那问题在影射她的童贞。</p>
+        <p>自从他回来后，她就闩上了卧室的门，但许多个夜晚过去，听着隔壁房间他那平稳的鼾声，她放松了警惕。</p>
+        <p>在他归来两个月后的一天凌晨，她察觉到他进了卧室。</p>
+        <p>那一刻，她并没有像预想的那样逃走或叫喊，心头反而涌上一阵如释重负的轻松。</p>
+        <p>她感觉到他钻进蚊帐，就像他孩提时代常做的那样，就像他一直以来所做的那样。</p>
+        <p>她意识到他寸丝不挂，不禁冷汗直流，牙齿咯咯打战。</p>
+        <p>“你走，”她低声道，惊得喘不过气来，“不走我就喊了。”</p>
+        <p>但奥雷里亚诺·何塞知道此刻该做些什么，他已经不再是怕黑的孩子，而是出自军营的猛兽。</p>
+        <p>自那天晚上起，没有结果的无声战斗又开始了，每每持续到黎明。</p>
+        <p>“我是你姑妈，”精疲力竭的阿玛兰妲低声道，“差不多就等于你母亲，这不光因为年纪，我还把你养大，就差没给你喂过奶。”</p>
+        <p>奥雷里亚诺·何塞黎明时离开，第二天凌晨又回来，每次发现房门并未闩上就愈加兴奋。</p>
+        <p>他没有一刻不想她。</p>
+        <p>在那些被攻陷村镇的阴暗卧室里，特别是在那些最下贱的地方，找到她的影子；在伤员绷带上干涸血迹的味道中，觅见她的身形；在致命危险所激发的恐惧中，随时随地与她相遇。</p>
+        <p>他曾经从她身边逃开，试图在记忆中将她抹去，为此不仅远走他方，还表现出被战友们归为莽撞的凶悍冒进。</p>
+        <p>他越是在战争的粪坑里摔打她的形象，战争本身就越像阿玛兰妲。</p>
+        <p>他就这样在流亡中忍受煎熬，寻求以自己的死亡来消灭她，直到听见有人讲起那个古老的故事。</p>
+        <p>故事主人公和既是自己姑妈又是自己表姐的女人结婚，结果生出的儿子成了自己的祖父。</p>
+        <p>“一个人能娶自己的姑妈吗？”他惊异地问。</p>
+        <p>“不光可以娶姑妈，”一个士兵回答，“我们现在跟教士打这场仗，就是为了让人连亲娘都能娶。”</p>
+        <p>十五天后他开了小差。</p>
+        <p>他发现阿玛兰妲比记忆中更憔悴，也更忧伤、更端庄；她岁月的航船正在绕过盛年的最后一个岬角，但在卧室的幽暗中她却显出从未有过的狂热，激烈的反抗也从未显得这样富于挑战。</p>
+        <p>“你是头野兽。”</p>
+        <p>受他追逼的阿玛兰妲说，“不能对一个可怜的姑妈干这种事，除非有教皇的特许。”</p>
+        <p>奥雷里亚诺·何塞答应去罗马，答应膝行整个欧洲去亲吻教皇的鞋子，只要她肯放下悬着的吊桥。</p>
+        <p>“不光是这个，”阿玛兰妲反驳道，“会生出猪尾巴孩子的。”</p>
+        <p>奥雷里亚诺·何塞对一切道理都充耳不闻。</p>
+        <p>“就算生出犰狳也不要紧。”他恳求道。</p>
+        <p>一天凌晨，他再也无法压抑欲望和忍受痛苦，便去了卡塔利诺的店里。</p>
+        <p>他找到一个乳房干瘪、亲切又廉价的女人，暂时平息了欲火。</p>
+        <p>他试图对阿玛兰妲采取蔑视的态度，见到她在长廊里做缝纫活计，已经能将手摇式缝纫机应用自如时，一句话都不对她说。</p>
+        <p>阿玛兰妲感觉卸去了重担，却不明白自己为什么又想起了赫里内勒多·马尔克斯上校，为什么怀念下跳棋的午后，甚至渴望他成为卧室中的情人。</p>
+        <p>奥雷里亚诺·何塞还不知道自己已丧失多少领地，一天晚上他无法再忍受伪装的漠然，又回到阿玛兰妲的房间。</p>
+        <p>她以无可动摇的决心拒绝了他，从此永远闩上了卧室的房门。</p>
+        <p>奥雷里亚诺·何塞回来后没几个月，家里来了个体态丰满的女人，浑身散发出茉莉香，带着一个五岁多的男孩。</p>
+        <p>她声称那是奥雷里亚诺·布恩迪亚上校的儿子，她带来请乌尔苏拉起名。</p>
+        <p>没有人怀疑那个无名男孩的血脉：他和被领去看冰块时的上校长得分毫不差。</p>
+        <p>女人说孩子一出生就大睁双眼，用大人的方式打量众人，他那种眼睫不眨看东西的样子令人害怕。</p>
+        <p>“一模一样，”乌尔苏拉说，“就差用眼神翻倒椅子了。”</p>
+        <p>他们给他起名为奥雷里亚诺，用了母亲的姓氏，因为法律不允许在生父尚未承认前使用父姓。</p>
+        <p>蒙卡达将军做了教父。</p>
+        <p>阿玛兰妲坚持要把孩子留下来抚养，但他母亲拒不同意。</p>
+        <p>乌尔苏拉那时还不知道将少女送进军人卧室的习俗，那就像把母鸡赶到良种公鸡那里去。</p>
+        <p>但在这一年她有了充分的了解：又有九个奥雷里亚诺·布恩迪亚上校的孩子被送到家里起名。</p>
+        <p>其中最大的已过十岁，长相奇特，肤色黝黑，眼睛碧绿，与父家没有丝毫相似。</p>
+        <p>送来的孩子有各种年龄各种肤色的，但都是男孩，都带着落落寡合的神情，显示出毋庸置疑的血缘归属。</p>
+        <p>其中有两个格外突出。</p>
+        <p>一个身材魁伟与年龄不符，打碎了许多花瓶和餐具，双手仿佛拥有损坏一切所碰东西的特性。</p>
+        <p>另一个一头金发，长着母亲那样的蓝眼睛，留着女人一样的长鬈发。</p>
+        <p>他走进家里，一副熟门熟路的样子，仿佛就在这里长大。</p>
+        <p>他径直来到乌尔苏拉卧室里的一个箱子前，说：“我要上弦的跳舞女郎。”</p>
+        <p>乌尔苏拉吓了一跳。</p>
+        <p>她打开箱子，在梅尔基亚德斯时期落满尘灰的旧物中翻寻，找到了包裹在一双长袜中的上弦跳舞女郎，这东西是当初皮埃特罗·克雷斯皮带到家里的，此后被人遗忘了。</p>
+        <p>不到两年内，他们为上校在战场上一路播撒的儿子命了名，都叫奥雷里亚诺，姓氏则随母亲：共计十七个。</p>
+        <p>起初，乌尔苏拉还往孩子的口袋里塞满钱，阿玛兰妲则努力争取把他们留下来抚养，但后来她们只是送一份礼物，并担当教母。</p>
+        <p>“我们起了名就行了。”</p>
+        <p>乌尔苏拉一边说，一边在小本子上记下母亲的姓名地址及孩子出生的时间地点，“奥雷里亚诺一定算得清楚，等他回来自己拿主意吧。”</p>
+        <p>吃午饭时，她对蒙卡达将军谈起这意外的人丁兴旺，希望奥雷里亚诺·布恩迪亚上校能回来一次，和所有儿子在家中团聚。</p>
+        <p>“不用担心，大姐，”蒙卡达将军不无神秘地说，“他会比您预料中回来得早。”</p>
+        <p>蒙卡达将军知晓这事却不愿在午饭时明说，其实奥雷里亚诺·布恩迪亚上校正要发动一场迄今为止他所领导的最漫长、最激烈也最残酷的起义。</p>
+        <p>时局又变得像第一次战争爆发前的数月里那般紧张，一度获得市长本人支持的斗鸡比赛都被取消了。</p>
+        <p>市政大权实际落在驻军首领阿基莱斯·里卡多上尉手中，自由党人将他视作挑衅分子。</p>
+        <p>“要出大事，”乌尔苏拉对奥雷里亚诺·何塞说，“下午六点以后不要上街。”</p>
+        <p>这些劝告都归于徒然。</p>
+        <p>奥雷里亚诺·何塞和当年的阿尔卡蒂奥一样，已经脱离她的怀抱。</p>
+        <p>他回到家里，仿佛就可以不再为日常需要操心，这在他身上唤醒了伯父何塞·阿尔卡蒂奥那种放浪懒散的习性。</p>
+        <p>他对阿玛兰妲的激情消逝得无影无踪。</p>
+        <p>他四处游荡，打打台球，拈花惹草排解孤独，翻出各个角落里乌尔苏拉藏起又忘记的钱财。</p>
+        <p>到后来他只为换衣服回家。</p>
+        <p>“都一个样。”</p>
+        <p>乌尔苏拉哀叹道，“一开始好好的，又听话又体面连只苍蝇都舍不得打，结果刚长出胡子就都变坏了。”</p>
+        <p>与阿尔卡蒂奥不同，他知道自己是庇拉尔·特尔内拉的儿子，她在家里支起一张吊床供他午睡。</p>
+        <p>两人是母子，却更像是孤独中的同伙。</p>
+        <p>庇拉尔·特尔内拉已经无所期盼。</p>
+        <p>她的微笑带上风琴那般的低音，她的乳房经过无数爱抚耷垂下来，她的小腹和大腿成为无可挽回的尤物生涯的牺牲品，但她的心在衰老中不觉苦涩。</p>
+        <p>她肥胖，饶舌，散发出落难主妇的傲气，摒弃了纸牌营造的乏味幻梦，却在旁人的爱情中找到了慰藉。</p>
+        <p>就在奥雷里亚诺·何塞午睡的屋子里，邻家的姑娘们带着露水情郎来幽会。</p>
+        <p>“把房间借给我，庇拉尔。”</p>
+        <p>他们就这么简单说一句，人已经在屋里。</p>
+        <p>“没问题。”</p>
+        <p>庇拉尔回答。</p>
+        <p>如果还有旁人在场，她会这样解释：</p>
+        <p>“人家在床上快活，我也快活。”</p>
+        <p>她从未为此收钱。</p>
+        <p>她从未拒绝帮忙，就像她从未拒绝不计其数的男人，而直到她盛年的尾声还有人找上门来。</p>
+        <p>他们既没有付出钱财也没有献上爱情，连愉悦也不过奉上寥寥几次。</p>
+        <p>她的五个女儿遗传了她火热的天性，少女时代就迷失在人生的歧路上。</p>
+        <p>两个长大成人的儿子，一个在奥雷里亚诺·布恩迪亚上校的部队里战死，另一个十四岁时在大泽区某村偷一篓母鸡受伤被抓。</p>
+        <p>在某种意义上，奥雷里亚诺·何塞就是半个世纪以来金杯国王向她允诺的那个高大黝黑的男人，他也像所有纸牌召唤来的男人一样，走进她内心时已经死星照命。</p>
+        <p>她在牌上看到了。</p>
+        <p>“今晚你别出门，”她对他说，“你在这儿睡，卡梅莉塔·蒙铁尔求了我不知多少次，让我把她带进你屋里。”</p>
+        <p>奥雷里亚诺·何塞没能理解这一恳求的深意。</p>
+        <p>“告诉她半夜等我。”他回答。</p>
+        <p>他去了剧院。</p>
+        <p>一家西班牙剧团将上演《狐狸的匕首》，那实际上是索里利亚的戏，但阿基莱斯·里卡多上尉下令改了名字，因为自由派把保守派称作哥特人。</p>
+        <p>到入口验票的时候，奥雷里亚诺·何塞才发现阿基莱斯·里卡多带着两个荷枪实弹的士兵在搜查过往人流。</p>
+        <p>“留神，上尉，”奥雷里亚诺·何塞提醒道，“敢对我动手动脚的人还没生出来呢。”</p>
+        <p>上尉试图强行搜查，奥雷里亚诺·何塞因为没带武器，撒腿便跑。</p>
+        <p>士兵们没有听从开枪的命令。</p>
+        <p>“他是布恩迪亚家的人。”</p>
+        <p>一个士兵解释道。</p>
+        <p>上尉气急败坏，一把抢过步枪，跨到街心，瞄准了目标。</p>
+        <p>“胆小鬼！”他喊了起来，“是奥雷里亚诺·布恩迪亚上校本人才好呢。”</p>
+        <p>二十岁的处女卡梅莉塔·蒙铁尔，刚用橘花水沐浴完毕，正在庇拉尔·特尔内拉的床上撒迷迭香叶子，枪声就在这时响起。</p>
+        <p>奥雷里亚诺·何塞本来注定要在她身上享受阿玛兰妲拒绝给予的幸福，生下七个儿女，最后老死在她怀里，然而一发步枪子弹被纸牌算命的失误导引，从他背后穿入在胸前开花。</p>
+        <p>而阿基莱斯·里卡多上尉，本是这天夜晚注定要死的人，确实比奥雷里亚诺·何塞早死了四个小时。</p>
+        <p>枪声刚响，他就被两发至今未明来源的子弹同时击中，人群的呐喊随即响彻夜空。</p>
+        <p>“自由党万岁！奥雷里亚诺·布恩迪亚上校万岁！”</p>
+        <p>十二点时，奥雷里亚诺·何塞血已流尽，卡梅莉塔·蒙铁尔发现纸牌指引的前途落了空。四百多人列队从剧院门口经过，用左轮手枪向阿基莱斯·里卡多上尉被遗弃的尸体开火。填满铅弹的尸体像泡了水的面包支离破碎，动用了一个小队推着独轮车才运走。</p>
+        <p>何塞·拉克尔·蒙卡达将军对政府军的过分举动深感恼火，他运用自己的政治影响，重又穿上军装，掌握了马孔多的军政大权。</p>
+        <p>但他并不指望凭自己息事宁人的态度改变已经无法挽回的事态。</p>
+        <p>九月间传来各种消息，彼此矛盾。</p>
+        <p>政府一再宣称仍掌握着对整个国家的控制权，而自由党人接连收到内陆武装起义的秘密消息。</p>
+        <p>在军事法庭缺席审判奥雷里亚诺·布恩迪亚上校并判处其死刑之后，政府才宣布进入战时状态。</p>
+        <p>任何部队一旦抓到他必须立即执行枪决。</p>
+        <p>“这就是说，他回来了。”</p>
+        <p>乌尔苏拉在蒙卡达将军面前喜形于色，但将军自己并没有得到这一消息。</p>
+        <p>实际上，奥雷里亚诺·布恩迪亚上校早在一个多月前就已回国。</p>
+        <p>人还未到，互相矛盾的传言就已传来，说他同一时间在相隔千里的不同地方出现，因此蒙卡达将军起初并不相信他已归来，直到官方正式宣布他占领了沿海两州。</p>
+        <p>“祝贺您，大姐，”蒙卡达将军对乌尔苏拉说，同时把电报拿给她看，“您很快就能见着他了。”</p>
+        <p>乌尔苏拉从那时起担心起来。</p>
+        <p>“那您怎么办，老弟？”她问道。</p>
+        <p>这个问题，蒙卡达将军已经问过自己很多次。</p>
+        <p>“和他一样，大姐，”他回答，“尽我的职责。”</p>
+        <p>十月一日黎明时分，奥雷里亚诺·布恩迪亚上校率领装备精良的一千人进攻马孔多，守军接到命令要抵抗到底。</p>
+        <p>到中午蒙卡达将军与乌尔苏拉一起吃饭的时候，起义军的一声炮击响彻全市，将市政府金库的大门炸为齑粉。</p>
+        <p>“他们的装备不比我们差，”蒙卡达将军感叹道，“而且他们士气更高。”</p>
+        <p>下午两点，大地在双方的炮声中颤抖。</p>
+        <p>他向乌尔苏拉道别，确信自己在打一场无望的仗。</p>
+        <p>“我祈求上帝让您今晚不会在家里看到奥雷里亚诺，”他说，“如果真是那样，请代我拥抱他，因为我不会再见到他了。”</p>
+        <p>当晚，他试图逃离马孔多时被捕，临行前他还给奥雷里亚诺·布恩迪亚上校写了一封长信，追缅当年想让战争更人道的共同理想，并祝愿他在对抗两党军人腐败和政客野心的战斗中获得最终胜利。</p>
+        <p>次日，奥雷里亚诺·布恩迪亚上校和他在乌尔苏拉那儿共进午餐，他就被囚禁在那里等待革命军事法庭决定他的命运。</p>
+        <p>这是一次家庭聚会。</p>
+        <p>然而就在敌对双方忘却战事一起缅怀往昔的同时，乌尔苏拉心头却蒙上一层阴影，感觉自己的儿子才是外来的侵入者。</p>
+        <p>她从看到他进门起就有这种感觉，那时一群喧嚣的军人护卫着他进来，搜遍各个房间确信没有危险才罢休。</p>
+        <p>奥雷里亚诺·布恩迪亚上校不仅允许他们这样做，还颁下严令不准任何人走进他周围三米以内，甚至连乌尔苏拉也不例外，与此同时他的卫队在房子附近忙着设置岗哨。</p>
+        <p>他身穿寻常粗布军装，没佩任何军衔标志，带马刺的长靴上沾满泥土和干血迹。</p>
+        <p>他腰间佩戴手枪，枪套未扣，手永远按在枪柄上，与眼神一样显出高度的警觉与果断。</p>
+        <p>他的前额如今分外开阔，像是被文火烤过。</p>
+        <p>他的脸庞因加勒比海的盐分而皴裂，带着几分金属般的坚厉。</p>
+        <p>他凭着某种活力胜过了迫近的衰老，只是这活力与内心的冷漠不无关联。</p>
+        <p>他比离家时更高，更苍白嶙峋，开始表露不念旧情的迹象。</p>
+        <p>“上帝啊，”乌尔苏拉心想，“他现在看起来什么事儿都干得出来。”</p>
+        <p>他的确成了这样的人。</p>
+        <p>他带给阿玛兰妲的阿兹台克头巾，他在午饭时的怀旧，他口中的趣闻逸事，都不过是昔日性情的残余。</p>
+        <p>将死尸掩埋到公墓里的命令刚被执行，他就指派罗格·卡尔尼塞罗上校去敦促建立军事法庭展开审判，他自己则担负起推行激进改革的艰巨任务，决心将江河日下的保守党政权摧毁殆尽。</p>
+        <p>“我们要赶在党内政客前面。”</p>
+        <p>他对自己的顾问说，“等他们睁眼面对现实的时候，看到的就是既成事实。”</p>
+        <p>就在此时，他决定审查百年来的地契，便发现了他哥哥何塞·阿尔卡蒂奥强占土地又将其合法化的行径。</p>
+        <p>他将那些文书一笔勾销。</p>
+        <p>最后出于礼貌，他搁下手头的事务，抽出一个小时去见丽贝卡通知他的决定。</p>
+        <p>在屋内的阴影中，那位曾经见证他被压抑的爱情，并以自己的执拗救过他性命的孤零孀妇已变成往昔的幽灵。</p>
+        <p>她遍体着黑直到指节，心如死灰，对战事几乎一无所知。</p>
+        <p>奥雷里亚诺·布恩迪亚上校感觉她骨头的磷光从皮肤透出，感觉她在重重鬼火间行走，而凝滞的空气中还能隐隐闻到火药的味道。</p>
+        <p>他开始劝说她节哀除丧，改善屋内通风，不要再为何塞·阿尔卡蒂奥的死迁怒整个世间。</p>
+        <p>然而丽贝卡已经看破一切浮华。</p>
+        <p>她曾经在泥土的味道中，在皮埃特罗·克雷斯皮芬芳的书信里，在丈夫如狂风暴雨的床榻上徒劳地寻寻觅觅，最终却在这个家中找到了安宁。</p>
+        <p>在这里，记忆因思绪无情的力量化为实体，如同活人一般在幽闭的房间里游荡。</p>
+        <p>她躺在藤摇椅里，望着奥雷里亚诺·布恩迪亚上校，仿佛他才是一个往昔的幽灵。</p>
+        <p>甚至听到何塞·阿尔卡蒂奥强夺的土地都将归还原主，她也不显丝毫激动。</p>
+        <p>“你想怎样就怎样吧，奥雷里亚诺。”她叹息道，“我一直认为，你是个无情的人，现在更确定了。”</p>
+        <p>审查地契的同时即决审判也在进行，由赫里内勒多·马尔克斯上校负责，以枪决所有被革命军俘虏的政府军军官告终。</p>
+        <p>最后受审的是何塞·拉克尔·蒙卡达将军。</p>
+        <p>乌尔苏拉出面干预。</p>
+        <p>“他是我们马孔多有史以来最好的长官。”</p>
+        <p>她对奥雷里亚诺·布恩迪亚上校说，“他心肠有多好，待我们多亲切，就更不用我跟你说了，因为你比谁都清楚。”</p>
+        <p>奥雷里亚诺·布恩迪亚上校不满地盯着她。</p>
+        <p>“我不能越权执法，”他回答，“如果您有话要说，请到军事法庭上去说。”</p>
+        <p>乌尔苏拉不仅这样做了，而且叫上了所有生活在马孔多的革命军军官的母亲。</p>
+        <p>这些建村元老都已年迈，其中不少人参加过当年翻越山脉的可怕远征，她们一个接一个颂扬何塞·拉克尔·蒙卡达将军的种种恩德。</p>
+        <p>乌尔苏拉最后登场。</p>
+        <p>她庄严的哀伤、她显赫的姓氏，以及她令人信服的慷慨陈词一度打破法庭的平静。</p>
+        <p>“诸位把这场可怕的游戏玩得很认真，你们做得不错，因为你们是在履行自己的职责。”</p>
+        <p>她对法庭成员说，“但是请别忘了，只要上帝还让我们活着，我们就还是母亲；不管你们有多么革命，只要没规矩，我们就有权脱了你们的裤子打一顿。”</p>
+        <p>法官们退庭讨论，她那铿锵的话语仍在已变为军营的学校里回响。</p>
+        <p>午夜时分，何塞·拉克尔·蒙卡达将军被判处死刑。</p>
+        <p>奥雷里亚诺·布恩迪亚上校不顾乌尔苏拉激烈的责骂，拒绝改判。</p>
+        <p>快天亮的时候，他去牢房探望死囚。</p>
+        <p>“你记住，老兄，”他说，“不是我要枪毙你。是革命要枪毙你。”</p>
+        <p>看见他走进来，蒙卡达将军甚至没从床上起来。</p>
+        <p>“见鬼去吧，老兄。”他回答。</p>
+        <p>直到此刻，归来以后的奥雷里亚诺·布恩迪亚上校才有机会与他真诚相对。上校惊讶于他的猝然衰老、他双手的颤抖、他等候死亡时多少出于惯性的逆来顺受，于是感到一阵对自己的深深蔑视，却将其误认为同情心萌发的表现。</p>
+        <p>“你比我更清楚，”他说，“所有的军事法庭都是闹剧。实际上你是在为别人的罪行受过，因为这次我们不惜代价要赢得胜利。换了是你，难道不会这样做？”</p>
+        <p>蒙卡达将军站起身来，用衬衫衣角擦拭玳瑁框眼镜的厚镜片。</p>
+        <p>“也许吧，”他说，“不过我担心的不是你要枪毙我，因为说到底，对于像我们这样的人来说这就算是自然死亡了。”</p>
+        <p>他把眼镜放在床上，又摘下怀表。</p>
+        <p>“我担心的是，”他补充道，“你那么憎恨军人，跟他们斗了那么久，琢磨了他们那么久，最终却变得和他们一样。</p>
+        <p>人世间没有任何理想值得以这样的沉沦作为代价。”</p>
+        <p>他摘下结婚戒指和救难圣母徽章，与眼镜和怀表放在一处。</p>
+        <p>“这样一来，”他总结道，“你不仅会变成我们历史上最专制最残忍的独裁者，而且还得枪毙我的乌尔苏拉大姐来抚慰你的良心。”</p>
+        <p>奥雷里亚诺·布恩迪亚上校不为所动。蒙卡达将军将眼镜、徽章、怀表和戒指递给他，换了副口气。</p>
+        <p>“不过我让你来不是为了指责你，”他说，“我想拜托你把这些东西交给我妻子。”</p>
+        <p>奥雷里亚诺·布恩迪亚上校将东西收进兜里。</p>
+        <p>“她还在马纳乌雷吗？”</p>
+        <p>“还在马纳乌雷，”蒙卡达将军确认道，“还在教堂后面你送过信的同一幢房子里。”</p>
+        <p>“很乐意效劳，何塞·拉克尔。”奥雷里亚诺·布恩迪亚上校说。</p>
+        <p>当他走入蓝色的晨雾，脸庞像当年另一个清晨那般湿润，他才明白为什么要下令在院中行刑，而不是在墓地的墙前。行刑队在门前列开，向他致以对国家元首的敬礼。</p>
+        <p>“可以把他带来了。”他下了命令。</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { 
+            font: 1.0, dictEnabled: true, barHidden: true, highlightEnabled: true, 
+            syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 
+        };
+
+        const bar = document.getElementById('top-bar');
+        const enC = document.getElementById('en-container');
+        const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const syncBtn = document.getElementById('sync-btn');
+
+        function applyPrefs() {
+            enC.style.fontSize = prefs.font + 'em';
+            zhC.style.fontSize = prefs.font + 'em';
+            
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.syncEnabled) {
+                syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff";
+            } else {
+                syncBtn.innerText = "同步: 关"; syncBtn.style.background = "#E5E5EA"; syncBtn.style.color = "#1C1C1E";
+            }
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+
+        let isProgrammaticScroll = false;
+        let scrollTimer;
+
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none';
+            let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block';
+            if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1;
+            let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none';
+            if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+
+        window.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY;
+            let heights = getHeights();
+            let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH);
+            let maxZH = Math.max(1, heights.hZH - viewportH);
+
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN;
+                prefs.posEN = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxZH / maxEN;
+                    prefs.posZH += delta * ratio;
+                    prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); 
+                }
+            } else {
+                let delta = currentY - prefs.posZH;
+                prefs.posZH = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxEN / maxZH;
+                    prefs.posEN += delta * ratio;
+                    prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN));
+                }
+            }
+
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            }, 300);
+        });
+
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') {
+                enC.style.display = 'none';
+                zhC.style.display = 'block';
+                prefs.currentLang = 'zh';
+                window.scrollTo(0, prefs.posZH);
+            } else {
+                zhC.style.display = 'none';
+                enC.style.display = 'block';
+                prefs.currentLang = 'en';
+                window.scrollTo(0, prefs.posEN);
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; }, 100);
+        }
+
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                let now = Date.now();
+                if (now - lastTwoFingerTap > 500) {
+                    switchLang();
+                    lastTwoFingerTap = now;
+                }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => { 
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' }); 
+                setTimeout(() => { isProgrammaticScroll = false; }, 50);
+            }, 50);
+        });
+
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; 
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+            try {
+                const urls = [
+                    'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
+                ];
+                let text = '';
+                for (let u of urls) {
+                    try {
+                        const res = await fetch(u);
+                        if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; }
+                    } catch (err) {}
+                }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) {
+                    highlightWords = new Set(arr);
+                    localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                    applyHighlightsToDOM();
+                }
+            } catch(e) {}
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) span.classList.add('is-highlight');
+            });
+        }
+
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json")
+                .then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{});
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(node) {
+                        const parent = node.parentNode;
+                        if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT;
+                        if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; });
+                    html += `</div>`;
+                } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`; 
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]); 
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initCEFRStaticDict();
+                if(enC) wrapTextNodesToWord(enC);
+                setupTippyDelegate();
+                initCloudHighlights(); 
+            }, 500);
+        })();
+    </script>
+</body>
+</html>

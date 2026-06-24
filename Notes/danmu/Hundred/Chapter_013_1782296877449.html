@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 13</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } 
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } 
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        .content-layer { transition: font-size 0.2s; width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 24px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 28px; height: 28px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 4px 6px; }
+        .dict-basic-trans { font-size: 30px; color: #444; margin-top: 6px; }
+        .dict-pos-block { margin-bottom: 6px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 6px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 24px; padding: 10px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 13 (EN)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>IN THE BEWILDERMENT of her last years, &uacute;rsula had had very little free time to attend to the papal education of José Arcadio, and the time came for him to get ready to leave for the seminary right away.</p>
+        <p>Meme, his sister, dividing her time between Fernanda's rigidity and Amaranta's bitterness, at almost the same moment reached the age set for to be sent to the nuns' school, where they would make a virtuoso on the clavichord of her.</p>
+        <p>&uacute;rsula felt tormented by grave doubts concerning the effectiveness of the methods with which she had molded the spirit of the languid apprentice Supreme Pontiff, but she did not put the blame on her staggering old age or the dark clouds that barely permitted her to make out the shape of things, but on something that she herself could not really define and that she conceived confusedly as a progressive breakdown of time.</p>
+        <p>"The years nowadays don't pass the way the old ones used to," she would say, feeling that everyday reality was slipping through her hands.</p>
+        <p>In the past, she thought, children took a long time to grow up.</p>
+        <p>All one had to do was remember all the time needed for José Arcadio, the elder, to go away with the gypsies and all that happened before he came back painted like a snake and talking like an astronomer, and the things that happened in the house before Amaranta and Arca-dio forgot the language of the Indians and learned Spanish.</p>
+        <p>One had to see only the days of sun and dew that poor José Arcadio Buend&iacute;a went through under the chestnut tree all the time weeded to mourn his death before they brought in a dying Colonel Aureli-ano Buend&iacute;a, who after so much war and so much suffering from it was still not fifty years of age.</p>
+        <p>In other times, after spending the whole day making candy animals, she had more than enough time for the children, to see from the whites of their eyes that they needed a dose of castor oil.</p>
+        <p>Now, however, when she had nothing to do and would go about with José Arcadio riding on her hip from dawn to dusk, this bad kind of time compelled her to leave things half done.</p>
+        <p>The truth was that &uacute;rsula resisted growing old even when she had already lost count of her age and she was a bother on all sides as she tried to meddle in everything and as she annoyed strangers with her questions as to whether they had left a plaster Saint Joseph to be kept until the rains were over during the days of the war.</p>
+        <p>No one knew exactly when she had begun to lose her sight.</p>
+        <p>Even in her later years, when she could no longer get out of bed, it seemed that she was simply defeated by decrepitude, but no one discovered that she was blind.</p>
+        <p>She had noticed it before the birth of José Arcadio.</p>
+        <p>At first she thought it was a matter of a passing debility and she secretly took marrow syrup and put honey on her eyes, but quite soon she began to realize that she was irrevocably sinking into the darkness, to a point where she never had a clear notion of the invention of the electric light, for when they put in the first bulbs she was only able to perceive the glow.</p>
+        <p>She did not tell anyone about it because it would have been a public recognition of her uselessness.</p>
+        <p>She concentrated on a silent schooling in the distances of things and peoples voices, so that she would still be able to see with her memory what the shadows cataracts no longer allowed her to.</p>
+        <p>Later on she was to discover the unforeseen help of odors, which were defined in the shadows with a strength that was much more convincing than that of bulk and color, and which saved her finally from the shame of admitting defeat.</p>
+        <p>In the darkness of the room she was able to thread a needle and sew a buttonhole and she knew when the milk was about to boil.</p>
+        <p>She knew with so much certainty the location of everything that she herself forgot that she was blind at times.</p>
+        <p>On one occasion Fernanda had the whole house upset because she had lost her wedding ring, and &uacute;rsula found it on a shelf in the children's bedroom.</p>
+        <p>Quite simply, while the others were going carelessly all about, she watched them with her four senses so that they never took her by surprise, after some time she discovered that every member of the family, without realizing it, repeated the same path every day, the same actions, and almost repeated the same words at the same hour.</p>
+        <p>Only when they deviated from meticulous routine did they run the risk of losing something.</p>
+        <p>So when she heard Fernanda all upset be cause she had lost her ring, &uacute;rsula remembered that the only thing different that she had done that day was to put the mattresses out in the sun because Meme had found a bedbug the might before.</p>
+        <p>Since the children had been present at the fumigation, &uacute;rsula figured that Fernanda had put the ring in the only place where they could not reach it: the shelf.</p>
+        <p>Fernanda, on the other hand, looked for it in vain along the paths of her everyday itinerary without knowing that the search for lost things is hindered by routine habits and that is why it is so difficult to find them.</p>
+        <p>The rearing of José Arcadio helped &uacute;rsula in the exhausting task of keeping herself up to date on the smallest changes in the house.</p>
+        <p>When she realized that Amaranta was dressing the saints in the bedroom she pretended to show the boy the differences in the colors.</p>
+        <p>"Let's see," she would tell him. "Tell me what color the Archangel Raphael is wearing."</p>
+        <p>In that way the child gave her the information that was denied her by her eyes, and long before he went away to the seminary &uacute;rsula could already distinguish the different colors of the saints' clothing by the texture.</p>
+        <p>Sometimes unforeseen accidents would happen.</p>
+        <p>One afternoon when Amaranta was 'embroidering on the porch with the begonias &uacute;rsula bumped into her.</p>
+        <p>"For heaven's sake," Amaranta protested. "watch where you're going."</p>
+        <p>"It's your fault," &uacute;rsula said. "You're not sitting where you're supposed to."</p>
+        <p>She was sure of it.</p>
+        <p>But that day she began to realize something that no one had noticed and it was that with the passage of the year the sun imperceptibly changed position and those who sat on the porch had to change their position little by little without being aware of it.</p>
+        <p>From then on &uacute;rsula had only to remember the date in order to know exactly where Amaranta was sitting.</p>
+        <p>Even though the trembling of her hands was more and more noticeable and the weight of her feet was too much for her, her small figure was never seen in so many places at the same time.</p>
+        <p>She was almost as diligent as when she had the whole weight of the house on her shoulders.</p>
+        <p>Nevertheless, in the impenetrable solitude of decrepitude she had such clairvoyance as she examined the most insignificant happenings in the family that for the first time she saw clearly the truths that her busy life in former times had prevented her from seeing.</p>
+        <p>Around the time they were preparing José Arcadio for the seminary she had already made a detailed recapitulation of life in the house since the founding of Macon-do and had completely changed the opinion that she had always held of her descendants.</p>
+        <p>She realized that Colonel Aure-liano Buend&iacute;a had not lost his love for the family because he had been hardened by the war, as she had thought before, but that he had never loved anyone, not even his wife Remedios or the countless one-night women who had passed through his life, much less his sons.</p>
+        <p>She sensed that he had fought so many wars not out of idealism, as everyone had thought, nor had he renounced a certain victory because of fatigue, as everyone had thought, but that he had won and lost for the same reason, pure and sinful pride.</p>
+        <p>She reached the conclusion that the son for whom she would have given her life was simply a man incapable love.</p>
+        <p>One night when she was carrying him in her belly she heard him weeping.</p>
+        <p>It was such a definite lament that José Arcadio Buend&iacute;a woke up beside her and was happy with the idea that his son was going to be a ventriloquist.</p>
+        <p>Other people predicted that he would be a prophet.</p>
+        <p>She, on the other hand, shuddered from the certainty that the deep moan was a first indication of the fearful pig tail and she begged God to let the child die in her womb.</p>
+        <p>But the lucidity of her old age allowed to see, and she said so many times, that the cries children in their mothers' wombs are not announcements of ventriloquism or a faculty for prophecy but an unmistakable sign of an incapacity for love.</p>
+        <p>The lowering of the image of her son brought out in her all at once all the compassion that she owed him.</p>
+        <p>Amaranta, however, whose hardness of heart frightened her, whose concentrated bitterness made her bitter, suddenly became clear to her in the final analysis as the most tender woman who had ever existed, and she understood with pitying clarity that the unjust tortures to which she had submitted Pietro Crespi had not been dictated by a desire for vengeance, as everyone had thought, nor had the slow martyrdom with which she had frustrated the life of Colonel Geri-neldo Márquez been determined by the gall of her bitterness, as everyone had thought, but that both actions had been a mortal struggle between a measureless love and an invincible cowardice, and that the irrational fear that Amaranta had always had of her own tormented heart had triumphed in the end.</p>
+        <p>It was during that time that &uacute;rsula, began to speak Rebeca's name, bringing back the memory of her with an old love that was exalted by tardy repentance and a sudden admiration, coming to understand that only she, Rebeca, the one who had never fed of her milk but only of the earth of the land and the whiteness of the walls, the one who did not carry the blood of her veins in hers but the unknown blood of the strangers whose bones were still clocing in their grave.</p>
+        <p>Rebeca, the one with an impatient heart, the one with a fierce womb, was the only one who bad the unbridled courage that &uacute;rsula had wanted for her line.</p>
+        <p>"Rebeca," she would say, feeling along the walls, "how unfair we've been to you!"</p>
+        <p>In the house they simply thought that her mind was wandering, especially since the time she had begun walking about with her right arm raised like the Arch-angel Gabriel.</p>
+        <p>Fernanda, however, realized that there was a sun of clairvoyance in the shadows of that wandering, for &uacute;rsula could say without hesitation how much money had been spent in the house during the previous year.</p>
+        <p>Amaranta had a similar idea one day as her mother was stirring a pot of soup in the kitchen and said all at once without knowing that they were listening to her that the corn grinder they had bought from the first gypsies and that had disappeared during the time before José Arcadio, had taken his sixty-five trips around the world was still in Pilar Ternera's house.</p>
+        <p>Also almost a hundred years old, but fit and agile in spite inconceivable fatness, which frightened children as her laughter had frightened the doves in other times, Pilar Ternera was not surprised that &uacute;rsula was correct because her own experience was beginning to tell her that an alert old age can be more keen than the cards.</p>
+        <p>Nevertheless, when &uacute;rsula realized that she had not had enough time to consolidate the vocation of José Arcadio, she let herself be disturbed by consternation.</p>
+        <p>She began to make mistakes, trying to see with her eyes the things that intuition allowed her to see with greater clarity.</p>
+        <p>One morning she poured the contents of an inkwell over the boy's head thinking that it was rose water.</p>
+        <p>She stumbled so much in her insistence in taking part in everything that she felt herself upset by gusts of bad humor and she tried to get rid of the shadows that were beginning to wrap her in a straitjacket of cobwebs.</p>
+        <p>It was then that it occurred to her that her clumsiness was not the first victory of decrepitude and darkness but a sentence passed by time.</p>
+        <p>She thought that previously, when God did not make the same traps out of the months and years that the Turks used when they measured a yard of percale, things were different.</p>
+        <p>Now children not only grew faster, but even feelings developed in a different way.</p>
+        <p>No sooner had Remedios the Beauty ascended to heaven in body and soul than the inconsiderate Fernanda was going about mumbling to herself because her sheets had been carried off.</p>
+        <p>The bodies of the Aureli-anos were no sooner cold in their graves than Aureli-ano Segun-do had the house lighted up again, filled with drunkards playing the accordion and dousing themselves in champagne, as if dogs and not Christians had died, and as if that madhouse which had cost her so many headaches and so many candy animals was destined to become a trash heap of perdition.</p>
+        <p>Remembering those things as she prepared José Arcadio's trunk, &uacute;rsula wondered if it was not preferable to lie down once and for all in her grave and let them throw the earth over her, and she asked God, without fear, if he really believed that people were made iron in order to bear so many troubles and mortifications, and asking over and over she was stirring up her own confusion and she felt irrepressible desires to let herself go and scamper about like a foreigner and allow herself at last an instant of rebellion, that instant yearned for so many times and so many times postponed, putting her resignation aside and shitting on everything once and for all and drawing out of her heart the infinite stacks of bad words that she had been forced to swallow over a century of conformity.</p>
+        <p>"Shit!" she shouted.</p>
+        <p>Amaranta, who was starting to put the clothes into the trunk, thought that she had been bitten by a scorpion.</p>
+        <p>"Where is it?" she asked in alarm.</p>
+        <p>"What?"</p>
+        <p>"The bug!" Amaranta said.</p>
+        <p>&uacute;rsula put a finger on her heart.</p>
+        <p>On Thursday, at two in the afternoon, José Arcadio left for the seminary.</p>
+        <p>'&uacute;rsula would remember him always as she said goodbye to him, languid and serious, without shedding a tear, as she had taught him, sweltering in the heat in the green corduroy suit copper buttons and a starched bow around his neck.</p>
+        <p>He left the dining room impregnated with the penetrating fragrance of rose water that she had sprinkled on his head so that she could follow his tracks through the house.</p>
+        <p>While the farewell lunch was going on, the family concealed its nervousness with festive expressions and they celebrated with exaggerated enthusiasm the remarks that Father Antonio Isabel made.</p>
+        <p>But when they took out the trunk bound in velvet and with silver corners, it was as if they had taken a coffin out of the house.</p>
+        <p>The only one who refused to take part in the farewell was Colonel Aureli-ano Buend&iacute;a.</p>
+        <p>"That's all we need," he muttered. "A Pope!"</p>
+        <p>Three months later Aureli-ano Segun-do and Fernanda took Meme to school and came back with a clavichord, which took the place of the pianola.</p>
+        <p>It was around that time that Amaranta started sewing her own shroud.</p>
+        <p>The banana fever had calmed down.</p>
+        <p>The old inhabitants of Macon-do found themselves surrounded by newcomers and working hard to cling to their precarious resources times gone by, but comforted in any case by the sense that they had survived a shipwreck.</p>
+        <p>In the house they still had guests for lunch and the old routine was never really set up again until the banana company left years later.</p>
+        <p>Nevertheless, there were radical changes in the traditional sense of hospitality because at that time it was Fernanda who imposed her rules.</p>
+        <p>With &uacute;rsula relegated to the shadows and with Amaranta absorbed In the work of her winding cloth, the former apprentice queen had the freedom to choose the guests and impose on them the rigid norms that parents had taught her.</p>
+        <p>Her severity made the house a redoubt of old customs in a town convulsed by the vulgarity with which the outsiders squandered their easy fortunes.</p>
+        <p>For her, with no further questions asked, proper people were those who had nothing to do with the banana company.</p>
+        <p>Even José Arcadio Segun-do, her brother-in-law, was the victim of her discriminatory jealousy because during the excitement of the first days he gave up his stupendous fighting cocks again and took a job as foreman with the banana company.</p>
+        <p>"He won't ever come into this house again," Fernanda said, "as long as he carries the rash of the foreigners."</p>
+        <p>Such was the narrowness imposed in the house that Aureli-ano Segun-do felt more comfortable at Petra Cotes's.</p>
+        <p>First, the pretext of taking the burden off his wife, he transferred his parties.</p>
+        <p>Then, the pretext that the animals were losing their fertility, he transferred his barns and stables.</p>
+        <p>Finally, with the pretext that it was cooler in his concubine's house, he transferred the small office in which he handled his business.</p>
+        <p>When Fernanda realized that she was a widow whose husband had still not died, it was already too late for things to return to their former state.</p>
+        <p>Aureli-ano Segun-do barely ate at home and the only appearances he put in, such as to sleep with his wife, were not enough to convince anyone.</p>
+        <p>One night, out of carelessness, morning found him in Petra Cotes's bed.</p>
+        <p>Fernan-da, contrary to expectations, did not reproach him in the least or give the slightest sigh of resentment, but on the same day she sent two trunks with his clothing to the house of his concubine.</p>
+        <p>She sent them in broad daylight and with instructions that they be carried through the middle of the street so that everyone could see them, thinking that her straying husband would be unable to bear the shame and would return to the fold with his head hung low.</p>
+        <p>But that heroic gesture was just one more proof of how poorly Fernanda knew not only the character of her husband but the character of a community that had nothing to do with that of her parents, for everyone who saw the trunks pass by said that it was the natural culmination of a story whose intimacies were known to everyone, and Aureli-ano Segun-do celebrated the freedom he had received with a party that lasted for three days.</p>
+        <p>To the greater disadvantage of his wife, as she was entering into a sad maturity with her somber long dresses, her old-fashioned medals, and her out-of-place pride, the concubine seemed to be bursting with a second youth, clothed in gaudy dresses of natural silk and with her eyes tiger--striped with a glow of vindication.</p>
+        <p>Aureli-ano Segun-do gave himself over to her again with the fury of adoles-cence, as before, when Petra Cotes had not loved him for himself but because she had him mixed up with his twin brotas she slept with both of them at the same time she thought that God had given her the good fortune of having a man who could make love like two.</p>
+        <p>The restored passion was so pressing that on more than one occasion they would look each other in the eyes as they were getting ready to eat and without saying anything they would cover their plates and go into the bedroom dying of hunger and of love.</p>
+        <p>Inspired by the things he had seen on his furtive visits to the French matrons, Aureli-ano Segun-do bought Petra Cotes a bed with an archiepiscopal canopy, put velvet curtains on the windows, and covered the ceiling the walls of the bedroom with large rock-crystal mirrors.</p>
+        <p>At the same time he was more of a carouser and spendthrift than ever.</p>
+        <p>On the train, which arrived every day at eleven o'clock, he would receive cases and more cases of champagne and brandy.</p>
+        <p>On the way back from the station he would drag the improvised cumbiamba along in full view of all the people on the way, natives or outsiders, acquaintances or people yet to be known, without distinctions of any kind.</p>
+        <p>Even the slippery Mr.</p>
+        <p>Brown, who talked only in a strange tongue, let himself be seduced by the tempting signs that Aureli-ano Segun-do made him and several times he got dead drunk in Petra Cotes's house and he even made the fierce German shepherd dogs that went everywhere with him dance to some Texas songs that he himself mumbled in one way or another to the accompaniment of the accordion.</p>
+        <p>"Cease, cows," Aureli-ano Segun-do shouted at the height of the party. "Cease, because life is short."</p>
+        <p>"If you can't, don't eat any more," The Elephant said to him. "Let's call it a tie."</p>
+        <p>"Take me to Fernanda," he managed to say.</p>
+        <p>His friends left him at the house thinking that they had helped him fulfill his promise to his wife not to die in his concubine's bed.</p>
+        <p>Petra Cotes had shined his patent leather boots that he wanted to wear in his coffin, and she was already looking for someone to take them when they came to tell her that Aureli-ano Segun-do was out of danger.</p>
+        <p>He did recover, indeed, in less than a week, and two weeks later he was celebrating the fact of his survival with unprecedented festivities.</p>
+        <p>He continued living at Petra Cotes's but he would visit Fernanda every day and sometimes he would stay to eat with the family, as if fate had reversed the situation and had made him the husband of his concubine and the lover of his wife.</p>
+        <p>It was a rest for Fernanda.</p>
+        <p>During the boredom of her abandonment her only distractions were the clavichord lessons at siesta time and the letters from her children.</p>
+        <p>In the detailed messages that she sent them every two weeks there was not a single line of truth.</p>
+        <p>She hid her troubles from them.</p>
+        <p>She hid from them the sadness of a house which, in spite of the light on the begonias, in spite of the heaviness at two in the afternoon, in spite of the frequent waves of festivals that came in from the street was more and more like the colonial mansion of her parents.</p>
+        <p>Fernanda would wander alone among the three living ghosts and the dead ghost of José Arcadio Buend&iacute;a, who at times would come to sit down with an inquisitive attention in the halflight of the parlor while she was playing the clavichord.</p>
+        <p>Colonel Aureli-ano Buend&iacute;a was a shadow.</p>
+        <p>Since the last time that he had gone out into the street to propose a war without any future to Colonel Geri-neldo Márquez, he left the workshop only to urinate under the chestnut tree.</p>
+        <p>He did not receive any visits except that of the barber every three weeks, He fed on anything that &uacute;rsula brought him once a day, and even though he kept on making little gold fishes with the same passion as before, he stopped selling them when he found out that people were buying them not as pieces of jewelry but as historic relics.</p>
+        <p>He made a bonfire in the courtyard of the dolls of Remedios which had decorated, their bedroom since their wedding.</p>
+        <p>The watchful &uacute;rsula realized what her son was doing but she could not stop him.</p>
+        <p>"You have a heart stone," she told him.</p>
+        <p>"It's not a question of a heart," he said. "The room's getting full of moths."</p>
+        <p>The greatest worry that Fernanda had during her years of abandonment was that Meme would come to spend her first vacation and not find Aureli-ano Segun-do at home.</p>
+        <p>His congestion had put an end to that fear.</p>
+        <p>When Meme returned, her parents had made an agreement that not only would the girl think that Aureli-ano Segun-do was still a domesticated husband but also that she would not notice the sadness of the house.</p>
+        <p>Every year for two months Aureli-ano Segun-do played his role of an exemplary husband and he organized parties with ice cream and cookies which the gay and lively school-girl enhanced with the clavichord.</p>
+        <p>It was obvious from then on that she had inherited very little of her mother's character.</p>
+        <p>She seemed more of a second version of Amaranta when the latter had not known bitterness and was arousing the house with her dance steps at the age of twelve or fourteen before her secret passion for Pietro Crespi was to twist the direction of her heart in the end.</p>
+        <p>But unlike Amaranta, unlike all of them, Meme still did not reveal the solitary fate of the family and she seemed entirely in conformity with the world, even when she would shut herself up in the parlor at two in the afternoon to practice the clavichord with an inflexible discipline.</p>
+        <p>It was obvious that she liked the house, that she spent the whole year dreaming about the excitement of the young people her arrival brought around, and that she was not far removed from the festive vocation and hospitable excesses of her father.</p>
+        <p>The first sign of that calamitous inheritance was revealed on her third vacation, when Meme appeared at the house with four nuns and sixty-eight classmates whom she had invited to spend a week with her family on her own Initiative and without any previous warning.</p>
+        <p>It was necessary to borrow beds and hammocks from the neighbors, to set up nine shifts at the table, to fix hours for bathing, and to borrow forty stools so that the girls in blue uniforms with masculine buttons would not spend the whole day running from one place to another.</p>
+        <p>The visit was a failure because the noisy schoolgirls would scarcely finish breakfast before they had to start taking turns for lunch and then for dinner, and for the whole week they were able to take only one walk through the plantations.</p>
+        <p>At nightfall the nuns were exhausted, unable to move, give another order, and still the troop of tireless adolescents was in the courtyard singing school songs out of tune.</p>
+        <p>One day they were on the point of trampling &uacute;rsula, who made an effort to be useful precisely where she was most in the way.</p>
+        <p>On another day the nuns got all excited because Colonel Aureli-ano Buend&iacute;a had urinated under the chestnut tree without being concerned that the schoolgirls were in the courtyard.</p>
+        <p>Amaranta was on the point of causing panic because one of the nuns went into the kitchen as she was salting the soup and the only thing that occurred to her to say was to ask what those handfuls of white powder were.</p>
+        <p>The night of their arrival the students carried on in such a way, trying to go to the bathroom before they went to bed, that at one o'clock in the morning the last ones were still going in.</p>
+        <p>Fernanda then bought seventy--two chamberpots but she only managed to change the nocturnal problem into a morning one, because from dawn on there was a long line of girls, each with her pot in her hand, waiting for her turn to wash it.</p>
+        <p>Although some of them suffered fevers and several of them were infected by mosquito bites, most of them showed an unbreakable resistance as they faced the most troublesome difficulties, and even at the time of the greatest heat they would scamper through the garden.</p>
+        <p>When they finally left, the flowers were destroyed, the furniture broken, and the walls covered with drawings and writing, but Fernanda pardoned them for all of the damage because of her relief at their leaving.</p>
+        <p>She returned the borrowed beds and stools and kept the seventy-two chamberpots in Melqu&iacute;ades' room.</p>
+        <p>The locked room, about which the spiritual life of the house revolved in former times, was known from that time on as the "chamberpot room."</p>
+        <p>For Colonel Aureli-ano Buend&iacute;a it was the most appropriate name, because while the rest of the family was still amazed by the fact that Melqu&iacute;ades' room was immune to dust and destruction, he saw it turned into a dunghill.</p>
+        <p>In any case, it did not seem to bother him who was correct, and if he found out about the fate of the room it was because Fernanda kept passing by and disturbing his work for a whole afternoon as she put away the chamberpots.</p>
+        <p>During those days José Arcadio Segun-do reappeared in the house.</p>
+        <p>He went along the porch without greeting anyone and he shut himself up in the workshop to talk to the colonel.</p>
+        <p>In spite of the fact that she could not see him, &uacute;rsula analyzed the clicking of his foreman's boots and was surprised at the unbridgeable distance that separated him from the family, even from the twin brother with whom he had played ingenious games of confusion in childhood and with whom he no longer had any traits in common.</p>
+        <p>He was linear, solemn, and had a pensive air and the sadness of a Saracen and a mournful glow on his face that was the color of autumn.</p>
+        <p>He was the one who most resembled his mother, Santa Sof&iacute;a de la Piedad.</p>
+        <p>&uacute;rsula reproached herself for the habit of forgetting about him when she spoke about the family, but when she sensed him in the house again and noticed that the colonel let him into the workshop during working hours, she reexamined her old memories and confirmed the belief that at some moment in childhood he had changed places with his twin brother, because it was he and not the other one who should have been called Aureli-ano.</p>
+        <p>No one knew the details of his life.</p>
+        <p>At one time it was discovered that he had no fixed abode, that he raised fighting cocks at Pilar Ternera's house and that sometimes he would stay there to sleep but that he almost always spent the night in the rooms the French matrons.</p>
+        <p>He drifted about, with no ties of affection, with no ambitions, like a wandering star in &uacute;rsula's planetary system.</p>
+        <p>In reality, José Arcadio Segun-do was not a member of the family, nor would he ever be any other since that distant dawn when Colonel Geri-neldo Márquez took him to the barracks, not so that he could see an execution, but so that for the rest of his life he would never forget the sad and somewhat mocking smile of the man being shot.</p>
+        <p>That was not only his oldest memory, but the only one he had of his childhood.</p>
+        <p>The other one, that of an old man with an old-fashioned vest and a hat with a brim like a crow's wings who told him marvelous things framed in a dazzling window, he was unable to place in any period.</p>
+        <p>It was an uncertain memory, entirely devoid of lessons or nostalgia, the opposite of the memory of the executed man, which had really set the direction of his life and would return to his memory clearer and dearer as he grew older, as if the passage of time were bringing him closer to it.</p>
+        <p>&uacute;rsula tried to use José Arcadio Segun-do to get Colonel Aureli-ano Buend&iacute;a.</p>
+        <p>to give up his imprisonment.</p>
+        <p>"Get him to go to the movies," she said to him.</p>
+        <p>"Even if he doesn't like the picture, as least he'll breathe a little fresh air."</p>
+        <p>But it did not take her long to realize that he was as insensible to her begging as the colonel would have been, and that they were armored by the same impermeability of affection.</p>
+        <p>Although she never knew, nor did anyone know, what they spoke about in their prolonged sessions shut up in the workshop, she understood that they were probably the only members of the family who seemed drawn together by some affinity.</p>
+        <p>"October," he said.</p>
+        <p>When he said it he did not raise his eyes from the first little fish of the day because he was putting in the rubies for the eyes.</p>
+        <p>Only when he finished it and put it with the others in the pail did he begin to drink the soup.</p>
+        <p>Then, very slowly, he ate the piece of meat roasted with onions, the white rice, and the slices of fried bananas all on the same plate together.</p>
+        <p>His appetite did not change under either the best or the harshest of circumstances.</p>
+        <p>After lunch he felt the drowsiness of inactivity.</p>
+        <p>Because of a kind of scientific superstition he never worked, or read, or bathed, or made love until two hours of digestion had gone by, and it was such a deep-rooted belief that several times he held up military operations so as not to submit the troops to the risks of indigestion.</p>
+        <p>So he lay down in the hammock, removing the wax from his ears with a penknife, and in a few minutes he was asleep.</p>
+        <p>He dreamed that he was going into an empty house with white walls and that he was upset by the burden of being the first human being to enter it.</p>
+        <p>In the dream he remembered that he had dreamed the same thing the night before and on many nights over the past years and he knew that the image would be erased from his memory when he awakened because that recurrent dream had the quality of not being remembered except within the dream itself.</p>
+        <p>A moment later, indeed, when the barber knocked at the workshop door, Colonel Aureli-ano Buend&iacute;a awoke with the impression that he had fallen asleep involuntarily for a few seconds and that he had not had time to dream anything.</p>
+        <p>"Not today." he told the barber. "We'll make it on Friday."</p>
+        <p>He had a three-day beard speckled with white hairs, but he did not think it necessary to shave because on Friday he was going to have his hair cut and it could all be done at the same time.</p>
+        <p>The sticky sweat of the unwanted siesta aroused the scars of the sores in his armpits.</p>
+        <p>The sky had cleared but the sun had not come out.</p>
+        <p>Colonel Aureli-ano Buend&iacute;a released a sonorous belch which brought back the acidity of the soup to his palate and which was like a command from his organism to throw his blanket over his shoulders and go to the toilet.</p>
+        <p>He stayed there longer than was necessary, crouched over the dense fermentation that was coming out of the wooden box until habit told him that it was time to start work again.</p>
+        <p>During the time he lingered he remembered again that it was Tuesday, and that José Arcadio Segun-do had not come to the workshop because it was payday on the banana company farms.</p>
+        <p>That recollection, as all of those of the past few years, led him to think about the war without his realizing it.</p>
+        <p>He remembered that Colonel Geri-neldo Márquez had once promised to get him a horse with a white star on its face and that he had never spoken about it again.</p>
+        <p>Then he went on toward scattered episodes but he brought them back without any judgment because since he could not think about anything else, he had learned to think coldly so that inescapable memories would not touch any feeling.</p>
+        <p>On his way back to the workshop, seeing that the air was beginning to dry out, he decided that it was a good time to take a bath, but Amaranta had got there ahead of him.</p>
+        <p>So he started on the second little fish the day.</p>
+        <p>He was putting a hook on the tail when the sun came out with such strength that the light creaked like a fishing boat.</p>
+        <p>The air, which had been washed by the three-day drizzle, was filled with flying ants.</p>
+        <p>Then he came to the realization that he felt like urinating and he had been putting it off until he had finished fixing the little fish.</p>
+        <p>He went out into the courtyard at ten minutes after four, when he heard the distant brass instruments, the beating of the bass drum and the shouting of the children, and for the first time since his youth he knowingly fell into a trap of nostalgia relived that prodigious afternoon the gypsies when his father took him to see ice.</p>
+        <p>Santa Sof&iacute;a de la Piedad dropped what she was doing in the kitchen and ran to the door.</p>
+        <p>"It's the circus," she shouted.</p>
+        <p>Instead of going to the chestnut tree, Colonel Aureli-ano Buend&iacute;a also went to the street door and mingled with the bystanders who, were watching the parade.</p>
+        <p>He saw a woman dressed in gold sitting on the head of an elephant.</p>
+        <p>He saw a sad dromedary.</p>
+        <p>He saw a bear dressed like a Dutch girl keeping time to the music with a soup spoon and a pan.</p>
+        <p>He saw the clowns doing cartwheels at the end of the parade and once more he saw the face his miserable solitude when everything had passed by and there was nothing but the bright expanse of the street and the air full of flying ants with a few onlookers peering into the precipice of uncertainty.</p>
+        <p>Then he went to the chestnut tree, thinking about the circus, and while he urinated he tried to keep on thinking about the circus, but he could no longer find the memory.</p>
+        <p>He pulled his head in between his shoulders like a baby chick and remained motionless with his forehead against the trunk of the chestnut tree.</p>
+        <p>The family did not find him until the following day at eleven o'clock in the morning when Santa Sof&iacute;a de la Piedad went to throw out the garbage in back and her attention was attracted by the descending vultures.</p>
+    </div>
+
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">Chapter 13 (ZH)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>在最后惶惑的几年，乌尔苏拉几乎无暇顾及对何塞·阿尔卡蒂奥的教皇培养，一转眼就到了他该收拾行装去上神学院的时候。</p>
+        <p>他的妹妹梅梅，夹在费尔南达的严厉和阿玛兰妲的幽怨之间，几乎同时到了预定的年龄，该送到修女开办的学校，她将在那里被培养成古钢琴大师。</p>
+        <p>乌尔苏拉十分苦恼，她怀疑自己的方法是否有效，竟调教出这样一位倦怠的见习教皇，但她没有归咎于自己老年蹒跚的步履、视物模糊的翳障，而是怪罪于某种她说不清的东西，只能模糊地想象为时代的逐渐衰败。</p>
+        <p>“如今的日子不比从前了。”</p>
+        <p>她常这么说，感到失去了对日常现实的把握。</p>
+        <p>以前，她觉得孩子们很久也长不大。</p>
+        <p>只要想想，过了多长时间长子何塞·阿尔卡蒂奥才跟着吉卜赛人离开，又过了多久之后他才刺了一身蟒蛇似的花纹，带着满口占星术士的腔调回家，而在阿玛兰妲和阿尔卡蒂奥忘掉印第安人的语言学会卡斯蒂利亚语之前家里又发生了多少事。</p>
+        <p>再想想可怜的何塞·阿尔卡蒂奥·布恩迪亚在栗树下经历了多少天烈日与寒露，她为他的去世又哭过多少回，然后是经历无数战事、为家人带来无数忧愁的奥雷里亚诺·布恩迪亚上校在奄奄一息中被抬回家来，当时他还不满五十岁。</p>
+        <p>过去，她做了整整一天的糖果小动物仍有时间照顾孩子，检查他们的眼白看是否需要一剂麻油。</p>
+        <p>而现在，她无事可做，驮着何塞·阿尔卡蒂奥从早到晚游逛，这分外匆忙的时光流逝却使得她做起事来全都半途而废。</p>
+        <p>事实上乌尔苏拉虽然连自己的年岁都已忘记却仍不服老。</p>
+        <p>她四处碍事却又想事事插手，连外乡人也厌烦了她不停的询问，问他们在战争时期可曾寄存一尊圣约瑟石膏雕像，等过了雨季再取走。</p>
+        <p>没人确切知道她从何时开始丧失视力。</p>
+        <p>最后几年她已经卧床不起，但仍表现得仿佛只是衰老所致，没有人察觉到她的失明。</p>
+        <p>她在何塞·阿尔卡蒂奥出生之前便意识到了这一异常。</p>
+        <p>一开始她以为只是暂时的视力衰退，偷偷服用骨髓糖浆并往眼睛里滴蜂蜜，但不久便渐渐确认自己已经无可挽回地陷入黑暗，以至于对电灯这一新发明一直没有明确的概念，因为第一批电灯泡装上时她只能隐约感受到那光亮。</p>
+        <p>她没有告诉任何人，因为那等于公开承认自己的无用。</p>
+        <p>她暗中用心记下东西的位置、人们的声音，继续凭记忆“观看”患白内障后看不到的事物。</p>
+        <p>到后来她意外地发现了气味的助益，在黑暗中据此分辨东西远比凭借体积和颜色更为有效，她由此终于免去了认输的羞耻。</p>
+        <p>在黑暗的房间里，她能穿针缝扣，还知道牛奶何时会煮沸。</p>
+        <p>她对所有东西的位置了如指掌，有时连她自己都忘记她已失明。</p>
+        <p>有一次，费尔南达因丢失了结婚戒指把家里搅得地覆天翻，最后还是乌尔苏拉在孩子们房间的壁架上找到。</p>
+        <p>其实很简单，当其他人漫不经心地四下走动时，乌尔苏拉用剩余的四种感官关注着他们，免得被他们不小心撞到；一段时间后她发现家里的每个人每天都在无意中重复同样的路线，做同样的事，甚至在同一时刻说同样的话。</p>
+        <p>只有当他们偏离这些刻板的常规时，才会有丢东西的危险。</p>
+        <p>因此乌尔苏拉听见费尔南达为丢了戒指而沮丧，立刻想起她当天所做唯一与往日不同的事就是晾晒孩子们的床席，因为前一天夜里梅梅发现了一只跳蚤。</p>
+        <p>那时孩子们也帮忙干活，由此乌尔苏拉想到费尔南达一定是将戒指放在了他们唯一够不着的地方—壁架上。</p>
+        <p>而费尔南达只在她平常经过的路线上寻找，殊不知寻找失物会受到日常习惯的妨碍，因此总是难以找到。</p>
+        <p>乌尔苏拉竭力跟上家里的一切细微变化，而抚养何塞·阿尔卡蒂奥正帮了她的忙。她注意到阿玛兰妲在为卧室里的圣徒像换衣服，便装作要教孩子辨别颜色。</p>
+        <p>“来，”她对他说，“告诉我天使长圣拉斐尔穿的衣服是什么颜色。”</p>
+        <p>就这样，孩子提供了她双眼无法获得的信息，而早在他离家去神学院学习之前，她就已经能够凭着圣徒像衣服的质地来分辨不同的颜色。但有时也会发生意外。一天下午，阿玛兰妲在秋海棠长廊里绣花，乌尔苏拉一下撞在她身上。</p>
+        <p>“上帝啊，”阿玛兰妲抱怨道，“请您走路看着点儿。”</p>
+        <p>“这得怪你，”乌尔苏拉说，“你坐在不该坐的地方。”</p>
+        <p>她觉得自己是对的。</p>
+        <p>但从那天起，她意识到从没有人发现过的一件事，即一年中太阳的位置不断发生细微的变化，坐在长廊里的人也会不知不觉随之挪动。</p>
+        <p>从那以后，乌尔苏拉只需记得日期，就能准确无误地判断出阿玛兰妲所坐的位置。</p>
+        <p>尽管双手颤抖得越来越明显，双脚越来越沉重，她瘦小的身影却从未那样活跃，同时在无数地方出现。</p>
+        <p>她几乎像当年操持整个家时一样忙碌。</p>
+        <p>然而，在晚年无法穿透的孤独中，她获得了非凡的洞察力，能察觉到家中任何不起眼的小事，也第一次看清了过去因忙碌而忽略的真相。</p>
+        <p>在培养何塞·阿尔卡蒂奥为上神学院作准备的那段时期，她细细回顾了马孔多创建以来家中的大事小情，彻底改变了对子孙的一贯看法。</p>
+        <p>她意识到奥雷里亚诺·布恩迪亚上校并非像她想的那样，由于战争的摧残而丧失对家人的情感，实际上他从未爱过任何人，包括妻子蕾梅黛丝和一夜风流后随即从他生命中消失的无数女人，更不必提他的儿子们。</p>
+        <p>她猜到他并非像所有人想的那样为着某种理想发动那些战争，也并非像所有人想的那样因为疲倦而放弃了近在眼前的胜利，实际上他成功和失败都因为同一个原因，即纯粹、罪恶的自大。</p>
+        <p>她最终得出结论，自己不惜为他付出生命的这个儿子，不过是个无力去爱的人。</p>
+        <p>他还在她腹中的时候，一天晚上她听见他哭泣。</p>
+        <p>那清晰可辨的哭声惊醒了身边的何塞·阿尔卡蒂奥·布恩迪亚，他高兴地认定儿子拥有腹语能力。</p>
+        <p>其他人则预测他会成为一个预言家。</p>
+        <p>而她却浑身颤抖，确信这深沉的哭号正是那可怕的猪尾巴的最初征兆，恳求上帝让他死在腹中。</p>
+        <p>然而晚年的洞察力使她明白—这一点她也多次向人提起—胎儿在母腹中的哭泣不是腹语或预言能力的先兆，而是缺乏爱的能力的明显信号。</p>
+        <p>儿子身上的光环剥落，反而在她心里激起所有他应得的同情。</p>
+        <p>至于阿玛兰妲，那孩子的铁石心肠曾令她恐惧，她刻骨的痛苦曾令她痛苦，但现在她终于发现阿玛兰妲才是世上从未有过的最温柔的女人。</p>
+        <p>她怀着惋惜的心情弄明白了，阿玛兰妲令皮埃特罗·克雷斯皮遭受那些不公平的折磨，并非像所有人想的那样是出于报复心理；令赫里内勒多·马尔克斯上校日夜煎熬徒劳等待，也并非像所有人想的那样是出于痛苦的怨毒。</p>
+        <p>实际上，这两样行为都属于无穷的爱意与无法战胜的胆怯之间的殊死较量，最终胜出的是阿玛兰妲毫无理由的恐惧，恐惧的对象是她自己饱受折磨的心灵。</p>
+        <p>也正是在这段时间，乌尔苏拉开始呼唤丽贝卡的名字。</p>
+        <p>迟来的悔恨和突如其来的敬意激发了旧日的亲情，她明白只有丽贝卡，从未喝过自己的奶水只以地上的泥土和墙上的石灰为食的丽贝卡，血管中流淌的不是自己的血液而是陌生人的陌生血液—他们的骨殖仍在坟墓里咯咯作响—拥有冲动心性和炽热情欲的丽贝卡，才拥有无畏的勇气，而那正是乌尔苏拉希望自己的后代具备的品质。</p>
+        <p>“丽贝卡，”她说着，手在墙壁上摸索，“我们对你太不公平！”</p>
+        <p>家里人以为她失去了理智，自从她走路时像天使长加百列一样高举右手，人们便认定了这一判断。</p>
+        <p>但费尔南达却发现她失常的阴影中隐藏着明察秋毫的光亮，因为她能毫不犹豫地说出家中上一年的开销。</p>
+        <p>阿玛兰妲也持相似的看法。</p>
+        <p>一天，她母亲在厨房搅拌着一锅汤，并不知道有人在一旁，却突然说起当初从第一拨吉卜赛人那里买来的玉米磨早在何塞·阿尔卡蒂奥六十五次周游世界之前就已丢失，可它其实还在庇拉尔·特尔内拉家里。</p>
+        <p>庇拉尔·特尔内拉也将近百岁，依然身体健康，充满活力，只是出奇肥胖，到了能吓跑小孩的地步，就像当年她的笑声能惊飞鸽群一样。</p>
+        <p>她对乌尔苏拉的本领毫不奇怪，因为她凭自己的经验开始明白，老年人的清醒判断会比纸牌算命更精准。</p>
+        <p>然而，当乌尔苏拉意识到她已经没有足够的时间让何塞·阿尔卡蒂奥来坚定志向，立时因沮丧而陷入迷惘。</p>
+        <p>她试图用眼睛去看那些本可以靠直觉看得更清楚的东西，于是开始频频出错。</p>
+        <p>一天早上，她把一瓶墨水误当作花露水倒在孩子头上。</p>
+        <p>她执意四处插手却造成无数麻烦，弄得自己也情绪恶劣，烦躁不安，一心想要挣脱如蛛网般缠着自己的黑暗。</p>
+        <p>这时她并未将自己的笨拙视作衰老与黑暗的最初胜利，而是归咎于时光的错误。</p>
+        <p>她想起以前，上帝还没让岁月缩水如同土耳其商人丈量花布时偷减尺寸，那时候不像现在这样。</p>
+        <p>如今不仅孩子们长得更快，连人的情感也变了样。</p>
+        <p>美人儿蕾梅黛丝连身体带灵魂才升天，凉薄的费尔南达就在角落里踱来踱去，为那些被卷走的床单愤愤不平。</p>
+        <p>奥雷里亚诺们在坟墓里尸骨未寒，奥雷里亚诺第二就又点亮家中的灯火，聚上一群醉汉拉起手风琴，浑身浇透香槟酒，仿佛被害的不是基督徒而只是几条狗，仿佛用无数的操劳和无数的糖果小动物换来的这个疯人之家注定要沦为堕落的垃圾场。</p>
+        <p>她想到这些的时候，家人正为何塞·阿尔卡蒂奥准备行李。</p>
+        <p>乌尔苏拉又不禁自问是否应当索性躺进坟墓让人埋土，并毫无顾忌地质询上帝是否真的认为人心如铁足以经受这许多痛苦的折磨。</p>
+        <p>她问了又问，愈加惶惑，并感到无可抑制的强烈欲望涌上心头，想要像外乡人一样破口大骂，想要让自己最终能放任片刻，那是她渴求已久却反复拖延的时刻，在这一时刻她不再逆来顺受，而要痛骂一场，把整整一个世纪忍气吞声压在心底的无数污言秽语一吐为快。</p>
+        <p>“妈的！”她叫了一声。</p>
+        <p>阿玛兰妲正要把衣服收进箱子，以为她被蝎子蜇了。</p>
+        <p>“在哪儿？”她警觉地问道。</p>
+        <p>“什么？”</p>
+        <p>“虫子！”阿玛兰妲解释道。</p>
+        <p>乌尔苏拉伸出一根手指指向心脏部位。</p>
+        <p>“这儿。”她回答。</p>
+        <p>星期四下午两点，何塞·阿尔卡蒂奥离家去了神学院。</p>
+        <p>乌尔苏拉将会永远记得想象中他告别时的样子：无精打采而又神情严肃，像她教导过的那样没流一滴泪；身穿配铜扣的绿呢正装，颈系浆过的领结，热得透不过气来。</p>
+        <p>饭厅里满是她为了掌握他的行踪而洒在他头上的花露水气味。</p>
+        <p>在饯行午宴上，家人用欢快的表情掩饰内心的不安，以夸张的热情回应安东尼奥·伊莎贝尔神甫的妙语。</p>
+        <p>当天鹅绒包面、四角镶银的箱子被搬出时，活像是从家里抬出一口棺材。</p>
+        <p>唯一拒绝参加告别仪式的人就是奥雷里亚诺·布恩迪亚上校。</p>
+        <p>“这下麻烦事全齐了，”他愤愤道，“一个教皇！”</p>
+        <p>三个月后，奥雷里亚诺第二和费尔南达把梅梅送到学校，带回一架击弦古钢琴代替了原先的自动钢琴。</p>
+        <p>正是在这个时候阿玛兰妲开始织起自己的寿衣。</p>
+        <p>香蕉引发的狂热已经平息下去。</p>
+        <p>马孔多的老住户被外乡人挤到边缘，勉强守住旧日的营生，但仍深感庆幸仿佛遭遇了一场海难劫后余生。</p>
+        <p>家里依旧招待客人吃午饭，一直要等到多年以后香蕉公司离开时，昔日的生活才得以恢复。</p>
+        <p>然而好客的传统发生了根本变化，因为现在是费尔南达发号施令。</p>
+        <p>乌尔苏拉被遗忘在黑暗中，阿玛兰妲只顾织寿衣，旧日的见习女王终于掌控了选择宾客的权力，并将承袭自父母的森严规矩强加给他们。</p>
+        <p>在这样一个外乡人胡乱挥霍轻易得来的财富，闹得四处乌烟瘴气的市镇上，她的严厉举措却将家里变成旧习俗的堡垒。</p>
+        <p>对她而言，只有和香蕉公司无涉的人才是体面人，就此毫无通融余地。</p>
+        <p>连小叔子何塞·阿尔卡蒂奥第二，也成为她歧视之下的牺牲品，因为他早在第一波狂潮中就将自己优异的斗鸡全部出手，当上了香蕉公司的庄园监工。</p>
+        <p>“只要他还长着外乡人的疖子，”费尔南达说，“就别想进这个家门。”</p>
+        <p>家中限制如此之严，相形之下奥雷里亚诺第二更体会到在佩特拉·科特斯那里的舒适。</p>
+        <p>起初，他借口减轻妻子的负担，将宴会转移过去。</p>
+        <p>后来，又借口牲畜的繁殖力下降，将牛棚和马厩移走。</p>
+        <p>最后，借口情妇家更凉快，将打理生意的小办公室也移了去。</p>
+        <p>等费尔南达发觉丈夫还在世自己就成了寡妇，已经错过了挽救的时机。</p>
+        <p>奥雷里亚诺第二几乎不在家里吃饭，虽然还陪妻子过夜，但这些表面维持的假象已经无法瞒过任何人。</p>
+        <p>一天晚上，他由于疏忽在佩特拉·科特斯的床上过了一夜。</p>
+        <p>出乎他的意料，费尔南达既无一句斥责也无一声幽怨，只是在次日把他的两箱衣物送到他情妇家里。</p>
+        <p>她有意挑选大白天，又命人抬着箱子走在街道中央，好让所有人看到，以为这样做能使迷途的丈夫羞愧难当，低头回归正道。</p>
+        <p>然而这一英勇壮举只是再次证明费尔南达不仅根本不了解自己的丈夫，而且也不了解这个与她父母所处完全不同的社区，因为所有看到衣箱经过的人都认为这是一段众所周知的历史的必然结局，奥雷里亚诺第二则连续三天大摆筵席庆祝获得自由。</p>
+        <p>对他妻子尤为不利的是，当她因颜色阴郁垂至脚踵的长袍、散发陈腐气息的诸多圣牌和不合时宜的高傲显得未老先衰，那位情妇却身裹华丽的真丝衣裙，眼中因旧情重燃漾出虎纹一样的光彩，像是再度焕发青春。</p>
+        <p>奥雷里亚诺第二对她重又萌发了年轻时的激情，那时佩特拉·科特斯将他错认为他的孪生兄弟而爱他，同时与两人睡觉，并相信是上帝赐予好运让自己拥有这样的男人，做起爱来好像两个不同的人。</p>
+        <p>这重拾的激情如此炽烈，两人不止一次正要吃饭，只因眼波交错，无需只言片语就立刻盖上饭菜，忍着饥饿去卧室里极尽欢爱。</p>
+        <p>奥雷里亚诺第二从偷偷拜访法国女郎的几次经历中受到启发，为佩特拉·科特斯买了一张带主教式华盖的床，在窗前挂起天鹅绒窗帘，在天花板和墙壁上镶满水晶镜面。</p>
+        <p>他从未像那时一般喜爱欢宴，大肆挥霍。</p>
+        <p>每天十一点抵达的火车为他运来一箱又一箱的香槟和白兰地。</p>
+        <p>从车站回家的路上，他像跳昆比安巴舞时即兴邀请舞伴一样将所有碰见的人拉去赴宴，不管是本地人还是外乡人，认识的还是即将认识的，一概都在邀请之列。</p>
+        <p>连只会说外语的布朗先生那样难以捉摸的人物，也被奥雷里亚诺第二诱人的表情和手势招引来，一次次在佩特拉·科特斯家烂醉如泥，甚至在手风琴的乐声中胡乱哼唱得克萨斯民歌，让一直跟在身边的德国猛犬伴着歌声跳舞。</p>
+        <p>“让一让，母牛们，”奥雷里亚诺第二在狂欢的高潮时分喊道，“让一让，生命短暂啊。”</p>
+        <p>他气色从未那样好过，他本人从未像那样广受爱戴，他的畜群也从未像那样疯狂地繁殖。</p>
+        <p>那么多的猪、牛、鸡在无休无止的宴席中被屠宰，院中泥土在无数鲜血的浇灌下变得淤软乌黑。</p>
+        <p>那里成了永久垃圾场，骨骸内脏遍地，残羹剩饭成堆，人们不得不一直燃放炸药吓走秃鹫，以免它们啄出宾客的眼珠来。</p>
+        <p>奥雷里亚诺第二变得肥硕臃肿，面色红中透紫，走路像乌龟般迟缓。</p>
+        <p>这都要归因于他奇佳的胃口，只有周游世界归来时的何塞·阿尔卡蒂奥才能比得上。</p>
+        <p>耸人听闻的贪食，一掷千金的豪气，无人可比的好客，他的名声越出大泽区的边界，吸引了沿海一带最知名的老饕。</p>
+        <p>神奇的饭桌精英从四面八方赶到，参加在佩特拉·科特斯家举行的疯狂的饕餮大赛。</p>
+        <p>奥雷里亚诺第二保持常胜不败，直到那个不祥的星期六卡米拉·萨迦丝杜梅出现，这个图腾般的女人以“母象”的美名享誉全国。</p>
+        <p>比赛一直持续到星期二清晨。</p>
+        <p>在最初的二十四小时里，奥雷里亚诺第二就着木薯、山药和烤香蕉吃掉一头牛，喝下一箱半香槟，对胜利充满信心。</p>
+        <p>比起波澜不惊的对手，他看起来兴奋活跃得多。</p>
+        <p>对手明显更具专业风范，但也正因如此在挤满屋子的各路观众眼中显得缺乏激情。</p>
+        <p>奥雷里亚诺第二在求胜欲望驱使下张口大嚼的同时，“母象”施展外科医生般的技艺将肉细细分解，慢慢享用，甚至带有几分愉悦。</p>
+        <p>她体形巨大敦实，但壮硕的身架掩不住女性的温情。</p>
+        <p>她脸庞秀美，纤细的双手保养得当，浑身散发出不可抗拒的个人魅力，奥雷里亚诺第二在她进门时低声说，自己宁愿和她在床上而不是在桌上比赛。</p>
+        <p>后来看到她吃下整整一扇牛肉仍保持着淑女的最佳仪态，他严肃地评价道，这头娇柔迷人而又胃口奇佳的长鼻动物从某种角度来看正是理想的女人类型。</p>
+        <p>他说得不错。</p>
+        <p>得名“母象”之前，她一度被称为“兀鹫”，这实在没有道理可言。</p>
+        <p>她不像流言所说是杀牛碎骨的屠夫，也不是希腊马戏团里长胡子的悍妇，而是一所声乐学校的校长。</p>
+        <p>她开始学习进食技巧时已是一位可敬的母亲，她这么做是为了找到合适的方式让自己的儿女吃得更好，即不靠人为刺激，而是凭借精神的绝对平静。</p>
+        <p>她那已被实践证明的理论基于以下原则：一个人只要能完全拥有良心上的安宁，就可以不断进食直到疲惫无力为止。</p>
+        <p>因此，她是出于道义上的考虑而非竞技方面的兴趣才离开学校和家庭，来与这个以无所顾忌的大胃王之名享誉全国的男人比试。</p>
+        <p>她第一眼看到奥雷里亚诺第二，就意识到他不会输在胃上，却会输在性格上。</p>
+        <p>第一个夜晚过去，“母象”依然不动声色，奥雷里亚诺第二却因为说笑太多而渐渐困乏。</p>
+        <p>他们睡了四个小时。</p>
+        <p>醒来的时候，每人喝下五十个橙子榨出的果汁、八升咖啡，吃了三十个生鸡蛋。</p>
+        <p>到第二个早上，两人都许久未眠，又吃下两头猪、一把香蕉和四箱香槟。</p>
+        <p>“母象”怀疑奥雷里亚诺第二也在无意中发现了同样的进食诀窍，但区别在于他是从彻底放纵的荒唐之道中领悟的。</p>
+        <p>这样他就比她预想的更为危险。</p>
+        <p>然而在佩特拉·科特斯端上两只烤火鸡时，奥雷里亚诺第二的肚子已快撑到极限。</p>
+        <p>“如果吃不了，就别再吃了，”“母象”说，“我们算打成平手。”</p>
+        <p>她说这话是出于真心，知道自己眼看要将对手逼死，在懊悔中再无法咽下任何食物。</p>
+        <p>但奥雷里亚诺第二将这话错当成新的挑战而猛吞火鸡，结果连他惊人的巨胃也无法承受。</p>
+        <p>他失去了知觉，一头扎在盛残骨的盘子里，像狗一样口吐白沫，发出窒息垂死时的嘶嘶声。</p>
+        <p>他感觉在黑暗中被人从一座塔的顶端扔下，坠向无底的深渊，并在最后一线清醒的光亮中意识到在这没完没了的下落尽头等待他的是死亡。</p>
+        <p>“带我去费尔南达那里。”他挤出了这句话。</p>
+        <p>朋友们把他送回家，认为他算是履行了对妻子的承诺，没有死在情妇的床上。</p>
+        <p>佩特拉·科特斯把他想要穿到棺材里去的那双漆皮靴打好鞋油，正四处找人要给他送去，这时却有人来告诉她说奥雷里亚诺第二已脱离危险。</p>
+        <p>实际上他不到一个星期就康复了，十五天后举办了规模空前的筵席庆祝大难不死。</p>
+        <p>他仍然住在佩特拉·科特斯家里，但每天都去看望费尔南达，有时还会留下来和家人吃饭，仿佛命运颠倒了事物，使他变成了情人的丈夫、妻子的情人。</p>
+        <p>这对费尔南达而言是一种宽慰。</p>
+        <p>遭冷落时，她排解烦闷的方法只剩下在午休时间弹奏古钢琴和阅读儿女的来信。</p>
+        <p>在半月一封寄给他们的信中，她没写一句真话。</p>
+        <p>她对儿女避而不言自己的痛苦，刻意隐去家中的悲哀。</p>
+        <p>尽管阳光仍照耀在秋海棠上，午后两点依然炎热难耐，欢闹声还不时从街上传来，这个家却越来越像她父母那座殖民时代的深宅。</p>
+        <p>费尔南达游荡于三个活着的鬼魂和何塞·阿尔卡蒂奥·布恩迪亚死去的鬼魂之间，后者在她弹奏古钢琴时，偶尔会坐在客厅的阴影里，露出探询的目光。</p>
+        <p>奥雷里亚诺·布恩迪亚上校恍如一个影子。</p>
+        <p>自从上次出门去找赫里内勒多·马尔克斯上校要发动一场无望的战争之后，他除了到栗树下小便几乎从未离开作坊。</p>
+        <p>他只允许理发师每三个星期登门一次，旁人一概不见。</p>
+        <p>乌尔苏拉每天给他送一次饭，送什么他便吃什么。</p>
+        <p>他制作小金鱼的热情未减，但自从听说人们买去不是当作首饰而是当作历史遗物，就不再出售。</p>
+        <p>他把蕾梅黛丝那些从成婚时起就装饰在卧室里的娃娃拿到院里付之一炬。</p>
+        <p>警觉的乌尔苏拉发现了儿子的举动，却没能制止。</p>
+        <p>“你心肠硬得像石头。”她对他说。</p>
+        <p>“这不是心肠的问题。”他回答，“房间里全是蛀虫。”</p>
+        <p>阿玛兰妲在织她的寿衣。</p>
+        <p>费尔南达不理解她为什么不时给梅梅写信，还寄去礼物，但对何塞·阿尔卡蒂奥却提都不愿提起。</p>
+        <p>“你们到死也不会明白。”</p>
+        <p>当她通过乌尔苏拉询问原因时，阿玛兰妲这样回答，而这一回答在她心中种下的疑问，永远也没有得到解答。</p>
+        <p>身材高挑瘦削，神情高傲，总穿着宽松的泡泡纱裙，顽强地抗拒岁月流逝以及苦痛记忆的侵蚀，阿玛兰妲仿佛在前额上刻着代表贞洁的灰烬十字。</p>
+        <p>其实真正的记号在她手上，在她睡觉时也不摘下并且总是亲手清洗熨平的黑纱上。</p>
+        <p>时间在她织绣寿衣的指缝间流逝。</p>
+        <p>在人们的印象中，她似乎白天织晚上拆，却不是为了借此击败孤独，恰恰相反，为的是持守孤独。</p>
+        <p>在被遗弃的岁月里，费尔南达最担心的是梅梅放假回家却见不到奥雷里亚诺第二。</p>
+        <p>那次暴食晕厥事件结束了她的担忧。</p>
+        <p>梅梅回来的时候，她父母已经商定，不仅要让女儿相信奥雷里亚诺第二仍是个顾家的丈夫，还要避免让她察觉到家里的悲凉气息。</p>
+        <p>每年的那两个月，奥雷里亚诺第二扮演起模范丈夫的角色，举办有冰激凌和小饼干的聚会，其间由这个活泼开朗的女学生弹奏古钢琴助兴。</p>
+        <p>从那时就可明显看出，她没有继承母亲的性格。</p>
+        <p>她更像是阿玛兰妲的缩影，仿如十二三岁时的她，还浑然不知伤心的滋味，走起路来仿佛踩着舞步，为家里平添生机，直到对皮埃特罗·克雷斯皮的秘密激情永远扭曲了她的心灵。</p>
+        <p>但与阿玛兰妲不同，与所有家人都不同，梅梅尚未表现出继承自家族的孤独宿命，看上去完全与外界融成一片，只是到了下午两点会雷打不动地关在客厅里练习古钢琴。</p>
+        <p>很明显她喜欢这个家，一整年都期盼着回家后在年轻人中引发的那种欢腾。</p>
+        <p>她喜爱聚会和殷勤好客的性情与父亲相去不远。</p>
+        <p>这一灾难性遗传的最初征兆显露于第三个假期，梅梅事先没打招呼，自作主张邀请了四位修女和六十八个同学来家里度假一周。</p>
+        <p>“太不幸了！”费尔南达哀叹道，“这孩子和她父亲一样荒唐！”</p>
+        <p>家里不得不向邻居借床及吊床，让她们分成九组就餐，排定沐浴时刻，并借来四十张凳子好让这些穿着蓝色校服和男式靴子的姑娘安稳片刻。</p>
+        <p>这是一次失败的邀请，因为这些唧唧喳喳的女学生刚刚吃完早饭，不一会儿又得开始排队吃午饭，然后是晚饭，整整一个星期只来得及去种植园散了一次步。</p>
+        <p>到了晚上，修女们个个精疲力竭，无法动弹也无力再下达命令，而不知疲惫的女学生们仍在院中高唱乏味的校歌。</p>
+        <p>一天，她们险些踩到乌尔苏拉身上，因为她总是坚持要帮忙，结果越帮越忙。</p>
+        <p>另一天，修女们一阵大乱，因为奥雷里亚诺·布恩迪亚上校在栗树下小便，毫不顾及院中有女学生在场。</p>
+        <p>阿玛兰妲也险些制造出恐慌，当时一位修女走进厨房看见她正往汤里放盐，一时觉得没话可说，便问她那白色粉末是什么。</p>
+        <p>“砒霜。”阿玛兰妲答道。</p>
+        <p>到达的当天晚上，女学生们为了在睡前如厕乱成一团，直到凌晨一点还有人没轮到。</p>
+        <p>于是费尔南达买来七十二个便盆，但结果只是把夜里的难题推迟到早上，因为一清早女学生们就在厕所门前排起长队，每人手持自己的便盆等着刷洗。</p>
+        <p>尽管有人发烧，不少人身上因蚊虫叮咬而发炎，但大多数人都表现出不屈的耐力，能战胜最艰巨的困难，甚至在一天中最热的时刻还在花园里跑来跑去。</p>
+        <p>等她们终于离开时，家里鲜花萎地，家具破损，墙壁上满是涂鸦，但费尔南达因她们的离开而备感轻松，也就原谅了她们造成的破坏。</p>
+        <p>她将借来的床和凳子归还，把七十二个便盆收进梅尔基亚德斯的房间。</p>
+        <p>那个紧锁的房间，一度指引过家中精神生活的方向，从此以后遂被称为“便盆室”。</p>
+        <p>在奥雷里亚诺·布恩迪亚上校看来，这才是最合适的名字，因为在家里其他人惊讶于梅尔基亚德斯的房间历经岁月侵蚀仍一尘不染的时候，他就已看出里面垃圾成堆。</p>
+        <p>说到底他本不在乎究竟谁看到的才是真相，他得知那房间的归宿也只是因为整整一下午费尔南达都在摆放便盆，进进出出打扰了他的工作。</p>
+        <p>那些天里，何塞·阿尔卡蒂奥第二又在家中出现。</p>
+        <p>他穿过长廊，没和任何人打招呼，一头钻进作坊与上校交谈起来。</p>
+        <p>尽管眼不能见，乌尔苏拉却听出了他那代表监工身份的皮靴声，惊讶于他与家人之间，包括与他的孪生兄弟之间无法消弭的隔阂，他们童年时曾一起上演奇妙的换名游戏，现在却已不剩任何相似之处。</p>
+        <p>他瘦削，严肃，总带着一副沉思的神态和几分撒拉逊人的忧郁，暮色沉沉的脸上闪烁着凄凉的光亮。</p>
+        <p>他最像他们的母亲，桑塔索菲亚·德拉·彼达。</p>
+        <p>乌尔苏拉在说起家人的时候常忘掉他，并因此而自责。</p>
+        <p>但当她感觉到他又在家中出现，而且注意到上校是在干活的时候允许他进了作坊，不由再次检视往日的记忆，从而确认了在童年的某个时刻他一定与孪生兄弟换了身份，应该是他而不是他的兄弟叫奥雷里亚诺这个名字。</p>
+        <p>没人了解他的生活细节。</p>
+        <p>据说有一段时间他没有固定住所，在庇拉尔·特尔内拉家里养斗鸡，有时也睡在那里，但一般都会在法国女郎的房间里过夜。</p>
+        <p>他胡乱度日，不动感情，毫无志气，仿佛乌尔苏拉星系中的一颗流星。</p>
+        <p>事实上，何塞·阿尔卡蒂奥第二不属于这个家，也从未属于任何一个，这都要追溯到赫里内勒多·马尔克斯上校带他去军营观看枪决的那个遥远的清晨。</p>
+        <p>他终其一生也无法忘记那个死刑犯悲伤而略带嘲弄的笑容。</p>
+        <p>那是他最早也是唯一的童年记忆。</p>
+        <p>另一段记忆，关于一个身穿不合时宜的坎肩、头戴鸦翼状礼帽，在明亮的窗前谈玄说异的老人的记忆，他却不知道该归于哪一时期。</p>
+        <p>那是一段模糊的记忆，毫无教益也不令人怀念，而对死刑犯的记忆则截然不同，不仅实际确定了他一生的走向，而且随着年纪渐长反而愈加清晰，仿佛流逝的时光使他与往事日益接近。</p>
+        <p>乌尔苏拉想托何塞·阿尔卡蒂奥第二帮忙让奥雷里亚诺·布恩迪亚上校走出幽闭。</p>
+        <p>“劝他去看看电影，”她对他说，“就算他不喜欢看电影，起码可以呼吸一下新鲜空气。”</p>
+        <p>但她很快发现他与上校一样对自己的恳求充耳不闻，两人都是铁石心肠，不为情所动。</p>
+        <p>尽管她无从得知，也没有任何人知道，两人关在作坊里长谈时究竟说了些什么，但她却明白家里只有这两人是因相似而走到一起。</p>
+        <p>事实上，即使何塞·阿尔卡蒂奥第二也无法将上校从幽闭中拉出来。</p>
+        <p>女学生的侵扰已经耗尽他的耐心。</p>
+        <p>尽管烧毁了蕾梅黛丝可爱的娃娃，他仍以卧室里蛀虫太多为借口，在作坊里支起吊床，除了去院中大小便以外再不离开。</p>
+        <p>乌尔苏拉连跟他随便聊天都做不到。</p>
+        <p>她知道他只顾着打制小金鱼，对盘里的食物看也不看就推到桌角，不在乎汤里油渐凝肉已冷。</p>
+        <p>自从赫里内勒多·马尔克斯上校拒绝帮助他在晚年发动一场战争，他一天天变得愈加冷酷。</p>
+        <p>他紧紧封闭起自己的内心，家人最后就权当他已不在人世。</p>
+        <p>他再没有表现出任何人性的反应，直到有一年的十月十一日他出门去看马戏团游行。</p>
+        <p>对奥雷里亚诺·布恩迪亚上校来说，那一天与他最后几年中的任何一天都没什么两样。</p>
+        <p>清晨五点，他被墙外蟾蜍和蟋蟀的齐鸣惊醒。</p>
+        <p>绵绵细雨从星期六开始就没有停歇，他即使不曾听到花园枝叶上的淅沥声，也能从自己骨头中的寒意里察觉到。</p>
+        <p>他与往常一样裹着羊毛毯，穿着粗棉布衬裤。</p>
+        <p>他还沿用旧年间的过时名谓称这裤子为“哥特佬衬裤”，但图舒适一直穿着。</p>
+        <p>他套上紧身裤，但没有系上带子，也没有像往常那样在衬衣领口别上金纽扣，因为他准备马上洗澡。</p>
+        <p>随后他把毯子披到头上好像兜帽，用手指捋捋脏污的髭须，就去院中小便。</p>
+        <p>离太阳出来还有好些时候，何塞·阿尔卡蒂奥·布恩迪亚还在泡了雨水而腐烂的棕榈棚下打盹。</p>
+        <p>上校像往常一样没看见他，也没听见他的鬼魂因热尿溅在靴子上被惊醒时所说的难解的言语。</p>
+        <p>他决定晚些时候洗澡，不是因为寒冷和潮湿，而是因为十月里沉闷的雾气。</p>
+        <p>回作坊的路上，他闻到桑塔索菲亚·德拉·彼达用来点燃炉灶的火捻的气味，便到厨房里等待咖啡煮开，好取走自己不加糖的那一杯。</p>
+        <p>桑塔索菲亚·德拉·彼达像每天清晨那样问他那天是星期几，他回答说是星期二、十月十一日。</p>
+        <p>他望着眼前这个被火光映成金色的沉稳女人，这个无论此时还是其他时刻都仿佛从未真实存在过的女人，忽然想起战事激烈时的另一个十月十一日，他因确信与他过夜的女人已死而突然惊醒。</p>
+        <p>她的确死了，而他没有忘记那个日期，因为那女人在死前一小时曾问过他那天是星期几。</p>
+        <p>在回忆中，这一次他仍未意识到往日的预感早已弃他而去。</p>
+        <p>咖啡在沸腾，他纯粹出于好奇，不带丝毫怀旧的风险，想着那个他从未知晓姓名，从未见过她生前模样的女人，因为她是在黑暗中跌跌撞撞摸上他的吊床。</p>
+        <p>然而，有太多女人以同样的方式进入他的生活，在他脑海中成为茫然一片，他记不起是否就是她在初会的狂热中几乎淹没在自己的眼泪里，并且在死前不到一小时还信誓旦旦要爱他到死。</p>
+        <p>他不再想她，也不再想其他女人，端着热气腾腾的咖啡走进作坊，打开灯来数点存在铁皮罐里的小金鱼。</p>
+        <p>有十七条。</p>
+        <p>自从决定不再出售，他仍然每天做两条，等凑够二十五条就放到坩埚里熔化重做。</p>
+        <p>他干了一上午活计，全神贯注，心无旁骛，没有察觉到十点的时候雨下大了，有人在作坊前叫喊着关门别让水淹到家里；他甚至忘掉了自我，直到乌尔苏拉端着午饭进来并关了灯。</p>
+        <p>“这雨下的！”乌尔苏拉说。</p>
+        <p>“十月嘛。”他回答。</p>
+        <p>说话的时候，他并未从当天做的第一条小金鱼上移开视线，他正往鱼眼里镶嵌红宝石。</p>
+        <p>直到做完小金鱼丢进罐子，他才开始喝汤。</p>
+        <p>然后他不急不慌，慢慢吃下盛在同一个盘子里的洋葱炖肉、白米饭和炸香蕉片。</p>
+        <p>他的胃口不受环境好坏的影响。</p>
+        <p>午饭后，他感到一阵闲下来的空虚。</p>
+        <p>出于一种科学的迷信，他在饭后消化的两小时内不干活、不阅读、不洗澡也不做爱。</p>
+        <p>这种信念如此根深蒂固，早在战时他就曾为了避免士兵们消化不良而多次推迟行动。</p>
+        <p>他躺在吊床上，用折叠小刀掏着耳朵，不到几分钟便睡着了。</p>
+        <p>他梦见自己走进一幢空空的房子，墙壁雪白，还因为自己是第一个走进这房子的人而深感不安。</p>
+        <p>在梦中，他记起前一夜以及近年来无数个夜晚自己都做过同样的梦，知道醒来时就会遗忘，因为这个不断重复的梦只能在梦中想起。</p>
+        <p>果然，片刻后当理发师敲响作坊的门，奥雷里亚诺·布恩迪亚上校醒来，只觉得自己无意中睡了短短几秒钟，还来不及做梦。</p>
+        <p>“今天不用理了，”他对理发师说，“星期五见。”</p>
+        <p>他的胡须三天没刮，夹杂着白茸毛，但他觉得没必要刮，反正星期五可以在理发时一并解决。</p>
+        <p>糟糕的小睡后，黏糊的汗水令他腋下疖子的旧疾又隐隐发作了。</p>
+        <p>雨停了，但还没出太阳。</p>
+        <p>奥雷里亚诺·布恩迪亚上校打了个响亮的嗝，嘴里泛起汤的酸味，仿佛是身体在下达命令，要他披上毯子去上厕所。</p>
+        <p>他蹲在那里超出了必要的时间，脚下木箱中发酵的臭气直往上腾，最后还是习惯提醒他该回去干活了。</p>
+        <p>在刚才等待的时间里，他又想到今天是星期二，香蕉公司的庄园里发工资的日子，所以何塞·阿尔卡蒂奥第二没来作坊。</p>
+        <p>这一记忆和近年来所有的记忆一样，总会让他不知不觉想起战争。</p>
+        <p>他记得赫里内勒多·马尔克斯上校曾答应为他找一匹额间带白斑的马，此后却再没谈起这个话题。</p>
+        <p>随后他又想起其他纷杂的事情，却无意评判，因为既然无法引开思绪，他便学会了冷静地回想过往，不让那些无法删除的记忆勾起自己的情感。</p>
+        <p>在回作坊的路上，他见空气开始变得干爽，觉得是洗澡的好时候，却被阿玛兰妲抢了先，于是便去制作当天的第二条小金鱼。</p>
+        <p>在他嵌鱼尾的时候太阳出来了，射出炽烈的光芒如帆船破浪般吱嘎作响。</p>
+        <p>空气经过三天细雨的洗涤，漫天都是飞蚁。</p>
+        <p>这时他觉得想要小便，但一直拖到把小金鱼做完才去。</p>
+        <p>四点十分，他向院子走去，忽然听见远处铜管奏乐、大鼓轰鸣、孩童欢呼。</p>
+        <p>从年轻时代起，他第一次有意落入怀旧的陷阱，仿佛回到了吉卜赛人到来时父亲带他去见识冰块的那个神奇下午。</p>
+        <p>桑塔索菲亚·德拉·彼达丢下厨房里的活计，向门口跑去。</p>
+        <p>“是马戏团。”她喊道。</p>
+        <p>奥雷里亚诺·布恩迪亚上校没有去栗树下，也走出门外，混在好奇的人群里观看游行。</p>
+        <p>他看见一个女人穿得金光闪闪骑在大象的脖子上。</p>
+        <p>他看见哀伤的单峰驼。</p>
+        <p>他看见打扮成荷兰姑娘的熊用炒勺和菜锅敲出音乐节奏。</p>
+        <p>他看见小丑在游行队尾表演杂耍。</p>
+        <p>最后当队伍全部走过，街上只剩下空荡荡一片，空中满是飞蚁，几个好奇的人还在茫然观望时，他又一次看见了自己那可悲的孤独的脸。</p>
+        <p>于是他向栗树走去，心里想着马戏团。</p>
+        <p>小便的同时，他仍努力想着马戏团，却已经失去记忆。</p>
+        <p>他像只小鸡一样把头缩在双肩里，额头抵上树干便一动不动了。</p>
+        <p>家里人毫无察觉，直到第二天上午十一点桑塔索菲亚·德拉·彼达去后院倒垃圾，忽然发现秃鹫正纷纷从天而降。</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { 
+            font: 1.0, dictEnabled: true, barHidden: true, highlightEnabled: true, 
+            syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 
+        };
+
+        const bar = document.getElementById('top-bar');
+        const enC = document.getElementById('en-container');
+        const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const syncBtn = document.getElementById('sync-btn');
+
+        function applyPrefs() {
+            enC.style.fontSize = prefs.font + 'em';
+            zhC.style.fontSize = prefs.font + 'em';
+            
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.syncEnabled) {
+                syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff";
+            } else {
+                syncBtn.innerText = "同步: 关"; syncBtn.style.background = "#E5E5EA"; syncBtn.style.color = "#1C1C1E";
+            }
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+
+        let isProgrammaticScroll = false;
+        let scrollTimer;
+
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none';
+            let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block';
+            if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1;
+            let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none';
+            if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+
+        window.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY;
+            let heights = getHeights();
+            let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH);
+            let maxZH = Math.max(1, heights.hZH - viewportH);
+
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN;
+                prefs.posEN = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxZH / maxEN;
+                    prefs.posZH += delta * ratio;
+                    prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); 
+                }
+            } else {
+                let delta = currentY - prefs.posZH;
+                prefs.posZH = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxEN / maxZH;
+                    prefs.posEN += delta * ratio;
+                    prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN));
+                }
+            }
+
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            }, 300);
+        });
+
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') {
+                enC.style.display = 'none';
+                zhC.style.display = 'block';
+                prefs.currentLang = 'zh';
+                window.scrollTo(0, prefs.posZH);
+            } else {
+                zhC.style.display = 'none';
+                enC.style.display = 'block';
+                prefs.currentLang = 'en';
+                window.scrollTo(0, prefs.posEN);
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; }, 100);
+        }
+
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                let now = Date.now();
+                if (now - lastTwoFingerTap > 500) {
+                    switchLang();
+                    lastTwoFingerTap = now;
+                }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => { 
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' }); 
+                setTimeout(() => { isProgrammaticScroll = false; }, 50);
+            }, 50);
+        });
+
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; 
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+            try {
+                const urls = [
+                    'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
+                ];
+                let text = '';
+                for (let u of urls) {
+                    try {
+                        const res = await fetch(u);
+                        if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; }
+                    } catch (err) {}
+                }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) {
+                    highlightWords = new Set(arr);
+                    localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                    applyHighlightsToDOM();
+                }
+            } catch(e) {}
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) span.classList.add('is-highlight');
+            });
+        }
+
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json")
+                .then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{});
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(node) {
+                        const parent = node.parentNode;
+                        if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT;
+                        if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; });
+                    html += `</div>`;
+                } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`; 
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]); 
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initCEFRStaticDict();
+                if(enC) wrapTextNodesToWord(enC);
+                setupTippyDelegate();
+                initCloudHighlights(); 
+            }, 500);
+        })();
+    </script>
+</body>
+</html>

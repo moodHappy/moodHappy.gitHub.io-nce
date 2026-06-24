@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 20</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } 
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } 
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        .content-layer { transition: font-size 0.2s; width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 24px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 28px; height: 28px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 4px 6px; }
+        .dict-basic-trans { font-size: 30px; color: #444; margin-top: 6px; }
+        .dict-pos-block { margin-bottom: 6px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 6px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 24px; padding: 10px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 20 (EN)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>PILAR TERNERA died in her wicker rocking chair during one night of festivities as she watched over the entrance to her paradise.</p>
+        <p>In accordance with her last wishes she was not buried in a coffin but sitting in her rocker, which eight men lowered by ropes into a huge hole dug in the center of the dance floor.</p>
+        <p>The mulatto girls, dressed in black, pale from weeping, invented shadowy rites as they took off their earrings, brooches, and rings and threw them into the pit before it was closed over with a slab that bore neither name nor dates, and that was covered with a pile of Amazonian camellias.</p>
+        <p>After poisoning the animals they closed up the doors and windows with brick and mortar and they scattered out into the world with their wooden trunks that were lined with pictures of saints, prints from magazines, and the portraits of sometime sweethearts, remote and fantastic, who shat diamonds, or ate cannibals, or were crowned playing-card kings on the high seas.</p>
+        <p>It was the end.</p>
+        <p>In Pilar Ternera's tomb, among the psalm and cheap whore jewelry, the ruins of the past would rot, the little that remained after the wise Catalonian had auctioned off his bookstore and returned to the Mediterranean village where he had been born, overcome by a yearning for a lasting springtime.</p>
+        <p>No one could have foreseen his decision.</p>
+        <p>He had arrived in Macon-do during the splendor of the banana company, fleeing from one of many wars, and nothing more practical had occurred to him than to set up that bookshop of incunabula and first editions in several languages, which casual customers would thumb through cautiously, as if they were junk books, as they waited their turn to have their dreams interpreted in the house across the way.</p>
+        <p>He spent half his life in the back of the store, scribbling in his extracareful hand in purple ink and on pages that he tore out of school notebooks, and no one was sure exactly what he was writing.</p>
+        <p>When Aureli-ano first met him he had two boxes of those motley pages that in some way made one think of Melqu&iacute;ades' parchments, and from that time until he left he had filled a third one, so it was reasonable to believe that he had done nothing else during his stay in Macon-do.</p>
+        <p>The only people with whom he maintained relations were the four friends, whom he had exchanged their tops and kites for books, and he set them to reading Seneca and Ovid while they were still in grammar school.</p>
+        <p>He treated the classical writers a household familiarity, as if they had all been his roommates at some period, and he knew many things that should not have been known, such as the fact that Saint Augustine wore a wool jacket under his habit that he did not take off for fourteen years and that Arnaldo of Villanova, the necromancer, was impotent since childhood because of a scorpion bite.</p>
+        <p>His fervor for the written word was an interweaving of solemn respect and gossipy irreverence.</p>
+        <p>Not even his own manuscripts were safe from that dualism.</p>
+        <p>Having learned Catalan in order to translate them, Alfonso put a roll of pages in his pockets, which were always full of newspaper clippings and manuals for strange trades, and one night he lost them in the house of the little girls who went to bed because of hunger.</p>
+        <p>When the wise old grandfather found out, instead of raising a row as had been feared, he commented, dying with laughter, that it was the natural destiny of literature.</p>
+        <p>On the other hand, there was no human power capable of persuading him not to take along the three boxes when he returned to his native village, and he unleashed a string of Carthaginian curses at the railroad inspectors who tried to ship them as freight until he finally succeeded in keeping them with him in the passenger coach.</p>
+        <p>"The world must be all fucked up," he said then, "when men travel first class and literature goes as freight."</p>
+        <p>That was the last thing he was heard to say.</p>
+        <p>He had spent a dark week on the final preparations for the trip, because as the hour approached his humor was breaking down and things began to be misplaced, and what he put in one place would appear in another, attacked by the same elves that had tormented Fernanda.</p>
+        <p>"Collons," he would curse.</p>
+        <p>"I shit on Canon Twenty-seven of the Synod of London."</p>
+        <p>Germán Aureli-ano took care of him.</p>
+        <p>They helped him like a child, fastening his tickets and immigration documents to his pockets with safety pins, making him a detailed list of what he must do from the time he left Macon-do until he landed in Barcelona, but nonetheless he threw away a pair of pants with half of his money in it without realizing it.</p>
+        <p>The night before the trip, after nailing up the boxes and putting his clothing into the same suitcase that he had brought when he first came, he narrowed his clam eyes, pointed with a kind of impudent benediction at the stacks of books with which he had endured during his exile, said to his friends:- "All that shit there I leave to you people!" Three months later they received in a large envelope twenty-nine letters and more than fifty pictures that he had accumulated during the leisure of the high seas.</p>
+        <p>Although he did not date them, the order in which he had written the letters was obvious.</p>
+        <p>In the first ones, with his customary good humor, he spoke about the difficulties of the crossing, the urge he had to throw the cargo officer overboard when he would not let him keep the three boxes in his cabin, the clear imbecility of a lady who was terrified at the number thirteen, not out of superstition but because she thought it was a number that had no end, and the bet that he had won during the first dinner because he had recognized in the drinking water on board the taste of the nighttime beets by the springs of Lérida.</p>
+        <p>With the passage of the days, however, the reality of life on board mattered less and less to him and even the most recent and trivial happenings seemed worthy of nostalgia, because as the ship got farther away, his memory began to grow sad.</p>
+        <p>That process of nostalgia was also evident in the pictures.</p>
+        <p>In the first ones he looked happy, with his sport shirt which looked like a hospital jacket and his snowy mane, in an October Caribbean filled with whitecaps.</p>
+        <p>In the last ones he could be seen to be wearing a dark coat and a milk scarf, pale in the face, taciturn from absence on the deck of a mournful ship that had come to be like a sleepwalker on the autumnal seas.</p>
+        <p>Germán and Aureli-ano answered his letters.</p>
+        <p>He wrote so many during the first months that at that time they felt closer to him than when he had been in Macon-do, and they were almost freed from the rancor that he had left behind.</p>
+        <p>At first he told them that everything was just the same, that the pink snails were still in the house where he had been born, that the dry herring still had the same taste on a piece toast, that the waterfalls in the village still took on a perfumed smell at dusk.</p>
+        <p>They were the notebook pages again, woven with the purple scribbling, in which he dedicated a special paragraph to each one.</p>
+        <p>Nevertheless, and although he himself did not seem to notice it, those letters of recuperation and stimulation were slowly changing into pastoral letters of disenchantment.</p>
+        <p>One winter night while the soup was boiling in the fireplace, he missed the heat of the back of his store, the buzzing the sun on the dusty almond trees, the whistle of the train during the lethargy of siesta time, just as in Macon-do he had missed the winter soup in the fireplace, the cries of the coffee vendor, and the fleeting larks of springtime.</p>
+        <p>Upset by two nostalgias facing each other like two mirrors, he lost his marvelous sense of unreality and he ended up recommending to all of them that they leave Macon-do, that they forget everything he had taught them about the world and the human heart, that they shit on Horace, and that wherever they might be they always remember that the past was a lie, that memory has no return, that every spring gone by could never be recovered, and that the wildest and most tenacious love was an ephemeral truth in the end.</p>
+        <p>Gaston had returned to Brussels.</p>
+        <p>Tired of waiting for the airplane, one day he put his indispensable things into a small suitcase, took his file of correspondence, and left with the idea of returning by air before his concession was turned over to a group of German pilots who had presented the provincial authorities with a more ambitious project than his.</p>
+        <p>Since the afternoon of their first love, Aureli-ano and Amaranta &uacute;rsula had continued taking advantage of her husband's rare unguarded moments, making love with gagged ardor in chance meetings and almost always interrupted by unexpected returns.</p>
+        <p>But when they saw themselves alone in the house they succumbed to the delirium of lovers who were making up for lost time.</p>
+        <p>It was a mad passion, unhinging, which made Fernanda's bones tremble with horror in her grave and which kept them in a state of perpetual excitement.</p>
+        <p>Amaranta &uacute;rsula's shrieks, her songs of agony would break out the same at two in the afternoon on the diningroom table as at two in the morning in the pantry.</p>
+        <p>"What hurts me most," she would say, laughing, "is all the time that we wasted."</p>
+        <p>In the bewilderment of passion she watched the ants devastating the garden, sating their prehistoric hunger with the beam of the house, and she watched the torrents of living lava take over the porch again, but she bothered to fight them only when she found them in her bedroom.</p>
+        <p>Aureli-ano abandoned the parchments, did not leave the house again, and carelessly answered the letters from the wise Catalonian.</p>
+        <p>They lost their sense of reality, the notion of time, the rhythm of daily habits.</p>
+        <p>They closed the doors and windows again so as not to waste time getting undressed and they walked about the house as Remedios the Beauty had wanted to do and they would roll around naked in the mud of the courtyard, and one afternoon they almost drowned as they made love in the cistern.</p>
+        <p>In a short time they did more damage than the red ants: they destroyed the furniture in the parlor, in their madness they tore to shreds the hammock that had resisted the sad bivouac loves of Colonel Aureli-ano Buend&iacute;a and they disemboweled the mattresses and emptied them on the floor as they suffocated in storms of cotton.</p>
+        <p>Although Aureli-ano was just as ferocious a lover as his rival, it was Amaranta &uacute;rsula who ruled in that paradise of disaster with her mad genius and her lyrical voracity, as if she had concentrated in her love the unconquerable energy that her great-great-grandmother had given to the making of little candy animals.</p>
+        <p>And yet, while she was singing with pleasure and dying with laughter over her own inventions, Aureli-ano was becoming more and more absorbed and silent, for his passion was self-centered and burning.</p>
+        <p>Nevertheless, they both reached such extremes of virtuosity that when they became exhausted from excitement, they would take advantage of their fatigue.</p>
+        <p>They would give themselves over to the worship of their bodies, discovering that the rest periods of love had unexplored possibilities, much richer than those of desire.</p>
+        <p>While he would rub Amaranta &uacute;rsula's erect breasts with egg whites or smooth her elastic thighs and peach-like stomach with cocoa butter, she would play with Aureli-ano's portentous creature as if it were a doll and would paint clown's eyes on it with her lipstick and give it a Turk's mustache with her eyebrow pencil, and would put on organza bow ties and little tinfoil hats.</p>
+        <p>One night they daubed themselves from head to toe peach jam and licked each other like dogs and made mad love on the floor of the porch, and they were awakened by a torrent of carnivorous ants who were ready to eat them alive.</p>
+        <p>During the pauses in their delirium, Amaranta &uacute;rsula would answer Gaston's letters.</p>
+        <p>She felt him to be so far away and busy that his return seemed impossible to her.</p>
+        <p>In one of his first letters he told that his Partners had actually sent the airplane, but that a shipping agent in Brussels had sent it by mistake to Tanganyika, where it was delivered to the scattered tribe of the Makondos.</p>
+        <p>That mix-up brought on so many difficulties that just to get the plane back might take two years.</p>
+        <p>So Amaranta &uacute;rsula dismissed the possibility of an inopportune return.</p>
+        <p>Aureli-ano, for his part, had no other contact with the world except for the letters from the wise Catalonian and the news he had of Gabriel through Mercedes, the silent pharmacist.</p>
+        <p>At first they were real contacts.</p>
+        <p>Gabriel had turned in his return ticket in order to stay in Paris, selling the old newspapers and empty bottles that the chambermaids threw out of a gloomy hotel on the Rue Dauphine.</p>
+        <p>Aureli-ano could visualize him then in a turtleneck sweater which he took off only when the sidewalk Cafés on Montparnasse filled with springtime lovers, and sleeping by day and writing by night in order to confuse hunger in the room that smelled of boiled cauliflower where Rocamadour was to die.</p>
+        <p>Nevertheless, news about him was slowly becoming so uncertain, and the letters from the wise man so sporadic and melancholy, that Aureli-ano grew to think about them as Amaranta &uacute;rsula thought about her husband, and both of them remained floating in an empty universe where the only everyday and eternal reality was love.</p>
+        <p>Suddenly, like the stampede in that world of happy unawareness, came the news of Gaston's return.</p>
+        <p>Aureli-ano and Amaranta &uacute;rsula opened their eyes, dug deep into their souls, looked at the letter with their hands on their hearts, understood that they were so close to each other that they preferred death to separation.</p>
+        <p>Then she wrote her husband a letter of contradictory truths in which she repeated her love and said how anxious she was to see him again, but at the same time she admitted as a design of fate the impossibility of living without Aureli-ano.</p>
+        <p>Contrary to what they had expected, Gaston sent them a calm, almost paternal reply, with two whole pages devoted to a warning against the fickleness of passion and a final paragraph with unmistakable wishes for them to be as happy as he had been during his brief conjugal experience.</p>
+        <p>It was such an unforeseen attitude that Amaranta &uacute;rsula felt humiliated by the idea that she had given her husband the pretext that he had wanted in order to abandon her to her fate.</p>
+        <p>The rancor was aggravated six months later when Gaston wrote again from Léopoldville, where he had finally recovered the airplane, simply to ask them to ship him the velocipede, which of all that he had left behind in Macon-do was the only thing that had any sentimental value for him.</p>
+        <p>Aureli-ano bore Amaranta &uacute;rsula's spite patiently and made an effort to show her that he could be as good a husband in adversity as in prosperity, and the daily needs that besieged them when Gaston's last money ran out created a bond of solidarity between them that was not as dazzling and heady as passion, but that let them make love as much and be as happy as during their uproarious and salacious days.</p>
+        <p>At the time Pilar Ternera died they were expecting a child.</p>
+        <p>Tormented by the certainty that he was his wife's brother, Aureli-ano ran out to the parish house to search through the moldy and moth-eaten archives for some clue to his parentage.</p>
+        <p>The oldest baptismal certificate that he found was that of Amaranta Buend&iacute;a, baptized in adolescence by Father Nicanor Reyna during the time when he was trying to prove the existence of God by means of tricks with chocolate.</p>
+        <p>He began to have that feeling that he was one the seventeen Aureli-anos, whose birth certificates he tracked down as he went through four volumes, but the baptism dates were too far back for his age.</p>
+        <p>Seeing him lost in the labyrinths of kinship, trembling with uncertainty, the arthritic priest, who was watching him from his hammock, asked him compassionately what his name was.</p>
+        <p>"Aureli-ano Buend&iacute;a," he said.</p>
+        <p>"Then don't wear yourself out searching," the priest exclaimed with final conviction.</p>
+        <p>"Many years ago there used to be a street here with that name and in those days people had the custom of naming their children after streets."</p>
+        <p>Aureli-ano trembled with rage.</p>
+        <p>"So!" he said.</p>
+        <p>"You don't believe it either."</p>
+        <p>"Believe what?" "That Colonel Aureli-ano, Buend&iacute;a fought thirty-two civil wars and lost them all," Aureli-ano answered.</p>
+        <p>"That the army hemmed in and machine-gunned three thousworkers and that their bodies were carried off to be thrown into the sea on a train with two hundred cars."</p>
+        <p>The priest measured a pitying look.</p>
+        <p>"Oh, my son," he signed.</p>
+        <p>"It's enough for me to be sure that you and I exist at this moment."</p>
+        <p>So Aureli-ano and Amaranta &uacute;rsula accepted the version of the basket, not because they believed it, but because it spared them their terror.</p>
+        <p>As the pregnancy advanced they were becoming a single being, they were becoming more and more integrated in the solitude a house that needed only one last breath to be knocked down.</p>
+        <p>They restricted themselves to an essential area, from Fernanda's bedroom, where the charms of sedentary love were visible, to the beginning of the porch, where Amaranta &uacute;rsula would sit to sew bootees and bonnets for the newborn baby and Aureli-ano, would answer the occasional letters from the wise Catalonian.</p>
+        <p>The rest of the house was given over to the tenacious assault of destruction.</p>
+        <p>The silver shop, Melqu&iacute;ades' room, the primitive and silent realm of Santa Sof&iacute;a de la Piedad remained in the depths of a domestic jungle that no one would have had the courage to penetrate.</p>
+        <p>Surrounded by the voracity of nature, Aureli-ano and Amaranta &uacute;rsula continued cultivating the oregano and the begonias and defended their world with demarcations of quicklime, building the last trenches in the age-old war between man and ant.</p>
+        <p>Her long and neglected hair, the splotches that were beginning to appear on her face, the swelling of her legs, the deformation of her former lovemaking weasel's body had changed Amaranta &uacute;rsula from the youthful creature she had been when she arrived at the house with the cage of luckless canaries and her captive husband, but it did not change the vivacity of her spirit.</p>
+        <p>"Shit," she would say, laughingly.</p>
+        <p>"Who would have thought that we really would end up living like cannibals!" The last thread that joined them to the world was broken on the sixth month of pregnancy when they received a letter that obviously was not from the wise Catalonian.</p>
+        <p>It had been mailed in Barcelona, but the envelope was addressed in conventional blue ink by an official hand and it had the innocent and impersonal look of hostile messages.</p>
+        <p>Aureli-ano snatched it out of Amaranta &uacute;rsula's hands as she was about to open it.</p>
+        <p>"Not this one," he told her.</p>
+        <p>"I don't want to know what it says."</p>
+        <p>Just as he had sensed, the wise Catalonian did not write again.</p>
+        <p>The stranger's letter, which no one read, was left to the mercy of the moths on the shelf where Fernanda had forgotten her wedding ring on occasion and there it remained, consuming itself in the inner fire of its bad news as the solitary lovers sailed against the tide of those days of the last stages, those impenitent and ill-fated times which were squandered on the useless effort of making them drift toward the desert of disenchantment and oblivion.</p>
+        <p>Aware of that menace, Aureli-ano and Amaranta &uacute;rsula spent the hot months holding hands, ending with the love of loyalty for the child who had his beginning in the madness of fornication.</p>
+        <p>At night, holding each other in bed, they were not frightened by the sublunary explosions of the ants or the noise of the moths or the constant and clean whistle of the growth of the weeds in the neighboring rooms.</p>
+        <p>Many times they were awakened by the traffic of the dead.</p>
+        <p>They could hear &uacute;rsula fighting against the laws creation to maintain the line, and José Arcadio Buend&iacute;a searching for the mythical truth of the great inventions, and Fernanda praying, and Colonel Aureli-ano Buend&iacute;a stupefying himself with the deception of war and the little gold fishes, and Aureli-ano Segun-do dying of solitude in the turmoil of his debauches, and then they learned that dominant obsessions can prevail against death and they were happy again with the certainty that they would go on loving each other in their shape as apparitions long after other species of future animals would steal from the insects the paradise of misery that the insects were finally stealing from man.</p>
+        <p>One Sunday, at six in the afternoon, Amaranta &uacute;rsula felt the pangs of childbirth.</p>
+        <p>The smiling mistress of the little girls who went to bed because of hunger had her get onto the diningroom table, straddled her stomach, and mistreated her with wild gallops until her cries were drowned out by the bellows of a formidable male child.</p>
+        <p>Through her tears Amaranta &uacute;rsula could see that he was one of those great Buend&iacute;as, strong and willful like the José Arcadios, with the open and clairvoyant eyes of the Aureli-anos, and predisposed to begin the race again from the beginning and cleanse it of its pernicious vices and solitary calling, for he was the only one in a century who had been engendered with love.</p>
+        <p>"He's a real cannibal."</p>
+        <p>she said.</p>
+        <p>"We'll name him Rodrigo."</p>
+        <p>"No," her husband countered.</p>
+        <p>"We'll name him Aure-liano and he'll win thirty-two wars."</p>
+        <p>After cutting the umbilical cord, the midwife began to use a cloth to take off the blue grease that covered his body as Aureli-ano held up a lamp.</p>
+        <p>Only when they turned him on his stomach did they see that he had something more than other men, and they leaned over to examine him.</p>
+        <p>It was the tail of a pig.</p>
+        <p>They were not alarmed.</p>
+        <p>Aureli-ano Amaranta &uacute;rsula were not aware of the family precedent, nor did they remember &uacute;rsula's frightening admonitions, and the midwife pacified them with the idea that the tail could be cut off when the child got his second teeth.</p>
+        <p>Then they had no time to think about it again, because Amaranta &uacute;rsula was bleeding in an uncontainable torrent.</p>
+        <p>They tried to help her with applications of spider webs and balls of ash, but it was like trying to hold back a spring with one's hands.</p>
+        <p>During the first hours she tried to maintain her good humor.</p>
+        <p>She took the frightened Aureli-ano by the hand and begged him not to worry, because people like her were not made to die against their will, and she exploded with laughter at the ferocious remedies of the midwife.</p>
+        <p>But as Aureli-ano's hope abandoned him she was becoming less visible, as if the light on her were fading away, until she sank into drowsiness.</p>
+        <p>At dawn on Monday they brought a woman who recited cauterizing prayers that were infallible for man and beast beside her bed, but Amaranta &uacute;rsula's passionate blood was insensible to any artifice that did not come from love.</p>
+        <p>In the afternoon, after twenty-four hours of desperation, they knew that she was dead because the flow had stopped without remedies and her profile became sharp and the blotches on her face evaporated in a halo of alabaster and she smiled again.</p>
+        <p>Aureli-ano did not understuntil then how much he loved his friends, how much he missed them, and how much he would have given to be with them at that moment.</p>
+        <p>He put the child in the basket that his mother had prepared for him, covered the face of the corpse with a blanket, wandered aimlessly through the town, searching for an entrance that went back to the past.</p>
+        <p>He knocked at the door of the pharmacy, where he had not visited lately, and he found a carpenter shop.</p>
+        <p>The old woman who opened the door with a lamp in her hand took pity on his delirium and insisted that, no, there had never been a pharmacy there, nor had she ever known a woman with a thin neck and sleepy eyes named Mercedes.</p>
+        <p>He wept, leaning his brow against the door of the wise Catalonian's former bookstore, conscious that he was paying with his tardy sobs for a death that he had refused to weep for on time so as not to break the spell of love.</p>
+        <p>He smashed his fists against the cement wall of The Golden Child, calling for Pilar Ternera, indifferent to the luminous orange disks that were crossing the sky and that so many times on holiday nights he had contemplated with childish fascination from the courtyard of the curlews.</p>
+        <p>In the last open salon of the tumbledown red-light district an accordion group was playing the songs of Rafael Escalona, the bishop's nephew, heir to the secrets of Francisco the Man.</p>
+        <p>The bartender, who had a withered and somewhat crumpled arm because he had raised it against his mother, invited Aureli-ano to have a bottle of cane liquor, and Aureli-ano then bought him one.</p>
+        <p>The bartender spoke to him about the misfortune of his arm.</p>
+        <p>Aureli-ano spoke to about the misfortune of his heart, withered and somewhat crumpled for having been raised against his sister.</p>
+        <p>They ended up weeping together and Aureli-ano felt for a moment that the pain was over.</p>
+        <p>But when he was alone again in the last dawn of Macon-do, he opened up his arms in the middle of the square, ready to wake up the whole world, and he shouted with all his might: "Friends are a bunch of bastards!" Nigromanta rescued him from a pool of vomit and tears.</p>
+        <p>She took him to her room, cleaned him up, made him drink a cup of broth.</p>
+        <p>Thinking that it would console him, she took a piece of charcoal and erased the innumerable loves that he still owed her for, and she voluntarily brought up her own most solitary sadnesses so as not to leave him alone in his weeping.</p>
+        <p>When he awoke, after a dull and brief sleep, Aureli-ano recovered the awareness of his headache.</p>
+        <p>He opened his eyes and remembered the child.</p>
+        <p>Aureli-ano, had never been more lucid in any act of his life as when he forgot about his dead ones and the pain of his dead ones and nailed up the doors and windows again with Fernanda's crossed boards so as not to be disturbed by any temptations of the world, for he knew then that his fate was written in Melqu&iacute;ades' parchments.</p>
+        <p>He found them intact among the prehistoric plants and steaming puddles and luminous insects that had removed all trace of man's passage on earth from the room, and he did not have the calmness to bring them out into the light, but right there, standing, without the slightest difficulty, as if they had been written in Spanish and were being read under the dazzling splendor of high noon, he began to decipher them aloud.</p>
+        <p>It was the history of the family, written by Melqu&iacute;ades, down to the most trivial details, one hundred years ahead of time.</p>
+        <p>He had written it in Sanskrit, which was his mother tongue, and he had encoded the even lines in the private cipher of the Emperor Augustus and the odd ones in a Lacedemonian military code.</p>
+        <p>The final protection, which Aureli-ano had begun to glimpse when he let himself be confused by the love Amaranta &uacute;rsula, was based on the fact that Melqu&iacute;ades had not put events in the order of man's conventional time, but had concentrated a century of daily episodes in such a way that they coexisted in one instant.</p>
+        <p>Fascinated by the discovery, Aureli-ano, read aloud without skipping the chanted encyclicals that Melqu&iacute;ades himself had made Arcadio listen to and that were in reality the prediction his execution, he found the announcement of the birth of the most beautiful woman in the world who was rising up to heaven in body and soul, and he found the origin of the posthumous twins who gave up deciphering the parchments, not simply through incapacity and lack of drive, but also because their attempts were premature.</p>
+        <p>At that point, impatient to know his own origin, Aureli-ano skipped ahead.</p>
+        <p>Then the wind began, warm, incipient, full of voices from the past, the murmurs of ancient geraniums, sighs of disenchantment that preceded the most tenacious nostalgia.</p>
+        <p>He did not notice it because at that moment he was discovering the first indications of his own being in a lascivious grandfather who let himself be frivolously dragged along across a hallucinated plateau in search of a beautiful woman who would not make him happy.</p>
+        <p>Aureli-ano recognized him, he pursued the hidden paths of his descent, and he found the instant of his own conception among the scorpions and the yellow butterflies in a sunset bathroom where a mechanic satisfied his lust on a woman who was giving herself out of rebellion.</p>
+        <p>He was so absorbed that he did not feel the second surge of wind either as its cyclonic strength tore the doors and windows off their hinges, pulled off the roof of the east wing, and uprooted the foundations.</p>
+        <p>Only then did he discover that Amaranta &uacute;rsula was not his sister but his aunt, and that Sir Francis Drake had attacked Riohacha only so that they could seek each other through the most intricate labyrinths of blood until they would engender the mythological animal that was to bring the line to an end.</p>
+        <p>Macon-do was already a fearful whirlwind of dust and rubble being spun about by the wrath of the biblical hurricane when Aureli-ano skipped eleven pages so as not to lose time with facts he knew only too well, and he began to decipher the instant that he was living, deciphering it as he lived it, prophesying himself in the act deciphering the last page of the parchments, as if he were looking into a speaking mirror.</p>
+        <p>Then he skipped again to anticipate the predictions and ascertain the date and circumstances of his death.</p>
+        <p>Before reaching the final line, however, he had already understood that he would never leave that room, for it was foreseen that the city of mirrors (or mirages) would be wiped out by the wind and exiled from the memory of men at the precise moment when Aureli-ano Babilonia would finish deciphering the parchments, and that everything written on them was unrepeatable since time immemorial and forever more, because races condemned to one hundred years of solitude did not have a second opportunity on earth.</p>
+    </div>
+
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">Chapter 20 (ZH)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>庇拉尔·特尔内拉死在藤摇椅上，那是在一个欢宴的夜晚，她当时仍在自己的乐园入口看门。</p>
+        <p>根据她的遗愿，人们没有将她入棺，而是让她坐在藤摇椅上，由八条大汉用龙舌兰粗绳缒到舞池中央挖出的大坑里。</p>
+        <p>那些混血姑娘身着黑衣，哭得脸色苍白，按她们即兴想出的告别仪式纷纷摘下耳坠、胸针和戒指扔到墓穴中，随后用一块全无姓名日期的墓碑封住，在上面用亚马逊山茶堆成小丘。</p>
+        <p>而后她们将动物全部毒死，用砖头和灰泥封牢门窗，这才带着自己的木衣箱各奔他乡，箱内贴满了圣徒像、杂志彩画，以及那些遥远而神奇的露水情人的肖像，他们或屙钻石，或吃人肉，或在公海上被尊为纸牌之王。</p>
+        <p>这便是结束。</p>
+        <p>在庇拉尔·特尔内拉的墓前，在妓女们的圣诗唱诵和念珠拨动中，旧日世界最后的零星残余也销蚀殆尽，而在此之前加泰罗尼亚智者已耐不住对四季长春的故乡的思念，将书店清仓，回到了他出生的地中海村庄。</p>
+        <p>这一决定出乎所有人的意料。</p>
+        <p>他在香蕉公司全盛时期逃避连绵不断的战乱来到马孔多，异想天开地创办了这间书店经营古籍和各种文字的原版书。</p>
+        <p>偶尔有等着去对面屋里解梦的人走进来，不无疑虑地翻上几页，仿佛那些书是从垃圾堆里捡来的。</p>
+        <p>他半生都在闷热的书店后堂度过，用紫色墨水在撕下来的学生练习本散页上胡乱涂写细密的字迹，没人知道其中的确切内容。</p>
+        <p>奥雷里亚诺与他结识的时候，他已经攒下两大箱文稿，让人想起梅尔基亚德斯的羊皮卷，到临走时他又装满了第三箱，由此可见他在马孔多期间没做别的事。</p>
+        <p>与他来往的只有那四个朋友，他在他们还在上小学时就用书籍跟他们交换陀螺和风筝，又带他们读塞内加和奥维德。</p>
+        <p>他谈起那些古典作家就像在说自家人，仿佛历代先贤都曾当过他的室友。</p>
+        <p>他还知道一些本不该知道的隐秘，譬如圣奥古斯丁在法袍内穿了件紧身羊毛坎肩十四年不曾离身，巫师阿尔纳多·德·比拉诺瓦幼年被蝎子蜇咬便从此不举。</p>
+        <p>他对文字的狂热中既有崇高敬意又有冷嘲热讽，对自己的手稿同样采取这种双重态度。</p>
+        <p>阿尔丰索为翻译这些手稿学会了加泰罗尼亚语，常把一卷稿子揣在兜里—里面总满满塞着各色剪报和奇特行业的手册—结果一天晚上在卖身糊口的女孩们家里丢失了。</p>
+        <p>老智者得悉后，居然没有大动肝火，反而大笑不已，说那正是文学的自然归宿。</p>
+        <p>到他返乡时情形却与此相反，他不顾一切劝说执意要带上那三大箱文稿，甚至操着卡塔赫纳方言对建议托运的列车员恶言相向，最终他争得许可带着箱子一起登上了旅客车厢。</p>
+        <p>“等到人类坐一等车厢而文学只能挤货运车厢的那一天，”他那时说道，“这个世界也就完蛋了。”</p>
+        <p>这是他留下的最后的话。</p>
+        <p>他最后准备行装的那个星期可谓苦不堪言，随着行期渐近他脾气越发恶劣，越发想不起该做的事情，明明把东西放在某处却在另一处发现，仿佛被当初折磨费尔南达的精灵所包围。</p>
+        <p>“见鬼，”他恶狠狠地说道，“去他的伦敦教务会议第二十七条！”</p>
+        <p>赫尔曼和奥雷里亚诺负责帮他准备行程。</p>
+        <p>他们像是对待一个孩子，把车票和护照放进他的兜里用安全别针别好，为他开列出从马孔多出发直到抵达巴塞罗那一路应做事项的详细清单，但他还是在无意中将一条装着一半家财的裤子丢进了垃圾堆。</p>
+        <p>出发前夜，他钉上文稿箱，把所有衣物塞进来时带的行李箱，然后揉了揉贝壳似的眼皮，指着一堆陪他度过流亡岁月的书本，以粗鄙无礼的祝福口吻宣布：</p>
+        <p>“这些破烂就留给你们了！”</p>
+        <p>三个月后，他们收到一个大信封，里面装着二十九封信和五十多张照片，都是他在海上的空闲中攒下来的。</p>
+        <p>尽管没有标明日期，但并不难看出写信的前后顺序。</p>
+        <p>在最初的信件中，他以一贯的幽默谈起旅途中的种种风波：他是如何渴望将那个不许他把三个箱子搬进舱室的监运员扔进大海；一位女士如何愚蠢至极地对数字“13” 怀有恐惧，但并非出于迷信，而是因为她感觉这是一个无穷无尽的数字；他如何在吃第一顿晚饭时，尝出船上的饮用水有莱里达泉水仿佛夜间甜菜的味道，为此打赌取胜。</p>
+        <p>然而日子一天天过去，他对船上的现实生活渐渐失去兴趣，而马孔多的一切，连晚近的琐碎事件也成为他怀恋的对象，因为随着航船渐行渐远，记忆也染上愈来愈浓烈的悲凉色彩。</p>
+        <p>怀念的加深在照片里也得到了清晰的体现。</p>
+        <p>最初的照片里，他身穿运动衫，额前银发飘飞，背衬十月加勒比海的浪花飞溅，一副快活的模样。</p>
+        <p>最后一批照片里，他站在甲板上裹着暗色大衣，系着丝围巾，脸色苍白，神不守舍，脚下沉郁的航船开始在秋天的大洋上梦游般前行。</p>
+        <p>赫尔曼和奥雷里亚诺给他回了信。</p>
+        <p>最初几个月他频繁来信，让人觉得比他在马孔多时与他更为接近，几乎不再为他的离去而痛苦。</p>
+        <p>一开始，他在信中说一切都和从前一样，他出生的家里仍有粉色的蜗牛，夹在面包里的鲱鱼干仍是当年的味道，村里的瀑布黄昏时仍弥散出芬芳的气息。</p>
+        <p>练习本的散页上重又布满紫色的字迹，其中还有分别献给他们四人的段落。</p>
+        <p>然而尽管他自己表面上并未察觉，那些在心绪转好后写下的热情洋溢的信件，却渐渐变成了灰心丧气的牧函。</p>
+        <p>冬夜，汤锅在炉上沸滚，他却在怀念书店后堂的闷热，烈日照在蒙尘的巴旦杏树上的嗡响，午休的昏恹中响起的火车汽笛，正如他在马孔多时怀念冬天炉上的热汤，咖啡小贩的叫卖，以及春天里疾飞的云雀。</p>
+        <p>两种怀念如同双镜对立，他夹在其间不知所措，无法再保持高妙的超脱，最后甚至劝说他们全都离开马孔多，忘掉他传授的一切世道人心知识，让贺拉斯见鬼去，还说不论在什么地方都要记住，过去都是假的，回忆没有归路，春天总是一去不返，最疯狂执著的爱情也终究是过眼云烟。</p>
+        <p>阿尔瓦罗第一个听从忠告离开了马孔多。</p>
+        <p>他变卖一切，包括家中院里吓唬路人的老虎，买下一张永久车票，登上一列永无终点的火车。</p>
+        <p>他从路经的车站寄来明信片，兴高采烈地描述车窗外瞬间闪过的世间万象，仿佛将一首飞逝的长诗撕成碎片向着遗忘之乡一路抛洒：路易斯安那棉田里奇怪的黑人，肯塔基蓝色草丛中疾驰的骏马，亚利桑那地狱般暮色里的希腊情侣，密歇根湖畔画水彩画的红衫少女—她举起画笔向他致意，不是为了告别而是盼望再见，因为她并不知道眼前所见的火车没有归路。</p>
+        <p>随后，阿尔丰索和赫尔曼在一个星期六离开，计划下星期一回来，却从此再无音讯。</p>
+        <p>加泰罗尼亚智者走后一年，只有加夫列尔还留在马孔多，仍然一事无成，靠尼格罗曼妲不稳定的周济过活。</p>
+        <p>他参加了一家法国杂志的有奖问答，头奖是一次巴黎之旅。</p>
+        <p>订阅杂志的人其实是奥雷里亚诺，他帮加夫列尔填写答案，有时在家里，更多的时候在马孔多仅存的一家药房中，在瓷瓶和缬草气息的环绕间，加夫列尔沉静的女友梅尔塞德斯所住的地方。</p>
+        <p>这是往昔的最后遗存，这往昔日渐衰落却不会彻底消亡，因为它是在自身之中无休无止地败落下去，每过一刻便向彻底灭亡更近一步，却永远无法抵达最后的终结。</p>
+        <p>整个市镇如此死气沉沉、与世隔绝，当加夫列尔赢了大奖，带着两套换洗衣服、一双鞋和一套拉伯雷全集要去巴黎的时候，不得不向司机挥手致意才让火车停下将他接上。</p>
+        <p>昔日的土耳其人大街已沦为被遗忘的角落，最后一批阿拉伯人沿袭千年传统端坐在门口等待死亡的到来，尽管最后一码斜纹布早已售出，幽暗的橱窗里只剩下一个个无头的模特。</p>
+        <p>至于香蕉公司的城镇，或许帕特里夏·布朗在阿拉巴马州普拉特维尔难耐的长夜里会就着醋拌黄瓜对儿孙们说起，但此时它已沦为一片野草丛生的平原。</p>
+        <p>安赫尔神甫的继任者是一位老神甫，没人愿意费心打听他的名姓。</p>
+        <p>他为关节炎及疑虑引发的失眠所苦，懒懒地躺在吊床上等待上帝的慈悲，任凭蜥蜴和老鼠在隔壁的教堂里争夺领地。</p>
+        <p>在那个连飞鸟也厌弃，长久的扬尘与酷热令人呼吸艰难的马孔多，奥雷里亚诺和阿玛兰妲·乌尔苏拉被爱情、被孤独、被爱情的孤独幽禁在因红蚂蚁疯狂啃噬的轰响而难以入睡的家里，他们是唯一幸福的生灵，世上再没有比他们更幸福的人。</p>
+        <p>加斯通已经回到布鲁塞尔。</p>
+        <p>他厌倦了苦苦望天的等待，有一天把往来信件和生活必需品塞进一只小箱子，抱着乘飞机归来的希望离去。</p>
+        <p>他一心想要赶在一群德国机师前面，因为他们已经向省府当局提交了更为雄心勃勃的计划。</p>
+        <p>从第一次欢爱的那天下午起，奥雷里亚诺和阿玛兰妲·乌尔苏拉一直在利用她丈夫难得的疏忽冒着风险幽会，紧张地避免发出响动，却几乎总被她丈夫无从预料的返家打断。</p>
+        <p>然而一旦有机会在家中独处，他们便彻底沉浸在迟来的爱情狂潮中。</p>
+        <p>那是一种癫狂失常的激情，令费尔南达的骨骸在墓中惊恐地颤抖，令双方耽溺于持久不衰的亢奋中。</p>
+        <p>阿玛兰妲·乌尔苏拉的尖叫、高潮时的歌唱响彻家中，或在下午两点的餐桌上，或在凌晨两点的谷仓里。</p>
+        <p>“最让我难过的是，”她笑着说道，“我们竟然浪费了那么多时间。”</p>
+        <p>在意乱神迷间，她看见蚂蚁横扫花园，受远古的饥饿驱使啃食家中的一切木制品获得餍足，看见有生命的岩浆洪流再次席卷长廊，却只是在卧室里发现敌踪时才去费心抵挡。</p>
+        <p>奥雷里亚诺丢下羊皮卷，不再出门一步，对加泰罗尼亚智者的来信也胡乱答复。</p>
+        <p>他们丧失了现实意识、时间观念和日常生活节奏。</p>
+        <p>他们重又紧闭门窗，为的是省下宽衣解带的工夫，就像当初美人儿蕾梅黛丝期待的那样在家中赤身来去，在院中泥地里一丝不挂地嬉闹，一天下午在水池中欢爱时还险些双双溺死。</p>
+        <p>短短时间内他们造成了比蚁灾更大的破坏：客厅里的家具四分五裂，曾经承载奥雷里亚诺·布恩迪亚上校军旅生涯中哀伤情爱的吊床被疯狂撕裂，床垫的芯子被剖出洒满地板，扬起满屋飞絮几令人窒息。</p>
+        <p>奥雷里亚诺这位狂野的情人比起对方并不逊色，但却是阿玛兰妲·乌尔苏拉凭借自己荒唐的才华和饥渴的柔情统治着这座灾难的乐园，仿佛在爱情中秉承和凝聚了高祖母制作糖果小动物时的无穷精力。</p>
+        <p>当她为自己的新花样欢快歌唱或纵情大笑的时候，奥雷里亚诺却变得越发沉默入神，因为他的激情是在内敛中暗自烧灼。</p>
+        <p>他们的情爱技艺登峰造极，在高潮后的疲惫中也能另辟佳境。</p>
+        <p>他们全心膜拜对方的肉体，发现情爱的低潮里存在着未开发的领域，那比欲望的空间更丰饶幽美。</p>
+        <p>他蘸着蛋清揉搓阿玛兰妲·乌尔苏拉挺立的乳峰，或用椰子脂润滑她充满弹性的大腿和仙桃般甜蜜的小腹，而她则把奥雷里亚诺超群的阳物当作玩偶摆弄，用口红给它画上小丑眼圈，用眉笔给它描出土耳其人胡子，为它戴上透明的硬纱细领带和锡纸小帽。</p>
+        <p>一天晚上，他们互相用桃子糖浆从头到脚涂满全身，像狗一般彼此舔舐，像疯子一样在长廊地板上欢爱，直到被蚂蚁的洪流唤醒，险些被活活吞噬。</p>
+        <p>阿玛兰妲·乌尔苏拉在迷狂的间歇回复加斯通的来信。</p>
+        <p>她感觉他是那样遥远又那样忙碌，似乎不可能再回来。</p>
+        <p>在最早的一封来信中，他提到合伙人的确已将飞机发出，但布鲁塞尔的海运公司错运到了坦噶尼喀，交付与当地散居的马空多人村社。</p>
+        <p>这一失误导致诸多耽延，仅将飞机讨回就可能拖上两年时间。</p>
+        <p>于是阿玛兰妲·乌尔苏拉不再担心丈夫会不合时宜地归来。</p>
+        <p>至于奥雷里亚诺，他与外界的联系只剩下加泰罗尼亚智者的来信，以及那位沉静的药房少女梅尔塞德斯转达的加夫列尔的消息。</p>
+        <p>开始的时候这些联系还很真实。</p>
+        <p>加夫列尔退掉了返程票留在巴黎，把多芬尼大街上一家阴森旅馆的女招待扔出来的过期报纸和空酒瓶拿去换钱来度日。</p>
+        <p>奥雷里亚诺能够想象他整日穿着高领红绒衫的样子，只在春天来临，蒙帕尔纳斯的路边咖啡馆坐满一对对情侣时才脱下；白天睡觉、晚上在弥漫着煮花椰菜气味的房间里写作以转移饥饿感，而日后罗卡玛杜将在同一房间离开人世。</p>
+        <p>然而，他传来的消息越来越含糊，加泰罗尼亚智者的信件也越来越稀少，愈显颓伤，奥雷里亚诺慢慢习惯了这种疏远，一如阿玛兰妲·乌尔苏拉对丈夫的感觉。</p>
+        <p>两人飘荡在一方空渺的天地，在那里日复一日、永恒不变的现实只有爱情。</p>
+        <p>突然间，这个幸福的梦幻世界中响起一声晴天霹雳，传来了加斯通返家的消息。</p>
+        <p>奥雷里亚诺和阿玛兰妲·乌尔苏拉睁开眼睛，审视各自的灵魂，手抚胸口相对而视，心下明白两人已连成一体，宁可死也不愿分开。</p>
+        <p>于是她给丈夫写了一封信，信中饱含真情又自相矛盾，重申了对他的爱意和想见到他的渴望，同时也坦承由于命运的捉弄，自己无法与奥雷里亚诺分离。</p>
+        <p>出乎两人的预料，加斯通的回复十分平和，甚至显出父辈的温情，那满满两张信纸都在提醒他们提防激情的起伏无常，最后一段更明明白白祝他们幸福，就像他在短暂的婚姻生活中经历的那样。</p>
+        <p>这态度太过出人意表，令阿玛兰妲·乌尔苏拉有蒙羞的感觉，仿佛主动给了丈夫期望的借口抛弃自己。</p>
+        <p>六个月后她的愤恨更加强烈，因为加斯通从利奥波德维尔写信来说，他终于在那里等到了飞机，请求将自行车寄过去，称那是他在马孔多唯一割舍不下的东西。</p>
+        <p>奥雷里亚诺耐心地承受阿玛兰妲·乌尔苏拉的怨气，努力向她证明无论顺境逆境自己都能成为一位好丈夫。</p>
+        <p>加斯通留下的钱财用尽了，迫在眉睫的窘困在两人之间促生出一种新的紧密关联，虽然不像激情那样令人迷醉，但仍能使他们与情欲泛滥的日子里一般的相爱、同样的幸福。</p>
+        <p>庇拉尔·特尔内拉去世的时候，他们已经在期待新生命的降生。</p>
+        <p>阿玛兰妲·乌尔苏拉在孕期的昏倦中试图经营鱼脊骨项链生意，但除了梅尔塞德斯买了一打，再无他人光顾。</p>
+        <p>奥雷里亚诺第一次发觉自己的语言天赋、百科全书般的博学，以及不需实地了解便能对远方事物了如指掌的罕见能力，都像自己女人的那匣珠宝一样毫无用处，尽管那时马孔多所有剩余居民的全部家资加在一起才抵得上那些珠宝的价值。</p>
+        <p>他们奇迹般地勉强度日。</p>
+        <p>阿玛兰妲·乌尔苏拉仍能保持良好心态，继续制造情趣花样，但她也养成了午饭后坐在长廊里的习惯，似睡非睡，若有所思。</p>
+        <p>奥雷里亚诺则在一旁陪伴。</p>
+        <p>有时两人会一直默默坐到傍晚，面对着面，彼此凝视，在静谧中相爱，并不比当初在癫狂中相爱减色。</p>
+        <p>未来的不确定使他们的心绪回到了过去。</p>
+        <p>他们看见自己置身暴雨时期失落的乐园，在院中的泥坑里玩水，捕杀蜥蜴挂到乌尔苏拉身上，拿她玩活埋游戏。</p>
+        <p>这些回忆令他们恍然觉察，两人自从记事以来共度的时光总是十分幸福。</p>
+        <p>追忆往事时，阿玛兰妲·乌尔苏拉记起一天下午她走进金银器作坊，母亲告诉她那个小奥雷里亚诺不是任何人的孩子，因为他是躺在一个篮子里顺水漂来的。</p>
+        <p>这一说法似乎让人难以置信，但却没有任何真实的信息可以取代。</p>
+        <p>在研究过所有可能性之后，唯一可以确定的是，费尔南达不是奥雷里亚诺的母亲。</p>
+        <p>阿玛兰妲·乌尔苏拉倾向于认为他是佩特拉·科特斯的儿子，尽管她只是记得那女人的一些丑闻。</p>
+        <p>这一推测使两人内心因恐惧而纠结。</p>
+        <p>想到妻子竟是自己的姐妹，奥雷里亚诺心悸不已，便去了一趟神甫的住所，期望在那些潮湿又遭虫蛀的档案中找到有关自己身世的蛛丝马迹。</p>
+        <p>最久远的受洗记录可以追溯到阿玛兰妲·布恩迪亚那里，她是在年轻时由尼卡诺尔·雷伊纳神甫施洗的，那也正是神甫凭借巧克力戏法四处证明上帝存在的时期。</p>
+        <p>他甚至幻想自己可能是十七个奥雷里亚诺之一，在四册洗礼簿中遍查他们的出生记录，但受洗时间与他的年龄相比都太过久远。</p>
+        <p>患关节炎的神甫躺在吊床上一直观察，见他迷失在血脉的迷宫，因犹疑而颤抖，不禁同情地问起他的名字。</p>
+        <p>“奥雷里亚诺·布恩迪亚。”他回答。</p>
+        <p>“这样的话你不必拼命找了，”神甫以确信无疑的口吻说道，“多年以前有条街叫这个名字，那时人们就形成了习惯，用街名给自己的孩子起名。”</p>
+        <p>奥雷里亚诺愤怒得浑身颤抖。</p>
+        <p>“哈！”他说，“这么说您也是不相信了。”</p>
+        <p>“不相信什么？”</p>
+        <p>“不相信奥雷里亚诺·布恩迪亚上校发动了三十二场内战但全部失利，”奥雷里亚诺回答，“不相信军队包围人群并开枪杀掉三千工人，然后把死尸装上两百节车厢的火车丢进大海。”</p>
+        <p>神甫用怜悯的目光打量着他。</p>
+        <p>“噢，孩子，”他叹息道，“对我来说，只要能确定你我在这一刻的存在就够了。”</p>
+        <p>奥雷里亚诺和阿玛兰妲·乌尔苏拉接受了篮中弃婴的说法，并非因为相信，而是因为能够借此脱离恐惧。</p>
+        <p>随着产期的临近，两人渐渐变得仿佛一人，不分彼此，在那幢吹口气就会倒塌的房子里的孤寂中融为一体。</p>
+        <p>他们退到一个仅能栖身的空间，从费尔南达的卧室，在那里他们得以享受情爱的静谧之美，到长廊的起点，在那里阿玛兰妲·乌尔苏拉坐下来为即将降生的孩子缝制小靴子和小帽子，奥雷里亚诺则在一旁回复加泰罗尼亚智者偶尔的来信。</p>
+        <p>家中其他地方已在毁灭的重围中沦降。</p>
+        <p>金银器作坊，梅尔基亚德斯的房间，桑塔索菲亚·德拉·彼达当年料理之下的原始而沉寂的王国，都已沉陷在一片家居密林的深处，没人胆敢涉险探入。</p>
+        <p>在大自然吞噬之力的重围中，奥雷里亚诺和阿玛兰妲·乌尔苏拉仍然栽种牛至与秋海棠，保卫自己用石灰圈出的领地，为永恒的人蚁之战挖出最后的战壕。</p>
+        <p>长发久未梳理，清晨起来脸庞生出淤斑，腿上出现浮肿，当初饱含爱意如鼬鼠般的胴体也脱了形，阿玛兰妲·乌尔苏拉已不复当年带着一笼不幸的金丝雀和俯首帖耳的丈夫回家时的青春模样，但她依旧未改欢快的心境。</p>
+        <p>“见鬼，”她常常笑着说，“谁能想到我们最后真变成野人啦！”她怀孕六个月时，一封明显不是加泰罗尼亚智者写来的信斩断了他们与外界的最后一线联系。</p>
+        <p>信从巴塞罗那寄出，但信封上是用常规的蓝色墨水写就的公文字体，带着不祥邮件特有的无辜而漠然的气息。</p>
+        <p>阿玛兰妲·乌尔苏拉正要拆开，奥雷里亚诺一把从她手中抢了过来。</p>
+        <p>“这一封不看了，”他说，“我不想知道里面说些什么。”</p>
+        <p>[1] 原文为加泰罗尼亚语。​​​​​​​​​</p>
+        <p>[2] 罗卡玛杜（Rocamadour），阿根廷作家胡里奥·科塔萨尔笔下的人物，见《跳房子》第28章。​​​​​​​​​</p>
+        <p>就像他预感的那样，加泰罗尼亚智者再没来过信。</p>
+        <p>那封陌生人的信件无人拆阅，丢在费尔南达曾经遗忘结婚戒指的壁架上任凭蠹虫吞噬，被信中噩耗燃出的火焰焚烧渐渐成灰，与此同时那对孤独的情侣顶着末后的时光之潮逆流而上，这顽固的不祥时光枉费力气，未能将他们引向幻灭与遗忘的荒漠。</p>
+        <p>奥雷里亚诺和阿玛兰妲·乌尔苏拉觉察到了危险，最后几个月手挽着手，让那源自癫狂私情的小生命在忠贞爱情中孕育而成。</p>
+        <p>夜里，两人相拥在床上，蚂蚁在月光下激增的响动，蠹虫搞破坏的轰鸣，杂草在邻近房间里持续而清晰的生长之声都无法令他们产生惧意。</p>
+        <p>许多次两人被鬼魂的忙碌声吵醒。</p>
+        <p>他们听到乌尔苏拉为了使血脉流传与造化法则抗争，何塞·阿尔卡蒂奥·布恩迪亚在探索伟大发明的神奇原理，费尔南达忙于祈祷，奥雷里亚诺·布恩迪亚上校在战争的幻象和打制小金鱼的辛劳中日渐木然，奥雷里亚诺第二在狂乱的欢宴中深感孤独苦苦挣扎，便明白生前的执念能够战胜死亡，于是重又欢欣鼓舞，确信他们变成鬼魂后还会继续相爱，确信即使有朝一日蚂蚁从人类手中夺取的这座破败乐园又被其他物种夺走，那时他们仍会一直相爱下去。</p>
+        <p>一个星期天的下午六点，阿玛兰妲·乌尔苏拉迎来了产前的阵痛。</p>
+        <p>那位一脸微笑、为卖身糊口的女孩们接生的产婆，让她躺上饭厅的餐桌，跨坐在她的腹部，粗暴地摆弄直到她的尖叫被一个巨大男婴的洪亮哭声压过。</p>
+        <p>透过朦胧泪眼，阿玛兰妲·乌尔苏拉看到又一个真正的布恩迪亚，如同所有的何塞·阿尔卡蒂奥一般粗壮任性，如同所有的奥雷里亚诺一般大睁着洞察一切的双眼，注定要从头更新家族的血脉，涤除其中顽固的恶习和孤独的天性，因为他是一个世纪以来第一个在爱情中孕育的生命。</p>
+        <p>“完全是个野人样，”她说，“叫他罗德里戈吧。”</p>
+        <p>“不，”她丈夫表示反对，“要叫他奥雷里亚诺，他会打赢三十二场战争。”</p>
+        <p>剪断脐带后，由奥雷里亚诺举着灯，产婆用布擦去孩子身上的淡蓝色黏浆。直到把他翻过身来，他们才发现他比其他人多了些什么，于是弯下腰去仔细查看。那是条猪尾巴。</p>
+        <p>他们并没有慌乱。</p>
+        <p>奥雷里亚诺和阿玛兰妲·乌尔苏拉未曾听闻家族中的先例，也没能想起乌尔苏拉可怕的警告，产婆最后还安慰他们，估计等孩子换牙的时候就可以把这条多余的尾巴顺便切掉。</p>
+        <p>后来他们便无暇顾及这个问题，因为阿玛兰妲·乌尔苏拉下身血如泉涌，无法止住。</p>
+        <p>他们试图用蛛网和厚厚的尘土敷上止血，却像用手捂住喷泉一样徒劳。</p>
+        <p>最初的几个小时，她努力保持乐观。</p>
+        <p>她握着惊恐的奥雷里亚诺的手，请他不要担心，说像她这样的人只有想死的时候才会死去，同时还为产婆各种耸人听闻的止血方法大笑不已。</p>
+        <p>然而随着希望一点一滴弃奥雷里亚诺而去，眼前的她渐渐模糊仿佛在光线中慢慢消失，最终陷入昏睡。</p>
+        <p>星期一清晨，他们请来一个女人在床前念诵对人类和动物一向灵验的止血咒，但爱情之外的任何方法面对阿玛兰妲·乌尔苏拉激情澎湃的血液都无能为力。</p>
+        <p>经过绝望的二十四小时，当天下午当那泉源无助地耗尽，他们知道她已经死亡。</p>
+        <p>她的侧影更加线条分明，脸上淤肿散尽显出雪花石膏般的光晕，并且重又露出了笑容。</p>
+        <p>奥雷里亚诺这时才明白自己多么爱他的朋友，多么需要他们，多么想在此时此刻有他们的陪伴。</p>
+        <p>他把孩子放进他母亲预备好的篮子，用毯子盖住死者的脸庞，然后跑到市镇上漫无方向地游荡，寻找回到往昔的途径。</p>
+        <p>他来到最近一阵未曾拜访的药房前叫门，发现那里变成了一家木匠作坊。</p>
+        <p>提灯为他开门的老妇人对他的胡言乱语表示同情，但同时一口咬定，这里从没有过什么药房，她也从不认识一个脖颈纤细、眼神迷离，名叫梅尔塞德斯的姑娘。</p>
+        <p>他来到加泰罗尼亚智者的书店旧址，一头抵在门上放声痛哭，心中明白这迟来的眼泪是为那桩死丧而流，当时没有哭泣是不愿破坏相爱的美好。</p>
+        <p>他捶打着“金童”乐园的灰泥墙直到双手俱裂，呼唤着庇拉尔·特尔内拉。</p>
+        <p>空中有发光的橙色圆盘飞过，他在过去无数个欢闹的夜晚曾经从养着石的院中像孩子般着迷地仰头观看，此时却无动于衷。</p>
+        <p>花街柳巷最后一家营业的舞厅里，手风琴乐队弹唱起主教的侄子，好汉弗朗西斯科的绝艺传人拉斐尔·埃斯卡洛纳的歌曲。</p>
+        <p>店主曾对自己的母亲不敬，出手向她动粗，结果落得一只手臂萎缩，他邀请奥雷里亚诺喝了瓶烧酒，奥雷里亚诺也请他喝了一瓶。</p>
+        <p>店主对他讲起自己手臂的不幸遭遇，奥雷里亚诺对他讲起自己心灵的不幸遭遇：因为对自己的姐妹倾心而落得枯焦。</p>
+        <p>最后，两人齐声痛哭起来，奥雷里亚诺一时间感到痛苦已经结束。</p>
+        <p>然而，当他在马孔多的最后一个清晨再次变成独身一人，他站在广场中央大张双臂，仿佛要唤醒整个世界一样声嘶力竭地吼道：</p>
+        <p>“什么朋友，都是婊子养的！”</p>
+        <p>尼格罗曼妲把他从一摊泪水与呕吐物当中救了出来。</p>
+        <p>她将他带回自己的房间，为他清洗干净，让他喝下热汤。</p>
+        <p>她又用炭条涂掉了他到如今一直欠着的无数爱情债务，认为这能让他开心些，还主动追忆起自己最孤单时的悲伤，以免他独自哀恸。</p>
+        <p>天亮的时候，奥雷里亚诺从短暂的沉睡中醒来，重又感到头痛欲裂。</p>
+        <p>他睁开眼睛，想起了孩子。</p>
+        <p>孩子不在篮子里。</p>
+        <p>最初一瞬喜悦的火花在他心头闪过，他以为阿玛兰妲·乌尔苏拉死而复活来照料孩子了。</p>
+        <p>但尸体分明仍在毯子下隆起如一堆石头。</p>
+        <p>奥雷里亚诺想起进家时卧室门正敞开着，便穿过弥漫着清晨牛至芳香的长廊，探身向饭厅里望去，那里仍是分娩时的一片狼藉：大锅，染血的床单，灰盆，留在桌上摊开的尿布里萎缩的脐带，剪刀和渔线丢在一旁。</p>
+        <p>产婆夜间过来抱走了孩子，这想法使他终于能够喘口气思考片刻。</p>
+        <p>他倒在摇椅上，在家族早年的日子里丽贝卡曾坐在上面传授刺绣技法，阿玛兰妲曾坐在上面与赫里内勒多·马尔克斯上校下跳棋，阿玛兰妲·乌尔苏拉曾坐在上面缝制婴儿衣物。</p>
+        <p>在一道清醒的电光中，他意识到自己的心灵承载不起这么多往事的重负。</p>
+        <p>他被自己和他人的回忆纠缠如同致命的长矛刺穿心房，不禁羡慕凋零玫瑰间横斜的蛛网如此沉着，杂草毒麦如此坚忍，二月清晨的明亮空气如此从容。</p>
+        <p>这时他看见了孩子。</p>
+        <p>那孩子只剩下一张肿胀干瘪的皮，全世界的蚂蚁一齐出动，正沿着花园的石子路努力把他拖回巢去。</p>
+        <p>奥雷里亚诺僵在原地，不仅仅因为惊恐而动弹不得，更因为在那神奇的一瞬梅尔基亚德斯终极的密码向他显明了意义。</p>
+        <p>他看到羊皮卷卷首的提要在尘世时空中完美显现：家族的第一个人被捆在树上，最后一个人正被蚂蚁吃掉。</p>
+        <p>奥雷里亚诺平生从未像此刻一般清醒，他忘却了家中的死者，忘却了死者的痛苦，用费尔南达留下的十字木条再次钉死门窗，远离世间一切干扰，因为他知道梅尔基亚德斯的羊皮卷上记载着自己的命运。</p>
+        <p>他发现史前的植物、湿气蒸腾的水洼、发光的昆虫已将房间内一切人类踪迹消除净尽，但羊皮卷仍安然无恙。</p>
+        <p>他顾不得拿到光亮处，就站在原地，仿佛那是用卡斯蒂利亚语写就，仿佛他正站在正午明亮的光线下阅读，开始毫不费力地大声破译。</p>
+        <p>那是他家族的历史，连最琐碎的细节也无一遗漏，百年前由梅尔基亚德斯预先写出。</p>
+        <p>他以自己的母语梵文书写，偶数行套用奥古斯都大帝的私人密码，奇数行择取斯巴达的军用密码。</p>
+        <p>而最后一道防线，奥雷里亚诺在迷上阿玛兰妲·乌尔苏拉时就已隐隐猜到，那便是梅尔基亚德斯并未按照世人的惯常时间来叙述，而是将一个世纪的日常琐碎集中在一起，令所有事件在同一瞬间发生。</p>
+        <p>奥雷里亚诺为这一发现激动不已，逐字逐句高声朗读教皇谕令般的诗行，当年阿尔卡蒂奥曾从梅尔基亚德斯口中听闻，却不知道那是关于自己死亡的预告。</p>
+        <p>他读到羊皮卷中预言世上最美的女人的诞生，她的灵魂与肉身正一起向天飞升；他读到那对遗腹孪生子的来历，他们放弃破译羊皮卷不仅因为缺乏才能和毅力，更是因为时机尚未成熟。</p>
+        <p>读到这里，奥雷里亚诺急于知道自己的身世，跳过几页。</p>
+        <p>此时微风初起，风中充盈着过往的群声嘁喳，旧日天竺葵的呢喃，无法排遣的怀念来临之前的失望叹息。</p>
+        <p>他对此毫无察觉，因为他发现了关于自己身世的初步线索。</p>
+        <p>他读到一位好色的祖父一时迷了心窍穿越幻象丛生的荒野，寻找一个不会令他幸福的美女。</p>
+        <p>奥雷里亚诺认出了他，沿着亲缘的隐秘小径追寻下去，找到了自己被赋予生命的一刻，那是在一间昏暗的浴室里，蝎子和黄蝴蝶的环绕间，一个工匠在一个因反叛家庭而委身于他的少女身上满足了欲望。</p>
+        <p>他读得如此入神，仍未发觉风势又起，飓风刮落了门窗，掀掉了东面长廊的屋顶，拔出了房屋的地基。</p>
+        <p>到这时，他才发现阿玛兰妲·乌尔苏拉不是他的姐妹，而是他的姨妈，而当年弗朗西斯·德雷克袭击里奥阿查不过是为了促成他们俩在繁复错综的血脉迷宫中彼此寻找，直到孕育出那个注定要终结整个家族的神话般的生物。</p>
+        <p>当马孔多在《圣经》所载那种龙卷风的怒号中化作可怕的瓦砾与尘埃旋涡时，奥雷里亚诺为避免在熟知的事情上浪费时间又跳过十一页，开始破译他正度过的这一刻，译出的内容恰是他当下的经历，预言他正在破解羊皮卷的最后一页，宛如他正在会言语的镜中照影。</p>
+        <p>他再次跳读去寻索自己死亡的日期和情形，但没等看到最后一行便已明白自己不会再走出这房间，因为可以预料这座镜子之城——或蜃景之城——将在奥雷里亚诺·巴比伦全部译出羊皮卷之时被飓风抹去，从世人记忆中根除，羊皮卷上所载一切自永远至永远不会再重复，因为注定经受百年孤独的家族不会有第二次机会在大地上出现。</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { 
+            font: 1.0, dictEnabled: true, barHidden: true, highlightEnabled: true, 
+            syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 
+        };
+
+        const bar = document.getElementById('top-bar');
+        const enC = document.getElementById('en-container');
+        const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const syncBtn = document.getElementById('sync-btn');
+
+        function applyPrefs() {
+            enC.style.fontSize = prefs.font + 'em';
+            zhC.style.fontSize = prefs.font + 'em';
+            
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.syncEnabled) {
+                syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff";
+            } else {
+                syncBtn.innerText = "同步: 关"; syncBtn.style.background = "#E5E5EA"; syncBtn.style.color = "#1C1C1E";
+            }
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+
+        let isProgrammaticScroll = false;
+        let scrollTimer;
+
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none';
+            let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block';
+            if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1;
+            let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none';
+            if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+
+        window.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY;
+            let heights = getHeights();
+            let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH);
+            let maxZH = Math.max(1, heights.hZH - viewportH);
+
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN;
+                prefs.posEN = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxZH / maxEN;
+                    prefs.posZH += delta * ratio;
+                    prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); 
+                }
+            } else {
+                let delta = currentY - prefs.posZH;
+                prefs.posZH = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxEN / maxZH;
+                    prefs.posEN += delta * ratio;
+                    prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN));
+                }
+            }
+
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            }, 300);
+        });
+
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') {
+                enC.style.display = 'none';
+                zhC.style.display = 'block';
+                prefs.currentLang = 'zh';
+                window.scrollTo(0, prefs.posZH);
+            } else {
+                zhC.style.display = 'none';
+                enC.style.display = 'block';
+                prefs.currentLang = 'en';
+                window.scrollTo(0, prefs.posEN);
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; }, 100);
+        }
+
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                let now = Date.now();
+                if (now - lastTwoFingerTap > 500) {
+                    switchLang();
+                    lastTwoFingerTap = now;
+                }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => { 
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' }); 
+                setTimeout(() => { isProgrammaticScroll = false; }, 50);
+            }, 50);
+        });
+
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; 
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+            try {
+                const urls = [
+                    'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
+                ];
+                let text = '';
+                for (let u of urls) {
+                    try {
+                        const res = await fetch(u);
+                        if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; }
+                    } catch (err) {}
+                }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) {
+                    highlightWords = new Set(arr);
+                    localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                    applyHighlightsToDOM();
+                }
+            } catch(e) {}
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) span.classList.add('is-highlight');
+            });
+        }
+
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json")
+                .then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{});
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(node) {
+                        const parent = node.parentNode;
+                        if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT;
+                        if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; });
+                    html += `</div>`;
+                } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`; 
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]); 
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initCEFRStaticDict();
+                if(enC) wrapTextNodesToWord(enC);
+                setupTippyDelegate();
+                initCloudHighlights(); 
+            }, 500);
+        })();
+    </script>
+</body>
+</html>

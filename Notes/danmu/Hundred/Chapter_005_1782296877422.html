@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 5</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: #F0F7F4; color: #2D4035; } 
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid #CDE0D5; padding-bottom: 20px; color: #1A2E22; } 
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 1px 8px rgba(0,0,0,0.08); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .reader-btn { background: #E5E5EA; color: #1C1C1E; border: none; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+        .reader-btn:active { transform: scale(0.95); }
+        .content-layer { transition: font-size 0.2s; width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.05); border-radius: 3px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; border-radius: 3px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; }
+        .tippy-box[data-theme~='light-border'] { background-color: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+        .tippy-box[data-theme~='light-border'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #ccc; }
+        .tippy-box[data-theme~='light-border'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #ccc; }
+        .tippy-content { padding: 8px; }
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #333; font-family: -apple-system, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; }
+        .dict-word-line { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .dict-head-word { font-weight: bold; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { font-family: sans-serif; color: #666; font-size: 24px; background: #f0f0f0; padding: 0 4px; border-radius: 4px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 2px; border-radius: 50%; transition: background 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); }
+        .dict-speaker-btn svg { width: 28px; height: 28px; pointer-events: none; }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        .dict-tags-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 500; }
+        .dict-tag.star-tag { color: #F59E0B; background: #FEF3C7; border-color: #FDE68A; letter-spacing: 1px; padding: 4px 6px; }
+        .dict-basic-trans { font-size: 30px; color: #444; margin-top: 6px; }
+        .dict-pos-block { margin-bottom: 6px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 6px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "; "; color: #999; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #666; font-style: italic; font-size: 24px; padding: 10px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button class="reader-btn" onclick="adjustFont(-0.1)">A-</button>
+            <button class="reader-btn" onclick="adjustFont(0.1)">A+</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+    </div>
+
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 5 (EN)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>AURELIANO BUEND&iacute;A and Remedios Moscote were married one Sunday in March before the altar Father Nicanor Reyna had set up in the parlor.</p>
+        <p>It was the culmination of four weeks of shocks in the Moscote household because little Remedios had reached puberty before getting over the habits of childhood.</p>
+        <p>In spite of the fact that her mother had taught her about the changes adolescence, one February afternoon she burst shouting into the living room, where her sisters were chatting with Aureliano, and showed them her panties, smeared with a chocolate-colored paste.</p>
+        <p>A month for the wedding was agreed upon.</p>
+        <p>There was barely enough time to teach how to wash herself, get dressed by herself, and understand the fundamental business of a home.</p>
+        <p>They made her urinate over hot bricks in order to cure her of the habit of wetting her bed.</p>
+        <p>It took a good deal of work to convince her of the inviolability of the marital secret, for Remedios was so confused and at the same time so amazed at the revelation that she wanted to talk to everybody about the details of the wedding night.</p>
+        <p>It was a fatiguing effort, but on the date set for the ceremony the child was as adept in the ways of the world as any of her sisters.</p>
+        <p>Don Apolinar Moscote escorted by the arm down the street that was decorated with flowers and wreaths amidst the explosion of rockets and the music of several bands, and she waved with her hand and gave her thanks with a smile to those who wished her good luck from the windows.</p>
+        <p>Aureliano, dressed in black, wearing the same patent leather boots with metal fasteners that he would have on a few years later as he faced the firing squad, had an intense paleness and a hard lump in his throat when he met the bride at the door of the house and led her to the altar.</p>
+        <p>She behaved as naturally, such discretion, that she did not lose her composure, not even when Aureliano dropped the ring as he tried to put it on her finger.</p>
+        <p>In the midst of the.</p>
+        <p>murmurs and confusion of the guests, she kept her arm with the fingerless lace glove held up and remained like that with her ring finger ready until the bridegroom managed to stop the ring with his foot before it rolled to the door, and came back blushing to the altar.</p>
+        <p>Her mother and sisters suffered so much from the fear that the child would do something wrong during the ceremony that in the end they were the ones who committed the impertinence of picking her up to kiss her.</p>
+        <p>From that day on the sense of responsibility, the natural grace, the calm control that Remedios would have in the face of adverse circumstances was revealed.</p>
+        <p>It was she who, on her own initiative, put aside the largest piece that she had cut from the wedding cake and took it on a plate with a fork to José Arcadio Buend&iacute;a.</p>
+        <p>Tied to the trunk of the chestnut tree, huddled on a wooden stool underneath the palm shelter, the enormous old man, discolored by the sun and rain, made a vague smile of gratitude and at the piece cake with his fingers, mumbling an unintelligible psalm.</p>
+        <p>The only unhappy person in that noisy celebration, which lasted until dawn on Monday, was Rebeca Buend&iacute;a.</p>
+        <p>It was her own frustrated party.</p>
+        <p>By an arrangement of &uacute;rsula's, her marriage was to be celebrated on the same day, but that Friday Pietro Crespi received a letter with the news of his mother's imminent death.</p>
+        <p>The wedding was postponed.</p>
+        <p>Pietro Crespi left for the capital of the province an hour after receiving the letter, and on the road he missed his mother, who arrived punctually Saturday night and at Aureliano's wedding sang the sad aria that she had prepared for the wedding of her son.</p>
+        <p>Pietro Crespi returned on Sunday midnight to sweep up the ashes of the party, after having worn out five horses on the road in an attempt to be in time for his wedding.</p>
+        <p>It was never discovered who wrote the letter.</p>
+        <p>Tormented by &uacute;rsula, Amaranta wept with indignation and swore her innocence in front of the altar, which the carpenters had not finished dismantling.</p>
+        <p>FatNicanor Reyna-whom Don Apolinar Moscote had brought from the swamp to officiate at the wedding--was an old man hardened by the ingratitude of his ministry.</p>
+        <p>His skin was sad, with the bones almost exposed, and he had a pronounced round stomach and the expression of an old angel, which came more from, simplicity than from goodness.</p>
+        <p>He had planned to return to his pariah after the wedding, but he was appalled at the hardness of the inhabitants of Macondo, who were prospering in the midst of scandal, subject to the natural law, without baptizing their children or sanctifying their festivals.</p>
+        <p>Thinking that no land needed the seed of God so much, he decided to stay on for another week to Christianize both circumcised and gentile, legalize concubinage, and give the sacraments to the dying.</p>
+        <p>But no one paid any attention to him.</p>
+        <p>They would answer him that they had been many years without a priest, arranging the business of their souls directly with God, and that they had lost the evil of original sin.</p>
+        <p>Tired of preaching in the open, Father Nicanor decided to undertake the building of a church, the largest in the world, with life-size saints and stained-glass windows on the sides, so that people would come from Rome to honor God in the center of impiety.</p>
+        <p>He went everywhere begging alms with a copper dish.</p>
+        <p>They gave him a large amount, but he wanted more, because the church had to have a bell that would raise the drowned up to the surface of the water.</p>
+        <p>He pleaded so much that he lost his voice.</p>
+        <p>His bones began to fill with sounds.</p>
+        <p>One Saturday, not even having collected the price of the doors, he fell into a desperate confusion.</p>
+        <p>He improvised an altar in the square and on Sunday he went through the town with a small bell, as in the days of insomnia, calling people to an openair mass.</p>
+        <p>Many went out of curiosity.</p>
+        <p>Others from nostalgia.</p>
+        <p>Others so that God would not take the disdain for His intermediary as a personal insult.</p>
+        <p>So that at eight in the morning half the town was in the square, where Father Nicanor chanted the gospels in a voice that had been lacerated by his pleading.</p>
+        <p>At the end, when the congregation began to break up, he raised his arms signaling for attention.</p>
+        <p>"Just a moment," he said. "Now we shall witness an undeniable proof of the infinite power of God."</p>
+        <p>The boy who had helped him with the mass brought him a cup of thick and steaming chocolate, which he drank without pausing to breathe.</p>
+        <p>Then he wiped his lips with a handkerchief that he drew from his sleeve, extended his arms, and closed his eyes.</p>
+        <p>Thereupon Father Nicanor rose six inches above the level of the ground.</p>
+        <p>It was a convincing measure.</p>
+        <p>He went among the houses for several days repeating the demonstration of levitation by means of chocolate while the acolyte collected so much money in a bag that in less than a month he began the construction of the church.</p>
+        <p>No one doubted the divine origin of the demonstration except José Arcadio Buend&iacute;a, who without changing expression watched the troop of people who gathered around the chestnut tree one morning to witness the revelation once more.</p>
+        <p>He merely stretched on his stool a little and shrugged his shoulders when Father Nicanor began to rise up from the ground along with the chair he was sitting on.</p>
+        <p>"Hoc est simplicissimus," José Arcadio Buend&iacute;a said. "Homo iste statum quartum materiae invenit."</p>
+        <p>Father Nicanor raised his hands and the four legs of the chair all landed on the ground at the same time.</p>
+        <p>"Nego," he said.</p>
+        <p>"Factum hoc existentiam Dei probat sine dubio."</p>
+        <p>"Hoc est simplicissimus," he replied. "Because I'm Crazy."</p>
+        <p>From then on, concerned about his own faith, the priest did not come back to visit him and dedicated himself to hurrying along the building of the church.</p>
+        <p>Rebeca felt her hopes being reborn.</p>
+        <p>Her future was predicated on the completion of the work, for one Sunday when Father Nicanor was lunching at the house and the whole family sitting at the table spoke of the solemnity and splendor that religious ceremonies would acquire when the church was built, Amaranta said: "The luckiest one will be Rebeca."</p>
+        <p>And since Rebeca did not understand what she meant, she explained it to her with an innocent smile:</p>
+        <p>"You're going to be the one who will inaugurate the church with your wedding."</p>
+        <p>Rebeca tried to forestall any comments.</p>
+        <p>The way the construction was going the church would not be built before another ten years.</p>
+        <p>Father Nicanor did not agree: the growing generosity of the faithful permitted to make more optimistic calculations.</p>
+        <p>To the mute Indignation of Rebeca, who could not finish her lunch, &uacute;rsula celebrated Amaranta's idea contributed a considerable sum for the work to move faster.</p>
+        <p>Father Nicanor felt that with another contribution like that the church would be ready within three years.</p>
+        <p>From then on Rebeca did not say another word to Amaranta, convinced that her initiative had not the innocence that she attempted to give it.</p>
+        <p>"That was the least serious thing I could have done," Amaranta answered her during the violent argument they had that night.</p>
+        <p>"In that way I won't have to kill you for three years."</p>
+        <p>Rebeca accepted the challenge.</p>
+        <p>When Pietro Crespi found out about the new postponement, he went through a crisis of disappointment, but Rebeca gave a final proof of her loyalty.</p>
+        <p>"We'll elope whenever you say," she told him.</p>
+        <p>Pietro Crespi, however, was not a man of adventure.</p>
+        <p>He lacked the impulsive character of his fiancée and he considered respect for one's given word as a wealth that should not be squandered.</p>
+        <p>Then Rebeca turned to more audacious methods.</p>
+        <p>A mysterious wind blew out the lamps in the parlor and &uacute;rsula surprised the lovers kissing in the dark.</p>
+        <p>Pietro Crespi gave some confused explanations about the poor quality of modern pitch lamps and he even helped her install a more secure system of illumination for the room.</p>
+        <p>But the fuel failed again or the wicks became clogged and &uacute;rsula found Rebeca sitting on her fiancé's lap.</p>
+        <p>This time she would accept no explanation.</p>
+        <p>She turned the responsibility of the bakery over to the Indian woman and sat in a rocking chair to watch over the young people during the visits, ready to win out over maneuvers that had already been old when she was a girl.</p>
+        <p>"Poor Mama," Rebeca would say with mock indignation, seeing &uacute;rsula yawn during the boredom of the visits.</p>
+        <p>"When she dies she'll go off to her reward in that rocking chair."</p>
+        <p>After three months of supervised love, fatigued by the slow progress of the construction, which he went to inspect every day, Pietro Crespi decided to give Father Nicanor the money he needed to finish the church.</p>
+        <p>Amaranta did not grow impatient.</p>
+        <p>As she conversed with her girl friends every afternoon when they came to embroider on the porch, she tried to think of new subterfuges.</p>
+        <p>A mistake in calculation spoiled the one she considered the most effective: removing the mothballs that Rebeca had put in her wedding dress before she put it away in the bedroom dresser.</p>
+        <p>She did it when two months were left for the completion the church.</p>
+        <p>But Rebeca was so impatient the approach of the wedding that she wanted to get the dress ready earlier than Amaranta had foreseen.</p>
+        <p>When she opened the dresser and unfolded first the papers and then the protective cloth, she found the fabric of the dress and the stitches of the veil and even the crown of orange blossoms perforated by moths.</p>
+        <p>Although she was sure that she had put a handful of mothballs in the wrappings, the disaster seemed so natural that she did not dare blame Amaranta.</p>
+        <p>There was less than a month until the wedding, but Amparo Moscote promised to sew a new dress within a week.</p>
+        <p>Amaranta felt faint that rainy noontime when Amparo came to the house wrapped in the froth of needlework for Rebeca to have the final fitting of the dress.</p>
+        <p>She lost her voice and a thread cold sweat ran down the path of her spine.</p>
+        <p>For long months she had trembled with fright waiting for that hour, because if she had not been able to conceive the ultimate obstacle to Rebeca's wedding, she was sure that at the last moment, when all the resources of her imagination had failed, she would have the courage to poison her.</p>
+        <p>That afternoon, while Rebeca was suffocating with heat inside the armor of thread that Amparo Moscote was putting about her body with thousands of pins and infinite patience, Amaranta made several mistakes in her crocheting and pricked her finger with the needle, but she decided with frightful coldness that the date would be the last Friday before the wedding and the method would be a dose of laudanum in her coffee.</p>
+        <p>A greater obstacle, as impassable as it was unforeseen, obliged a new and indefinite postponement.</p>
+        <p>One week before the date set for the wedding, little Remedios woke up in the middle of the night soaked in a hot broth which had exploded in her insides with a kind of tearing belch, and she died three days later, poisoned by her own blood, a pair of twins crossed in stomach.</p>
+        <p>Amarante suffered a crisis conscience.</p>
+        <p>She had begged God with such fervor for something fearful to happen so that she would not have to poison Rebeca that she felt guilty of Remedios' death.</p>
+        <p>That was not the obstacle that she had begged for so much.</p>
+        <p>Remedios had brought a breath of merriment to the house.</p>
+        <p>She had settled down with her husband in a room near the workshop, which she decorated with the dolls and toys of her recent childhood, merry vitality overflowed the four walls of the bedroom and went like a whirlwind of good health along the porch with the begonias: She would start singing at dawn.</p>
+        <p>She was the only person who dared intervene in the arguments between Rebeca and Amaranta.</p>
+        <p>She plunged into the fatiguing chore of taking care of José Arcadio Buend&iacute;a.</p>
+        <p>She would bring him his food, she would help him with his daily necessities, wash him with soap and a scrubbing brush, keep his hair and beard free of lice and nits, keep the palm shelter in good condition and reinforce it with waterproof canvas in stormy weather.</p>
+        <p>In her last months she had succeeded in communicating with him in phrases of rudimentary Latin.</p>
+        <p>When the son of Aureliano and Pilar Ternera was born and brought to the house and baptized in an intimate ceremony with the name Aureliano José, Remedios decided that he would be considered their oldest child.</p>
+        <p>Her maternal instinct surprised &uacute;rsula.</p>
+        <p>Aureliano, for his part, found in the justification that he needed to live.</p>
+        <p>He worked all day in his workshop and Remedios would bring him a cup of black coffee in the middle the morning.</p>
+        <p>They would both visit the Moscotes every night.</p>
+        <p>Aureliano would play endless games of dominoes with his father-in-law while Remedios chatted with her sisters or talked to her motabout more important things.</p>
+        <p>The link with the Buend&iacute;as consolidated Don Apolinar Moscote's authority in the town.</p>
+        <p>On frequent trips to the capital of the province he succeeded in getting the government to build a school so that Arcadio, who had inherited the educational enthusiasm of his grandfather, could take charge of it.</p>
+        <p>Through persuasion he managed to get the majority of houses painted blue in time for the date of national independence.</p>
+        <p>At the urging of Father Nicanor, he arranged for the transfer of Catarino's store to a back street and he closed down several scandalous establishments that prospered in the center of town.</p>
+        <p>Once he returned with six policemen armed with rifles to whom he entrusted the maintenance of order, and no one remembered the original agreement not to have armed men in the town.</p>
+        <p>Aureliano enjoyed his father-in-law's efficiency.</p>
+        <p>"You're going to get as fat as he is," his friends would say to him.</p>
+        <p>But his sedentary life, which accentuated his cheekbones and concentrated the sparkle of his eyes, did not increase his weight or alter the parsimony of his character, but, on the contrary, it hardened on his lips the straight line of solitary meditation and implacable decision.</p>
+        <p>So deep was the affection that he and his wife had succeeded in arousing in both their families that when Remedios announced that she was going to have a child.</p>
+        <p>even Rebeca and Amaranta declared a truce in order to knit items in blue wool if it was to be a boy and in pink wool in case it was a girl.</p>
+        <p>She was the last person Arcadio thought about a few years later when he faced the firing squad.</p>
+        <p>&uacute;rsula ordered a mourning period of closed doors and windows, with no one entering or leaving except on matters of utmost necessity.</p>
+        <p>She prohibited any talking aloud for a year and she put Remedios' daguerreotype in the place where her body had been laid out, with a black ribbon around it and an oil lamp that was always kept lighted.</p>
+        <p>Future generations, who never let the lamp go out, would be puzzled at that girl in a pleated skirt, white boots, and with an organdy band around her head, and they were never able to connect her with the standard image of a great-grandmother.</p>
+        <p>Amaranta took charge of Aureliano José.</p>
+        <p>She adopted him as a son who would share her solitude and relieve her from the involutary laudanum that her mad beseeching had thrown into Remedios' coffee.</p>
+        <p>Pietro Crespi would tiptoe in at dusk, with a black ribbon on his hat, and he would pay a silent visit to Rebeca, who seemed to be bleeding to death inside the black dress with sleeves down to wrists.</p>
+        <p>Just the idea of thinking about a new date for the wedding would have been so irreverent that the engagement turned into an eternal relationship, a fatigued love that no one worried about again, as if the lovers, who in other days had sabotaged the lamps in order to kiss, had been abandoned to the free will of death.</p>
+        <p>Having lost her bearings, completely demoralized, Rebeca began eating earth again.</p>
+        <p>Suddenly-when the mourning had gone on so long that the needlepoint sessions began again-someone pushed open the street door at two in the afternoon in the mortal silence of the heat and the braces in the foundation shook with such force that Amaranta and her friends sewing on the porch, Rebeca sucking finger in her bedroom, &uacute;rsula in the kitchen, Aureliano in the workshop, and even José Arcadio Buend&iacute;a under the solitary chestnut tree had the impression that an earthquake was breaking up the house.</p>
+        <p>A huge man had arrived.</p>
+        <p>His square shoulders barely fitted through the doorways.</p>
+        <p>He was wearing a medal of Our Lady of Help around his bison neck, his arms and chest were completely covered with cryptic tattooing, and on his right wrist was the tight copper bracelet of the ni?osen-cruz amulet.</p>
+        <p>His skin was tanned by the salt of the open air, his hair was short and straight like the mane of a mule, his jaws were of iron, and he wore a sad smile.</p>
+        <p>He had a belt on that was twice as thick as the cinch of a horse, boots with leggings and spurs and iron on the heels, and his presence gave the quaking impression of a seismic tremor.</p>
+        <p>He went through the parlor and the living room, carrying some half-worn saddlebags in his hand, and he appeared like a thunderclap on the porch with the begonias where Amaranta and her friends were paralyzed, their needles in the air.</p>
+        <p>"Hello," he said to them in a tired voice, threw the saddlebags on a worktable, and went by on his way to the back of the house.</p>
+        <p>"Hello," he said to the startled Rebecca, who saw him pass by the door of her bedroom.</p>
+        <p>"Hello," he said to Aureliano, who was at his silversmith's bench with all five senses alert.</p>
+        <p>He did not linger with anyone.</p>
+        <p>He went directly to the kitchen and there he stopped for the first time at the end of a trip that had begun the other side of the world.</p>
+        <p>"Hello," he said.</p>
+        <p>&uacute;rsula stood for a fraction of a second with her mouth open, looked into his eyes, gave a cry, and flung her arms around his neck, shouting and weeping with joy.</p>
+        <p>It was José Arcadio.</p>
+        <p>He was returning as poor as when he had left, to such an extreme that &uacute;rsula had to give him two pesos to pay for the rental of his horse.</p>
+        <p>He spoke a Spanish that was larded with sailor slang.</p>
+        <p>They asked where he had been he answered: "Out there."</p>
+        <p>He hung his hammock in the room they assigned him and slept for three days.</p>
+        <p>When he woke up, after eating sixteen raw eggs, he went directly to Catarino's store, where his monumental size provoked a panic of curiosity among the women.</p>
+        <p>He called for music and cane liquor for everyone, to be put on his bill.</p>
+        <p>He would Indian-wrestle with five men at the same time.</p>
+        <p>"It can't be done," they said, convinced that they would not be able to move his arm.</p>
+        <p>"He has ni?os-en-cruz."</p>
+        <p>Catarino, who did not believe in magical tricks of strength, bet twelve pesos that he could not move the counter.</p>
+        <p>José Arcadio pulled it out of its place, lifted it over his head, and put it in the street.</p>
+        <p>It took eleven men to put it back.</p>
+        <p>In the heat the party he exhibited his unusual masculinity on the bar, completely covered with tattoos of words in several languages intertwined in blue and red.</p>
+        <p>To the women who were besieging him and coveting him he put the question as to who would pay the most.</p>
+        <p>The one who had the most money offered him twenty pesos.</p>
+        <p>Then he proposed raffling himself off among them at ten pesos a chance.</p>
+        <p>It was a fantastic price because the most sought-after woman earned eight pesos a night, but they all accepted.</p>
+        <p>They wrote their names on fourteen pieces of paper which they put into a hat and each woman took one out.</p>
+        <p>When there were only two pieces left to draw, it was established to whom they belonged.</p>
+        <p>"Five pesos more from each one," José Arcadio proposed, "and I'll share myself with both.</p>
+        <p>He made his living that way.</p>
+        <p>He had been around the world sixty-five times, enlisted in a crew of sailors without a country.</p>
+        <p>The women who went to bed that night in Catarino's store brought him naked into the dance salon so that people could see that there was not a square inch of his body that was not tattooed, front and back, and from his neck to his toes.</p>
+        <p>He did not succeed in becoming incorporated into the family.</p>
+        <p>He slept all day and spent the night in the red-light district, making bets on his strength.</p>
+        <p>On the rare occasions when &uacute;rsula got him to sit down at the table, he gave signs of radiant good humor, especially when he told about his adventures in remote countries.</p>
+        <p>He had been shipwrecked and spent two weeks adrift in the Sea of Japan, feeding on the body of a comrade who had succumbed to sunstroke and whose extremely salty flesh as it cooked in the sun had a sweet and granular taste.</p>
+        <p>Under a bright noonday sun in the Gulf of Bengal his ship had killed a sea dragon, in the stomach of which they found the helmet, the buckles, and the weapons of a Crusader.</p>
+        <p>In the Caribbean he had seen the ghost of the pirate ship of Victor Hugues, its sails torn by the winds of death, the masts chewed by sea worms, and still looking for the course to Guadeloupe.</p>
+        <p>&uacute;rsula would weep at the table as if she were reading the letters that had never arrived and in which José Arcadio told about his deeds and misadventures.</p>
+        <p>"And there was so much of a home here for you, my son," she would sob, "and so much food thrown to the hogs!" But underneath it an she could not conceive that the boy the gypsies took away was the same lout who would eat half a suckling pig for lunch and whose flatulence withered the flowers.</p>
+        <p>Something similar took place with the rest of the family.</p>
+        <p>Amaranta could not conceal the repugnance that she felt at the table because of his bestial belching.</p>
+        <p>Arcadio, who never knew the secret of their relationship, scarcely answered the questions that he asked with the obvious idea of gaining his affection.</p>
+        <p>Aureliano tried to relive the times when they slept in the same room, tried to revive the complicity of childhood, but José Arcadio had forgotten about it, because life at sea had saturated his memory with too many things to remember.</p>
+        <p>Only Rebeca succumbed to the first impact.</p>
+        <p>The day that she saw him pass by bedroom she thought that Pietro Crespi was a sugary dandy next to that protomale whose volcanic breathing could be heard all over the house.</p>
+        <p>She tried to get near him under any pretext.</p>
+        <p>On a certain occasion José Arcadio looked at her body with shameless attention and said to her "You're a woman, little sister."</p>
+        <p>Rebeca lost control of herself.</p>
+        <p>She went back to eating earth and the whitewash on the walls with the avidity of previous days, and she sucked her finger so much anxiety that she developed a callus on her thumb.</p>
+        <p>She vomited up a green liquid with dead leeches in it.</p>
+        <p>She spent nights awake shaking with fever, fighting against delirium, waiting until the house shook with the return of José Arcadio at dawn.</p>
+        <p>One afternoon, when everyone was having a siesta, she could no longer resist and went to his bedroom.</p>
+        <p>She found him in his shorts, lying in the hammock that he had hung from the beams with a ship's hawser.</p>
+        <p>She was so impressed by his enormous motley nakedness that she felt an impulse to retreat.</p>
+        <p>"Excuse me," she said, "I didn't know you were here."</p>
+        <p>But she lowered her voice so as not to wake anyone up.</p>
+        <p>"Come here," he said.</p>
+        <p>Rebeca obeyed.</p>
+        <p>She stopped beside the hammock in an icy sweat, feeling knots forming in her intestines, while José Arcadio stroked her ankles with the tips of his fingers, then her calves, then her thighs, murmuring: "Oh, little sister, little sister."</p>
+        <p>She had to make a supernatural effort not to die when a startlingly regulated cyclonic power lifted her up by the waist and despoiled her of her intimacy with three clashes of its claws and quartered her like a little bird.</p>
+        <p>She managed to thank God for having been born before she lost herself in the inconceivable pleasure of that unbearable pain, splashing in the steaming marsh of the hammock which absorbed the explosion of blood like a blotter.</p>
+        <p>"She's your sister."</p>
+        <p>"I don't care," José Arcadio replied.</p>
+        <p>Pietro Crespi mopped his brow with the handkerchief that was soaked in lavender.</p>
+        <p>"It's against nature," he explained, "and besides, it's against the law."</p>
+        <p>José Arcadio grew impatient, not so much at the argument as over Pietro Crespi's paleness.</p>
+        <p>"Fuck nature two times over," he said. "And I've come to tell you not to bother going to ask Rebeca anything."</p>
+        <p>But his brutal deportment broke down when he saw Pietro Crespi's eyes grow moist.</p>
+        <p>"Now," he said to him in a different tone, "if you really like the family, there's Amaranta for you."</p>
+        <p>Father Nicanor revealed in his Sunday sermon that José Arcadio and Rebeca were not brother and sister.</p>
+        <p>&uacute;rsula never forgave what she considered an inconceivable lack of respect and when they came back from church she forbade the newlyweds to set foot in the house again.</p>
+        <p>For her it was as if they were dead.</p>
+        <p>So they rented a house across from the cemetery and established themselves there with no other furniture but José Arcadio's hammock.</p>
+        <p>On their wedding night a scorpion that had got into her slipper bit Rebeca on the foot.</p>
+        <p>Her tongue went to sleep, but that did not stop them from spending a scandalous honeymoon.</p>
+        <p>The neighbors were startled by the cries that woke up the whole district as many as eight times in a single night and three times during siesta, and they prayed that such wild passion would not disturb the peace of the dead.</p>
+        <p>Aureliano was the only one who was concerned about them.</p>
+        <p>He bought them some furniture and gave them some money until José Arcadio recovered his sense of reality and began to work the noman's-land that bor-dered the courtyard of the house.</p>
+        <p>Amaranta, on the other hand, never did overcome her rancor against Rebeca, even though life offered her a satisfaction of which she had not dreamed: at the initiative of &uacute;rsula, who did not know how to repair the shame, Pietro Crespi continued having lunch at the house on Tuesdays, rising above his defeat with a serene dignity.</p>
+        <p>He still wore the black ribbon on his hat as a sign of respect for the family, and he took pleasure in showing his affection for &uacute;rsula by bringing her exotic gifts: Portuguese sardines, Turkish rose marmalade, and on one occasion a lovely Manila shawl.</p>
+        <p>Amaranta looked after him with a loving diligence.</p>
+        <p>She anticipated his wants, pulled out the threads on the cuffs of his shirt, and embroidered a dozen handkerchiefs with his initials for his birthday.</p>
+        <p>On Tuesdays, after lunch, while she would embroider on the porch, he would keep her happy company.</p>
+        <p>For Pietro Crespi, that woman whom he always had considered and treated as a child was a revelation.</p>
+        <p>Although her temperament lacked grace, she had a rare sensibility for appreciating the things of the world had a secret tenderness.</p>
+        <p>One Tuesday, when no one doubted that sooner or later it had to happen, Pietro Crespi asked her to marry him.</p>
+        <p>She did not stop her work.</p>
+        <p>She waited for the hot blush to leave her ears and gave her voice a serene stress of maturity.</p>
+        <p>"Of course, Crespi," she said. "But when we know each other better. It's never good to be hasty in things."</p>
+        <p>&uacute;rsula was confused.</p>
+        <p>In spite of the esteem she had for Pietro Crespi, she could not tell whether his decision was good or bad from the moral point of view after his prolonged and famous engagement to Rebeca.</p>
+        <p>But she finally accepted it as an unqualified fact because no one shared her doubts.</p>
+        <p>Aureliano, who was the man of the house, confused her further with his enigmatic and final opinion:</p>
+        <p>"These are not times to go around thinking about weddings."</p>
+        <p>That opinion, which &uacute;rsula understood only some months later, was the only sincere one that Aureliano could express at that moment, not only with respect to marriage, but to anything that was not war.</p>
+        <p>He himself, facing a firing squad, would not understand too well the concatenation of the series of subtle but irrevocable accidents that brought him to that point.</p>
+        <p>The death of Remedios had not produced the despair that he had feared.</p>
+        <p>It was, rather, a dull feeling of rage that grades ally dissolved in a solitary and passive frustration similar to the one he had felt during the time he was resigned to living without a woman.</p>
+        <p>He plunged into his work again, but he kept up the custom of playing dominoes with his father-in-law.</p>
+        <p>In a house bound up in mourning, the nightly conversations consolidated the friendship between the two men.</p>
+        <p>"Get married again.</p>
+        <p>Aurelito," his father-in-law would tell him.</p>
+        <p>"I have six daughters for you to choose from."</p>
+        <p>On one occasion on the eve of the elections, Don Apolinar Moscote returned from one of his frequent trips worried about the political situation in the country.</p>
+        <p>The Liberals were determined to go to war.</p>
+        <p>Since Aureliano at that time had very confused notions about the difference between Conservatives and Liberals, his father-in-law gave him some schematic lessons.</p>
+        <p>The Liberals, he said, were Freemasons, bad people, wanting to hang priests, to institute civil marriage and divorce, to recognize the rights of illegitimate children as equal to those of legitimate ones, and to cut the country up into a federal system that would take power away from the supreme authority.</p>
+        <p>The Conservatives, on the other hand, who had received their power directly from God, proposed the establishment public order and family morality.</p>
+        <p>They were the defenders of the faith of Christ, of the principle of authority, and were not prepared to permit the country to be broken down into autonomous entities.</p>
+        <p>Because of his humanitarian feelings Aureliano sympathized with the Liberal attitude with respect to the rights of natural children, but in any case, he could not understand how people arrived at the extreme of waging war over things that could not be touched with the hand.</p>
+        <p>It seemed an exaggeration to him that for the elections his father-in--law had them send six soldiers armed with rifles under the comma sergeant to a town with no political passions.</p>
+        <p>They not only arrived, but they went from house to house confiscating hunting weapons, machetes, and even kitchen knives before they distributed among males over twenty-one the blue ballots with the names of the Conservative candidates and the red ballots the names of the Liberal candidates.</p>
+        <p>On the eve of the elections Don Apolinar Moscote himself read a decree that prohibited the sale of alcoholic beverages and the gathering together of more than three people who were not of the same family.</p>
+        <p>The elections took place without incident.</p>
+        <p>At eight o'clock on Sunday morning a wooden ballot box was set up in the square, which was watched over by the six soldiers.</p>
+        <p>The voting was absolutely free, as Aureliano himself was able to attest since he spent almost the entire day with his father-in-law seeing that no one voted more than once.</p>
+        <p>At four in the afternoon a roll drums in the square announced the closing of the polls and Don Apolinar Moscote sealed the ballot box with a label crossed by his signature.</p>
+        <p>That night, while he played dominoes with Aureliano, he ordered the sergeant to break the seal in order to count the votes.</p>
+        <p>There were almost as many red ballots as blue, but the sergeant left only ten red ones made up the difference with blue ones.</p>
+        <p>Then they sealed the box again with a new label and the first thing on the following day it was taken to the capital of the province.</p>
+        <p>"The Liberals will go to war," Aureliano said.</p>
+        <p>Don Apolinar concentrated on his domino pieces.</p>
+        <p>"If you're saying that because of the switch in ballots, they won't," he said.</p>
+        <p>"We left a few red ones in so there won't be any complaints."</p>
+        <p>Aureliano understood the disadvantages of being in the opposition.</p>
+        <p>"I were a Liberal," he said, "I'd go to war because of those ballots."</p>
+        <p>His father-in-law looked at him over his glasses.</p>
+        <p>"Come now, Aurelito," he said, "if you were a Liberal, even though you're my son-in-law, you wouldn't have seen the switching of the ballots."</p>
+        <p>What really caused indignation in the town was.</p>
+        <p>not the results of the elections but the fact that the soldiers had not returned the weapons.</p>
+        <p>A group of women spoke with Aureliano so that he could obtain the return of their kitchen knives from his father-in-law.</p>
+        <p>Don Apolinar Moscote explained to him, in strictest confidence, that the soldiers had taken the weapons off as proof that the Liberals were preparing for war.</p>
+        <p>The cynicism of the remark alarmed him.</p>
+        <p>He said nothing, but on a certain night when Gerineldo Márquez and Magn&iacute;fico Visbal were speaking with some other friends about the incident of the knives, they asked him if he was a Liberal or a Conservative.</p>
+        <p>Aureliano did not hesitate.</p>
+        <p>"If I have to be something I'll be a Liberal," he said, "because the Conservatives are tricky."</p>
+    </div>
+
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">Chapter 5 (ZH)</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/24 18:27:57</div>
+        <p>三月的一个星期天，奥雷里亚诺·布恩迪亚和蕾梅黛丝·摩斯科特在尼卡诺尔·雷伊纳神甫于客厅里搭起的祭坛前结为夫妇。</p>
+        <p>摩斯科特家四个星期以来的担惊受怕至此达到顶点，因为小蕾梅黛丝虽已进入青春期，却尚未摆脱童年的习惯。</p>
+        <p>母亲已经给她讲授过青春期的变化，但二月的一个下午她仍然惊叫着冲进房间，打断了姐姐们和奥雷里亚诺的谈话，向他们展示内裤上一块巧克力色的污迹。</p>
+        <p>于是婚礼定在一个月后举行。</p>
+        <p>几乎没有足够的时间教会她自己洗澡穿衣，让她懂得最基本的家庭事务。</p>
+        <p>他们让她在烧热的砖上小便，好摆脱尿床的习惯。</p>
+        <p>他们还费了不少工夫才说服她相信夫妻间的秘密绝不可外传，因为她听说以后既惊惶又兴奋，恨不得和遇见的每一个人讨论新婚之夜的种种细节。</p>
+        <p>这项工作颇费心神，但当预定的佳期到来，小女孩熟谙人情世故已经不逊于任何一位姐姐。</p>
+        <p>堂阿波利纳尔·摩斯科特挽着她的手臂，在鞭炮声和数家乐队的乐声中走过鲜花与花环装点一新的街道。</p>
+        <p>新娘挥手致意，并向在窗口为她祝福的人们表示感谢。</p>
+        <p>奥雷里亚诺身着黑呢正装，脚穿带金属搭扣的漆皮靴，数年后面对行刑队时他穿的也是这一双。</p>
+        <p>他在家门前迎接新娘，随后带她走向祭坛，整个过程中脸色极其苍白，喉咙里像有个硬球堵着。</p>
+        <p>新娘却表现得自然得体，即使在奥雷里亚诺为她戴戒指却失手落地时也没有丝毫失态。</p>
+        <p>四周一片耳语，宾客开始骚动，而她仍抬起戴着花边手套的手，无名指兀自不动，直到新郎赶在戒指滚到门口之前伸脚挡住，又面红耳赤地回到祭坛前。</p>
+        <p>她母亲和姐姐们提心吊胆，生怕小女孩在仪式上有不得体的举动，结果倒是她们自己失态，冲上去吻她。</p>
+        <p>从那天起，她就展示出责任感、大方的仪态，以及面对逆境仍波澜不惊的控制力。</p>
+        <p>她还想到留下结婚蛋糕最好的部分，盛在盘里配上叉子端到何塞·阿尔卡蒂奥·布恩迪亚面前。</p>
+        <p>身形魁梧的老人被绑在栗树树干上，蜷缩于棕榈叶顶棚下的一张小木凳上，饱经日晒雨淋已失去血色。</p>
+        <p>他冲她感激地笑了笑，一边用手指抓蛋糕吃，一边哼着一首难以理解的圣诗。</p>
+        <p>喧闹的庆典一直持续到星期一早上，其间唯一不幸的人是丽贝卡·布恩迪亚。</p>
+        <p>这本该也是她的喜事。</p>
+        <p>乌尔苏拉已同意在同一天为她举行婚礼，不料皮埃特罗·克雷斯皮星期五接到的一封信带来了他母亲病危的消息。</p>
+        <p>婚礼推迟了。</p>
+        <p>皮埃特罗·克雷斯皮接到信后一个小时即起程前往省城，在路上错过了与母亲的相遇，他母亲星期六晚上准时抵达马孔多，并在奥雷里亚诺的婚礼上献唱了本是为自己儿子婚礼准备的悲伤咏叹调。</p>
+        <p>皮埃特罗·克雷斯皮为了及时赶回自己的婚礼，一路跑瘫了五匹马，但当他星期天午夜时分赶到的时候，能做的只剩下打扫喜事的残烛余烬。</p>
+        <p>从未查出究竟是谁写了那封信。</p>
+        <p>在乌尔苏拉的拷问下，阿玛兰妲气得哭了起来，对着木匠们尚未拆除的祭坛赌咒发誓以证明自己的无辜。</p>
+        <p>尼卡诺尔·雷伊纳神甫是堂阿波利纳尔·摩斯科特从大泽区请来主持婚礼的，这位老人因清苦的职业而变得刻板。</p>
+        <p>他肤色阴沉，瘦得皮包骨，肚子却浑圆凸出，一副老好人的表情与其说是善良不如说是天真。</p>
+        <p>他本打算婚礼结束后就回自己的教区，但马孔多居民的灵性贫瘠状态令他大吃一惊，他们按本性行事，肆无忌惮地繁衍生息，不给儿女施洗，不为节庆祝圣。</p>
+        <p>考虑到世上没有别的地方更需要上帝的种子，他决定再待一个星期来教化犹太人和外邦人，使同居的合法化，让濒死的领圣礼。</p>
+        <p>然而没有人理睬他。</p>
+        <p>他们回答说这里很多年来没有神甫，大家一向都是直接和上帝解决灵魂问题，已经摆脱了致死之罪的污染。</p>
+        <p>尼卡诺尔神甫厌倦了在旷野讲道，决心建造一座教堂，世界上最大的教堂，要有真人大小的圣徒群像和彩绘玻璃窗，要让人们从罗马来到这个不敬神的中心敬拜上帝。</p>
+        <p>他托着一个小铜盘四处募捐。</p>
+        <p>人们给了他不少捐资，但他想要更多，因为教堂得有一口声音能震得溺水者浮出水面的大钟。</p>
+        <p>他苦苦恳求，直到声音嘶哑，浑身骨头开始咯咯作响。</p>
+        <p>到一个星期六，他连造门的钱都没募齐，不由陷入绝望。</p>
+        <p>他临时在广场搭起一个祭坛，星期天就像失眠症时期一样摇着铃铛，召唤居民参加露天弥撒。</p>
+        <p>一些人出于好奇，另一些人出于怀旧，还有些人唯恐上帝将他们对其代理人的轻慢视为对其本身的冒犯，都应邀而来。</p>
+        <p>就这样，早上八点的时候半个镇子的人都聚集在广场上，听尼卡诺尔神甫用因乞讨变得嘶哑的嗓音咏唱福音书。</p>
+        <p>最后，当人群开始散去，他举手提请大家注意。</p>
+        <p>“稍等，”他说，“现在我们要亲眼观看上帝神力无穷的明证。”</p>
+        <p>方才助祭的男孩递过一杯热气腾腾的浓巧克力，他一口喝了下去。</p>
+        <p>然后他从袖子里掏出手帕擦嘴，闭上眼睛大张双臂。</p>
+        <p>随即，尼卡诺尔神甫从地面凭空升起足足十二厘米。</p>
+        <p>这一举动很有说服力。</p>
+        <p>一连几天他走街串巷，凭借巧克力的助力一再重现升空的明证，施舍源源不断地被祭童收到口袋里。</p>
+        <p>不到一个月，教堂便得以开工建造。</p>
+        <p>没有人怀疑这一演示的神圣源起，除了何塞·阿尔卡蒂奥·布恩迪亚。</p>
+        <p>一天上午人们聚集在栗树周围想再次见证神迹，他只是无动于衷地看着。</p>
+        <p>当尼卡诺尔神甫连同身下的凳子一起离地腾空，他只在小木凳上挺了挺身，耸耸肩膀。</p>
+        <p>“Hoc est simplicisimum,”何塞·阿尔卡蒂奥·布恩迪亚说，“homo iste statum quartum materiae invenit.”</p>
+        <p>尼卡诺尔神甫一抬手，凳子的四条腿同时落了地。</p>
+        <p>“Nego,”他说，“Factum hoc existentiam Dei probat sine dubio.”</p>
+        <p>就这样，人们知道了何塞·阿尔卡蒂奥·布恩迪亚口中的鬼话其实是拉丁语。</p>
+        <p>尼卡诺尔神甫利用自己是唯一能与他交流的人这一优势，试图将信仰灌输到他错乱的头脑中。</p>
+        <p>他天天下午坐到栗树下用拉丁语传教，但何塞·阿尔卡蒂奥·布恩迪亚拒不相信繁复的证明和巧克力的效验，单单要求拿上帝的照片作为凭证。</p>
+        <p>尼卡诺尔神甫给他带去各式圣牌圣像，甚至包括一件维罗妮卡手帕的复制品，但何塞·阿尔卡蒂奥·布恩迪亚将这些通通视作缺乏科学依据的人工制品概不承认。</p>
+        <p>面对他的冥顽不灵，尼卡诺尔神甫放弃了向他传福音的念头，但出于慈悲心怀仍旧每天来探望他。</p>
+        <p>这时就轮到何塞·阿尔卡蒂奥·布恩迪亚转守为攻，试图用他理性主义者的种种策略动摇神甫的信仰。</p>
+        <p>有一回，尼卡诺尔神甫带上棋盘和棋子来到树下邀他下西洋跳棋，他没有答应，理由是既然都同意遵守规则，他无法理解两个对手如何还能争斗。</p>
+        <p>尼卡诺尔神甫从未自这个角度思考，但此后再也没有摸过跳棋。</p>
+        <p>他越来越惊叹于何塞·阿尔卡蒂奥·布恩迪亚的睿智，便问他怎么会被绑在树上。</p>
+        <p>“Hoc est simplicisimum,”他回答，“因为我疯了。”</p>
+        <p>从那以后，神甫担心自己的信念会动摇，就不再去探望他，全心投入教堂的建造以加快进程。</p>
+        <p>丽贝卡重新燃起了希望。</p>
+        <p>她的未来全系于教堂的竣工，因为有个星期天尼卡诺尔神甫来家里吃午饭时，全家人都在席间谈论教堂建成后举行的宗教仪式将是何等庄重堂皇。</p>
+        <p>“最幸运的人是丽贝卡。”</p>
+        <p>阿玛兰妲说。</p>
+        <p>丽贝卡没有听懂她的意思，于是她带着天真的笑容解释：</p>
+        <p>“因为你的婚礼将是教堂落成后举行的第一个仪式。”</p>
+        <p>丽贝卡试图抢先作出评论。</p>
+        <p>以现在的施工速度来看，教堂竣工起码要等十年。</p>
+        <p>但尼卡诺尔神甫看法不同：鉴于信徒们捐赠日益慷慨，完全可以作出更乐观的估计。</p>
+        <p>尽管丽贝卡暗暗生气，连饭都没有吃完，乌尔苏拉还是赞同阿玛兰妲的主意，并捐出一笔可观的款项以加速施工。</p>
+        <p>尼卡诺尔神甫认为再有一笔相同数额的捐赠，教堂就能在三年内竣工。</p>
+        <p>从此，丽贝卡不再和阿玛兰妲说话，确信她的用心并不像表面那样单纯无辜。</p>
+        <p>“我已经手下留情了，”在当晚的激烈争吵中阿玛兰妲回答道，“这三年我都用不着杀你了。”</p>
+        <p>丽贝卡接受了挑战。</p>
+        <p>皮埃特罗·克雷斯皮得知婚礼再次推迟，失望之极，但丽贝卡向他证明了自己的忠贞不渝。</p>
+        <p>“等你准备好，咱们就私奔。”</p>
+        <p>她对他说。</p>
+        <p>然而皮埃特罗·克雷斯皮并不是敢于冒险的人，他不像未婚妻那样性情冲动，视对承诺的尊重为不容挥霍的资本。</p>
+        <p>于是丽贝卡采取了更大胆的举措。</p>
+        <p>一阵神秘的风吹灭了客厅里的灯，乌尔苏拉随即发现这对情侣在黑暗中接吻。</p>
+        <p>皮埃特罗·克雷斯皮窘迫地向她解释说这要归咎于新式煤油灯的质量问题，甚至帮她在客厅里安上了更可靠的照明设施。</p>
+        <p>但又一次不知是灯油出了问题还是灯芯被阻断，乌尔苏拉发现丽贝卡坐在未婚夫的腿上。</p>
+        <p>她不再接受任何借口。</p>
+        <p>她把面包房托付给印第安女人比西塔西翁打理，亲自坐到摇椅上监视情侣的相会，免得那些在自己的青春年代就已过时的花招得逞。</p>
+        <p>“可怜的妈妈，”丽贝卡看着乌尔苏拉在一旁打着哈欠昏昏欲睡的样子，又好气又好笑，“到死也要在这把摇椅上受罪。”</p>
+        <p>皮埃特罗·克雷斯皮天天去察看施工，在过了三个月受监视的爱情生活后终于厌烦了缓慢的工程进度，决定自己出钱给尼卡诺尔神甫补足完工所需的资金。</p>
+        <p>阿玛兰妲并没有慌张。</p>
+        <p>她每天和女友们在长廊里绣花或做编织活计，一边聊天一边酝酿新的计策。</p>
+        <p>她自以为最有效的一招，即取走丽贝卡将嫁衣收入卧室衣柜之前就放好的樟脑丸，却因为估算失误落了空。</p>
+        <p>她是在离教堂完工不到两个月时采取的行动，但随着婚期临近丽贝卡迫不及待地要试穿嫁衣，比阿玛兰妲预计的时间提前了许多。</p>
+        <p>丽贝卡打开衣柜，依次取下包装纸和护衬布，发现从锦缎礼服、织绣纱巾直到橘花头冠都被蛾子蛀成了粉末。</p>
+        <p>她确信当初在包装里放过两把樟脑丸，但这一悲剧似乎纯粹出于偶然，她不敢责怪到阿玛兰妲身上。</p>
+        <p>离婚礼已不到一个月，安帕萝·摩斯科特竟慨然答允在一个星期内为她做出一身新嫁衣。</p>
+        <p>那个阴雨绵绵的中午，当安帕萝抱着一堆泡沫般的织物走进家门让丽贝卡最后一次试衣时，阿玛兰妲几乎要昏厥过去。</p>
+        <p>她瞬间失声，一道冷汗沿脊背下流。</p>
+        <p>漫长的数月里，她一直在恐惧的战栗中等待这一刻的到来。</p>
+        <p>她深信，如果最终找不到阻挠丽贝卡婚礼的办法，到了一切手段用尽的最后时刻，她不会缺乏下毒的胆量。</p>
+        <p>那天下午，安帕萝以无穷无尽的耐心在丽贝卡周身上下别了千万枚别针，丽贝卡则裹在那甲胄般的缎料里热得透不过气来，与此同时，阿玛兰妲多次乱了针脚，扎了手指，但仍以可怕的冷静作出决定：日期定在婚礼前最后一个星期五，方式是在咖啡中加一剂鸦片酊。</p>
+        <p>不料一个更大的障碍突然出现，并且无法挽救，迫使婚礼再次无限期延迟。</p>
+        <p>婚期前一个星期，小蕾梅黛丝半夜醒来，内脏打嗝般撕裂，火热的汁液爆涌浸透全身。</p>
+        <p>三天后她被自己的血毒死，一对双胞胎也横死腹中。</p>
+        <p>阿玛兰妲受到良心的谴责。</p>
+        <p>她曾切切祈求上帝，希望发生某种可怕的事情免得自己向丽贝卡下毒，因此对蕾梅黛丝的死怀有负罪感。</p>
+        <p>那并不是她日夜祈祷所期盼的障碍。</p>
+        <p>蕾梅黛丝为这个家带来了欢快气息。</p>
+        <p>她和丈夫在作坊旁收拾出一间小屋，用刚刚告别的童年时代的娃娃和玩具装饰一新。</p>
+        <p>她欢快的活力溢出房间四壁，像生机盎然的和风吹过秋海棠长廊。</p>
+        <p>她从清晨便开始唱歌。</p>
+        <p>她是唯一敢在丽贝卡与阿玛兰妲争吵时从中斡旋的人。</p>
+        <p>她担负起照顾何塞·阿尔卡蒂奥·布恩迪亚的繁重任务。</p>
+        <p>她为他送去食物，每日伺候他大小便，用肥皂和丝瓜瓤给他擦洗，为他除去头发胡须里的跳蚤和虱子，还让棕榈叶顶棚保持完好并在暴风雨天气用防水帆布加固。</p>
+        <p>最后几个月，她已经能够用简单的拉丁语与他沟通。</p>
+        <p>当奥雷里亚诺和庇拉尔·特尔内拉的儿子出生后被送到家里，并在家中举行仪式命名为奥雷里亚诺·何塞，蕾梅黛丝决定把他认作自己的长子。</p>
+        <p>她这种母性本能令乌尔苏拉惊讶不已。</p>
+        <p>就奥雷里亚诺而言，他在她这里找到了生存的意义。</p>
+        <p>他整日在作坊干活，蕾梅黛丝会在上午送去一杯不加糖的咖啡。</p>
+        <p>夫妇俩每天晚上都去摩斯科特家。</p>
+        <p>奥雷里亚诺和岳父一局接一局地玩多米诺骨牌，蕾梅黛丝则与姐姐们聊天，或和母亲商量大人的事情。</p>
+        <p>与布恩迪亚家的联姻稳固了堂阿波利纳尔·摩斯科特在镇上的权威。</p>
+        <p>他频繁前往省城，结果成功让政府在镇上建立一所学校，便交由继承了祖父教学热忱的阿尔卡蒂奥掌管。</p>
+        <p>他说服了大多数人家将房子漆成蓝色以纪念国家独立日。</p>
+        <p>应尼卡诺尔神甫之请，他将卡塔利诺的店铺迁往一条偏僻的街道，还关闭了镇中心多处生意兴隆却有伤风化的场所。</p>
+        <p>他带回六名荷枪警察来维持秩序，这时却没人想起当初镇上不准有武装人员的协议。</p>
+        <p>奥雷里亚诺对岳父的工作效率颇为欣赏。</p>
+        <p>“你也会变得像他一样胖。”</p>
+        <p>他的朋友们对他说。</p>
+        <p>但长久端坐着干活，令他颧骨线条更明显，使他眼神更锐利，却没有增加他的体重，也不曾影响他的冷静性格，相反还加深了他唇间的笔直线条，那代表着孤独的沉思和无情的决断。</p>
+        <p>他和妻子在双方家里都成功唤醒了深厚的亲情，因而当蕾梅黛丝宣告怀孕的时候，甚至连丽贝卡和阿玛兰妲都暂时休战，忙着编织蓝毛衣—如果生的是男孩；还有红毛衣—如果生的是女孩。</p>
+        <p>几年以后面对行刑队，阿尔卡蒂奥最后想到的人也是她。</p>
+        <p>乌尔苏拉吩咐关闭门窗守丧，如非绝对必要不许任何人出入。</p>
+        <p>她还要求一年之内不得高声说话，并将一张蕾梅黛丝的银版照片摆在停放遗体守灵的地方，照片上斜系着一根黑色饰带，前面点起一盏长明灯。</p>
+        <p>此后子孙们一直保持灯火不熄，他们面对着照片上这个身着百褶裙、脚踏白色小靴子、头系蝉翼纱蝴蝶结的小女孩却不免困惑，难以将其与曾祖母的标准像联系起来。</p>
+        <p>阿玛兰妲担负起照顾奥雷里亚诺·何塞的职责。</p>
+        <p>她当作儿子抚养的这个孩子，将会分担她的孤独，缓解她的内疚—由于她向上帝疯狂祈求，鸦片酊误落在蕾梅黛丝的咖啡里。</p>
+        <p>皮埃特罗·克雷斯皮戴着系了黑纱的帽子轻手轻脚走进家门，与一袭黑衣长袖及手、心中仿佛暗暗淌血的丽贝卡默默相会。</p>
+        <p>此时此刻连重议婚期的念头也会被视为大不敬，恋人关系就此永远停滞不前，沦为无人再去理会的倦怠爱情，仿佛昔日为了亲吻而熄灭灯火的情侣已被抛弃，屈从于死神的淫威。</p>
+        <p>方向迷失，希望破灭，丽贝卡又开始吃土。</p>
+        <p>居丧多日后十字绣活动已经恢复，一天下午两点，酷热的死寂中突然有人推开大门。</p>
+        <p>房柱震颤不已，长廊里刺绣的阿玛兰妲及其女友，卧室里吸吮手指的丽贝卡，厨房里的乌尔苏拉，作坊里的奥雷里亚诺，甚至栗树下孤零零的何塞·阿尔卡蒂奥·布恩迪亚，都感到房子在大地的震动中摇摇欲坠。</p>
+        <p>来人是一个身材过人的大汉。</p>
+        <p>他粗壮的胸背几乎挤不进门。</p>
+        <p>他野牛似的脖子上挂着救难圣母像，双臂和胸前覆满神秘的刺青，右手腕上紧紧缠着“十字架婴孩”护符铜手链。</p>
+        <p>他的身体经风吹日晒变成棕褐色，短发竖起好像骡子的鬃毛，下颌坚毅，眼神悲伤。</p>
+        <p>他的腰带比马肚带宽两倍，靴子带护腿和马刺，靴跟钉了铁掌，走到哪里都给人以地震般的战栗感。</p>
+        <p>他拎着几个破旧的褡裢穿过客厅和起居室，像一阵风暴般出现在秋海棠长廊，惊得阿玛兰妲和女友们一动不动，绣花针停在空中。</p>
+        <p>“嗨。”</p>
+        <p>他用疲倦的声音说道，随手将褡裢往缝纫桌上一丢，径直走向家中深处。</p>
+        <p>“嗨。”</p>
+        <p>他向丽贝卡打了个招呼，她看着他从自己卧室门前经过，吓得呆了。</p>
+        <p>“嗨。”</p>
+        <p>他对奥雷里亚诺说道，后者正在作坊工作台前全神贯注地干活。</p>
+        <p>他没在任何人身边停留，直接走向厨房，在那里才第一次停住脚步，结束了从世界另一端起程的旅行。</p>
+        <p>“嗨。”</p>
+        <p>他说。</p>
+        <p>乌尔苏拉瞬间愣住，看着他的眼睛，随即发出一声惊呼，扑过去搂住他的脖子，高兴得又哭又叫。</p>
+        <p>他是何塞·阿尔卡蒂奥。</p>
+        <p>他像离开时一样赤贫，乌尔苏拉还得给他两个比索付雇马的钱。</p>
+        <p>他说的西班牙语掺杂着水手的黑话。</p>
+        <p>家人问他都去了哪里，他回答：“那边。”</p>
+        <p>他把吊床支在为他安排的房间里，睡了三天三夜。</p>
+        <p>醒来后吃了十六个生鸡蛋，便直接去了卡塔利诺的店里，他那超常的身材在女人当中引发了好奇和恐慌。</p>
+        <p>他要求奏乐并请所有人喝甘蔗酒。</p>
+        <p>他打赌说能同时和五个男人掰腕子。</p>
+        <p>“这不可能。”</p>
+        <p>那些人确信无法撼动他的手臂后，不禁发出感慨，“他有‘十字架婴孩’。”</p>
+        <p>卡塔利诺不相信这类角力花样，押上十二比索赌他挪不动柜台。</p>
+        <p>何塞·阿尔卡蒂奥将柜台从原地搬起，举过头顶，又放到大街上。</p>
+        <p>结果出动了十一个男人才把它搬回去。</p>
+        <p>在节庆般的狂热气氛中，他在柜台上展示了自己那令人难以置信的阳物，上面红蓝两色纵横交错，覆满多种语言的刺青。</p>
+        <p>那些女人饥渴地围在他身边，他问谁肯出最高价。</p>
+        <p>最有钱的一个愿出二十比索。</p>
+        <p>他又提议所有女人一起抽签，十比索一个签号。</p>
+        <p>这是个夸张的价格，最红的姑娘一夜也不过挣八比索，然而所有女人都表示同意。</p>
+        <p>她们把自己的名字写在十四张纸条上，放在一顶帽子里，然后每人抽出一张。</p>
+        <p>最后抽到只剩两张了，中奖者将在其中产生。</p>
+        <p>“每人再出五比索，”何塞·阿尔卡蒂奥建议，“我就让你们两个分享。”</p>
+        <p>他以此为生。</p>
+        <p>他曾与一群无国籍的水手一起周游世界六十五次。</p>
+        <p>当晚与他在卡塔利诺店里同床的女人将他赤身裸体带到舞厅，让大家观赏他从前额到后背、从脖颈到脚趾，通身上下没有一丝一毫皮肤没文刺青。</p>
+        <p>他没能融入家庭。</p>
+        <p>他白天睡觉，晚上就去烟花巷赌赛力气。</p>
+        <p>难得几次乌尔苏拉把他拉到餐桌前，他表现得迷人又可亲，特别是当他讲述异国冒险的时候。</p>
+        <p>他曾经遭遇海难，在日本海漂流了两个星期，以死于日晒病的同伴尸体为食，那一次次用海水腌制，又经阳光烤熟的肉质有种甜美的味道。</p>
+        <p>在孟加拉湾一个阳光灿烂的正午，他们的船杀死了一条海龙，他们还在龙腹中发现了一名十字军战士的头盔、搭扣和武器。</p>
+        <p>他在加勒比海见过维克多·休斯的海盗幽灵船，船帆被死亡的阴风扯得七零八落，桅杆被海蠊蛀蚀，它再也找不到瓜德罗普岛的方向。</p>
+        <p>乌尔苏拉坐在桌边哭个不停，仿佛在阅读一封封从未抵达的家书，阅读何塞·阿尔卡蒂奥讲述的英雄业绩和不幸际遇。</p>
+        <p>“家里有这么多房间，我的儿子啊，”她抽泣道，“有那么多吃的都喂了猪！”但在内心深处，她无法把那个被吉卜赛人带走的男孩和这个吃午饭能吃掉半扇乳猪、放屁能令花儿枯萎的巨汉联系起来。</p>
+        <p>其他家人的感觉也是如此。</p>
+        <p>阿玛兰妲听到他在席间如野兽般打嗝，无法掩饰自己的厌恶。</p>
+        <p>阿尔卡蒂奥从未得悉自己的身世秘密，对他刻意博取好感的问长问短，几乎不加理睬。</p>
+        <p>奥雷里亚诺试图重温两人共宿一室的旧日时光，重拾少年时代的默契，但何塞·阿尔卡蒂奥都已忘却，因为海上生涯里有太多事情塞满了记忆。</p>
+        <p>只有丽贝卡一见面就被他征服。</p>
+        <p>那天下午看见他从自己卧室门前经过，她就觉得比起这个呼气好像火山爆发、全家都为之震颤的阳刚化身，皮埃特罗·克雷斯皮不过是个好赶时髦的文弱小子。</p>
+        <p>她寻找一切借口接近他。</p>
+        <p>有一次，何塞·阿尔卡蒂奥肆无忌惮地上下打量着她，对她说：“你很有女人味，小妹妹。”</p>
+        <p>丽贝卡失去了自制力，又开始以往日的狂热吃泥土和墙皮，饥渴地吸吮手指，拇指上甚至都结出了茧子。</p>
+        <p>她呕出混杂有死水蛭的绿色液体。</p>
+        <p>她夜夜不眠，烧热得颤抖，在谵妄中挣扎，直等到凌晨时分整栋房子因何塞·阿尔卡蒂奥的归来而震颤。</p>
+        <p>一天下午全家人都在午睡，她再也无法忍受，去了他的房间。</p>
+        <p>她发现他穿着短裤，醒着躺在用缆绳绑在柱子上的吊床里。</p>
+        <p>她盯着那花饰繁复的巨大身躯大感震惊，不禁想要退回去。</p>
+        <p>“对不起，”她辩解道，“我不知道您在这儿。”</p>
+        <p>她压低了声音，以免惊醒旁人。</p>
+        <p>“到这儿来。”</p>
+        <p>他说。</p>
+        <p>丽贝卡照做了。</p>
+        <p>她站在吊床前，流出冷汗，感到五脏六腑都纠结在一起，而阿尔卡蒂奥用指肚抚摸她的脚踝，然后是小腿肚，然后是大腿，嘴里喃喃地说：“小妹妹，啊，小妹妹。”</p>
+        <p>一股强似龙卷风却又惊人精准的力量将她拦腰举起，三两下扯去内衣，像撕裂一只小鸟一般，她得努力支撑着才不至于死在当场。</p>
+        <p>她感谢上帝让自己拥有生命，随即失去神志，沉浸在由无法承受的痛苦生出的不可思议的快感中，扑腾挣扎于吊床这热气腾腾的泥沼间，喷出的血液被泥沼像吸墨纸一般吸收了。</p>
+        <p>三天后，他们在五点钟的弥撒上结为夫妇。</p>
+        <p>何塞·阿尔卡蒂奥前一天去了皮埃特罗·克雷斯皮的商店，看见他正在给学生上古弦琴课，但并没有把他叫到一边回避学生。</p>
+        <p>“我要和丽贝卡结婚了。”</p>
+        <p>他说。</p>
+        <p>皮埃特罗·克雷斯皮顿时脸色煞白，把琴交给学生，宣布课程结束。</p>
+        <p>等到堆满乐器和上弦玩具的厅里只剩下他们两人，皮埃特罗·克雷斯皮说：</p>
+        <p>“她是您的妹妹。”</p>
+        <p>“我无所谓。”何塞·阿尔卡蒂奥回答。</p>
+        <p>皮埃特罗·克雷斯皮用散发出薰衣草气味的手帕擦了擦额头。</p>
+        <p>“这违背天理，”他解释道，“另外，法律也不允许。”</p>
+        <p>何塞·阿尔卡蒂奥失去了耐性，倒不是皮埃特罗·克雷斯皮所讲的道理，而是他那副苍白的脸色更让人恼火。</p>
+        <p>“去他的天理，”他说，“我来是为了告诉你，不要再费心去问丽贝卡什么。”</p>
+        <p>但当看到皮埃特罗·克雷斯皮眼眶湿润，他粗暴的态度软了下来。</p>
+        <p>“好吧，”他换了一副腔调，“如果您真喜欢我们家，那还有阿玛兰妲呢。”</p>
+        <p>尼卡诺尔神甫在星期天的讲道中申明何塞·阿尔卡蒂奥和丽贝卡不是兄妹。</p>
+        <p>乌尔苏拉视此事为不可想象的失礼，永远不肯原谅。</p>
+        <p>当他们从教堂回来的时候，她禁止这对新人再迈进家门。</p>
+        <p>对她来说，他们就等于死了一样。</p>
+        <p>因此他们到公墓对面租了一间小屋，屋里唯一的家具是何塞·阿尔卡蒂奥的吊床。</p>
+        <p>新婚之夜一只蝎子钻进拖鞋蜇了丽贝卡的脚，她的舌头为此都麻痹了，但这并不妨碍他们度过一个惊世骇俗的蜜月。</p>
+        <p>邻居们因惊醒整个街区的叫声而恐慌—每夜八次，连午睡时段也有三次—祈祷那种肆无忌惮的激情不要侵扰死人的安眠。</p>
+        <p>奥雷里亚诺是唯一关心他们的人。</p>
+        <p>他给他们买了一些家具，并送钱过去，直到何塞·阿尔卡蒂奥恢复常态，开始耕种与家中院子相邻的无主土地。</p>
+        <p>阿玛兰妲却永远无法摆脱对丽贝卡的怨恨，尽管生活为她带来了超出梦想的满足：乌尔苏拉不知如何洗刷耻辱，她主动提出让皮埃特罗·克雷斯皮每个星期二仍来家中共进午餐，后者平和而不失尊严地战胜了挫折。</p>
+        <p>出于对这一家人的尊敬，他在帽子上仍然系着黑纱，并很乐意亲近乌尔苏拉，为她带来异国礼物：葡萄牙沙丁鱼，土耳其玫瑰果酱，还有一次是一条精美的马尼拉大披巾。</p>
+        <p>阿玛兰妲总是亲切殷勤地款待他。</p>
+        <p>她揣测他的喜好，为他扯掉衬衫袖口的脱线，在他过生日时送上一打绣着他姓名缩写的手帕。</p>
+        <p>每个星期二吃过午饭，她在长廊里绣花，他陪伴一旁，其乐融融。</p>
+        <p>对皮埃特罗·克雷斯皮而言，这个他一向当小女孩对待的姑娘不啻全新的发现。</p>
+        <p>她虽然外表缺乏魅力，却拥有罕见的感受力，能体会世间万物的美好，还蕴含一种不为人知的柔情。</p>
+        <p>一个星期二，发生了众人意料中早晚会发生的事：皮埃特罗·克雷斯皮向她求婚。</p>
+        <p>她没有停下手里的活计，等耳边火热的红潮退去才开口，镇静的声音显出老成持重。</p>
+        <p>“当然可以，克雷斯皮，”她回答，“但要等了解更深的时候。太着急总是不好。”</p>
+        <p>乌尔苏拉困惑不已。</p>
+        <p>尽管对皮埃特罗·克雷斯皮抱有好感，她仍然无法确定他经历了与丽贝卡风波重重的漫长恋爱后作出这一决定，从道德角度来看究竟是好是坏。</p>
+        <p>其他人没有这样的顾虑，最后她只好将此事当作无从判断的事实接受下来。</p>
+        <p>奥雷里亚诺是家中的主心骨，他的意见神秘难解却又不容置疑，更为乌尔苏拉平添一重困惑。</p>
+        <p>“现在不是谈婚论嫁的时候。”</p>
+        <p>这句话的含义乌尔苏拉几个月后才明白，但那已是奥雷里亚诺当时所能给出的最坦诚的意见，不光涉及婚嫁，也适用于战争以外的所有事项。</p>
+        <p>他自己面对行刑队的时候，仍将无法理解一系列微妙又无可抗拒的偶然事件是如何将他引向那个结论的。</p>
+        <p>蕾梅黛丝的死并未引起他所担心的震惊，而更像是一种沉郁的愤怒，渐渐转化为寂寞消极的挫败感，与当初他认命选择独身时的感受相仿。</p>
+        <p>他重新沉浸到工作中，但保留了与岳父玩多米诺骨牌的习惯。</p>
+        <p>在那个因守丧而陷于沉寂的家里，晚间的交谈加深了两个男人的友谊。</p>
+        <p>“再结婚吧，奥雷里托，”岳父对他说，“我还有六个女儿可选。”</p>
+        <p>选举前夕，堂阿波利纳尔·摩斯科特频繁出行，有一次归来后为国家的政局忧心忡忡。</p>
+        <p>自由派已决意开战。</p>
+        <p>奥雷里亚诺那时还完全不明白自由派和保守派的区别，岳父为他作了简要介绍。</p>
+        <p>自由派，他说道，都是些共济会分子，心术不正，主张绞死教士，实行世俗婚姻并允许离婚，承认私生子和婚生子享有同等权利，试图分裂国家建立联邦制以剥夺最高当局的权力。</p>
+        <p>而保守派不同，他们直接从上帝那里获得天赋权柄，以维护公共秩序和家庭道德为己任；他们是基督信仰和当局权威的捍卫者，决不允许国家分裂搞自治。</p>
+        <p>出于人道方面的情感，奥雷里亚诺对自由派关于私生子的主张颇有好感，但他难以理解为看不见摸不着的东西竟会闹到发动战争的地步。</p>
+        <p>在他看来，岳父为了选举请求调来六个荷枪实弹的士兵，由一名士官率领进驻这个没有丝毫政治热情的小镇，实在有些小题大做。</p>
+        <p>士兵不仅进驻了镇子，还挨家挨户收缴猎枪、砍刀甚至菜刀，然后才给二十一岁以上的男子分发写有保守派候选人名字的蓝色选票和写有自由派候选人名字的红色选票。</p>
+        <p>选举前夜，堂阿波利纳尔·摩斯科特亲自宣读了一份公告：从星期六午夜开始四十八小时内禁止贩卖酒精饮料，禁止非同一家庭的三人以上聚会。</p>
+        <p>选举顺利进行，没有发生任何意外。</p>
+        <p>星期天早上八点广场上安放了一个木箱，由六个士兵看守。</p>
+        <p>投票完全自由，这一点奥雷里亚诺可以作证，他几乎一整天都和岳父一起监督，确保每人只投一次。</p>
+        <p>下午四点，广场上响起一阵军鼓声宣告投票结束，堂阿波利纳尔用带有自己签名的标签封住票箱。</p>
+        <p>当晚，他和奥雷里亚诺玩多米诺骨牌时，命令士官打开票箱计票。</p>
+        <p>红色选票与蓝色选票的数目不相上下，但士官只留下十张红色选票，其余用蓝色选票补足。</p>
+        <p>然后他们用新标签重新封好票箱，第二天一早便送去省城。</p>
+        <p>“自由派一定会开战。”</p>
+        <p>奥雷里亚诺说。</p>
+        <p>堂阿波利纳尔没将视线从自己的多米诺骨牌上移开。</p>
+        <p>“如果你是指换票的事，那他们不会。”</p>
+        <p>他说，“已经留下一些红的，免得他们有意见。”</p>
+        <p>奥雷里亚诺明白了反对派的不利地位。</p>
+        <p>“如果我是自由派，我就要为选票的事开战。”</p>
+        <p>岳父从眼镜上方瞟了他一眼。</p>
+        <p>“哈，奥雷里托，”他说，“如果你是自由派，就算你是我女婿也看不着换票的事。”</p>
+        <p>真正在镇上激起民愤的不是选举的结果，而是士兵们没有归还查收的武器。</p>
+        <p>一群妇女找到奥雷里亚诺，请求他向岳父要回那些菜刀。</p>
+        <p>堂阿波利纳尔·摩斯科特非常含蓄地向他解释，士兵们已经把查没的武器运走，作为自由派准备开战的证据。</p>
+        <p>奥雷里亚诺对此没作任何评论，但有天晚上赫里内勒多·马尔克斯和马格尼菲科·比斯巴勒跟其他朋友谈论菜刀事件，他们问他是自由派还是保守派时，他没有犹豫。</p>
+        <p>“如果一定要当什么，我当自由派，”他答道，“因为保守派净是些骗子。”</p>
+        <p>第二天，应朋友之请，他去拜访阿利黎奥·诺格拉医生，求治并不存在的肝痛。</p>
+        <p>他甚至不知道自己为什么要这样做。</p>
+        <p>阿利黎奥·诺格拉医生几年前来到马孔多，带着一药箱无味的药丸和一块无法令人信服的行医招牌：“一钉入，一钉出。”</p>
+        <p>其实那只是伪装。</p>
+        <p>那副平庸医生的无辜外表下隐藏着一个恐怖分子，借着及膝的高筒靴遮住相伴五年的脚镣在踝部留下的疤痕。</p>
+        <p>他是在参加联邦派的第一次起事时被捕的，后乔装改扮逃往库拉索，被迫披上他在这个世界上最憎恶的衣服—教士袍。</p>
+        <p>漫长的逃亡岁月过去，从加勒比海各地来到库拉索的流亡者带来令人振奋的消息，他大受鼓舞登上走私贩的帆船，随身带着一瓶瓶纯由白糖制成的药丸和一张他自己伪造的莱比锡大学文凭，出现在里奥阿查。</p>
+        <p>但他随即失望得痛哭起来。</p>
+        <p>联邦派的激情在流亡者口中被描述成一触即发的火药桶，其实早已沦为对选举的渺茫幻想。</p>
+        <p>怀着受挫的苦涩，以及寻找一处安稳地方养老的渴望，这位冒牌的顺势疗法医生逃到了马孔多。</p>
+        <p>他在广场一侧租下间小屋，在这摆满空药瓶的斗室里过了几年，生计全仰仗那些已经试遍所有医药，最后只靠糖丸聊作安慰的病人。</p>
+        <p>在堂阿波利纳尔·摩斯科特有名无实的统治期间，他那煽动者的天性一直无用武之地。</p>
+        <p>追忆往昔，与哮喘作斗争，他的日子一天天过去。</p>
+        <p>大选的临近使他重新找到了起事的机会。</p>
+        <p>他与镇上缺乏政治素养的年轻人建立联系，暗暗展开教唆工作。</p>
+        <p>票箱中出现大量红色选票，堂阿波利纳尔·摩斯科特归因于年轻人的追新猎奇，但其实是他计划的一部分：强迫自己的门徒投票，好让他们认清选举不过是一场骗人的闹剧。</p>
+        <p>“唯一有效的，”他说，“就是暴力。”</p>
+        <p>奥雷里亚诺的大多数朋友都为铲除保守秩序的念头所鼓舞，但没人敢拉他下水，这不仅因为他与里正的关系，也和他孤僻遁世的性格有关。</p>
+        <p>另外众所周知，他在岳父的授意下投了蓝色选票。</p>
+        <p>因此他表露自己的政治态度纯属偶然，为不存在的病痛去求诊更是完全出于一时的好奇心。</p>
+        <p>猪圈般的陋室里蛛网横斜，樟脑味扑鼻，他见到的是一个浑身灰尘颇似蜥蜴的人，喘息间肺里呼啸作响。</p>
+        <p>医生一言不发，先把他领到窗前，检查下眼睑。</p>
+        <p>“不是这里。”</p>
+        <p>奥雷里亚诺按照人家事先所教的说道。</p>
+        <p>他用指尖按住肝部，加了一句：“是这里疼得让我睡不着觉。”</p>
+        <p>于是阿利黎奥·诺格拉医生推说阳光太强，关上了窗，随即向他简洁地解说为什么刺杀保守派是一种爱国行为。</p>
+        <p>连续几天奥雷里亚诺都在衬衣兜里揣着小药瓶，每两个小时取出一次，倒出三粒药丸在手上，然后放进嘴里慢慢含服。</p>
+        <p>堂阿波利纳尔·摩斯科特嘲笑他竟信任顺势疗法，但那些知情人都把他当成又一个加入的同伴。</p>
+        <p>几乎所有建村元老的儿子都参与其中，但没人知晓他们所酝酿的行动的具体内容。</p>
+        <p>然而有一天医生向奥雷里亚诺吐露了秘密，他终于弄清了密谋的详情。</p>
+        <p>虽然当时他确信铲除保守党政权刻不容缓，但这一计划仍令他不寒而栗。</p>
+        <p>阿利黎奥·诺格拉医生是个信奉个人暗杀的狂热分子，他的方案可归纳如下：将一系列个人行动汇成一次全国范围内的总攻，铲除当局官员及其亲属，特别是孩子，以达到将保守主义斩草除根的目的。</p>
+        <p>堂阿波利纳尔·摩斯科特，他的妻子和六个女儿，自然全在目标之列。</p>
+        <p>“您不是什么自由派，您什么派也不是，”奥雷里亚诺波澜不惊地对他说道，“您就是一个屠夫。”</p>
+        <p>“这样的话，”医生同样平静地回答，“把药瓶还给我。你不再需要了。”</p>
+        <p>六个月后，奥雷里亚诺才得知医生当时曾宣布他已无可救药，说他性格被动、生性孤僻，是个感情用事、没有前途的家伙。</p>
+        <p>他们担心他会泄密，试图困住他。</p>
+        <p>奥雷里亚诺打消了他们的顾虑：他不会说出一个字，但在刺杀摩斯科特一家的晚上，他们将会看见他守在门口。</p>
+        <p>他表现出不容置疑的决心，那计划只得无限期推延。</p>
+        <p>就在这段日子里，乌尔苏拉询问他对皮埃特罗·克雷斯皮和阿玛兰妲成亲的意见，他于是回答说现在不是谈婚论嫁的时候。</p>
+        <p>从一个星期前开始，他就在衬衣下藏着一把老式手枪，并监视着自己的朋友们。</p>
+        <p>每天下午他与何塞·阿尔卡蒂奥和丽贝卡喝咖啡—他们的家开始有些样子了—从七点起跟岳父玩多米诺骨牌。</p>
+        <p>午饭时他会与阿尔卡蒂奥聊天，后者已经长成一个身材魁伟的少年，因战争的迫近越来越兴奋。</p>
+        <p>在学校里，比阿尔卡蒂奥还要年长的学生跟刚学会说话的孩子混在一起，自由派的激情在那里传播开来。</p>
+        <p>他们谈论着枪毙尼卡诺尔神甫，将教堂改成学校，实现自由恋爱。</p>
+        <p>奥雷里亚诺试图抑制他的狂热，劝他要小心谨慎。</p>
+        <p>阿尔卡蒂奥听不进他冷静的说理和对现实的客观估计，当众斥责他性格软弱。</p>
+        <p>奥雷里亚诺等待着。</p>
+        <p>终于，在十二月初，乌尔苏拉惊慌失措地冲进作坊。</p>
+        <p>“开战了！”</p>
+        <p>实际上，战争三个月前就开始了。</p>
+        <p>整个国家都进入戒严状态。</p>
+        <p>唯一及时获悉情况的人是堂阿波利纳尔·摩斯科特，但他连自己妻子都没告诉，直到一支小部队突然赶到控制了镇子。</p>
+        <p>他们用骡子拖着两门轻型炮，在拂晓前悄无声息地入驻，把军营扎在学校。</p>
+        <p>下午六点开始实施戒严。</p>
+        <p>这次搜查比前次更加严格，挨家挨户连农具也没收了。</p>
+        <p>他们把阿利黎奥·诺格拉医生拖出来，绑在广场上的一棵树上，未经审判就地枪毙。</p>
+        <p>尼卡诺尔神甫试图凭借腾空的神迹令军方折服，结果一个士兵用枪托给了他一下，打破了他的脑袋。</p>
+        <p>自由派的群情汹涌在无声的恐惧中沉寂。</p>
+        <p>奥雷里亚诺面色苍白，沉默寡言，继续和岳父玩牌戏。</p>
+        <p>他明白堂阿波利纳尔·摩斯科特尽管还拥有镇上军政首领的头衔，实际上又一次沦为傀儡。</p>
+        <p>所有决策都由一位上尉作出，他的部队每天都要征收一笔特殊的治安税。</p>
+        <p>在他的命令下，四个士兵把一个被疯狗咬过的女人从家中强拖出来，当街用枪托活活打死。</p>
+        <p>军事占领两星期后的一个星期天，奥雷里亚诺走进赫里内勒多·马尔克斯家，像往常一样从容地要了杯不加糖的咖啡。</p>
+        <p>只剩下他们两人在厨房里时，奥雷里亚诺的声音里平添了一种此前从未有过的权威。</p>
+        <p>“叫小伙子们准备好，”他说，“我们要开战了。”</p>
+        <p>赫里内勒多·马尔克斯无法相信。</p>
+        <p>“用什么武器呢？”他问。</p>
+        <p>“用他们的。”奥雷里亚诺回答。</p>
+        <p>星期二午夜，在一次近乎疯狂的行动中，二十一个不到三十岁、用餐刀和尖铁棍武装起来的男子由奥雷里亚诺·布恩迪亚率领，奇袭军营，缴获武器，并在院中将上尉和四个杀害那女人的凶手枪毙。</p>
+        <p>当夜，在行刑枪声响起的同时，阿尔卡蒂奥被任命为镇上的军政首领。</p>
+        <p>那些已成家的起义者甚至没有时间与妻子告别，只能任由她们从此自生自灭。</p>
+        <p>黎明时，在摆脱了恐惧的镇民的欢呼声中，他们出发去投奔革命军将领维多利奥·梅迪纳，据最新消息说他的队伍正在马纳乌雷一带活动。</p>
+        <p>出发前，奥雷里亚诺把堂阿波利纳尔·摩斯科特从衣柜里请了出来。</p>
+        <p>“您不用紧张，岳父，”他说，“新政府会保证您本人和您家人的安全。”</p>
+        <p>堂阿波利纳尔·摩斯科特很难将眼前脚踏高筒靴、肩挎步枪的阴谋家与晚上和他玩多米诺骨牌到九点的那个人联系起来。</p>
+        <p>“这真荒唐，奥雷里托！”他喊道。</p>
+        <p>“一点儿也不荒唐，”奥雷里亚诺回答，“这是战争。另外请不要再叫我奥雷里托，我现在是奥雷里亚诺·布恩迪亚上校。”</p>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { 
+            font: 1.0, dictEnabled: true, barHidden: true, highlightEnabled: true, 
+            syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 
+        };
+
+        const bar = document.getElementById('top-bar');
+        const enC = document.getElementById('en-container');
+        const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn');
+        const hlBtn = document.getElementById('hl-btn');
+        const syncBtn = document.getElementById('sync-btn');
+
+        function applyPrefs() {
+            enC.style.fontSize = prefs.font + 'em';
+            zhC.style.fontSize = prefs.font + 'em';
+            
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } 
+            else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+
+            if (prefs.dictEnabled) {
+                document.body.classList.add('dict-enabled');
+                dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('dict-enabled');
+                dictBtn.innerText = "查词: 关"; dictBtn.style.background = "#E5E5EA"; dictBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.highlightEnabled) {
+                document.body.classList.add('highlights-enabled');
+                hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff";
+            } else {
+                document.body.classList.remove('highlights-enabled');
+                hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "#E5E5EA"; hlBtn.style.color = "#1C1C1E";
+            }
+            if (prefs.syncEnabled) {
+                syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff";
+            } else {
+                syncBtn.innerText = "同步: 关"; syncBtn.style.background = "#E5E5EA"; syncBtn.style.color = "#1C1C1E";
+            }
+        }
+
+        document.addEventListener('dblclick', (e) => {
+            if(e.target.closest('#top-bar')) return;
+            prefs.barHidden = !prefs.barHidden;
+            applyPrefs();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            if(window.getSelection().toString().length > 0) return;
+        });
+
+        function adjustFont(delta) { prefs.font = Math.max(0.6, Math.min(2.0, prefs.font + delta)); applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+
+        let isProgrammaticScroll = false;
+        let scrollTimer;
+
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none';
+            let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block';
+            if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1;
+            let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none';
+            if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+
+        window.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY;
+            let heights = getHeights();
+            let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH);
+            let maxZH = Math.max(1, heights.hZH - viewportH);
+
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN;
+                prefs.posEN = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxZH / maxEN;
+                    prefs.posZH += delta * ratio;
+                    prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); 
+                }
+            } else {
+                let delta = currentY - prefs.posZH;
+                prefs.posZH = currentY;
+                if (prefs.syncEnabled) {
+                    let ratio = maxEN / maxZH;
+                    prefs.posEN += delta * ratio;
+                    prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN));
+                }
+            }
+
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            }, 300);
+        });
+
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') {
+                enC.style.display = 'none';
+                zhC.style.display = 'block';
+                prefs.currentLang = 'zh';
+                window.scrollTo(0, prefs.posZH);
+            } else {
+                zhC.style.display = 'none';
+                enC.style.display = 'block';
+                prefs.currentLang = 'en';
+                window.scrollTo(0, prefs.posEN);
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; }, 100);
+        }
+
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                let now = Date.now();
+                if (now - lastTwoFingerTap > 500) {
+                    switchLang();
+                    lastTwoFingerTap = now;
+                }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => { 
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' }); 
+                setTimeout(() => { isProgrammaticScroll = false; }, 50);
+            }, 50);
+        });
+
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; 
+            const cached = localStorage.getItem(cacheKey);
+            const now = Date.now();
+            if (cached) {
+                try {
+                    const {data, time} = JSON.parse(cached);
+                    if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { 
+                        highlightWords = new Set(data);
+                        applyHighlightsToDOM();
+                        return;
+                    }
+                } catch(e) {}
+            }
+            try {
+                const urls = [
+                    'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                    'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt'
+                ];
+                let text = '';
+                for (let u of urls) {
+                    try {
+                        const res = await fetch(u);
+                        if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; }
+                    } catch (err) {}
+                }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) {
+                    highlightWords = new Set(arr);
+                    localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now}));
+                    applyHighlightsToDOM();
+                }
+            } catch(e) {}
+        }
+
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => {
+                const word = span.textContent.trim().toLowerCase();
+                if(highlightWords.has(word)) span.classList.add('is-highlight');
+            });
+        }
+
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+
+        (function() {
+            const ttsConfig = {
+                voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"],
+                apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ]
+            };
+
+            let globalResultCache = GM_getValue('tm_dict_cache', {});
+            let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) {
+                globalResultCache[wordKey] = resultData;
+                const keys = Object.keys(globalResultCache);
+                if (keys.length > 2000) delete globalResultCache[keys[0]]; 
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500);
+            }
+
+            let cefrStaticCache = {}; 
+            function initCEFRStaticDict() {
+                fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json")
+                .then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{});
+            }
+
+            function fetchCEFR(word) {
+                return new Promise((resolve) => {
+                    const w = word.toLowerCase();
+                    if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } 
+                    GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) });
+                });
+            }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+
+            let globalAudioPlayer = null;
+            let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play();
+                if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(node) {
+                        const parent = node.parentNode;
+                        if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT;
+                        if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT;
+                        if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data;
+                let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) {
+                    html += `<div class="dict-details">`;
+                    entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; });
+                    html += `</div>`;
+                } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`; 
+                return html;
+            }
+
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]); 
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                initCEFRStaticDict();
+                if(enC) wrapTextNodesToWord(enC);
+                setupTippyDelegate();
+                initCloudHighlights(); 
+            }, 500);
+        })();
+    </script>
+</body>
+</html>
