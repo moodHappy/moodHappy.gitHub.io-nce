@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 6</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* ====== 动态主题注入 ====== */
+        :root {
+            --bg-color: #FDF6E3; --text-color: #4A4A4A; --border-color: #E6D5B8; --h1-color: #3C352D; --bar-bg: rgba(253,246,227,0.95); --btn-bg: #EAE0C8; --btn-text: #4A4A4A;
+        }
+        
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: var(--bg-color); color: var(--text-color); }
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; color: var(--h1-color); }
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        /* 顶部导航栏 */
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: var(--bar-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid var(--border-color); padding: 8px 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        
+        /* 断句及拆分模式 CSS (默认合并，拆分状态下散开) */
+        .sent-block { display: inline; margin-bottom: 0; }
+        body.is-split .sent-block { display: block; margin-bottom: 1.0em; }
+        body.is-split .sent-block:last-child { margin-bottom: 0; }
+        
+        /* 底部阅读进度条 */
+        #reading-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: linear-gradient(90deg, #34C759, #32D74B); width: 0%; transition: width 0.15s ease-out; border-radius: 0 2px 2px 0; }
+        
+        .reader-btn { background: var(--btn-bg); color: var(--btn-text); border: none; padding: 6px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .reader-btn:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.02); }
+        .content-layer { width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.08); border-radius: 4px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: all 0.2s ease; border-radius: 4px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; box-shadow: 0 1px 4px rgba(21,101,192,0.1); }
+        
+        .tippy-box[data-theme~='light-border'] { background-color: #ffffff; color: #333; border: 1px solid #E5E5EA; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .tippy-content { padding: 10px; }
+        
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #2C3E50; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #F0F0F0; padding-bottom: 8px; margin-bottom: 8px; }
+        .dict-word-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .dict-head-word { font-weight: 800; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { color: #546E7A; font-size: 24px; background: #ECEFF1; padding: 2px 6px; border-radius: 6px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 4px; border-radius: 50%; transition: all 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); transform: scale(1.1); }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        
+        .dict-tags-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 600; }
+        .dict-tag.star-tag { color: #D97706; background: #FEF3C7; border-color: #FDE68A; }
+        .dict-basic-trans { font-size: 30px; color: #374151; margin-top: 8px; font-weight: 500; }
+        .dict-pos-block { margin-bottom: 8px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 8px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; color: #4B5563; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "； "; color: #9CA3AF; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #6B7280; font-style: italic; font-size: 24px; padding: 12px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled is-split">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button id="split-btn" class="reader-btn" style="background:#FF9500; color:#fff;" onclick="toggleSplit()">拆分: 开</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+        <div id="reading-progress"></div>
+    </div>
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 6</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/25 12:41:56</div>
+        <p>- the little prince and the narrator talk about sunsets</p>
+        <p class="split-para"><span class="sent-block">oh, little prince!</span> <span class="sent-block">bit by bit i came to understand the secrets of your sad little life… for a long time you had found your only entertainment in the quiet pleasure of looking at the sunset.</span> <span class="sent-block">i learned that new detail on the morning of the fourth day, w hen you said to me:</span></p>
+        <p>"i am very fond of sunsets. come, let us go look at a sunset now."</p>
+        <p>"but we must wait," i said.</p>
+        <p>"wait? for what?"</p>
+        <p>"for the sunset. we must wait until it is time."</p>
+        <p>at first you seemed to be very much surprised. and then you laughed to yourself. you said to me:</p>
+        <p>"i am always thinking that i am at home!"</p>
+        <p>just so. everybody knows that when it is noon in the united states the sun is setting over france.</p>
+        <p class="split-para"><span class="sent-block">if you could fly to france in one minute, you could go straight into the sunset, right from noon.</span> <span class="sent-block">unfortunately, france is too far away for that.</span> <span class="sent-block">but on your tiny placom, my little prince, all you need do is move your chair a few steps.</span> <span class="sent-block">you can see the day end and the twilight falling whenever you like…</span></p>
+        <p>"one day," you said to me, "i saw the sunset forty-four times!"</p>
+        <p>and a little later you added:</p>
+        <p>"you know-- one loves the sunset, when one is so sad…"</p>
+        <p>"were you so sad, then?" i asked, "on the day of the forty-four sunsets?"</p>
+        <p>but the little prince made no reply.</p>
+    </div>
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">第六章</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/25 12:41:56</div>
+        <p>哦，小王子！我开始逐渐认识到你忧伤生活的奥秘……有很长一段时间，你发现自己的惟一乐趣就是静静地观看落日。这一新细节是第四天早上你告诉我之后我才得知的：</p>
+        <p>“我特别喜欢看落日。来，现在我们就去看夕阳吧！”</p>
+        <p>“但我们必须等。”我说。</p>
+        <p>“等？等什么？”</p>
+        <p>“等日头落山。我们必须等到那时候。”</p>
+        <p>一开始，你对我的话似乎非常吃惊。接着，你便自我解嘲般地笑起来。你对我说：</p>
+        <p>“我老是觉得自己在家里！”</p>
+        <p>是啊，大家都知道，美国正午时，法国却处在黄昏时分。</p>
+        <p>如果你能在一分钟之内飞到法国，就可以在美国的正午时分直接看到日落。遗憾的是，法国离美国实在太远。但是，我的小王子，在你那微小的星球上，你只用将坐椅挪几步就可以做到。</p>
+        <p>只要你愿意，可以随时看到白昼结束、夜幕降临。</p>
+        <p>你对我说：“有一天，我看到了44次落日……！”</p>
+        <p>过了一会儿，你又说：</p>
+        <p>“你知道，人在忧伤时喜欢看落日……”</p>
+        <p>“看了44次落日，当时你就那么忧伤？”</p>
+        <p>但小王子没有回答。</p>
+    </div>
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { splitEnabled: true, dictEnabled: true, barHidden: true, highlightEnabled: true, syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 };
+        if (prefs.splitEnabled === undefined) prefs.splitEnabled = true; // 兼容旧版本缓存
+        
+        const bar = document.getElementById('top-bar'); const enC = document.getElementById('en-container'); const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn'); const hlBtn = document.getElementById('hl-btn'); const syncBtn = document.getElementById('sync-btn');
+        const splitBtn = document.getElementById('split-btn');
+        const progressBar = document.getElementById('reading-progress');
+        
+        function applyPrefs() {
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+            if (prefs.dictEnabled) { document.body.classList.add('dict-enabled'); dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff"; } else { document.body.classList.remove('dict-enabled'); dictBtn.innerText = "查词: 关"; dictBtn.style.background = "var(--btn-bg)"; dictBtn.style.color = "var(--btn-text)"; }
+            if (prefs.highlightEnabled) { document.body.classList.add('highlights-enabled'); hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff"; } else { document.body.classList.remove('highlights-enabled'); hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "var(--btn-bg)"; hlBtn.style.color = "var(--btn-text)"; }
+            if (prefs.syncEnabled) { syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff"; } else { syncBtn.innerText = "同步: 关"; syncBtn.style.background = "var(--btn-bg)"; syncBtn.style.color = "var(--btn-text)"; }
+            if (prefs.splitEnabled) { document.body.classList.add('is-split'); if(splitBtn){ splitBtn.innerText = "拆分: 开"; splitBtn.style.background = "#FF9500"; splitBtn.style.color = "#fff"; } } else { document.body.classList.remove('is-split'); if(splitBtn){ splitBtn.innerText = "拆分: 关"; splitBtn.style.background = "var(--btn-bg)"; splitBtn.style.color = "var(--btn-text)"; } }
+        }
+        
+        document.addEventListener('dblclick', (e) => { if(e.target.closest('#top-bar')) return; prefs.barHidden = !prefs.barHidden; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); if(window.getSelection().toString().length > 0) return; });
+        function toggleSplit() { prefs.splitEnabled = !prefs.splitEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); setTimeout(updateProgress, 100); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        
+        let isProgrammaticScroll = false; let scrollTimer;
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none'; let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block'; if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1; let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none'; if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+        
+        function updateProgress() {
+            let maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            let percent = maxScroll > 0 ? (window.scrollY / maxScroll) * 100 : 0;
+            progressBar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+        }
+
+        window.addEventListener('scroll', () => {
+            updateProgress();
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY; let heights = getHeights(); let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH); let maxZH = Math.max(1, heights.hZH - viewportH);
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN; prefs.posEN = currentY;
+                if (prefs.syncEnabled) { let ratio = maxZH / maxEN; prefs.posZH += delta * ratio; prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); }
+            } else {
+                let delta = currentY - prefs.posZH; prefs.posZH = currentY;
+                if (prefs.syncEnabled) { let ratio = maxEN / maxZH; prefs.posEN += delta * ratio; prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN)); }
+            }
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }, 300);
+        });
+        
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') { enC.style.display = 'none'; zhC.style.display = 'block'; prefs.currentLang = 'zh'; window.scrollTo(0, prefs.posZH); } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; prefs.currentLang = 'en'; window.scrollTo(0, prefs.posEN); }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; updateProgress(); }, 100);
+        }
+        
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) { let now = Date.now(); if (now - lastTwoFingerTap > 500) { switchLang(); lastTwoFingerTap = now; } }
+        });
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => {
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' });
+                setTimeout(() => { isProgrammaticScroll = false; updateProgress(); }, 50);
+            }, 50);
+        });
+        
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; const cached = localStorage.getItem(cacheKey); const now = Date.now();
+            if (cached) { try { const {data, time} = JSON.parse(cached); if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { highlightWords = new Set(data); applyHighlightsToDOM(); return; } } catch(e) {} }
+            try {
+                const urls = [ 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt', 'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt', 'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt' ];
+                let text = '';
+                for (let u of urls) { try { const res = await fetch(u); if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; } } catch (err) {} }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) { highlightWords = new Set(arr); localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now})); applyHighlightsToDOM(); }
+            } catch(e) {}
+        }
+        
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => { const word = span.textContent.trim().toLowerCase(); if(highlightWords.has(word)) span.classList.add('is-highlight'); });
+        }
+        
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+        
+        (function() {
+            const ttsConfig = { voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"], apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ] };
+            let globalResultCache = GM_getValue('tm_dict_cache', {}); let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) { globalResultCache[wordKey] = resultData; const keys = Object.keys(globalResultCache); if (keys.length > 2000) delete globalResultCache[keys[0]]; clearTimeout(saveTimeout); saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500); }
+            
+            let cefrStaticCache = {};
+            function initCEFRStaticDict() { fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json").then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{}); }
+            function fetchCEFR(word) { return new Promise((resolve) => { const w = word.toLowerCase(); if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+            
+            let globalAudioPlayer = null; let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play(); if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+            
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, { acceptNode: function(node) { const parent = node.parentNode; if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT; if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT; if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT; return NodeFilter.FILTER_ACCEPT; } });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+            
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data; let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) { html += `<div class="dict-details">`; entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; }); html += `</div>`; } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`;
+                return html;
+            }
+            
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]);
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+            
+            setTimeout(() => { initCEFRStaticDict(); if(enC) wrapTextNodesToWord(enC); setupTippyDelegate(); initCloudHighlights(); }, 500);
+        })();
+    </script>
+</body>
+</html>

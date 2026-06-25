@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 21</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* ====== 动态主题注入 ====== */
+        :root {
+            --bg-color: #FDF6E3; --text-color: #4A4A4A; --border-color: #E6D5B8; --h1-color: #3C352D; --bar-bg: rgba(253,246,227,0.95); --btn-bg: #EAE0C8; --btn-text: #4A4A4A;
+        }
+        
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: var(--bg-color); color: var(--text-color); }
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; color: var(--h1-color); }
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        /* 顶部导航栏 */
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: var(--bar-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid var(--border-color); padding: 8px 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        
+        /* 断句及拆分模式 CSS (默认合并，拆分状态下散开) */
+        .sent-block { display: inline; margin-bottom: 0; }
+        body.is-split .sent-block { display: block; margin-bottom: 1.0em; }
+        body.is-split .sent-block:last-child { margin-bottom: 0; }
+        
+        /* 底部阅读进度条 */
+        #reading-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: linear-gradient(90deg, #34C759, #32D74B); width: 0%; transition: width 0.15s ease-out; border-radius: 0 2px 2px 0; }
+        
+        .reader-btn { background: var(--btn-bg); color: var(--btn-text); border: none; padding: 6px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .reader-btn:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.02); }
+        .content-layer { width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.08); border-radius: 4px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: all 0.2s ease; border-radius: 4px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; box-shadow: 0 1px 4px rgba(21,101,192,0.1); }
+        
+        .tippy-box[data-theme~='light-border'] { background-color: #ffffff; color: #333; border: 1px solid #E5E5EA; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .tippy-content { padding: 10px; }
+        
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #2C3E50; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #F0F0F0; padding-bottom: 8px; margin-bottom: 8px; }
+        .dict-word-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .dict-head-word { font-weight: 800; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { color: #546E7A; font-size: 24px; background: #ECEFF1; padding: 2px 6px; border-radius: 6px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 4px; border-radius: 50%; transition: all 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); transform: scale(1.1); }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        
+        .dict-tags-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 600; }
+        .dict-tag.star-tag { color: #D97706; background: #FEF3C7; border-color: #FDE68A; }
+        .dict-basic-trans { font-size: 30px; color: #374151; margin-top: 8px; font-weight: 500; }
+        .dict-pos-block { margin-bottom: 8px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 8px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; color: #4B5563; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "； "; color: #9CA3AF; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #6B7280; font-style: italic; font-size: 24px; padding: 12px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled is-split">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button id="split-btn" class="reader-btn" style="background:#FF9500; color:#fff;" onclick="toggleSplit()">拆分: 开</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+        <div id="reading-progress"></div>
+    </div>
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 21</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/25 12:41:56</div>
+        <p>- the little prince befriends the fox</p>
+        <p>it was then that the fox appeared.</p>
+        <p>"good morning," said the fox.</p>
+        <p>"good morning," the little prince responded politely, although when he turned around he saw nothing.</p>
+        <p>"i am right here," the voice said, "under the apple tree."</p>
+        <p>"who are you?" asked the little prince, and added, "you are very pretty to look at."</p>
+        <p>"i am a fox," said the fox.</p>
+        <p>"come and play with me," proposed the little prince. "i am so unhappy."</p>
+        <p>"i cannot play with you," the fox said. "i am not tamed."</p>
+        <p>"ah! please excuse me," said the little prince.</p>
+        <p>but, after some thought, he added:</p>
+        <p>"what does that mean-- &#39;tame&#39;?"</p>
+        <p>"you do not live here," said the fox. "what is it that you are looking for?"</p>
+        <p>"i am looking for men," said the little prince. "what does that mean-- &#39;tame&#39;?"</p>
+        <p>"men," said the fox. "they have guns, and they hunt. it is very disturbing. they also raise chickens. these are their only interests. are you looking for chickens?"</p>
+        <p>"no," said the little prince. "i am looking for friends. what does that mean-- &#39;tame&#39;?"</p>
+        <p>"it is an act too often neglected," said the fox. it means to establish ties."</p>
+        <p>"&#39;to establish ties&#39;?"</p>
+        <p class="split-para"><span class="sent-block">"just that," said the fox.</span> <span class="sent-block">"to me, you are still nothing more than a little boy who is just like a hundred thousand other little boys.</span> <span class="sent-block">and i have no need of you.</span> <span class="sent-block">and you, on your part, have no need of me.</span> <span class="sent-block">to you, i am nothing more than a fox like a hundred thousand other foxes.</span> <span class="sent-block">but if you tame me, then we shall need each other.</span> <span class="sent-block">to me, you will be unique in all the world.</span> <span class="sent-block">to you, i shall be unique in all the world…"</span></p>
+        <p>"i am beginning to understand," said the little prince. "there is a flower… i think that she has tamed me…"</p>
+        <p>"it is possible," said the fox. "on the earth one sees all sorts of things."</p>
+        <p>"oh, but this is not on the earth!" said the little prince.</p>
+        <p>the fox seemed perplexed, and very curious.</p>
+        <p>"on another placom?"</p>
+        <p>"yes."</p>
+        <p>"are there hunters on this placom?"</p>
+        <p>"no."</p>
+        <p>"ah, that is interesting! are there chickens?"</p>
+        <p>"no."</p>
+        <p>"nothing is perfect," sighed the fox.</p>
+        <p>but he came back to his idea.</p>
+        <p class="split-para"><span class="sent-block">"my life is very monotonous," the fox said.</span> <span class="sent-block">"i hunt chickens; men hunt me.</span> <span class="sent-block">all the chickens are just alike, and all the men are just alike.</span> <span class="sent-block">and, in consequence, i am a little bored.</span> <span class="sent-block">but if you tame me, it will be as if the sun came to shine on my life .</span> <span class="sent-block">i shall know the sound of a step that will be different from all the others.</span> <span class="sent-block">other steps send me hurrying back underneath the ground.</span> <span class="sent-block">yours will call me, like music, out of my burrow.</span> <span class="sent-block">and then look: you see the grain-fields down yonder?</span> <span class="sent-block">i do not ea t bread.</span> <span class="sent-block">wheat is of no use to me.</span> <span class="sent-block">the wheat fields have nothing to say to me.</span> <span class="sent-block">and that is sad.</span> <span class="sent-block">but you have hair that is the colour of gold.</span> <span class="sent-block">think how wonderful that will be when you have tamed me!</span> <span class="sent-block">the grain, which is also golden, will bring me bac k the thought of you.</span> <span class="sent-block">and i shall love to listen to the wind in the wheat…"</span></p>
+        <p>the fox gazed at the little prince, for a long time.</p>
+        <p>"please-- tame me!" he said.</p>
+        <p>"i want to, very much," the little prince replied. "but i have not much time. i have friends to discover, and a great many things to understand."</p>
+        <p class="split-para"><span class="sent-block">"one only understands the things that one tames," said the fox.</span> <span class="sent-block">"men have no more time to understand anything.</span> <span class="sent-block">they buy things all ready made at the shops.</span> <span class="sent-block">but there is no shop anywhere where one can buy friendship, and so men have no friends any more.</span> <span class="sent-block">if you want a friend, tame me…"</span></p>
+        <p>"what must i do, to tame you?" asked the little prince.</p>
+        <p class="split-para"><span class="sent-block">"you must be very patient," replied the fox.</span> <span class="sent-block">"first you will sit down at a little distance from me-- like that-- in the grass.</span> <span class="sent-block">i shall look at you out of the corner of my eye, and you will say nothing.</span> <span class="sent-block">words are the source of misunderstandings.</span> <span class="sent-block">but yo u will sit a little closer to me, every day…"</span></p>
+        <p>the next day the little prince came back.</p>
+        <p class="split-para"><span class="sent-block">"it would have been better to come back at the same hour," said the fox.</span> <span class="sent-block">"if, for example, you come at four o&#39;clock in the afternoon, then at three o&#39;clock i shall begin to be happy.</span> <span class="sent-block">i shall feel happier and happier as the hour advances.</span> <span class="sent-block">at four o&#39;clock, i shall already be worrying and jumping about.</span> <span class="sent-block">i shall show you how happy i am!</span> <span class="sent-block">but if you come at just any time, i shall never know at what hour my heart is to be ready to greet you… one must observe the proper rites…"</span></p>
+        <p>"what is a rite?" asked the little prince.</p>
+        <p class="split-para"><span class="sent-block">"those also are actions too often neglected," said the fox.</span> <span class="sent-block">"they are what make one day different from other days, one hour from other hours.</span> <span class="sent-block">there is a rite, for example, among my hunters.</span> <span class="sent-block">every thursday they dance with the village girls.</span> <span class="sent-block">so thursday is a wonderful day for me!</span> <span class="sent-block">i can take a walk as far as the vineyards.</span> <span class="sent-block">but if the hunters danced at just any time, every day would be like every other day, and i should never have any vacation at all."</span></p>
+        <p>so the little prince tamed the fox. and when the hour of his departure drew near--</p>
+        <p>"ah," said the fox, "i shall cry."</p>
+        <p>"it is your own fault," said the little prince. "i never wished you any sort of harm; but you wanted me to tame you…"</p>
+        <p>"yes, that is so," said the fox.</p>
+        <p>"but now you are going to cry!" said the little prince.</p>
+        <p>"yes, that is so," said the fox.</p>
+        <p>"then it has done you no good at all!"</p>
+        <p>"it has done me good," said the fox, "because of the color of the wheat fields." and then he added:</p>
+        <p>"go and look again at the roses. you will understand now that yours is unique in all the world. then come back to say goodbye to me, and i will make you a present of a secret."</p>
+        <p>the little prince went away, to look again at the roses.</p>
+        <p class="split-para"><span class="sent-block">"you are not at all like my rose," he said.</span> <span class="sent-block">"as yet you are nothing.</span> <span class="sent-block">no one has tamed you, and you have tamed no one.</span> <span class="sent-block">you are like my fox when i first knew him.</span> <span class="sent-block">he was only a fox like a hundred thousand other foxes.</span> <span class="sent-block">but i have made him my friend, and now he is unique in all the world."</span></p>
+        <p>and the roses were very much embarrassed.</p>
+        <p class="split-para"><span class="sent-block">"you are beautiful, but you are empty," he went on.</span> <span class="sent-block">"one could not die for you.</span> <span class="sent-block">to be sure, an ordinary passerby would think that my rose looked just like you-- the rose that belongs to me.</span> <span class="sent-block">but in herself alone she is more important than all the hundreds of you other roses: because it is she that i have watered; because it is she that i have put under the glass globe; because it is she that i have sheltered behind the screen; because it is for her that i have killed the caterpillars (except the two or three that we saved to become butterflies); because it is she that i have listened to, when she grumbled, or boasted, or even sometimes when she said nothing.</span> <span class="sent-block">because she is my rose.</span></p>
+        <p>and he went back to meet the fox.</p>
+        <p>"goodbye," he said.</p>
+        <p>"goodbye," said the fox. "and now here is my secret, a very simple secret: it is only with the heart that one can see rightly; what is essential is invisible to the eye."</p>
+        <p>"what is essential is invisible to the eye," the little prince repeated, so that he would be sure to remember.</p>
+        <p>"it is the time you have wasted for your rose that makes your rose so important."</p>
+        <p>"it is the time i have wasted for my rose--" said the little prince, so that he would be sure to remember.</p>
+        <p>"men have forgotten this truth," said the fox. "but you must not forget it. you become responsible, forever, for what you have tamed. you are responsible for your rose…"</p>
+        <p>"i am responsible for my rose," the little prince repeated, so that he would be sure to remember.</p>
+    </div>
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">第二十一章</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/25 12:41:56</div>
+        <p>正在眼里，狐狸出现了。</p>
+        <p>“早上好！”狐狸打着招呼。</p>
+        <p>“早上好！”尽管环顾四周什么也没看见，小王子还是礼貌地答应着。</p>
+        <p>“我就在苹果树下面”那个声音说。</p>
+        <p>“你是谁呀？”小王子问着，又说，“你真好看。”</p>
+        <p>“我是一只狐狸。”狐狸说。</p>
+        <p>“过来陪我玩吧！”小王子提议，“我很不开心。”</p>
+        <p>“我不能陪你玩，”狐狸说，“我还没有被驯服呢！”</p>
+        <p>“是吗！对不起！”小王子说。</p>
+        <p>不过，他想了想，又说：“‘驯服’——是什么意思？”</p>
+        <p>“你不是本地人，”狐狸说。“你在找什么？”</p>
+        <p>“我在找人，”小王子说，“‘驯服’——是什么意思？”</p>
+        <p>“人？”狐狸问，“他们有枪，而且还打猎，真让人讨厌。他们还养鸡，他们只有这点爱好了。你在找鸡吗？”</p>
+        <p>“不是，”小王子说，“我在找朋友。‘驯服’——是什么意思？”</p>
+        <p>“‘驯服’是一种很不被重视的行为，”狐狸说，“它的意思就是建立联系。”</p>
+        <p>“建立联系？”</p>
+        <p>“仅此而已，”狐狸说，“对我来说，你现在仍然只是个小男孩，和无数其他小男孩没什么两样。我不需要你。就你而言，你也不需要我。对你来说，我不过是一只狐狸，和无数其他狐狸也没什么两样。但是，如果你驯服了我，我们彼此就需要对方了。对我来说，你在这个世界上是惟一的人；而对你来说，我也是这个世界上惟一的狐狸……”</p>
+        <p>“我有点懂了，”小王子说，“有一朵花……我想它把我驯服了……”</p>
+        <p>“这有可能，”狐狸说，“地球上任何事都有可能看到。”</p>
+        <p>“是啊，不过我们不在地球上！”小王子说。</p>
+        <p>狐狸似乎很不解，而且非常好奇。</p>
+        <p>“难道在另一个星球上？”</p>
+        <p>“是的。”</p>
+        <p>“在那个星球上有猎人吗？”</p>
+        <p>“没有。”</p>
+        <p>“哦，真有意思！那儿有鸡吗？”</p>
+        <p>“也没有。”</p>
+        <p>“什么都没有最好。”狐狸长叹一声。</p>
+        <p>不过，它的思维又回到了眼前。</p>
+        <p class="split-para"><span class="sent-block">“我的生活十分单调，”狐狸说，“我逮鸡，人逮我。</span><span class="sent-block">所有的鸡都一样，所有的人也没什么区别。</span><span class="sent-block">所以我有些厌烦。</span><span class="sent-block">不过，如果你驯服了我，我的生活就会艳阳高照。</span><span class="sent-block">我将能辨别出与所有其他人的脚步声都不一样的脚步声。</span><span class="sent-block">别人的脚步使我赶忙躲到地下去，而你的脚步声则像音乐一样，将我从洞穴里唤出来。</span><span class="sent-block">对了，你看到那边的麦田没有？</span><span class="sent-block">我不吃面包，麦子对我毫无用处，麦田与我毫不相干。</span><span class="sent-block">这真让人伤心。</span><span class="sent-block">不过，你有一头金色的头发。</span><span class="sent-block">想一想，如果你已经驯服了我，那是多少美妙的事情啊！</span><span class="sent-block">麦子也是金黄色，它会让我想起你。</span><span class="sent-block">我甚至喜欢倾听风吹麦浪的声音……”</span></p>
+        <p>狐狸盯着小王子看了很久。</p>
+        <p>“请你驯服我！”他说。</p>
+        <p>“我很想驯服你，”小王子回答，“但我没有多少时间。我要去找朋友，还要了解许多事情。”</p>
+        <p>“只用了解自己驯服的事物就行了，”狐狸说，“人没有更多时间了解任何事物，他们到商店里去买现成的东西。但是，世上找不到能购买友谊的商店，所以人也就没有朋友。如果你想有个朋友，就驯服我吧……”</p>
+        <p>“要想驯服你，我应该怎么做？”小王子问。</p>
+        <p>“你必须很有耐心才行，”狐狸答道，“一开始，你就像现在这样坐在草地上，和我保持一点距离。我会斜着眼睛看你，而你什么都不说。语言是产生误解的根源。不过，你坐的位置每天都要向我靠近一点……”</p>
+        <p>第二天，小王子又来了。</p>
+        <p>“你最好在同一时间来，”狐狸说，“比如说，如果你下午4点钟来，那么，我在3点钟就开始觉得幸福。时间越迫近，我就越来越觉得幸福。到4点时，我应该已经焦躁不安、上窜下跳了。我将让你看到我是多么幸福！但是，如果你来的时间捉摸不定，我就永远不知道怎样做好心理准备迎候你……我们应该看到适当的仪式……”</p>
+        <p>“什么是仪式？”小王子问。</p>
+        <p>“仪式也是一种很不被重视的行为，”狐狸说，“仪式能使我们的某一天、某一时刻显得与众不同。譬如，我的猎人们就有一种仪式。他们每周四都要和村里的姑娘跳舞。这样一来，周四对我来说就是个美好的日子了！我可以一直散步到葡萄园。但是，如果猎人跳舞的时间捉摸不定，每一天和其他一天没什么区别，那我就永远也不得安生。”</p>
+        <p>于是小王子驯服了狐狸。当他出发的时间越来越迫近时——</p>
+        <p>“哦，”狐狸说，“我会哭的。”</p>
+        <p>“那是你的问题，”小王子说，“我根本不希望你受到半点伤害；而你却希望我驯服你……”</p>
+        <p>“是的，是这样！”狐狸说。</p>
+        <p>“但你现在却要哭了！”小王子说。</p>
+        <p>“是的，是这样！”狐狸说。</p>
+        <p>“但你没有得到任何好处！”</p>
+        <p>“我已经得到了好处，”狐狸说，“从麦田的颜色上。”他随后又补充道，“再来看看玫瑰花吧。现在你会发现，你的花是世上独一无二的花。然后你才回来和我道别，我会把一个秘密当礼物送给你。”</p>
+        <p>小王子离开狐狸，再次去看那些玫瑰花。</p>
+        <p>“你们和我的玫瑰一点也不同，”他说，“眼下你们什么都不是。没有人驯服你们，你们也没有驯服任何人。你们就像我刚认识时的狐狸一样。当时他只是一只普普通通的狐狸，和所有其他狐狸没什么两样。但是，我已经和它交上了朋友，现在它是世上独一无二的了。”</p>
+        <p>玫瑰们非常难堪。</p>
+        <p>“你们很美，却很空洞，”他接着说，“没有人为你们去死。是的，平常的过客会认为我的玫瑰和你们一模一样——虽然那枝玫瑰属于我。但是，仅它一朵便比你们所有这些玫瑰重要。是我为它浇的水，是我为它罩上了玻璃罩，是我放置屏风为它遮风挡雨，是我为它杀死了毛毛虫（不过，我们留了两三条毛毛虫，让它们变成蝴蝶）。当它发牢骚、吹牛皮，甚至偶尔一言不发时，我都是它的听众。它是我的玫瑰花。”</p>
+        <p>看完玫瑰，小王子又回到狐狸身边。</p>
+        <p>“再见！”他说。</p>
+        <p>“再见！”狐狸说，“对了，这便是我的秘密，一个非常简单的秘密：只有用心去看，才能看得准；重要的东西眼睛是看不见的。”</p>
+        <p>“重要的东西眼睛是看不见的，”小王子重复着，以便能够牢记在心。</p>
+        <p>“正是你在那朵玫瑰上花费的时间，才使得你的玫瑰如此非凡。”</p>
+        <p>“正是我在那朵玫瑰上花费的时间……”小王子说着，以便够牢记在心。</p>
+        <p>“人们已经忘记了这条道理，”狐狸说，“但是你必须记住它。从现在起，你要永远对你驯服的事物负责。你要对你的玫瑰花负责……”</p>
+        <p>“我对我的玫瑰花负责。”小王子重复着，以便能够牢记在心。</p>
+    </div>
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { splitEnabled: true, dictEnabled: true, barHidden: true, highlightEnabled: true, syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 };
+        if (prefs.splitEnabled === undefined) prefs.splitEnabled = true; // 兼容旧版本缓存
+        
+        const bar = document.getElementById('top-bar'); const enC = document.getElementById('en-container'); const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn'); const hlBtn = document.getElementById('hl-btn'); const syncBtn = document.getElementById('sync-btn');
+        const splitBtn = document.getElementById('split-btn');
+        const progressBar = document.getElementById('reading-progress');
+        
+        function applyPrefs() {
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+            if (prefs.dictEnabled) { document.body.classList.add('dict-enabled'); dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff"; } else { document.body.classList.remove('dict-enabled'); dictBtn.innerText = "查词: 关"; dictBtn.style.background = "var(--btn-bg)"; dictBtn.style.color = "var(--btn-text)"; }
+            if (prefs.highlightEnabled) { document.body.classList.add('highlights-enabled'); hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff"; } else { document.body.classList.remove('highlights-enabled'); hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "var(--btn-bg)"; hlBtn.style.color = "var(--btn-text)"; }
+            if (prefs.syncEnabled) { syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff"; } else { syncBtn.innerText = "同步: 关"; syncBtn.style.background = "var(--btn-bg)"; syncBtn.style.color = "var(--btn-text)"; }
+            if (prefs.splitEnabled) { document.body.classList.add('is-split'); if(splitBtn){ splitBtn.innerText = "拆分: 开"; splitBtn.style.background = "#FF9500"; splitBtn.style.color = "#fff"; } } else { document.body.classList.remove('is-split'); if(splitBtn){ splitBtn.innerText = "拆分: 关"; splitBtn.style.background = "var(--btn-bg)"; splitBtn.style.color = "var(--btn-text)"; } }
+        }
+        
+        document.addEventListener('dblclick', (e) => { if(e.target.closest('#top-bar')) return; prefs.barHidden = !prefs.barHidden; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); if(window.getSelection().toString().length > 0) return; });
+        function toggleSplit() { prefs.splitEnabled = !prefs.splitEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); setTimeout(updateProgress, 100); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        
+        let isProgrammaticScroll = false; let scrollTimer;
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none'; let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block'; if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1; let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none'; if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+        
+        function updateProgress() {
+            let maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            let percent = maxScroll > 0 ? (window.scrollY / maxScroll) * 100 : 0;
+            progressBar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+        }
+
+        window.addEventListener('scroll', () => {
+            updateProgress();
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY; let heights = getHeights(); let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH); let maxZH = Math.max(1, heights.hZH - viewportH);
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN; prefs.posEN = currentY;
+                if (prefs.syncEnabled) { let ratio = maxZH / maxEN; prefs.posZH += delta * ratio; prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); }
+            } else {
+                let delta = currentY - prefs.posZH; prefs.posZH = currentY;
+                if (prefs.syncEnabled) { let ratio = maxEN / maxZH; prefs.posEN += delta * ratio; prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN)); }
+            }
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }, 300);
+        });
+        
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') { enC.style.display = 'none'; zhC.style.display = 'block'; prefs.currentLang = 'zh'; window.scrollTo(0, prefs.posZH); } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; prefs.currentLang = 'en'; window.scrollTo(0, prefs.posEN); }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; updateProgress(); }, 100);
+        }
+        
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) { let now = Date.now(); if (now - lastTwoFingerTap > 500) { switchLang(); lastTwoFingerTap = now; } }
+        });
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => {
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' });
+                setTimeout(() => { isProgrammaticScroll = false; updateProgress(); }, 50);
+            }, 50);
+        });
+        
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; const cached = localStorage.getItem(cacheKey); const now = Date.now();
+            if (cached) { try { const {data, time} = JSON.parse(cached); if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { highlightWords = new Set(data); applyHighlightsToDOM(); return; } } catch(e) {} }
+            try {
+                const urls = [ 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt', 'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt', 'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt' ];
+                let text = '';
+                for (let u of urls) { try { const res = await fetch(u); if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; } } catch (err) {} }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) { highlightWords = new Set(arr); localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now})); applyHighlightsToDOM(); }
+            } catch(e) {}
+        }
+        
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => { const word = span.textContent.trim().toLowerCase(); if(highlightWords.has(word)) span.classList.add('is-highlight'); });
+        }
+        
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+        
+        (function() {
+            const ttsConfig = { voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"], apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ] };
+            let globalResultCache = GM_getValue('tm_dict_cache', {}); let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) { globalResultCache[wordKey] = resultData; const keys = Object.keys(globalResultCache); if (keys.length > 2000) delete globalResultCache[keys[0]]; clearTimeout(saveTimeout); saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500); }
+            
+            let cefrStaticCache = {};
+            function initCEFRStaticDict() { fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json").then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{}); }
+            function fetchCEFR(word) { return new Promise((resolve) => { const w = word.toLowerCase(); if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+            
+            let globalAudioPlayer = null; let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play(); if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+            
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, { acceptNode: function(node) { const parent = node.parentNode; if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT; if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT; if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT; return NodeFilter.FILTER_ACCEPT; } });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+            
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data; let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) { html += `<div class="dict-details">`; entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; }); html += `</div>`; } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`;
+                return html;
+            }
+            
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]);
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+            
+            setTimeout(() => { initCEFRStaticDict(); if(enC) wrapTextNodesToWord(enC); setupTippyDelegate(); initCloudHighlights(); }, 500);
+        })();
+    </script>
+</body>
+</html>

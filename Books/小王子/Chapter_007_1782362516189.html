@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chapter 7</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+        /* ====== 动态主题注入 ====== */
+        :root {
+            --bg-color: #FDF6E3; --text-color: #4A4A4A; --border-color: #E6D5B8; --h1-color: #3C352D; --bar-bg: rgba(253,246,227,0.95); --btn-bg: #EAE0C8; --btn-text: #4A4A4A;
+        }
+        
+        body { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; max-width: 800px; margin: 0 auto; padding: 50px 24px; font-size: 20px; line-height: 1.8; letter-spacing: 0.05em; background-color: var(--bg-color); color: var(--text-color); }
+        h1 { text-align: left !important; font-size: 28px; margin-bottom: 0.5em; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; color: var(--h1-color); }
+        p { margin-bottom: 1.5em; text-indent: 2em; text-align: justify; }
+        body { padding-top: 70px !important; transition: padding-top 0.3s cubic-bezier(0.4,0,0.2,1); }
+        body.bar-hidden { padding-top: 20px !important; }
+        
+        /* 顶部导航栏 */
+        .reader-bar { position: fixed; top: 0; left: 0; right: 0; min-height: 50px; background: var(--bar-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); border-bottom: 1px solid var(--border-color); padding: 8px 5px; }
+        .reader-bar.hidden { transform: translateY(-100%); }
+        .reader-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        
+        /* 断句及拆分模式 CSS (默认合并，拆分状态下散开) */
+        .sent-block { display: inline; margin-bottom: 0; }
+        body.is-split .sent-block { display: block; margin-bottom: 1.0em; }
+        body.is-split .sent-block:last-child { margin-bottom: 0; }
+        
+        /* 底部阅读进度条 */
+        #reading-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: linear-gradient(90deg, #34C759, #32D74B); width: 0%; transition: width 0.15s ease-out; border-radius: 0 2px 2px 0; }
+        
+        .reader-btn { background: var(--btn-bg); color: var(--btn-text); border: none; padding: 6px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .reader-btn:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.02); }
+        .content-layer { width: 100%; }
+        
+        body.highlights-enabled .tm-word.is-highlight { color: #FF3B30 !important; font-weight: 700; background-color: rgba(255, 59, 48, 0.08); border-radius: 4px; padding: 0 2px; }
+        .dict-enabled .tm-word { cursor: pointer; transition: all 0.2s ease; border-radius: 4px; }
+        .dict-enabled .tm-word:hover, .dict-enabled .tm-word[aria-expanded="true"] { background-color: #E3F2FD; color: #1565C0 !important; box-shadow: 0 1px 4px rgba(21,101,192,0.1); }
+        
+        .tippy-box[data-theme~='light-border'] { background-color: #ffffff; color: #333; border: 1px solid #E5E5EA; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .tippy-content { padding: 10px; }
+        
+        .dict-popup { text-align: left; font-size: 30px; line-height: 1.4; max-width: 90vw; min-width: 280px; color: #2C3E50; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        .dict-header-row { border-bottom: 1px solid #F0F0F0; padding-bottom: 8px; margin-bottom: 8px; }
+        .dict-word-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .dict-head-word { font-weight: 800; color: #D32F2F; font-size: 36px; }
+        .dict-ipa { color: #546E7A; font-size: 24px; background: #ECEFF1; padding: 2px 6px; border-radius: 6px; }
+        .dict-speaker-btn { display: inline-flex; cursor: pointer; color: #1976D2; padding: 4px; border-radius: 50%; transition: all 0.2s; }
+        .dict-speaker-btn:hover { background-color: rgba(25, 118, 210, 0.1); transform: scale(1.1); }
+        .dict-speaker-btn.playing { color: #E91E63; animation: tm-pulse 1s infinite; }
+        
+        .dict-tags-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
+        .dict-tag { background: #F0F4F8; color: #476582; font-size: 20px; padding: 4px 8px; border-radius: 6px; border: 1px solid #D9E2EC; font-weight: 600; }
+        .dict-tag.star-tag { color: #D97706; background: #FEF3C7; border-color: #FDE68A; }
+        .dict-basic-trans { font-size: 30px; color: #374151; margin-top: 8px; font-weight: 500; }
+        .dict-pos-block { margin-bottom: 8px; }
+        .dict-pos-tag { font-style: italic; color: #1976D2; font-weight: bold; font-size: 24px; margin-right: 8px; }
+        .dict-def-list { margin: 0; padding: 0; list-style: none; display: inline; color: #4B5563; }
+        .dict-def-item { display: inline; }
+        .dict-def-item::after { content: "； "; color: #9CA3AF; }
+        .dict-def-item:last-child::after { content: ""; }
+        .dict-loading { color: #6B7280; font-style: italic; font-size: 24px; padding: 12px; text-align: center; }
+        @keyframes tm-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        #zh-container { font-family: "Noto Serif SC", "Songti SC", STSong, "Microsoft YaHei", serif; }
+    </style>
+</head>
+<body class="bar-hidden dict-enabled highlights-enabled is-split">
+    <div class="reader-bar hidden" id="top-bar">
+        <div class="reader-controls">
+            <button id="split-btn" class="reader-btn" style="background:#FF9500; color:#fff;" onclick="toggleSplit()">拆分: 开</button>
+            <button id="sync-btn" class="reader-btn" style="background:#007AFF; color:white;" onclick="toggleSync()">同步: 开</button>
+            <button id="hl-btn" class="reader-btn" style="background:#FF3B30; color:white;" onclick="toggleHighlight()">高亮: 开</button>
+            <button id="dict-btn" class="reader-btn" style="background:#34C759; color:white;" onclick="toggleDict()">查词: 开</button>
+        </div>
+        <div id="reading-progress"></div>
+    </div>
+    <div id="en-container" class="content-layer">
+        <h1 style="text-align: left !important;">Chapter 7</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/25 12:41:56</div>
+        <p>- the narrator learns about the secret of the little prince&#39;s life</p>
+        <p class="split-para"><span class="sent-block">on the fifth day-- again, as always, it was thanks to the sheep-- the secret of the little prince&#39;s life was revealed to me.</span> <span class="sent-block">abruptly, without anything to lead up to it, and as if the question had been born of long and silent meditation on his problem, he demanded:</span></p>
+        <p>"a sheep-- if it eats little bushes, does it eat flowers, too?"</p>
+        <p>"a sheep," i answered, "eats anything it finds in its reach."</p>
+        <p>"even flowers that have thorns?"</p>
+        <p>"yes, even flowers that have thorns."</p>
+        <p>"then the thorns-- what use are they?"</p>
+        <p class="split-para"><span class="sent-block">i did not know.</span> <span class="sent-block">at that moment i was very busy trying to unscrew a bolt that had got stuck in my engine.</span> <span class="sent-block">i was very much worried, for it was becoming clear to me that the breakdown of my plane was extremely serious.</span> <span class="sent-block">and i had so little drinking-water left that i had to fear for the worst.</span></p>
+        <p>"the thorns-- what use are they?"</p>
+        <p>the little prince never let go of a question, once he had asked it. as for me, i was upset over that bolt. and i answered with the first thing that came into my head:</p>
+        <p>"the thorns are of no use at all. flowers have thorns just for spite!"</p>
+        <p>"oh!"</p>
+        <p>there was a moment of complete silence. then the little prince flashed back at me, with a kind of resentfulness:</p>
+    </div>
+    <div id="zh-container" class="content-layer" style="display: none;">
+        <h1 style="text-align: left !important;">第七章</h1>
+        <div style="text-align: left !important; margin-top: -0.2em; margin-bottom: 1.5em; font-size: 0.85em; color: #999; opacity: 0.8; font-family: -apple-system, sans-serif;">2026/06/25 12:41:56</div>
+        <p>第五天，和往常一样，小羊的帮助为我揭开了小王子的生活秘密。就像对所提的问题经过长期深思熟虑一样，他突然没头没脑地问我：</p>
+        <p>“如果小羊吃小灌木，那它是不是也吃花？”</p>
+        <p>“只要够得着，小羊看见什么吃什么。”我答道。</p>
+        <p>“连带刺的花儿也吃？”</p>
+        <p>“是的，它连带刺的花儿都吃。”</p>
+        <p>“刺？刺有何用呢？”</p>
+        <p>我也不知道。当时我正忙着将牢牢固定在发动机上的一颗螺钉拧下来。我越发清楚地发现，飞机损毁相当严重，这让我焦急万分。另外，饮用水所剩无几，我不得不担心出现最坏的情况。</p>
+        <p>“那些刺儿——它们有何用处？”</p>
+        <p>小王子一旦提出某个问题，一定会刨根问底。而我呢，那个该死的螺钉已经让我心烦意乱。我不假思索地答道：</p>
+        <p>“那些刺毫无用处。花儿带刺，仅仅是为了表达它们的怨恨罢了！”</p>
+        <p>“哦！”</p>
+        <p>完全沉默一会儿之后，小王子突然闪到我身后，有些愤慨地说：“我不信你的话！花是柔弱、纯朴的生物，总是尽最大努力安慰自己。它们相信身上的刺是最有力的武器……”</p>
+        <p>我没做声。当时我正在想：“如果这颗螺钉还纹丝不动，我就用锤子把它敲掉。”而小王子却再次搅乱了我的思绪。</p>
+        <p>“其实，你也相信花儿……”</p>
+        <p>“哦，不！”我叫起来。“哦，不，不！我什么也不相信。我只不过随口答应而已。我正忙着做正经事呢，你就没有看见？”</p>
+        <p>他瞠目结舌地瞪着我。</p>
+        <p>“正经事！”</p>
+        <p>他站在那里看着我，我手里正拿着锤子，手指沾满发动机机油的污渍，弯腰俯在一个对他来说极难看的机件上。</p>
+        <p>“你说话和那些大人一样！”</p>
+        <p>这句话让我有点难为情。他却不管不顾地接着说：“你把任何东西都搅在一起……你什么也分不清……”</p>
+        <p>他真的大动肝火，那头金色卷发随风摇摆。</p>
+        <p>“我听说有个星球，上面住着一位红脸先生。他从未闻过一朵花，从未看过一颗星星，从未爱过任何人。除了算账，他什么也没做过。他成天像你一样反复说：‘我在忙着做正经事呢！’这使他的虚荣心日益膨胀。不过，他并不是人——他是一朵蘑菇！”</p>
+        <p>“一朵什么？”</p>
+        <p>“一朵蘑菇！”</p>
+        <p>此时，小王子气得脸色发白。</p>
+        <p>“数百万年以来，花儿一直长刺；数百万年以来，羊儿一直吃花。努力搞清花儿为什么历尽千辛万苦去长对它们毫无用处的刺，这难道不是正经事吗？羊和花之间的斗争难道就不重要？这不比大腹便便的红脸先生的账目更重要？假如我自己认识世上仅有的一朵花，它就生长在我居住的星球上，但在一天早上，却有一只小羊稀里糊涂地一口把它吃掉——天呐！你却认为这并不重要！”</p>
+        <p>他继续说下去，脸色由白变红：“如果你爱上了这无数星星中盛开的惟一花朵，只用凝望这些星星，就足以让花儿感到幸福。你可以自言自语说，‘我的花就在这些星星上……’，但如果羊儿吃掉了这朵花，你所有的星星就会瞬间内变得一团漆黑……可恨的是，你竟然认为这并不重要！”他泣不成声，再也说不下去了。</p>
+        <p>夜幕降临了。我任由工具从手中滑落。现在，我的锤子、螺钉甚至饥渴或死亡还有何重要性可言？在一个星球上，在我所在的星球——地球上，有一位小王子需要安慰！我一把将他搂进怀里摇晃着，对他说：“你喜爱的那朵花并无危险。我会给你的小羊画一幅口套，再画一圈围栏将你的花儿保护起来。我会……”</p>
+        <p>我不知道该对他说什么好。我觉得自己既尴尬又笨拙。我不知道如何走进他的内心，在那里我可以再次与他邂逅，再次和他手拉手。</p>
+        <p>泪水的世界就是这样一个神秘之地。</p>
+    </div>
+    <script>
+        const STORAGE_KEY = 'bio_reader_prefs_sync_' + location.pathname.replace(/[^a-zA-Z0-9]/g, '');
+        let prefs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { splitEnabled: true, dictEnabled: true, barHidden: true, highlightEnabled: true, syncEnabled: true, currentLang: 'en', posEN: 0, posZH: 0 };
+        if (prefs.splitEnabled === undefined) prefs.splitEnabled = true; // 兼容旧版本缓存
+        
+        const bar = document.getElementById('top-bar'); const enC = document.getElementById('en-container'); const zhC = document.getElementById('zh-container');
+        const dictBtn = document.getElementById('dict-btn'); const hlBtn = document.getElementById('hl-btn'); const syncBtn = document.getElementById('sync-btn');
+        const splitBtn = document.getElementById('split-btn');
+        const progressBar = document.getElementById('reading-progress');
+        
+        function applyPrefs() {
+            if (prefs.barHidden) { bar.classList.add('hidden'); document.body.classList.add('bar-hidden'); } else { bar.classList.remove('hidden'); document.body.classList.remove('bar-hidden'); }
+            if (prefs.dictEnabled) { document.body.classList.add('dict-enabled'); dictBtn.innerText = "查词: 开"; dictBtn.style.background = "#34C759"; dictBtn.style.color = "#fff"; } else { document.body.classList.remove('dict-enabled'); dictBtn.innerText = "查词: 关"; dictBtn.style.background = "var(--btn-bg)"; dictBtn.style.color = "var(--btn-text)"; }
+            if (prefs.highlightEnabled) { document.body.classList.add('highlights-enabled'); hlBtn.innerText = "高亮: 开"; hlBtn.style.background = "#FF3B30"; hlBtn.style.color = "#fff"; } else { document.body.classList.remove('highlights-enabled'); hlBtn.innerText = "高亮: 关"; hlBtn.style.background = "var(--btn-bg)"; hlBtn.style.color = "var(--btn-text)"; }
+            if (prefs.syncEnabled) { syncBtn.innerText = "同步: 开"; syncBtn.style.background = "#007AFF"; syncBtn.style.color = "#fff"; } else { syncBtn.innerText = "同步: 关"; syncBtn.style.background = "var(--btn-bg)"; syncBtn.style.color = "var(--btn-text)"; }
+            if (prefs.splitEnabled) { document.body.classList.add('is-split'); if(splitBtn){ splitBtn.innerText = "拆分: 开"; splitBtn.style.background = "#FF9500"; splitBtn.style.color = "#fff"; } } else { document.body.classList.remove('is-split'); if(splitBtn){ splitBtn.innerText = "拆分: 关"; splitBtn.style.background = "var(--btn-bg)"; splitBtn.style.color = "var(--btn-text)"; } }
+        }
+        
+        document.addEventListener('dblclick', (e) => { if(e.target.closest('#top-bar')) return; prefs.barHidden = !prefs.barHidden; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); if(window.getSelection().toString().length > 0) return; });
+        function toggleSplit() { prefs.splitEnabled = !prefs.splitEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); setTimeout(updateProgress, 100); }
+        function toggleDict() { prefs.dictEnabled = !prefs.dictEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleHighlight() { prefs.highlightEnabled = !prefs.highlightEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        function toggleSync() { prefs.syncEnabled = !prefs.syncEnabled; applyPrefs(); localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        
+        let isProgrammaticScroll = false; let scrollTimer;
+        function getHeights() {
+            let enWasHidden = enC.style.display === 'none'; let zhWasHidden = zhC.style.display === 'none';
+            if (enWasHidden) enC.style.display = 'block'; if (zhWasHidden) zhC.style.display = 'block';
+            let hEN = enC.offsetHeight || 1; let hZH = zhC.offsetHeight || 1;
+            if (enWasHidden) enC.style.display = 'none'; if (zhWasHidden) zhC.style.display = 'none';
+            return { hEN, hZH };
+        }
+        
+        function updateProgress() {
+            let maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            let percent = maxScroll > 0 ? (window.scrollY / maxScroll) * 100 : 0;
+            progressBar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+        }
+
+        window.addEventListener('scroll', () => {
+            updateProgress();
+            if (isProgrammaticScroll) return;
+            let currentY = window.scrollY; let heights = getHeights(); let viewportH = window.innerHeight;
+            let maxEN = Math.max(1, heights.hEN - viewportH); let maxZH = Math.max(1, heights.hZH - viewportH);
+            if (prefs.currentLang === 'en') {
+                let delta = currentY - prefs.posEN; prefs.posEN = currentY;
+                if (prefs.syncEnabled) { let ratio = maxZH / maxEN; prefs.posZH += delta * ratio; prefs.posZH = Math.max(0, Math.min(prefs.posZH, maxZH)); }
+            } else {
+                let delta = currentY - prefs.posZH; prefs.posZH = currentY;
+                if (prefs.syncEnabled) { let ratio = maxEN / maxZH; prefs.posEN += delta * ratio; prefs.posEN = Math.max(0, Math.min(prefs.posEN, maxEN)); }
+            }
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }, 300);
+        });
+        
+        function switchLang() {
+            isProgrammaticScroll = true;
+            if (prefs.currentLang === 'en') { enC.style.display = 'none'; zhC.style.display = 'block'; prefs.currentLang = 'zh'; window.scrollTo(0, prefs.posZH); } 
+            else { zhC.style.display = 'none'; enC.style.display = 'block'; prefs.currentLang = 'en'; window.scrollTo(0, prefs.posEN); }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            setTimeout(() => { isProgrammaticScroll = false; updateProgress(); }, 100);
+        }
+        
+        let lastTwoFingerTap = 0;
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) { let now = Date.now(); if (now - lastTwoFingerTap > 500) { switchLang(); lastTwoFingerTap = now; } }
+        });
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPrefs();
+            if (prefs.currentLang === 'zh') { enC.style.display = 'none'; zhC.style.display = 'block'; } else { zhC.style.display = 'none'; enC.style.display = 'block'; }
+            isProgrammaticScroll = true;
+            setTimeout(() => {
+                window.scrollTo({ top: prefs.currentLang === 'zh' ? prefs.posZH : prefs.posEN, behavior: 'instant' });
+                setTimeout(() => { isProgrammaticScroll = false; updateProgress(); }, 50);
+            }, 50);
+        });
+        
+        let highlightWords = new Set();
+        async function initCloudHighlights() {
+            const cacheKey = 'bio_remote_hl_words_v2'; const cached = localStorage.getItem(cacheKey); const now = Date.now();
+            if (cached) { try { const {data, time} = JSON.parse(cached); if (now - time < 24 * 60 * 60 * 1000 && Array.isArray(data) && data.length > 0) { highlightWords = new Set(data); applyHighlightsToDOM(); return; } } catch(e) {} }
+            try {
+                const urls = [ 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt', 'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt', 'https://fastly.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt' ];
+                let text = '';
+                for (let u of urls) { try { const res = await fetch(u); if (res.ok) { text = await res.text(); if (text && !text.includes('<html') && !text.includes('Cloudflare')) break; } } catch (err) {} }
+                if (!text) return;
+                const arr = text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w);
+                if (arr.length > 0) { highlightWords = new Set(arr); localStorage.setItem(cacheKey, JSON.stringify({data: arr, time: now})); applyHighlightsToDOM(); }
+            } catch(e) {}
+        }
+        
+        function applyHighlightsToDOM() {
+            if(highlightWords.size === 0) return;
+            const words = enC.querySelectorAll('.tm-word');
+            words.forEach(span => { const word = span.textContent.trim().toLowerCase(); if(highlightWords.has(word)) span.classList.add('is-highlight'); });
+        }
+        
+        const GM_getValue = (key, def) => { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };
+        const GM_setValue = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+        const GM_xmlhttpRequest = (opt) => {
+            let url = opt.url;
+            if(url.includes('dict.youdao.com') || url.includes('cambridge.org')) {
+                const isYoudao = url.includes('dict.youdao.com');
+                const proxies = [ url, `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, `https://corsproxy.io/?${encodeURIComponent(url)}` ];
+                let currentProxyIdx = 0;
+                const tryNext = () => {
+                    if (currentProxyIdx >= proxies.length) return opt.onerror && opt.onerror(new Error('Proxy Blocked'));
+                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })
+                    .then(async r => {
+                        let t = ''; try { t = await r.text(); } catch(err){}
+                        if (!r.ok || t.includes('Cloudflare')) throw new Error('Blocked Node');
+                        if (isYoudao && !t.trim().startsWith('{')) throw new Error('Not JSON');
+                        if(opt.onload) opt.onload({status: 200, responseText: t});
+                    }).catch(e => tryNext());
+                };
+                tryNext(); return;
+            }
+            fetch(url, { headers: opt.headers || {} }).then(async r => { let t = ''; try { t = await r.text(); } catch(err){} if(opt.onload) opt.onload({status: r.status, responseText: t}); }).catch(err => opt.onerror && opt.onerror(err));
+        };
+        
+        (function() {
+            const ttsConfig = { voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural"], apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ] };
+            let globalResultCache = GM_getValue('tm_dict_cache', {}); let saveTimeout = null;
+            function saveToGlobalCache(wordKey, resultData) { globalResultCache[wordKey] = resultData; const keys = Object.keys(globalResultCache); if (keys.length > 2000) delete globalResultCache[keys[0]]; clearTimeout(saveTimeout); saveTimeout = setTimeout(() => { GM_setValue('tm_dict_cache', globalResultCache); }, 1500); }
+            
+            let cefrStaticCache = {};
+            function initCEFRStaticDict() { fetch("https://fastly.jsdelivr.net/gh/winterdl/oxford-5000-vocabulary-audio-definition@main/data/oxford_5000.json").then(r => r.json()).then(data => { if (Array.isArray(data)) data.forEach(item => { if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(()=>{}); }
+            function fetchCEFR(word) { return new Promise((resolve) => { const w = word.toLowerCase(); if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; } GM_xmlhttpRequest({ method: "GET", url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w)}`, onload: (res) => { const match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\s*([A-C][1-2])\s*<\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchCEFRWithTimeout(word) { return Promise.race([ fetchCEFR(word), new Promise(r => setTimeout(() => r(null), 1500)) ]); }
+            function fetchTranslation(text) { return new Promise((resolve, reject) => { GM_xmlhttpRequest({ method: "GET", url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(); }, onerror: reject }); }); }
+            function fetchPhonetics(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`, onload: (res) => { if (res.status === 200) { const data = JSON.parse(res.responseText); if (data && data.length > 0) resolve((data[0].phonetics.find(p => p.text) || data[0]).text || null); } else resolve(null); }, onerror: () => resolve(null) }); }); }
+            function fetchWordLevel(text) { return new Promise((resolve) => { GM_xmlhttpRequest({ method: "GET", url: `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(text)}`, onload: (res) => { let result = { stars: 0, tags: [] }; try { const data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries) { const s = data.collins.collins_entries[0].star; if(s) result.stars = parseInt(String(s).replace(/[^0-9]/g, ''))||0; } } catch (e) {} resolve(result); }, onerror: () => resolve({ stars: 0, tags: [] }) }); }); }
+            
+            let globalAudioPlayer = null; let currentPlayingBtn = null;
+            function playTTS(apiIndex, text, voice, btn) {
+                if (!globalAudioPlayer) { globalAudioPlayer = document.createElement('audio'); document.body.appendChild(globalAudioPlayer); }
+                if (apiIndex >= ttsConfig.apis.length) { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); return; }
+                if (currentPlayingBtn && currentPlayingBtn !== btn) currentPlayingBtn.classList.remove('playing');
+                currentPlayingBtn = btn; btn.classList.add('playing');
+                const api = ttsConfig.apis[apiIndex];
+                globalAudioPlayer.src = api.type === "read-aloud" ? `${api.url}?text=${encodeURIComponent(text)}&voiceName=${voice}` : `${api.url}?t=${encodeURIComponent(text)}&v=${voice}&r=0&p=0`;
+                globalAudioPlayer.onended = () => { if (currentPlayingBtn) currentPlayingBtn.classList.remove('playing'); };
+                globalAudioPlayer.onerror = () => playTTS(apiIndex + 1, text, voice, btn);
+                const p = globalAudioPlayer.play(); if (p !== undefined) p.catch(() => playTTS(apiIndex + 1, text, voice, btn));
+            }
+            
+            function wrapTextNodesToWord(rootNode) {
+                const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, { acceptNode: function(node) { const parent = node.parentNode; if (!parent || ['SCRIPT','STYLE','BUTTON','A'].includes(parent.nodeName)) return NodeFilter.FILTER_REJECT; if (parent.closest('.tm-word')) return NodeFilter.FILTER_REJECT; if (!node.nodeValue.trim() || !/\b[a-zA-Z'-]+\b/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT; return NodeFilter.FILTER_ACCEPT; } });
+                const nodes = []; let curr; while ((curr = walker.nextNode())) nodes.push(curr);
+                nodes.forEach(node => {
+                    const text = node.nodeValue; const fragment = document.createDocumentFragment(); let lastIndex = 0;
+                    text.replace(/\b([a-zA-Z'-]+)\b/g, (match, p1, offset) => {
+                        if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.substring(lastIndex, offset)));
+                        const span = document.createElement('span'); span.className = 'tm-word'; span.textContent = match; fragment.appendChild(span);
+                        lastIndex = offset + match.length; return match;
+                    });
+                    if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                    if (fragment.childNodes.length > 0) node.parentNode.replaceChild(fragment, node);
+                });
+            }
+            
+            function formatDictData(orig, data) {
+                const { transData, ipaText, levelData, cefrLevel } = data; let tagsHtml = '';
+                if (cefrLevel || (levelData && (levelData.stars > 0 || levelData.tags.length > 0))) {
+                    tagsHtml = `<div class="dict-tags-row">`;
+                    if (levelData && levelData.stars > 0) tagsHtml += `<span class="dict-tag star-tag">${'★'.repeat(levelData.stars)}${'☆'.repeat(5 - levelData.stars)}</span>`;
+                    if (cefrLevel) tagsHtml += `<span class="dict-tag cefr-${cefrLevel}">CEFR ${cefrLevel}</span>`;
+                    if (levelData && levelData.tags) levelData.tags.forEach(t => tagsHtml += `<span class="dict-tag">${t}</span>`);
+                    tagsHtml += `</div>`;
+                }
+                const basic = (transData && transData[0] && transData[0][0]) ? transData[0][0][0] : '';
+                let html = `<div class="dict-header-row"><div class="dict-word-line"><span class="dict-head-word">${orig}</span>${ipaText ? `<span class="dict-ipa">${ipaText}</span>` : ''}<span class="dict-speaker-btn" data-word="${orig.replace(/"/g, '&quot;')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span></div>${tagsHtml}<div class="dict-basic-trans">${basic}</div></div>`;
+                const entries = transData ? transData[1] : null;
+                if (entries && entries.length > 0) { html += `<div class="dict-details">`; entries.forEach(e => { html += `<div class="dict-pos-block"><span class="dict-pos-tag">${e[0]}.</span><ul class="dict-def-list">`; e[1].slice(0, 3).forEach(def => html += `<li class="dict-def-item">${def}</li>`); html += `</ul></div>`; }); html += `</div>`; } else if (!basic) html += `<div style="padding:10px; color:#666; font-size:24px;">无释义结果...</div>`;
+                return html;
+            }
+            
+            function setupTippyDelegate() {
+                tippy.delegate(enC, {
+                    target: '.tm-word', trigger: 'click', interactive: true, theme: 'light-border', placement: 'bottom', appendTo: () => document.body, maxWidth: '90vw',
+                    onShow(instance) {
+                        if (!document.body.classList.contains('dict-enabled')) return false;
+                        const word = instance.reference.innerText.trim();
+                        const render = (data) => {
+                            if (instance.reference.innerText.trim() !== word) return;
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = formatDictData(word, data);
+                            ['mousedown', 'touchstart', 'click'].forEach(evt => div.addEventListener(evt, e => e.stopPropagation(), { capture: true }));
+                            const btn = div.querySelector('.dict-speaker-btn');
+                            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const t = btn.getAttribute('data-word'); if (t && !btn.classList.contains('playing')) playTTS(0, t.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); });
+                            instance.setContent(div);
+                        };
+                        if (globalResultCache[word.toLowerCase()]) render(globalResultCache[word.toLowerCase()]);
+                        else {
+                            const div = document.createElement('div'); div.className = 'dict-popup'; div.innerHTML = '<div class="dict-loading">极速查询中...</div>'; instance.setContent(div);
+                            Promise.all([ fetchTranslation(word).catch(()=>[[['API Error']]]), fetchPhonetics(word).catch(()=>null), fetchWordLevel(word).catch(()=>({stars:0,tags:[]})), fetchCEFRWithTimeout(word).catch(()=>null) ])
+                            .then(([transData, ipaText, levelData, cefrLevel]) => { const data = { transData, ipaText, levelData, cefrLevel }; saveToGlobalCache(word.toLowerCase(), data); if (instance.state.isVisible) render(data); });
+                        }
+                    }
+                });
+            }
+            
+            setTimeout(() => { initCEFRStaticDict(); if(enC) wrapTextNodesToWord(enC); setupTippyDelegate(); initCloudHighlights(); }, 500);
+        })();
+    </script>
+</body>
+</html>
