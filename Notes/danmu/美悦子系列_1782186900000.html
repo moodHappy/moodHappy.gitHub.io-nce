@@ -16,7 +16,7 @@
         .link.targeting { background-color: #000; color: #0ff; border: 1px dashed #0ff; }
         .link.locked { background-color: #ffde00; color: #000; border: 1px solid #000; font-weight: 900; box-shadow: 2px 2px 0 #000; }
 
-        /* 黑色控制台：位于 content-area 内部最下方，紧跟在列表屁股后面 */
+        /* 黑色控制台：位于 content-area 内部最下方 */
         .cyber-panel { background-color: #0b0f19; border: 2px solid #0ff; border-radius: 6px; padding: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 0 10px rgba(0, 255, 255, 0.2); }
         #actionBtn { background: transparent; color: #0ff; border: 2px solid #0ff; padding: 8px 20px; font-size: 1.2rem; font-family: 'Courier New', monospace; font-weight: 900; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
         #actionBtn.running { border-color: #ff0055; color: #ff0055; }
@@ -51,20 +51,6 @@
             </div>
         </div>
 
-        <div class="series-section">
-            <h2>百年孤独シリーズ</h2>
-            <div class="links-grid">
-                <a class="link" href="https://moodhappy.github.io/moodHappy.gitHub.io-nce/Notes/danmu/Hundred/%E7%99%BE%E5%B9%B4%E5%AD%A4%E7%8B%AC%E7%9B%AE%E5%BD%95_1782298920000.html">百年孤独</a>
-            </div>
-        </div>
-
-        <div class="series-section">
-            <h2>小王子シリーズ</h2>
-            <div class="links-grid">
-                <a class="link" href="https://moodhappy.github.io/moodHappy.gitHub.io-nce/Notes/danmu/Books/%E5%B0%8F%E7%8E%8B%E5%AD%90/%E5%B0%8F%E7%8E%8B%E5%AD%90%E7%9B%AE%E5%BD%95.html_1782364260000.html">小王子</a>
-            </div>
-        </div>
-
         <div class="cyber-panel">
             <div id="numberDisplay">---</div>
             <button id="actionBtn">START</button>
@@ -72,6 +58,27 @@
     </div>
 
     <script>
+        // ==========================================
+        // 【配置区】在这里填入你目标文件夹下的所有文件名
+        // 脚本会从这里随机选一个，并自动提取其中的数字
+        // ==========================================
+        const fileList = [
+            "Chapter_001__The__Super_Sale_1781676200000.html",
+            "Chapter_002__The_Midnight_Cleaning_1781676200000.html",
+            "Chapter_003__The_Broken_Window_1781676200000.html",
+            "Chapter_004__The_Dark_Room_1781676200000.html",
+            "Chapter_005__The_Heatwave_1781676470000.html",
+            "Chapter_006__The_Broken_Sign_1781676000000.html",
+            "Chapter_007__The_Late-Night_Restock_1781676000000.html",
+            "Chapter_008__The_Rainy_Afternoon_1781670000000.html",
+            "Chapter_009__The_Inventory_Count_1781670000000.html",
+            "Chapter_010__The_Inventory_Mismatch_1781670000000.html",
+            "Chapter_011__The_Inventory_Leak_1781670000000.html",
+            "Chapter_012__The_Wisdom_Tooth_1781670000000.html",
+            "Chapter_013__The_Razor_Edge_1781670000000.html"
+            // 如果有新章节，直接加在下面即可
+        ];
+
         const btn = document.getElementById('actionBtn');
         const display = document.getElementById('numberDisplay');
         const links = document.querySelectorAll('.link');
@@ -79,32 +86,50 @@
 
         btn.addEventListener('click', function() {
             if (!isRunning) {
+                // START 阶段：纯视觉效果的随机数字跳动
                 isRunning = true;
                 btn.innerText = "STOP";
                 btn.classList.add('running');
+                
                 shuffleInterval = setInterval(() => {
                     links.forEach(l => l.classList.remove('targeting', 'locked'));
                     links[Math.floor(Math.random() * links.length)].classList.add('targeting');
                     display.innerText = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
                 }, 40);
+                
             } else {
+                // STOP 阶段：确定最终文件并跳转
                 isRunning = false;
                 clearInterval(shuffleInterval);
                 btn.innerText = "START";
                 btn.classList.remove('running');
+                
+                // 1. 锁定上方的一个随机链接
                 links.forEach(l => l.classList.remove('targeting'));
                 const finalLink = links[Math.floor(Math.random() * links.length)];
                 finalLink.classList.add('locked');
 
-                const finalNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                // 2. 核心：从预设列表中随机抽取一个真实存在的文件
+                const targetFile = fileList[Math.floor(Math.random() * fileList.length)];
 
-                // 核心逻辑：最小数字获得红色
+                // 3. 提取文件名中的 3 位数字（例如把 Chapter_001 提取为 "001"）
+                // 使用正则表达式寻找连续的 3 个数字
+                const matchResult = targetFile.match(/\d{3}/);
+                const finalNum = matchResult ? matchResult[0] : "000"; // 找不到默认000
+
+                // 4. 计算最小数字并给予红色高亮
                 const digits = Array.from(finalNum).map(Number);
                 const minVal = Math.min(...digits);
                 const redIdx = digits.indexOf(minVal); 
 
                 display.innerHTML = Array.from(finalNum).map((n, i) => 
                     `<span style="color:${i === redIdx ? '#ff0055' : '#0ff'}">${n}</span>`).join('');
+
+                // 5. 延迟 1.5 秒后跳转到该文件
+                setTimeout(() => {
+                    // 跳转到同级目录下的对应文件
+                    window.location.href = `./${targetFile}`;
+                }, 1500);
             }
         });
     </script>
