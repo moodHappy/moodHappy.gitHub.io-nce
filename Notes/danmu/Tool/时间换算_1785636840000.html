@@ -3,49 +3,105 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>当前时间转换器</title>
+<title>实时动态时钟</title>
 
 <style>
 body {
-    font-family: "Microsoft YaHei", Arial, sans-serif;
+    /* 适配手机端系统默认字体 */
+    font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif;
     background: #f4f7fb;
-    text-align: center;
-    padding: 40px;
+    margin: 0;
+    padding: 20px;
+    /* 让卡片在页面中垂直水平居中 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh; 
 }
 
 .container {
-    max-width: 500px;
-    margin: auto;
+    width: 100%;
+    max-width: 380px; /* 适合手机的宽度 */
     background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    padding: 40px 20px;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    text-align: center;
 }
 
-button {
+h2 {
+    margin-top: 0;
+    margin-bottom: 35px;
+    color: #333;
+    font-size: 22px;
+}
+
+/* 常规时间显示区 */
+.time-section {
+    margin-bottom: 35px;
+}
+
+.date-text {
+    font-size: 15px;
+    color: #888;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.time-text {
+    font-size: 40px; /* 放大时间，作为核心视觉 */
+    color: #d4380d;
+    font-weight: bold;
+    font-family: "Courier New", Courier, monospace;
+    letter-spacing: 2px;
+}
+
+/* Unix 毫秒显示区 */
+.unix-section {
+    margin-bottom: 35px;
+}
+
+.unix-label {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.unix-text {
+    font-size: 22px;
+    color: #d4380d;
+    font-weight: bold;
+    font-family: "Courier New", Courier, monospace;
+    background: #fff2e8; /* 浅橙色背景块，增加稳重感 */
+    padding: 10px 20px;
+    border-radius: 8px;
+    display: inline-block;
+    letter-spacing: 1px;
+}
+
+/* 按钮样式优化 */
+.copy-btn {
     background: #1677ff;
     color: white;
     border: none;
-    padding: 12px 25px;
+    padding: 14px 0;
+    width: 85%;
+    max-width: 220px;
     font-size: 16px;
-    border-radius: 8px;
+    border-radius: 30px; /* 圆角按钮更显精致 */
     cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(22, 119, 255, 0.2);
 }
 
-button:hover {
+.copy-btn:hover {
     background: #0958d9;
+    transform: translateY(-2px);
 }
 
-.result {
-    margin-top: 25px;
-    text-align: left;
-    line-height: 1.8;
-    font-size: 16px;
-}
-
-.time {
-    color: #d4380d;
-    font-weight: bold;
+.copy-btn.success {
+    background: #52c41a;
+    box-shadow: 0 4px 15px rgba(82, 196, 26, 0.2);
 }
 </style>
 
@@ -55,46 +111,56 @@ button:hover {
 
 <div class="container">
 
-<h2>⏰ 当前时间转换器</h2>
+    <h2>⏰ 实时动态时钟</h2>
 
-<button onclick="convertTime()">获取当前时间</button>
+    <div class="time-section">
+        <div class="date-text" id="date-display">加载中...</div>
+        <div class="time-text" id="time-display">--:--:--</div>
+    </div>
 
-<div class="result" id="result">
-    点击按钮显示时间
+    <div class="unix-section">
+        <div class="unix-label">Unix 毫秒</div>
+        <div class="unix-text" id="unix-ms">加载中...</div>
+    </div>
+
+    <button class="copy-btn" id="copy-btn" onclick="copyUnixMs()">复制 Unix 毫秒</button>
+
 </div>
-
-</div>
-
 
 <script>
+let currentUnixMs = 0;
 
-function convertTime() {
-
+function updateClock() {
     let now = new Date();
+    currentUnixMs = now.getTime();
 
-    // 本地时间
-    let local = now.toLocaleString("zh-CN", {
-        timeZone: "Asia/Shanghai",
-        hour12: false
-    });
+    // 分离日期和时间，解决手机端挤在一起换行的问题
+    let dateStr = now.toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" });
+    let timeStr = now.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 
-    // UTC时间
-    let utc = now.toISOString();
-
-    // Unix 秒
-    let unixSeconds = Math.floor(now.getTime() / 1000);
-
-    // Unix 毫秒
-    let unixMilliseconds = now.getTime();
-
-
-    document.getElementById("result").innerHTML = `
-        <p>北京时间：<span class="time">${local}</span></p>
-        <p>UTC时间：${utc}</p>
-        <p>Unix秒：${unixSeconds}</p>
-        <p>Unix毫秒：${unixMilliseconds}</p>
-    `;
+    document.getElementById("date-display").innerText = dateStr;
+    document.getElementById("time-display").innerText = timeStr;
+    document.getElementById("unix-ms").innerText = currentUnixMs;
 }
+
+function copyUnixMs() {
+    navigator.clipboard.writeText(currentUnixMs.toString()).then(() => {
+        let btn = document.getElementById("copy-btn");
+        btn.innerText = "✅ 复制成功！";
+        btn.classList.add("success");
+        
+        setTimeout(() => {
+            btn.innerText = "复制 Unix 毫秒";
+            btn.classList.remove("success");
+        }, 2000);
+    }).catch(err => {
+        alert("复制失败，请检查浏览器权限。");
+        console.error("复制失败: ", err);
+    });
+}
+
+setInterval(updateClock, 50);
+updateClock();
 
 </script>
 
