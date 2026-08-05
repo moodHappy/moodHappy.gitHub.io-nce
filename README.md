@@ -3,7 +3,7 @@
 # **NCE Notes**  
 ## **目录**
 
-[美悦子系列](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/config/gt_dict_sync.json)
+[背单词缓存](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/config/gt_dict_sync.json)
 
 [CW.md](https://github.com/moodHappy/moodHappy.gitHub.io-nce/blob/main/Fiction%2FCW.md
 )
