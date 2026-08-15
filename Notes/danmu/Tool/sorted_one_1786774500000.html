@@ -36,11 +36,20 @@
         
         .search-box { display: flex; justify-content: center; margin-bottom: 20px; }
         .search-box input {
-            width: 100%; max-width: 400px; padding: 12px 20px; font-size: 1rem;
+            width: 100%; max-width: 300px; padding: 12px 20px; font-size: 1rem;
             border: 2px solid var(--border-color); border-radius: 25px; outline: none;
             transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            flex: 1;
         }
         .search-box input:focus { border-color: var(--primary-color); box-shadow: 0 4px 10px rgba(76, 175, 80, 0.15); }
+        
+        .export-btn {
+            background-color: var(--primary-color); color: white; border: none;
+            border-radius: 25px; padding: 0 15px; margin-left: 10px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            white-space: nowrap; transition: all 0.2s;
+        }
+        .export-btn:active { transform: scale(0.95); }
         
         .table-wrapper { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); overflow: hidden; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 340px; }
@@ -148,8 +157,9 @@
         <h2>📊 词汇矩阵</h2>
         <div class="stats">共扫描 <b>7525</b> 个词汇<br><small>💡向左滑动屏幕进入"我的学习"</small></div>
         
-        <div class="search-box">
+        <div class="search-box" style="max-width: 400px; margin: 0 auto 20px auto;">
             <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 搜索单词...">
+            <button class="export-btn" onclick="exportVocabulary()">导出未学</button>
         </div>
 
         <div class="table-wrapper">
@@ -60479,6 +60489,41 @@
                 html += `<li class="learning-item"><span>${w}</span><button class="delete-btn" onclick="removeWord('${w}')">✖</button></li>`;
             });
             container.innerHTML = html;
+        }
+
+        // === 导出未学单词库功能 ===
+        function exportVocabulary() {
+            let unlearnedWords = [];
+            let trs = document.getElementById("wordTable").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+            
+            for (let i = 0; i < trs.length; i++) {
+                let tdWord = trs[i].getElementsByTagName("td")[1];
+                if (tdWord) {
+                    let word = tdWord.textContent || tdWord.innerText;
+                    if (!studyList.includes(word)) {
+                        unlearnedWords.push(word);
+                    }
+                }
+            }
+
+            if (unlearnedWords.length === 0) {
+                showToast("所有单词都在学习列表中了！");
+                return;
+            }
+
+            let textContent = unlearnedWords.join("\n");
+            let blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+            let url = URL.createObjectURL(blob);
+            
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'unlearned_vocabulary.txt';
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("✅ 已成功导出未学单词！");
         }
 
         // === 手势页面切换与双指隐藏导航 ===
