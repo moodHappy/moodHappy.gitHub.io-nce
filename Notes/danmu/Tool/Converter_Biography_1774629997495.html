@@ -639,22 +639,8 @@
 '        }\n' +
 '        var GM_getValue = function(key, def) { var v = localStorage.getItem(key); return v ? JSON.parse(v) : def; };\n' +
 '        var GM_setValue = function(key, val) { localStorage.setItem(key, JSON.stringify(val)); };\n' +
-'        var GM_xmlhttpRequest = function(opt) {\n' +
-'            var url = opt.url; if(url.includes(\'dict.youdao.com\') || url.includes(\'cambridge.org\')) {\n' +
-'                var isYoudao = url.includes(\'dict.youdao.com\');\n' +
-'                var proxies = [url, \'https://api.codetabs.com/v1/proxy?quest=\' + encodeURIComponent(url), \'https://corsproxy.io/?\' + encodeURIComponent(url), \'https://api.allorigins.win/raw?url=\' + encodeURIComponent(url)];\n' +
-'                var currentProxyIdx = 0;\n' +
-'                var tryNext = function() {\n' +
-'                    if (currentProxyIdx >= proxies.length) { if(opt.onerror) opt.onerror(new Error()); return; }\n' +
-'                    fetch(proxies[currentProxyIdx++], { headers: opt.headers || {} })\n' +
-'                    .then(async function(r) { var t = \'\'; try{t = await r.text();}catch(e){} if(!r.ok || t.includes(\'Cloudflare\')) throw new Error(); if(isYoudao && !t.trim().startsWith(\'{\')) throw new Error(); if(opt.onload) opt.onload({status:200, responseText:t}); })\n' +
-'                    .catch(function(){ tryNext(); });\n' +
-'                };\n' +
-'                tryNext(); return;\n' +
-'            }\n' +
-'            fetch(url, { headers: opt.headers || {} }).then(async function(r){ var t = \'\'; try{t = await r.text();}catch(e){} if(opt.onload) opt.onload({status:r.status, responseText:t}); }).catch(opt.onerror);\n' +
-'        };\n' +
 '        (function() {\n' +
+'            function fetchWithTimeout(url, options = {}, timeout = 3000) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer)); }\n' +
 '            var ttsConfig = { voices: ["en-US-AdamNeural", "en-US-AriaNeural", "en-US-AnaNeural", "en-US-JennyNeural", "en-US-GuyNeural"], apis: [ { url: "https://read-aloud-bay.vercel.app/api/synthesis", type: "read-aloud" }, { url: "https://libre-tts-nu.vercel.app/api/tts", type: "libre" } ] };\n' +
 '            var globalResultCache = GM_getValue(\'tm_dict_cache\', {}); var saveTimeout = null;\n' +
 '            function saveToGlobalCache(wordKey, resultData) { globalResultCache[wordKey] = resultData; var keys = Object.keys(globalResultCache); if (keys.length > 2000) delete globalResultCache[keys[0]]; clearTimeout(saveTimeout); saveTimeout = setTimeout(function(){ GM_setValue(\'tm_dict_cache\', globalResultCache); }, 1500); }\n' +
@@ -664,15 +650,21 @@
 '                var idx = 0; var tryFetch = function() { if (idx >= staticUrls.length) return; fetch(staticUrls[idx++]).then(function(r){return r.json();}).then(function(data){ if (Array.isArray(data)) data.forEach(function(item){ if (item.word && item.cefr) cefrStaticCache[item.word.toLowerCase()] = item.cefr.toUpperCase(); }); }).catch(tryFetch); };\n' +
 '                tryFetch();\n' +
 '            }\n' +
-'            function fetchCEFR(word) {\n' +
-'                return new Promise(function(resolve) {\n' +
-'                    var w = word.toLowerCase(); if (cefrStaticCache[w]) { resolve(cefrStaticCache[w]); return; }\n' +
-'                    GM_xmlhttpRequest({ method: "GET", url: \'https://dictionary.cambridge.org/dictionary/english/\' + encodeURIComponent(w), onload: function(res) { if (res.status === 200) { var match = res.responseText.match(/(?:epp-xref|dxref)[^>]*>\\s*([A-C][1-2])\\s*<\\/span>/i) || res.responseText.match(/title="CEFR[^>]*>\\s*([A-C][1-2])\\s*<\\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); resolve(cefrStaticCache[w]); return; } } resolve(null); }, onerror: function(){resolve(null);} });\n' +
-'                });\n' +
+'            async function fetchCEFR(word) {\n' +
+'                var w = word.toLowerCase(); if (cefrStaticCache[w]) return cefrStaticCache[w];\n' +
+'                const targetUrl = \'https://dictionary.cambridge.org/dictionary/english/\' + encodeURIComponent(w);\n' +
+'                const proxies = [ targetUrl, \'https://corsproxy.io/?\' + encodeURIComponent(targetUrl), \'https://api.allorigins.win/raw?url=\' + encodeURIComponent(targetUrl) ];\n' +
+'                const tryProxy = async (proxy) => { const res = await fetchWithTimeout(proxy, {}, 2500); if (!res.ok) throw new Error(); const text = await res.text(); var match = text.match(/(?:epp-xref|dxref)[^>]*>\\s*([A-C][1-2])\\s*<\\/span>/i) || text.match(/title="CEFR[^>]*>\\s*([A-C][1-2])\\s*<\\/span>/i); if (match && match[1]) { cefrStaticCache[w] = match[1].toUpperCase(); return cefrStaticCache[w]; } return null; };\n' +
+'                try { return await Promise.any(proxies.map(p => tryProxy(p))); } catch(e) { return null; }\n' +
 '            }\n' +
-'            function fetchTranslation(text) { return new Promise(function(resolve, reject) { GM_xmlhttpRequest({ method: "GET", url: \'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=\' + encodeURIComponent(text), onload: function(res) { if (res.status === 200) resolve(JSON.parse(res.responseText)); else reject(new Error()); }, onerror: reject }); }); }\n' +
-'            function fetchPhonetics(text) { return new Promise(function(resolve) { GM_xmlhttpRequest({ method: "GET", url: \'https://api.dictionaryapi.dev/api/v2/entries/en/\' + encodeURIComponent(text), onload: function(res) { if (res.status === 200) { var data = JSON.parse(res.responseText); if (data && data.length > 0) { var pObj = data[0].phonetics.find(function(p){return p.text;}) || data[0]; resolve(pObj.text || null); return; } } resolve(null); }, onerror: function(){resolve(null);} }); }); }\n' +
-'            function fetchWordLevel(text) { return new Promise(function(resolve) { GM_xmlhttpRequest({ method: "GET", url: \'https://dict.youdao.com/jsonapi?q=\' + encodeURIComponent(text), onload: function(res) { var result = { stars: 0, tags: [] }; try { var data = JSON.parse(res.responseText); if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) { var starStr = data.collins.collins_entries[0].star; if (starStr) { var parsedNum = parseInt(String(starStr).replace(/[^0-9]/g, \'\'), 10); result.stars = isNaN(parsedNum) ? 0 : parsedNum; } } } catch (e) {} resolve(result); }, onerror: function(){resolve({ stars: 0, tags: [] });} }); }); }\n' +
+'            async function fetchTranslation(text) { try { const res = await fetchWithTimeout(\'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&dt=bd&q=\' + encodeURIComponent(text), {}, 3500); if (!res.ok) throw new Error(); return await res.json(); } catch(e) { return [[[\'查询超时或网络错误\']]]; } }\n' +
+'            async function fetchPhonetics(text) { try { const res = await fetchWithTimeout(\'https://api.dictionaryapi.dev/api/v2/entries/en/\' + encodeURIComponent(text), {}, 2500); if (!res.ok) return null; const data = await res.json(); if (data && data.length > 0) { const pObj = data[0].phonetics.find(p => p.text) || data[0]; return pObj.text || null; } return null; } catch(e) { return null; } }\n' +
+'            async function fetchWordLevel(text) {\n' +
+'                const targetUrl = \'https://dict.youdao.com/jsonapi?q=\' + encodeURIComponent(text);\n' +
+'                const proxies = [ \'https://corsproxy.io/?\' + encodeURIComponent(targetUrl), \'https://api.allorigins.win/raw?url=\' + encodeURIComponent(targetUrl), \'https://api.codetabs.com/v1/proxy?quest=\' + encodeURIComponent(targetUrl) ];\n' +
+'                const tryProxy = async (proxy) => { const res = await fetchWithTimeout(proxy, {}, 2000); if (!res.ok) throw new Error(); const data = await res.json(); var result = { stars: 0, tags: [] }; if (data.ec && data.ec.exam_type) result.tags = data.ec.exam_type; if (data.collins && data.collins.collins_entries && data.collins.collins_entries.length > 0) { var starStr = data.collins.collins_entries[0].star; if (starStr) { var parsedNum = parseInt(String(starStr).replace(/[^0-9]/g, \'\'), 10); result.stars = isNaN(parsedNum) ? 0 : parsedNum; } } return result; };\n' +
+'                try { return await Promise.any(proxies.map(p => tryProxy(p))); } catch (e) { return { stars: 0, tags: [] }; }\n' +
+'            }\n' +
 '            var globalAudioPlayer = null; var currentPlayingBtn = null;\n' +
 '            function initAudioPlayer() { if (!globalAudioPlayer) { globalAudioPlayer = document.createElement(\'audio\'); globalAudioPlayer.style.display = \'none\'; document.body.appendChild(globalAudioPlayer); } }\n' +
 '            function playTTS(apiIndex, text, voice, btn) {\n' +
@@ -715,8 +707,7 @@
 '                        var renderContent = function(data) { if (instance.reference.innerText.trim() !== word) return; var contentDiv = document.createElement(\'div\'); contentDiv.className = \'dict-popup\'; contentDiv.innerHTML = formatDictData(word, data); [\'mousedown\', \'touchstart\', \'click\'].forEach(function(evt){ contentDiv.addEventListener(evt, function(e){e.stopPropagation();}, { capture: true }); }); var btn = contentDiv.querySelector(\'.dict-speaker-btn\'); if (btn) { btn.addEventListener(\'click\', function(e){ e.preventDefault(); e.stopPropagation(); var text = btn.getAttribute(\'data-word\'); if (!text || btn.classList.contains(\'playing\')) return; playTTS(0, text.trim(), ttsConfig.voices[Math.floor(Math.random() * ttsConfig.voices.length)], btn); }); } instance.setContent(contentDiv); };\n' +
 '                        if (globalResultCache[wordKey]) { renderContent(globalResultCache[wordKey]); } else {\n' +
 '                            var loadingDiv = document.createElement(\'div\'); loadingDiv.className = \'dict-popup\'; loadingDiv.innerHTML = \'<div class="dict-loading">极速查询中...</div>\'; instance.setContent(loadingDiv);\n' +
-'                            var pTrans = fetchTranslation(word).catch(function(){return [[[\'API Error\']]];}); var pPhon = fetchPhonetics(word).catch(function(){return null;}); var pLevel = fetchWordLevel(word).catch(function(){return {stars:0, tags:[]};}); var pCefr = Promise.race([fetchCEFR(word), new Promise(function(r){setTimeout(function(){r(null);},1500);})]).catch(function(){return null;});\n' +
-'                            Promise.all([pTrans, pPhon, pLevel, pCefr]).then(function(arr){ var resultData = { transData: arr[0], ipaText: arr[1], levelData: arr[2], cefrLevel: arr[3] }; saveToGlobalCache(wordKey, resultData); if (instance.state.isVisible) renderContent(resultData); });\n' +
+'                            Promise.all([fetchTranslation(word), fetchPhonetics(word), fetchWordLevel(word), fetchCEFR(word)]).then(function(arr){ var resultData = { transData: arr[0], ipaText: arr[1], levelData: arr[2], cefrLevel: arr[3] }; saveToGlobalCache(wordKey, resultData); if (instance.state.isVisible) renderContent(resultData); });\n' +
 '                        }\n' +
 '                    }\n' +
 '                });\n' +
