@@ -15,6 +15,7 @@
             --danger: #ff3b30;
             --btn-bg: #1d1d1f;
             --btn-text: #ffffff;
+            --star-gold: #ffcc00;
         }
 
         * {
@@ -169,7 +170,6 @@
         }
         .status-msg.error { color: var(--danger); height: auto; padding: 20px 0; }
 
-        /* 重试按钮 */
         .retry-btn {
             margin-top: 18px;
             padding: 10px 24px;
@@ -216,7 +216,7 @@
             text-align: center;
             font-size: 1.2rem;
             font-weight: 800;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             color: var(--text-main);
             letter-spacing: 1px;
         }
@@ -235,7 +235,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 20px;
+            padding: 14px 16px;
             background: var(--bg-color);
             border-radius: 16px;
             cursor: pointer;
@@ -245,6 +245,30 @@
             transform: scale(0.96);
             background: #e5e5ea;
         }
+        .history-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        /* 收藏星星按钮 */
+        .star-btn {
+            color: #d1d1d6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            margin-left: -4px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .star-btn:active {
+            transform: scale(0.8);
+            background: rgba(0,0,0,0.05);
+        }
+        .star-btn.active {
+            color: var(--star-gold);
+        }
+
         .history-word {
             font-size: 1.15rem;
             font-weight: 700;
@@ -256,7 +280,7 @@
             font-weight: 500;
         }
 
-        /* 底部页面指示器 (极简) */
+        /* 底部页面指示器 */
         .page-indicator {
             position: absolute;
             bottom: 25px;
@@ -303,10 +327,10 @@
         </div>
     </div>
 
-    <!-- 历史记录页面 (双指滑动访问) -->
+    <!-- 历史记录页面 -->
     <div id="page-history" class="page">
         <div class="card history-card">
-            <div class="history-header">Recent 24h</div>
+            <div class="history-header">Recent 24h & Favorites</div>
             <div class="history-list" id="history-list">
                 <!-- 动态渲染 -->
             </div>
@@ -325,8 +349,9 @@
         const activeAudio = new Audio();
         let dictCache = {}; 
 
-        // 历史记录数组 (保存在 localStorage 中)
-        let wordHistory = JSON.parse(localStorage.getItem('PorcelainHistory_v1')) || [];
+        // 历史记录数组 (无缝兼容旧版数据，存入新版 key)
+        let wordHistory = JSON.parse(localStorage.getItem('PorcelainHistory_v2')) || 
+                          JSON.parse(localStorage.getItem('PorcelainHistory_v1')) || [];
 
         const els = {
             word: document.getElementById('word-display'),
@@ -355,22 +380,46 @@
             activeAudio.play().catch(e => console.log('Audio error:', e));
         }
 
-        // ================= 历史记录核心逻辑 =================
+        // ================= 历史记录与收藏核心逻辑 =================
         function saveToHistory(word) {
-            // 过滤掉已存在的，将其移到最前
+            // 查找是否已经存在（保留其收藏状态）
+            let existingItem = wordHistory.find(item => item.word === word);
+            let isStarred = existingItem ? existingItem.starred : false;
+            
+            // 剔除旧的，移到最前
             wordHistory = wordHistory.filter(item => item.word !== word);
-            wordHistory.unshift({ word: word, time: Date.now() });
+            wordHistory.unshift({ word: word, time: Date.now(), starred: isStarred });
+            
             cleanAndSaveHistory();
         }
+
+        // 切换收藏状态
+        window.toggleStar = function(event, word) {
+            event.stopPropagation(); // 阻止点击事件冒泡到父级卡片
+            let index = wordHistory.findIndex(item => item.word === word);
+            if (index > -1) {
+                wordHistory[index].starred = !wordHistory[index].starred;
+                cleanAndSaveHistory();
+                renderHistory(); // 重新渲染列表刷新星星颜色
+            }
+        };
 
         function cleanAndSaveHistory() {
             const now = Date.now();
             const oneDay = 24 * 60 * 60 * 1000;
-            // 剔除24小时之前的数据
-            wordHistory = wordHistory.filter(item => now - item.time < oneDay);
-            // 限制最多保存 100 条防止爆满
-            if (wordHistory.length > 100) wordHistory = wordHistory.slice(0, 100);
-            localStorage.setItem('PorcelainHistory_v1', JSON.stringify(wordHistory));
+            
+            // 核心规则：保留星标收藏的，或者 24 小时以内的
+            wordHistory = wordHistory.filter(item => item.starred || (now - item.time < oneDay));
+            
+            // 防止无限制膨胀 (最大容量 500)
+            if (wordHistory.length > 500) {
+                let starred = wordHistory.filter(i => i.starred);
+                let unstarred = wordHistory.filter(i => !i.starred).slice(0, 500 - starred.length);
+                wordHistory = [...starred, ...unstarred];
+                wordHistory.sort((a, b) => b.time - a.time);
+            }
+            
+            localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
         }
 
         function renderHistory() {
@@ -379,23 +428,33 @@
                 els.historyList.innerHTML = '<div style="text-align:center;color:var(--text-muted);margin-top:40px;">No records yet.</div>';
                 return;
             }
+            
+            // 苹果风 SVG 星星
+            const starSvg = `<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="var(--fill-color, none)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+            
             els.historyList.innerHTML = wordHistory.map(item => {
                 const timeStr = new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const starClass = item.starred ? 'active' : '';
+                const fillStyle = item.starred ? 'style="--fill-color: currentColor;"' : '';
+                
                 return `
                     <div class="history-item" onclick="loadFromHistory('${item.word}')">
-                        <span class="history-word">${item.word}</span>
+                        <div class="history-item-left">
+                            <div class="star-btn ${starClass}" onclick="toggleStar(event, '${item.word}')" ${fillStyle}>
+                                ${starSvg}
+                            </div>
+                            <span class="history-word">${item.word}</span>
+                        </div>
                         <span class="history-time">${timeStr}</span>
                     </div>
                 `;
             }).join('');
         }
 
-        // 历史卡片反向唤醒
         window.loadFromHistory = function(word) {
             switchPage('page-main');
             currentWord = word;
             
-            // 重置 UI 并渲染卡片
             els.word.innerText = currentWord;
             els.word.classList.remove('pulse');
             adjustFontSize();
@@ -407,7 +466,7 @@
             setTimeout(() => playAudio(currentWord), 150);
             requestDictionaryData(currentWord);
             
-            // 更新时间戳使其重回顶部
+            // 更新该词时间戳使其重回顶部，且不丢失收藏状态
             saveToHistory(currentWord); 
         };
 
@@ -426,14 +485,12 @@
             }
         }
 
-        // 双指滑动监听
         let twoFingerTouch = false;
         let startX = 0;
 
         document.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 twoFingerTouch = true;
-                // 取双指中心点
                 startX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             } else {
                 twoFingerTouch = false;
@@ -447,11 +504,9 @@
                 let diffX = startX - currentX;
                 
                 if (diffX > 60) {
-                    // 向左滑 -> 呼出第二页历史记录
                     switchPage('page-history');
-                    twoFingerTouch = false; // 触发后立即重置，防止一次滑动触发多次
+                    twoFingerTouch = false; 
                 } else if (diffX < -60) {
-                    // 向右滑 -> 返回第一页
                     switchPage('page-main');
                     twoFingerTouch = false;
                 }
@@ -506,15 +561,11 @@
                 els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
 
                 setTimeout(() => playAudio(currentWord), 150);
-                
-                // 存入24小时记录
                 saveToHistory(currentWord);
-
                 requestDictionaryData(currentWord);
             }, 200);
         }
 
-        // 重新请求绑定的全局方法
         window.retryFetch = function() {
             els.dictArea.innerHTML = '<div class="status-msg pulse">Retrying...</div>';
             requestDictionaryData(currentWord);
@@ -571,7 +622,6 @@
             if (currentWord !== targetWord) return; 
 
             if (!data) {
-                // 🌟 新增的带有重试按钮的错误提示UI
                 els.dictArea.innerHTML = `
                     <div class="status-msg error">
                         ❌ Timeout or blocked.<br>Ensure Tampermonkey is active.
@@ -648,7 +698,6 @@
         els.btn.addEventListener('click', showRandomWord);
         window.addEventListener('resize', () => { if (currentWord) adjustFontSize(); });
 
-        // 启动系统
         fetchWords();
     </script>
 </body>
