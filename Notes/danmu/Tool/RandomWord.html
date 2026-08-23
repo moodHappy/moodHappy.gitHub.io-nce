@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Porcelain 单词引擎</title>
+    <title>Porcelain Engine</title>
     <style>
         :root {
-            --bg-color: #f5f5f7;       /* 柔和的灰白背景 */
-            --card-bg: #ffffff;        /* 纯白卡片 */
-            --text-main: #1d1d1f;      /* 极致深灰（接近黑，不刺眼） */
-            --text-muted: #86868b;     /* 次级灰 */
-            --accent: #007aff;         /* 点缀蓝 */
-            --divider: #e5e5ea;        /* 淡淡的分割线 */
-            --danger: #ff3b30;         /* 警示红 */
-            --btn-bg: #1d1d1f;         /* 按钮背景 */
-            --btn-text: #ffffff;       /* 按钮文字 */
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --accent: #007aff;
+            --divider: #e5e5ea;
+            --danger: #ff3b30;
+            --btn-bg: #1d1d1f;
+            --btn-text: #ffffff;
         }
 
         * {
@@ -25,17 +25,32 @@
         }
 
         body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, sans-serif;
             overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
         }
 
-        /* 瓷白卡片设计：干净、无边框、大阴影 */
+        /* 页面切换层级设计 */
+        .page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0; 
+            left: 0;
+        }
+        .page.active {
+            display: flex;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        /* 核心卡片设计 */
         .card {
             width: 90%;
             max-width: 500px;
@@ -49,7 +64,7 @@
             transition: all 0.3s ease;
         }
 
-        /* 单词主显区：加入防折行和溢出隐藏 */
+        /* 第一页：主显区 */
         .word-display {
             width: 100%;
             text-align: center;
@@ -57,7 +72,7 @@
             font-weight: 800;
             letter-spacing: -1px;
             color: var(--text-main);
-            white-space: nowrap; /* 绝对禁止换行 */
+            white-space: nowrap; 
             overflow: hidden;
             line-height: 1.1;
             min-height: 1.1em;
@@ -65,7 +80,6 @@
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
-        /* 音标与发音按钮区 */
         .phonetics-row {
             display: flex;
             justify-content: center;
@@ -103,7 +117,6 @@
             margin-bottom: 25px;
         }
 
-        /* 释义渲染区域 */
         .dictionary-area {
             width: 100%;
             min-height: 150px;
@@ -115,7 +128,6 @@
             text-align: left;
         }
         
-        /* 极简滚动条 */
         .dictionary-area::-webkit-scrollbar { width: 4px; }
         .dictionary-area::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 4px; }
 
@@ -134,7 +146,6 @@
         }
         .gt-def { color: var(--text-main); word-break: break-word; font-weight: 400; }
 
-        /* 例句区域 */
         .gt-ex-box {
             margin-top: 20px;
             padding-top: 15px;
@@ -144,7 +155,6 @@
         .gt-ex-en { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; color: var(--text-main); line-height: 1.5; }
         .gt-ex-zh { color: var(--text-muted); line-height: 1.4; }
 
-        /* 状态提示 */
         .status-msg {
             display: flex;
             flex-direction: column;
@@ -155,10 +165,28 @@
             font-size: 0.95rem;
             text-align: center;
             letter-spacing: 0.5px;
+            line-height: 1.6;
         }
-        .status-msg.error { color: var(--danger); }
+        .status-msg.error { color: var(--danger); height: auto; padding: 20px 0; }
 
-        /* 纯粹的英文按钮 */
+        /* 重试按钮 */
+        .retry-btn {
+            margin-top: 18px;
+            padding: 10px 24px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #fff;
+            background: var(--text-main);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        .retry-btn:active { transform: scale(0.92); }
+
+        /* NEXT 主操作按钮 */
         button.action-btn {
             margin-top: 30px;
             width: 100%;
@@ -179,42 +207,137 @@
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
         }
 
-        /* 动画 */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* 第二页：历史记录卡片 */
+        .history-card {
+            align-items: stretch;
+            padding: 30px 20px;
+        }
+        .history-header {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: var(--text-main);
+            letter-spacing: 1px;
+        }
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            max-height: 60vh;
+            padding-right: 5px;
+        }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 4px; }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-color);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:active {
+            transform: scale(0.96);
+            background: #e5e5ea;
+        }
+        .history-word {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .history-time {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* 底部页面指示器 (极简) */
+        .page-indicator {
+            position: absolute;
+            bottom: 25px;
+            left: 0; 
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .dot {
+            width: 6px; 
+            height: 6px; 
+            border-radius: 50%; 
+            background: #d1d1d6; 
+            transition: all 0.3s ease;
+        }
+        .dot.active {
+            width: 18px; 
+            border-radius: 3px; 
+            background: var(--text-muted);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .pulse { animation: pulse 1.5s infinite ease-in-out; }
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div id="word-display" class="word-display pulse">LOADING</div>
-        
-        <div id="phonetics" class="phonetics-row"></div>
-        <div class="divider"></div>
-        
-        <div id="dictionary-area" class="dictionary-area">
-            <div class="status-msg pulse">Fetching Database...</div>
-        </div>
+    <!-- 主页面 -->
+    <div id="page-main" class="page active">
+        <div class="card">
+            <div id="word-display" class="word-display pulse">LOADING</div>
+            
+            <div id="phonetics" class="phonetics-row"></div>
+            <div class="divider"></div>
+            
+            <div id="dictionary-area" class="dictionary-area">
+                <div class="status-msg pulse">Fetching Database...</div>
+            </div>
 
-        <button id="random-btn" class="action-btn">NEXT</button>
+            <button id="random-btn" class="action-btn">NEXT</button>
+        </div>
+    </div>
+
+    <!-- 历史记录页面 (双指滑动访问) -->
+    <div id="page-history" class="page">
+        <div class="card history-card">
+            <div class="history-header">Recent 24h</div>
+            <div class="history-list" id="history-list">
+                <!-- 动态渲染 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 页面底部指示器 -->
+    <div class="page-indicator">
+        <div class="dot active" id="dot-main"></div>
+        <div class="dot" id="dot-history"></div>
     </div>
 
     <script>
-        // 核心变量
         let wordsList = [];
         let currentWord = "";
         const activeAudio = new Audio();
         let dictCache = {}; 
 
+        // 历史记录数组 (保存在 localStorage 中)
+        let wordHistory = JSON.parse(localStorage.getItem('PorcelainHistory_v1')) || [];
+
         const els = {
             word: document.getElementById('word-display'),
             phonetics: document.getElementById('phonetics'),
             dictArea: document.getElementById('dictionary-area'),
-            btn: document.getElementById('random-btn')
+            btn: document.getElementById('random-btn'),
+            historyList: document.getElementById('history-list'),
+            dotMain: document.getElementById('dot-main'),
+            dotHistory: document.getElementById('dot-history')
         };
 
-        // 🌟 动态字体计算：绝对防拐弯
         function adjustFontSize() {
             els.word.style.fontSize = '4.5rem';
             let currentSize = 4.5;
@@ -224,16 +347,119 @@
             }
         }
 
-        // 发音功能
         function playAudio(text, event) {
             if(event) event.stopPropagation();
             if(!text) return;
             const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`;
             activeAudio.src = url;
-            activeAudio.play().catch(e => console.log('音频播放受限:', e));
+            activeAudio.play().catch(e => console.log('Audio error:', e));
         }
 
-        // 1. 多路获取词库
+        // ================= 历史记录核心逻辑 =================
+        function saveToHistory(word) {
+            // 过滤掉已存在的，将其移到最前
+            wordHistory = wordHistory.filter(item => item.word !== word);
+            wordHistory.unshift({ word: word, time: Date.now() });
+            cleanAndSaveHistory();
+        }
+
+        function cleanAndSaveHistory() {
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000;
+            // 剔除24小时之前的数据
+            wordHistory = wordHistory.filter(item => now - item.time < oneDay);
+            // 限制最多保存 100 条防止爆满
+            if (wordHistory.length > 100) wordHistory = wordHistory.slice(0, 100);
+            localStorage.setItem('PorcelainHistory_v1', JSON.stringify(wordHistory));
+        }
+
+        function renderHistory() {
+            cleanAndSaveHistory();
+            if (wordHistory.length === 0) {
+                els.historyList.innerHTML = '<div style="text-align:center;color:var(--text-muted);margin-top:40px;">No records yet.</div>';
+                return;
+            }
+            els.historyList.innerHTML = wordHistory.map(item => {
+                const timeStr = new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                return `
+                    <div class="history-item" onclick="loadFromHistory('${item.word}')">
+                        <span class="history-word">${item.word}</span>
+                        <span class="history-time">${timeStr}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 历史卡片反向唤醒
+        window.loadFromHistory = function(word) {
+            switchPage('page-main');
+            currentWord = word;
+            
+            // 重置 UI 并渲染卡片
+            els.word.innerText = currentWord;
+            els.word.classList.remove('pulse');
+            adjustFontSize();
+            els.word.style.opacity = 1;
+            
+            els.phonetics.innerHTML = '';
+            els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
+
+            setTimeout(() => playAudio(currentWord), 150);
+            requestDictionaryData(currentWord);
+            
+            // 更新时间戳使其重回顶部
+            saveToHistory(currentWord); 
+        };
+
+        // ================= 页面切换与手势逻辑 =================
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            if (pageId === 'page-history') {
+                renderHistory();
+                els.dotMain.classList.remove('active');
+                els.dotHistory.classList.add('active');
+            } else {
+                els.dotHistory.classList.remove('active');
+                els.dotMain.classList.add('active');
+            }
+        }
+
+        // 双指滑动监听
+        let twoFingerTouch = false;
+        let startX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                twoFingerTouch = true;
+                // 取双指中心点
+                startX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            } else {
+                twoFingerTouch = false;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!twoFingerTouch) return;
+            if (e.touches.length === 2) {
+                let currentX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                let diffX = startX - currentX;
+                
+                if (diffX > 60) {
+                    // 向左滑 -> 呼出第二页历史记录
+                    switchPage('page-history');
+                    twoFingerTouch = false; // 触发后立即重置，防止一次滑动触发多次
+                } else if (diffX < -60) {
+                    // 向右滑 -> 返回第一页
+                    switchPage('page-main');
+                    twoFingerTouch = false;
+                }
+            }
+        }, { passive: true });
+
+
+        // ================= 网络抓取与渲染逻辑 =================
         async function fetchWords() {
             const fetchUrls = [
                 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
@@ -253,16 +479,15 @@
                         }
                     }
                 } catch (error) {
-                    console.warn(`节点拉取失败，尝试下一个...`);
+                    console.warn(`Node failed, trying next...`);
                 }
             }
             
             els.word.innerText = 'ERROR';
             els.word.classList.remove('pulse');
-            els.dictArea.innerHTML = '<div class="status-msg error">❌ Failed to load words.<br>Check your network.</div>';
+            els.dictArea.innerHTML = '<div class="status-msg error">Failed to load words.<br>Check your network.</div>';
         }
 
-        // 2. 随机单词逻辑
         function showRandomWord() {
             if (wordsList.length === 0) return;
             
@@ -272,25 +497,29 @@
                 const randomIndex = Math.floor(Math.random() * wordsList.length);
                 currentWord = wordsList[randomIndex];
                 
-                // 更新单词UI & 防拐弯校验
                 els.word.innerText = currentWord;
                 els.word.classList.remove('pulse');
                 adjustFontSize();
                 els.word.style.opacity = 1;
                 
-                // 重置面板
                 els.phonetics.innerHTML = '';
                 els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
 
-                // 尝试发音
                 setTimeout(() => playAudio(currentWord), 150);
+                
+                // 存入24小时记录
+                saveToHistory(currentWord);
 
-                // 核心：请求词典数据
                 requestDictionaryData(currentWord);
             }, 200);
         }
 
-        // 3. 🛡️ 强健的双擎词典抓取 (直连 + 油猴回退)
+        // 重新请求绑定的全局方法
+        window.retryFetch = function() {
+            els.dictArea.innerHTML = '<div class="status-msg pulse">Retrying...</div>';
+            requestDictionaryData(currentWord);
+        };
+
         async function requestDictionaryData(word) {
             if (dictCache[word]) {
                 renderDictionary(word, dictCache[word]);
@@ -311,7 +540,7 @@
                 if (currentWord === word) renderDictionary(word, data);
             } 
             catch (err) {
-                console.warn(`[直连受阻] 转交油猴跨域引擎处理: ${word}`);
+                console.warn(`[CORS Blocked] Switching to Tampermonkey: ${word}`);
                 els.dictArea.innerHTML = '<div class="status-msg pulse" style="color: var(--accent);">Bypassing CORS...</div>';
 
                 const tmHandler = (e) => {
@@ -338,12 +567,17 @@
             }
         }
 
-        // 4. 解析并渲染数据
         function renderDictionary(targetWord, data) {
             if (currentWord !== targetWord) return; 
 
             if (!data) {
-                els.dictArea.innerHTML = `<div class="status-msg error">❌ Timeout or blocked.<br>Ensure Tampermonkey is active.</div>`;
+                // 🌟 新增的带有重试按钮的错误提示UI
+                els.dictArea.innerHTML = `
+                    <div class="status-msg error">
+                        ❌ Timeout or blocked.<br>Ensure Tampermonkey is active.
+                        <button class="retry-btn" onclick="retryFetch()">RETRY</button>
+                    </div>
+                `;
                 return;
             }
 
@@ -351,7 +585,6 @@
             let meaningsHtml = '';
             let exampleHtml = '';
             
-            // 提取音标
             if (data.simple?.word?.[0]) {
                 const w = data.simple.word[0];
                 const p = w.usphone || w.ukphone || w.phone;
@@ -360,7 +593,6 @@
                 phonetic = `/${data.ec.word[0].usphone}/`;
             }
 
-            // 渲染音标区域
             const bigSpk = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
             if (phonetic) {
                 els.phonetics.innerHTML = `
@@ -371,7 +603,6 @@
                 els.phonetics.innerHTML = `<div class="speaker-btn" data-speak="${targetWord}" onclick="playAudio(this.getAttribute('data-speak'), event)">${bigSpk}</div>`;
             }
 
-            // 提取释义
             if (data.ec?.word?.[0]?.trs) {
                 data.ec.word[0].trs.forEach(item => {
                     const text = item.tr?.[0]?.l?.i?.join('；');
@@ -392,7 +623,6 @@
                 meaningsHtml = `<li><span class="gt-def" style="color: var(--text-muted);">No definition found.</span></li>`;
             }
 
-            // 提取例句
             const sents = data.blng_sents_part?.["sentence-pair"];
             if (sents && sents.length > 0) {
                 const en = sents[0].sentence;
@@ -412,11 +642,9 @@
                 }
             }
 
-            // 装载入 DOM
             els.dictArea.innerHTML = `<ul class="gt-meanings">${meaningsHtml}</ul>${exampleHtml}`;
         }
 
-        // 绑定事件
         els.btn.addEventListener('click', showRandomWord);
         window.addEventListener('resize', () => { if (currentWord) adjustFontSize(); });
 
