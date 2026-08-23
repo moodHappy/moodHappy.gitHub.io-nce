@@ -64,7 +64,6 @@
             position: relative; 
         }
 
-        /* 🌟 左上角收藏按钮：更小、更靠边 */
         .main-star-btn {
             position: absolute;
             top: 18px;
@@ -107,7 +106,7 @@
             font-size: 1.1rem;
             color: var(--text-muted);
             font-family: "Lucida Sans Unicode", "Arial", sans-serif;
-            margin-bottom: 25px;
+            margin-bottom: 8px; 
             min-height: 30px;
         }
 
@@ -126,6 +125,37 @@
         .speaker-btn:active { 
             background: rgba(0, 122, 255, 0.15); 
             transform: scale(0.92); 
+        }
+
+        /* 🌟 相遇星星 & 毕业提示合并区 */
+        .encounter-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 20px;
+            min-height: 24px;
+        }
+        .encounter-stars {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            color: var(--star-gold);
+        }
+        .encounter-stars svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            animation: fadeIn 0.3s ease;
+        }
+        .graduated-text {
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+            display: none; /* 默认隐藏，毕业时显示 */
         }
 
         .divider {
@@ -351,7 +381,6 @@
             background: var(--text-muted);
         }
 
-        /* 设置图标及模态框 */
         .settings-icon {
             position: fixed;
             top: 25px;
@@ -441,13 +470,19 @@
 
     <div id="page-main" class="page active">
         <div class="card">
-            <!-- 左上角星星 -->
             <div class="main-star-btn hidden" id="main-star-btn" onclick="toggleMainStar()">
                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="var(--fill-color, none)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
             
             <div id="word-display" class="word-display pulse">LOADING</div>
             <div id="phonetics" class="phonetics-row"></div>
+            
+            <!-- 🌟 相遇与毕业记录区 -->
+            <div class="encounter-area">
+                <div id="encounter-stars" class="encounter-stars"></div>
+                <div id="graduated-text" class="graduated-text">Graduated & Excluded</div>
+            </div>
+            
             <div class="divider"></div>
             <div id="dictionary-area" class="dictionary-area">
                 <div class="status-msg pulse">Fetching Database...</div>
@@ -475,7 +510,9 @@
     </div>
 
     <script>
-        let wordsList = [];
+        // --- 核心变量池 ---
+        let wordsList = []; // 动态随机池
+        let fullWordsList = []; // 原始全量池（用于排除比对）
         let currentWord = "";
         const activeAudio = new Audio();
         let dictCache = {}; 
@@ -484,6 +521,10 @@
                           JSON.parse(localStorage.getItem('PorcelainHistory_v1')) || [];
         
         let appStats = JSON.parse(localStorage.getItem('PorcelainStats_v1')) || { total: 0 };
+        let wordEncounters = JSON.parse(localStorage.getItem('PorcelainEncounters_v1')) || {};
+        
+        // 🌟 新增：已毕业（被排除的）单词记录
+        let graduatedWords = JSON.parse(localStorage.getItem('PorcelainGraduated_v1')) || {};
 
         const GITHUB_REPO = "moodHappy/moodHappy.gitHub.io-nce";
         const GITHUB_PATH = "config/porcelain_sync.json";
@@ -491,6 +532,8 @@
         const els = {
             word: document.getElementById('word-display'),
             phonetics: document.getElementById('phonetics'),
+            encounterStars: document.getElementById('encounter-stars'),
+            graduatedText: document.getElementById('graduated-text'),
             dictArea: document.getElementById('dictionary-area'),
             btn: document.getElementById('random-btn'),
             historyList: document.getElementById('history-list'),
@@ -510,13 +553,10 @@
             else modal.classList.remove('show');
         }
 
-        function utf8_to_b64(str) {
-            return btoa(unescape(encodeURIComponent(str)));
-        }
-        function b64_to_utf8(str) {
-            return decodeURIComponent(escape(atob(str)));
-        }
+        function utf8_to_b64(str) { return btoa(unescape(encodeURIComponent(str))); }
+        function b64_to_utf8(str) { return decodeURIComponent(escape(atob(str))); }
 
+        // ================= 🌟 云端同步功能更新 =================
         async function syncData(action) {
             const token = els.tokenInput.value.trim();
             if (!token) return;
@@ -525,7 +565,12 @@
             try {
                 if (action === 'push') {
                     cleanAndSaveHistory();
-                    const payload = JSON.stringify({ history: wordHistory, stats: appStats });
+                    const payload = JSON.stringify({ 
+                        history: wordHistory, 
+                        stats: appStats,
+                        encounters: wordEncounters,
+                        graduated: graduatedWords // 将毕业单词表打包上传
+                    });
                     if (payload.length > 900000) return alert('Size Limit Exceeded (1MB)');
 
                     let sha = '';
@@ -540,7 +585,7 @@
                         method: 'PUT',
                         headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            message: 'Sync Porcelain Data',
+                            message: 'Sync Porcelain Data (Include Exclusions)',
                             content: utf8_to_b64(payload),
                             sha: sha || undefined
                         })
@@ -553,6 +598,7 @@
                     if (res.ok) {
                         let data = await res.json();
                         let content = JSON.parse(b64_to_utf8(data.content.replace(/\n/g, '')));
+                        
                         if (content.history) {
                             wordHistory = content.history;
                             localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
@@ -561,8 +607,19 @@
                             appStats = content.stats;
                             localStorage.setItem('PorcelainStats_v1', JSON.stringify(appStats));
                         }
+                        if (content.encounters) {
+                            wordEncounters = content.encounters;
+                            localStorage.setItem('PorcelainEncounters_v1', JSON.stringify(wordEncounters));
+                        }
+                        if (content.graduated) {
+                            graduatedWords = content.graduated;
+                            localStorage.setItem('PorcelainGraduated_v1', JSON.stringify(graduatedWords));
+                            applyExclusions(); // 拉取后立即重新清洗内存词库
+                        }
+                        
                         renderHistory();
                         updateMainStarState();
+                        updateEncounterStars(currentWord);
                         alert('PULL SUCCESS');
                     }
                 }
@@ -589,11 +646,13 @@
             activeAudio.play().catch(e => {});
         }
 
-        function saveToHistory(word) {
+        function saveToHistory(word, forceStar = false) {
             let existingItem = wordHistory.find(item => item.word === word);
-            let isStarred = existingItem ? existingItem.starred : false;
+            let isStarred = forceStar ? true : (existingItem ? existingItem.starred : false);
+            
             wordHistory = wordHistory.filter(item => item.word !== word);
             wordHistory.unshift({ word: word, time: Date.now(), starred: isStarred });
+            
             cleanAndSaveHistory();
             updateMainStarState();
         }
@@ -626,6 +685,26 @@
             }
         }
 
+        function updateEncounterStars(word) {
+            if(!word) {
+                els.encounterStars.innerHTML = '';
+                els.graduatedText.style.display = 'none';
+                return;
+            }
+            const count = Math.min(wordEncounters[word] || 0, 5);
+            const starSvg = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="none" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+            let html = '';
+            for(let i = 0; i < count; i++) { html += starSvg; }
+            els.encounterStars.innerHTML = html;
+            
+            // 🌟 如果达到了 5 次，显示毕业提示文本
+            if (count >= 5 || graduatedWords[word]) {
+                els.graduatedText.style.display = 'block';
+            } else {
+                els.graduatedText.style.display = 'none';
+            }
+        }
+
         window.toggleStar = function(event, word) {
             event.stopPropagation();
             let index = wordHistory.findIndex(item => item.word === word);
@@ -644,15 +723,11 @@
             wordHistory = wordHistory.filter(item => item.starred || (now - item.time < oneDay));
             
             wordHistory.sort((a, b) => {
-                if (a.starred === b.starred) {
-                    return b.time - a.time;
-                }
+                if (a.starred === b.starred) { return b.time - a.time; }
                 return a.starred ? -1 : 1;
             });
             
-            if (wordHistory.length > 500) {
-                wordHistory = wordHistory.slice(0, 500);
-            }
+            if (wordHistory.length > 500) { wordHistory = wordHistory.slice(0, 500); }
             localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
         }
 
@@ -702,9 +777,7 @@
                 `;
             }).join('');
 
-            if(els.searchInput.value) {
-                filterHistory();
-            }
+            if(els.searchInput.value) { filterHistory(); }
         }
 
         window.loadFromHistory = function(word) {
@@ -717,11 +790,15 @@
             els.word.style.opacity = 1;
             
             els.phonetics.innerHTML = '';
+            els.encounterStars.innerHTML = ''; 
+            els.graduatedText.style.display = 'none';
             els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
 
             setTimeout(() => playAudio(currentWord), 150);
-            requestDictionaryData(currentWord);
+            
             saveToHistory(currentWord); 
+            updateEncounterStars(currentWord); 
+            requestDictionaryData(currentWord);
         };
 
         function switchPage(pageId) {
@@ -768,6 +845,13 @@
             }
         }, { passive: true });
 
+        // 🌟 剔除已毕业的单词
+        function applyExclusions() {
+            if (fullWordsList.length > 0) {
+                wordsList = fullWordsList.filter(w => !graduatedWords[w]);
+            }
+        }
+
         async function fetchWords() {
             els.mainStarBtn.classList.add('hidden'); 
 
@@ -782,8 +866,10 @@
                     const response = await fetch(url, { timeout: 5000 });
                     if (response.ok) {
                         const text = await response.text();
-                        wordsList = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-                        if (wordsList.length > 0) {
+                        fullWordsList = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                        
+                        if (fullWordsList.length > 0) {
+                            applyExclusions(); // 去除已毕业的名单
                             showRandomWord();
                             return; 
                         }
@@ -797,7 +883,12 @@
         }
 
         function showRandomWord() {
-            if (wordsList.length === 0) return;
+            if (wordsList.length === 0) {
+                els.word.innerText = 'CLEAR';
+                els.word.classList.remove('pulse');
+                els.dictArea.innerHTML = '<div class="status-msg" style="color:var(--accent);">🎉 All words have graduated!</div>';
+                return;
+            }
             
             els.word.style.opacity = 0;
             els.mainStarBtn.classList.add('hidden');
@@ -809,16 +900,33 @@
                 appStats.total++;
                 localStorage.setItem('PorcelainStats_v1', JSON.stringify(appStats));
 
+                // 增加相遇计数
+                wordEncounters[currentWord] = (wordEncounters[currentWord] || 0) + 1;
+                localStorage.setItem('PorcelainEncounters_v1', JSON.stringify(wordEncounters));
+                
+                // 🌟 如果相遇达到 5 次，标记毕业、排除名额、并强制收藏
+                let autoFavorite = false;
+                if (wordEncounters[currentWord] >= 5) {
+                    autoFavorite = true;
+                    graduatedWords[currentWord] = true;
+                    localStorage.setItem('PorcelainGraduated_v1', JSON.stringify(graduatedWords));
+                    applyExclusions(); // 实时从抽词池中永久排除
+                }
+
                 els.word.innerText = currentWord;
                 els.word.classList.remove('pulse');
                 adjustFontSize();
                 els.word.style.opacity = 1;
                 
                 els.phonetics.innerHTML = '';
+                els.encounterStars.innerHTML = ''; 
+                els.graduatedText.style.display = 'none';
                 els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
 
                 setTimeout(() => playAudio(currentWord), 150);
-                saveToHistory(currentWord);
+                saveToHistory(currentWord, autoFavorite);
+                updateEncounterStars(currentWord);
+
                 requestDictionaryData(currentWord);
             }, 200);
         }
