@@ -61,7 +61,28 @@
             flex-direction: column;
             align-items: center;
             transition: all 0.3s ease;
+            position: relative; /* 为左上角星星定位提供基准 */
         }
+
+        /* 🌟 左上角收藏按钮 */
+        .main-star-btn {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            color: #d1d1d6;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .main-star-btn:active { transform: scale(0.8); background: rgba(0,0,0,0.05); }
+        .main-star-btn.active { color: var(--star-gold); }
+        /* 初始化时隐藏，等单词加载完再显示 */
+        .main-star-btn.hidden { opacity: 0; pointer-events: none; }
 
         .word-display {
             width: 100%;
@@ -69,13 +90,14 @@
             font-size: 4.5rem;
             font-weight: 800;
             letter-spacing: -1px;
-            color: var(--text-main);
+            color: var(--danger); /* 适配截图中红色的主词条 */
             white-space: nowrap; 
             overflow: hidden;
             line-height: 1.1;
             min-height: 1.1em;
             margin-bottom: 12px;
             transition: opacity 0.3s ease, transform 0.3s ease;
+            padding: 0 20px; /* 留出空间防止文字遮挡星星 */
         }
 
         .phonetics-row {
@@ -151,6 +173,8 @@
             font-size: 0.95rem;
         }
         .gt-ex-en { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; color: var(--text-main); line-height: 1.5; }
+        .gt-ex-en-text { flex: 1; padding-right: 10px; }
+        .gt-ex-en-text strong { color: var(--danger); font-weight: 700; } /* 适配截图中例句关键字高亮 */
         .gt-ex-zh { color: var(--text-muted); line-height: 1.4; }
 
         .status-msg {
@@ -223,12 +247,36 @@
             color: var(--text-main);
             letter-spacing: 1px;
         }
+        
+        /* 🌟 第二页搜索框 */
+        .history-search-container {
+            margin-bottom: 15px;
+            padding: 0 5px;
+        }
+        .history-search-input {
+            width: 100%;
+            padding: 12px 18px;
+            background-color: var(--bg-color);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .history-search-input:focus {
+            background-color: #fff;
+            border-color: var(--text-muted);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .history-search-input::placeholder { color: #aaa; }
+
         .history-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
             overflow-y: auto;
-            max-height: 60vh;
+            max-height: 55vh;
             padding-right: 5px;
         }
         .history-list::-webkit-scrollbar { width: 4px; }
@@ -244,6 +292,7 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+        .history-item.hidden { display: none !important; }
         .history-item:active {
             transform: scale(0.96);
             background: #e5e5ea;
@@ -273,7 +322,7 @@
         .history-word {
             font-size: 1.15rem;
             font-weight: 700;
-            color: var(--text-main);
+            color: var(--danger); /* 历史记录列表单词颜色 */
         }
         .history-time {
             font-size: 0.85rem;
@@ -394,6 +443,11 @@
 
     <div id="page-main" class="page active">
         <div class="card">
+            <!-- 左上角星星 -->
+            <div class="main-star-btn hidden" id="main-star-btn" onclick="toggleMainStar()">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="var(--fill-color, none)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            
             <div id="word-display" class="word-display pulse">LOADING</div>
             <div id="phonetics" class="phonetics-row"></div>
             <div class="divider"></div>
@@ -408,6 +462,12 @@
         <div class="card history-card">
             <div class="history-stats" id="history-stats">0 / 0</div>
             <div class="history-header">Recent 24h & Favorites</div>
+            
+            <!-- 搜索框 -->
+            <div class="history-search-container">
+                <input type="text" id="history-search" class="history-search-input" placeholder="Search..." onkeyup="filterHistory()">
+            </div>
+
             <div class="history-list" id="history-list"></div>
         </div>
     </div>
@@ -440,7 +500,9 @@
             dotMain: document.getElementById('dot-main'),
             dotHistory: document.getElementById('dot-history'),
             stats: document.getElementById('history-stats'),
-            tokenInput: document.getElementById('gh-token')
+            tokenInput: document.getElementById('gh-token'),
+            mainStarBtn: document.getElementById('main-star-btn'),
+            searchInput: document.getElementById('history-search')
         };
 
         els.tokenInput.value = localStorage.getItem('GH_TOKEN') || '';
@@ -503,6 +565,7 @@
                             localStorage.setItem('PorcelainStats_v1', JSON.stringify(appStats));
                         }
                         renderHistory();
+                        updateMainStarState();
                         alert('PULL SUCCESS');
                     }
                 }
@@ -535,6 +598,37 @@
             wordHistory = wordHistory.filter(item => item.word !== word);
             wordHistory.unshift({ word: word, time: Date.now(), starred: isStarred });
             cleanAndSaveHistory();
+            updateMainStarState();
+        }
+
+        // 🌟 主页面左上角星星点击逻辑
+        window.toggleMainStar = function() {
+            if(!currentWord) return;
+            let index = wordHistory.findIndex(item => item.word === currentWord);
+            if (index > -1) {
+                wordHistory[index].starred = !wordHistory[index].starred;
+            } else {
+                wordHistory.unshift({ word: currentWord, time: Date.now(), starred: true });
+            }
+            cleanAndSaveHistory();
+            updateMainStarState();
+        }
+
+        // 更新主页面星星的亮暗状态
+        function updateMainStarState() {
+            if(!currentWord) {
+                els.mainStarBtn.classList.add('hidden');
+                return;
+            }
+            els.mainStarBtn.classList.remove('hidden');
+            let item = wordHistory.find(i => i.word === currentWord);
+            if(item && item.starred) {
+                els.mainStarBtn.classList.add('active');
+                els.mainStarBtn.style.setProperty('--fill-color', 'currentColor');
+            } else {
+                els.mainStarBtn.classList.remove('active');
+                els.mainStarBtn.style.setProperty('--fill-color', 'none');
+            }
         }
 
         window.toggleStar = function(event, word) {
@@ -543,7 +637,8 @@
             if (index > -1) {
                 wordHistory[index].starred = !wordHistory[index].starred;
                 cleanAndSaveHistory();
-                renderHistory(); 
+                renderHistory();
+                if(word === currentWord) updateMainStarState();
             }
         };
 
@@ -551,10 +646,8 @@
             const now = Date.now();
             const oneDay = 24 * 60 * 60 * 1000;
             
-            // 过滤：保留收藏的，或 24 小时内的
             wordHistory = wordHistory.filter(item => item.starred || (now - item.time < oneDay));
             
-            // 排序：收藏置顶，同等状态下按时间倒序（最新的在前）
             wordHistory.sort((a, b) => {
                 if (a.starred === b.starred) {
                     return b.time - a.time;
@@ -562,12 +655,26 @@
                 return a.starred ? -1 : 1;
             });
             
-            // 防止无限制膨胀 (最大容量 500)
             if (wordHistory.length > 500) {
                 wordHistory = wordHistory.slice(0, 500);
             }
             localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
         }
+
+        // 🌟 历史搜索过滤逻辑
+        window.filterHistory = function() {
+            const filterValue = els.searchInput.value.toLowerCase().trim();
+            const items = els.historyList.querySelectorAll('.history-item');
+            
+            items.forEach(item => {
+                const word = item.querySelector('.history-word').innerText.toLowerCase();
+                if (word.includes(filterValue)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        };
 
         function renderHistory() {
             cleanAndSaveHistory();
@@ -589,17 +696,22 @@
                 const fillStyle = item.starred ? 'style="--fill-color: currentColor;"' : '';
                 
                 return `
-                    <div class="history-item" onclick="loadFromHistory('${item.word}')">
-                        <div class="history-item-left">
+                    <div class="history-item">
+                        <div class="history-item-left" onclick="loadFromHistory('${item.word}')">
                             <div class="star-btn ${starClass}" onclick="toggleStar(event, '${item.word}')" ${fillStyle}>
                                 ${starSvg}
                             </div>
                             <span class="history-word">${item.word}</span>
                         </div>
-                        <span class="history-time">${timeStr}</span>
+                        <span class="history-time" onclick="loadFromHistory('${item.word}')">${timeStr}</span>
                     </div>
                 `;
             }).join('');
+
+            // 重新渲染后保持之前的搜索状态
+            if(els.searchInput.value) {
+                filterHistory();
+            }
         }
 
         window.loadFromHistory = function(word) {
@@ -627,9 +739,14 @@
                 renderHistory();
                 els.dotMain.classList.remove('active');
                 els.dotHistory.classList.add('active');
+                // 每次进第二页，自动聚焦搜索框 (如果在桌面端或需求允许)
+                // els.searchInput.focus(); 
             } else {
                 els.dotHistory.classList.remove('active');
                 els.dotMain.classList.add('active');
+                // 退出第二页时清空搜索框
+                els.searchInput.value = '';
+                filterHistory();
             }
         }
 
@@ -662,6 +779,8 @@
         }, { passive: true });
 
         async function fetchWords() {
+            els.mainStarBtn.classList.add('hidden'); // 加载时隐藏星星
+
             const fetchUrls = [
                 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
                 'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt',
@@ -691,6 +810,7 @@
             if (wordsList.length === 0) return;
             
             els.word.style.opacity = 0;
+            els.mainStarBtn.classList.add('hidden');
             
             setTimeout(() => {
                 const randomIndex = Math.floor(Math.random() * wordsList.length);
@@ -764,6 +884,12 @@
             }
         }
 
+        function highlightKeyword(sentence, keyword) {
+            if (!keyword || !sentence) return sentence;
+            const regex = new RegExp(`(${keyword})`, 'gi');
+            return sentence.replace(regex, '<strong>$1</strong>');
+        }
+
         function renderDictionary(targetWord, data) {
             if (currentWord !== targetWord) return; 
 
@@ -825,11 +951,12 @@
                 const zh = sents[0]["sentence-translation"];
                 if (en && zh) {
                     const cleanEnText = en.replace(/<[^>]+>/g, '');
+                    const highlightedEn = highlightKeyword(cleanEnText, targetWord);
                     const smSpk = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
                     exampleHtml = `
                         <div class="gt-ex-box">
                             <div class="gt-ex-en">
-                                <div style="padding-right: 10px;">${en}</div>
+                                <div class="gt-ex-en-text">${highlightedEn}</div>
                                 <div class="speaker-btn" style="width:26px;height:26px;flex-shrink:0;background:rgba(0,122,255,0.05);" data-speak="${cleanEnText}" onclick="playAudio(this.getAttribute('data-speak'), event)">${smSpk}</div>
                             </div>
                             <div class="gt-ex-zh">${zh}</div>
