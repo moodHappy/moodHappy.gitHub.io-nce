@@ -550,13 +550,21 @@
         function cleanAndSaveHistory() {
             const now = Date.now();
             const oneDay = 24 * 60 * 60 * 1000;
+            
+            // 过滤：保留收藏的，或 24 小时内的
             wordHistory = wordHistory.filter(item => item.starred || (now - item.time < oneDay));
             
+            // 排序：收藏置顶，同等状态下按时间倒序（最新的在前）
+            wordHistory.sort((a, b) => {
+                if (a.starred === b.starred) {
+                    return b.time - a.time;
+                }
+                return a.starred ? -1 : 1;
+            });
+            
+            // 防止无限制膨胀 (最大容量 500)
             if (wordHistory.length > 500) {
-                let starred = wordHistory.filter(i => i.starred);
-                let unstarred = wordHistory.filter(i => !i.starred).slice(0, 500 - starred.length);
-                wordHistory = [...starred, ...unstarred];
-                wordHistory.sort((a, b) => b.time - a.time);
+                wordHistory = wordHistory.slice(0, 500);
             }
             localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
         }
