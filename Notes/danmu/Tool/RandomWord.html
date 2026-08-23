@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>极简单词引擎</title>
+    <title>HUD 单词引擎</title>
     <style>
         :root {
-            --bg-color: #f0f4f8;
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --accent: #3b82f6;
-            --btn-bg: #0f172a;
-            --btn-hover: #1e293b;
+            --neon-cyan: #00f3ff;
+            --neon-blue: #0077ff;
+            --dark-bg: #050a10;
+            --card-bg: rgba(5, 15, 25, 0.7);
+            --text-main: #e0f2fe;
+            --text-muted: #7dd3fc;
+            --border-glow: rgba(0, 243, 255, 0.4);
+            --danger: #ff4444;
         }
 
         * {
@@ -27,168 +28,195 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
+            font-family: "SF Pro Text", "Segoe UI", Roboto, Helvetica, monospace, sans-serif;
+            background-color: var(--dark-bg);
+            /* 科技感网格背景 */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 25px 25px;
             color: var(--text-main);
             overflow: hidden;
         }
 
-        /* 核心卡片设计 */
-        .card {
-            width: 90%;
+        /* 核心 HUD 面板 */
+        .hud-card {
+            width: 92%;
             max-width: 500px;
             background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 32px;
-            padding: 40px 30px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1), 
-                        0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 30px 20px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1), inset 0 0 20px rgba(0, 243, 255, 0.05);
             display: flex;
             flex-direction: column;
-            align-items: center;
-            text-align: center;
-            transition: all 0.3s ease;
+            position: relative;
         }
+
+        /* 边角科技装饰 */
+        .hud-card::before, .hud-card::after {
+            content: ''; position: absolute; width: 20px; height: 20px; border: 2px solid var(--neon-cyan);
+        }
+        .hud-card::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .hud-card::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
 
         /* 单词主显区：加入防折行和溢出隐藏 */
         .word-display {
-            width: 100%; /* 限制最大宽度为父容器 */
-            font-size: 4.5rem; /* 初始超大字体 */
+            width: 100%;
+            text-align: center;
+            font-size: 4.5rem;
             font-weight: 800;
-            letter-spacing: -1.5px;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, #0f172a, #334155);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            white-space: nowrap; /* 🌟 绝对禁止换行（拐弯） */
-            overflow: hidden;    /* 配合 JS 检测真实宽度 */
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-cyan);
+            white-space: nowrap; /* 绝对禁止换行 */
+            overflow: hidden;
             line-height: 1.2;
             min-height: 1.2em;
+            margin-bottom: 10px;
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
-        /* 音标区域 */
-        .phonetics {
+        /* 音标与发音按钮区 */
+        .phonetics-row {
             display: flex;
-            gap: 15px;
-            font-size: 1.1rem;
-            color: var(--text-muted);
-            font-family: "Lucida Sans Unicode", "Arial", sans-serif;
-            margin-bottom: 25px;
-            min-height: 1.5em;
-        }
-
-        .phonetics span {
-            background: rgba(241, 245, 249, 0.8);
-            padding: 4px 12px;
-            border-radius: 20px;
-        }
-
-        /* 分割线 */
-        .divider {
-            width: 60px;
-            height: 4px;
-            background-color: #cbd5e1;
-            border-radius: 2px;
-            margin-bottom: 25px;
-        }
-
-        /* 释义渲染区域 */
-        .dictionary-area {
-            width: 100%;
-            min-height: 80px;
-            margin-bottom: 35px;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
+            gap: 15px;
+            font-size: 1.1rem;
+            color: var(--neon-cyan);
+            font-family: monospace;
+            margin-bottom: 20px;
+            min-height: 30px;
         }
 
-        .dict-entry {
-            width: 100%;
-            text-align: left;
-            background: #f8fafc;
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            border-left: 4px solid var(--accent);
-            animation: fadeIn 0.4s ease forwards;
-        }
-
-        .status-msg {
-            color: var(--text-muted);
-            font-size: 1rem;
+        .speaker-btn {
+            color: var(--neon-cyan);
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            transition: all 0.2s;
+        }
+        .speaker-btn:active { background: rgba(0, 243, 255, 0.3); transform: scale(0.9); }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
 
-        .error { color: #ef4444; }
+        /* 释义渲染区域 (仿照你参考代码的结构) */
+        .dictionary-area {
+            width: 100%;
+            min-height: 150px;
+            max-height: 40vh;
+            overflow-y: auto;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            padding-right: 5px;
+        }
         
-        /* 极致手感的按钮 */
-        button {
+        /* 滚动条美化 */
+        .dictionary-area::-webkit-scrollbar { width: 4px; }
+        .dictionary-area::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 4px; }
+
+        .gt-meanings { list-style: none; padding: 0; margin: 0; }
+        .gt-meanings li { margin-bottom: 10px; display: flex; align-items: baseline; animation: fadeIn 0.4s ease forwards; }
+        .gt-pos { 
+            color: #050a10; 
+            font-size: 12px; 
+            background: var(--neon-cyan); 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            margin-right: 10px; 
+            flex-shrink: 0; 
+            font-weight: 800; 
+            box-shadow: 0 0 5px var(--neon-cyan);
+        }
+        .gt-def { color: var(--text-main); word-break: break-word; }
+
+        /* 例句区域 */
+        .gt-ex-box {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed rgba(0, 243, 255, 0.3);
+            font-size: 14px;
+        }
+        .gt-ex-en { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 5px; color: #fff;}
+        .gt-ex-zh { color: var(--text-muted); }
+
+        /* 状态提示 */
+        .status-msg {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100px;
+            color: var(--neon-cyan);
+            font-family: monospace;
+            text-align: center;
+        }
+        .status-msg.error { color: var(--danger); text-shadow: 0 0 5px var(--danger); }
+
+        /* 科技感按钮 */
+        button.action-btn {
+            margin-top: 25px;
             width: 100%;
             padding: 18px 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: white;
-            background: var(--btn-bg);
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--dark-bg);
+            background: var(--neon-cyan);
             border: none;
-            border-radius: 999px;
+            border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 10px 20px -10px rgba(15, 23, 42, 0.5);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+        button.action-btn:active {
+            transform: scale(0.97);
+            background: #fff;
+            box-shadow: 0 0 25px #fff;
         }
 
-        button:hover {
-            background: var(--btn-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px -10px rgba(15, 23, 42, 0.6);
-        }
-
-        button:active {
-            transform: translateY(1px);
-            box-shadow: 0 5px 10px -5px rgba(15, 23, 42, 0.5);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .pulse {
-            animation: pulse 1.5s infinite ease-in-out;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
+        /* 动画 */
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .pulse { animation: pulse 1.5s infinite ease-in-out; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div id="word-display" class="word-display pulse">加载中...</div>
+    <div class="hud-card">
+        <div id="word-display" class="word-display pulse">SYSTEM_INIT</div>
         
-        <div id="phonetics" class="phonetics"></div>
+        <div id="phonetics" class="phonetics-row"></div>
         <div class="divider"></div>
         
         <div id="dictionary-area" class="dictionary-area">
-            <div class="status-msg">正在从 GitHub 获取词库引擎...</div>
+            <div class="status-msg pulse">ESTABLISHING LINK TO GITHUB...</div>
         </div>
 
-        <button id="random-btn">随机一个单词</button>
+        <button id="random-btn" class="action-btn">随机提取 / NEXT</button>
     </div>
 
     <script>
-        const txtUrl = 'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt';
+        // 核心变量
         let wordsList = [];
         let currentWord = "";
+        const activeAudio = new Audio();
+        let dictCache = {}; 
 
         const els = {
             word: document.getElementById('word-display'),
@@ -197,136 +225,219 @@
             btn: document.getElementById('random-btn')
         };
 
-        // 🌟 动态字体计算：保证长单词在一行内完全显示，不拐弯
+        // 🌟 动态字体计算：绝对防拐弯
         function adjustFontSize() {
-            // 先重置为最大字号
             els.word.style.fontSize = '4.5rem';
             let currentSize = 4.5;
-            
-            // 如果内部文本真实宽度 (scrollWidth) 大于可视宽度 (clientWidth)
-            // 就循环减小字号，直到能够完全容纳
+            // 只要单词宽度超过了卡片可用宽度，就不断缩小字号
             while (els.word.scrollWidth > els.word.clientWidth && currentSize > 1) {
                 currentSize -= 0.1;
                 els.word.style.fontSize = currentSize + 'rem';
             }
         }
 
-        // 1. 获取并解析文本文件
-        async function fetchWords() {
-            try {
-                const response = await fetch(txtUrl);
-                if (!response.ok) throw new Error('网络请求失败');
-                
-                const text = await response.text();
-                wordsList = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-                
-                if (wordsList.length > 0) {
-                    showRandomWord();
-                } else {
-                    els.word.innerText = '空词库';
-                    els.word.classList.remove('pulse');
-                    els.dictArea.innerHTML = '<span class="status-msg error">⚠️ 词库文件内没有单词</span>';
-                }
-            } catch (error) {
-                console.error('获取词库出错:', error);
-                els.word.innerText = '网络错误';
-                els.word.classList.remove('pulse');
-                els.dictArea.innerHTML = '<span class="status-msg error">❌ 无法连接到 GitHub</span>';
-            }
+        // 发音功能 (复用参考代码逻辑)
+        function playAudio(text, event) {
+            if(event) event.stopPropagation();
+            if(!text) return;
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`;
+            activeAudio.src = url;
+            activeAudio.play().catch(e => console.log('音频播放受限:', e));
         }
 
-        // 2. 随机挑选单词并呼叫油猴脚本
+        // 1. 多路获取词库，防止国内 DNS 污染导致加载不出来
+        async function fetchWords() {
+            // 提供原版和多个国内友好的镜像加速代理
+            const fetchUrls = [
+                'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt',
+                'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt'
+            ];
+
+            for (let url of fetchUrls) {
+                try {
+                    const response = await fetch(url, { timeout: 5000 });
+                    if (response.ok) {
+                        const text = await response.text();
+                        wordsList = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                        if (wordsList.length > 0) {
+                            showRandomWord();
+                            return; // 成功加载，直接退出函数
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`节点 ${url} 拉取失败，尝试下一个...`);
+                }
+            }
+            
+            // 如果所有节点都失败
+            els.word.innerText = 'SYS_ERROR';
+            els.word.classList.remove('pulse');
+            els.dictArea.innerHTML = '<div class="status-msg error">❌ 词库加载失败<br>请检查网络或代理设置</div>';
+        }
+
+        // 2. 随机单词逻辑
         function showRandomWord() {
             if (wordsList.length === 0) return;
             
-            // UI 切换动画准备
             els.word.style.opacity = 0;
-            els.word.style.transform = "scale(0.95)";
             
             setTimeout(() => {
                 const randomIndex = Math.floor(Math.random() * wordsList.length);
                 currentWord = wordsList[randomIndex];
                 
-                // 更新单词 UI
+                // 更新单词UI & 防拐弯校验
                 els.word.innerText = currentWord;
                 els.word.classList.remove('pulse');
-                
-                // 触发字体自适应校验
                 adjustFontSize();
-                
-                // 动画恢复
                 els.word.style.opacity = 1;
-                els.word.style.transform = "scale(1)";
                 
-                // 重置释义和音标 UI
+                // 重置面板
                 els.phonetics.innerHTML = '';
-                els.dictArea.innerHTML = '<div class="status-msg pulse">✨ 正在呼叫词典引擎跨域抓取...</div>';
+                els.dictArea.innerHTML = '<div class="status-msg pulse">CALLING DICT ENGINE...<br>等待引擎响应</div>';
 
-                // 向油猴脚本发送求助信号
-                window.dispatchEvent(new CustomEvent('TM_Dict_Request', {
-                    detail: { word: currentWord }
-                }));
+                // 尝试发音
+                setTimeout(() => playAudio(currentWord), 150);
+
+                // 核心：请求词典数据
+                requestDictionaryData(currentWord);
             }, 200);
         }
 
-        // 3. 监听油猴脚本传回的词典数据
-        window.addEventListener('TM_Dict_Response', function(e) {
-            const returnedWord = e.detail.word;
-            const data = e.detail.data;
-
-            if (returnedWord !== currentWord) return;
-
-            if (!data) {
-                els.dictArea.innerHTML = '<div class="status-msg error">❌ 词典请求超时或无数据</div>';
+        // 3. 🛡️ 强健的双擎词典抓取 (直连 + 油猴回退)
+        async function requestDictionaryData(word) {
+            if (dictCache[word]) {
+                renderDictionary(word, dictCache[word]);
                 return;
             }
 
-            renderDictionary(data);
-        });
-
-        // 4. 解析并渲染有道词典的 JSON 数据
-        function renderDictionary(data) {
-            let ukPhone = '', usPhone = '', translations = [];
-
+            const url = `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`;
+            
+            // 引擎1：尝试浏览器直接 Fetch
             try {
-                if (data.simple && data.simple.word && data.simple.word[0]) {
-                    if (data.simple.word[0].ukphone) ukPhone = `UK [${data.simple.word[0].ukphone}]`;
-                    if (data.simple.word[0].usphone) usPhone = `US [${data.simple.word[0].usphone}]`;
-                }
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500); // 直连给 2.5s 机会
+                
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                const data = await res.json();
+                
+                dictCache[word] = data;
+                if (currentWord === word) renderDictionary(word, data);
+            } 
+            catch (err) {
+                // 引擎2：直连失败(大概率CORS)，唤醒油猴跨域抓取
+                console.warn(`[直连受阻] 转交油猴跨域引擎处理: ${word}`);
+                els.dictArea.innerHTML = '<div class="status-msg pulse" style="color: #0077ff;">BYPASSING CORS...<br>油猴引擎介入中</div>';
 
-                if (data.ec && data.ec.word && data.ec.word[0] && data.ec.word[0].trs) {
-                    translations = data.ec.word[0].trs.map(t => {
-                        return t.tr[0].l.i[0];
-                    }).filter(t => t);
-                } else if (data.web_trans && data.web_trans.web_translation) {
-                    translations = data.web_trans.web_translation[0].value;
-                }
-            } catch (err) {
-                console.error("解析字典数据出错:", err);
-            }
+                const tmHandler = (e) => {
+                    if (e.detail.word === word) {
+                        window.removeEventListener('TM_Dict_Response', tmHandler);
+                        if (e.detail.data) {
+                            dictCache[word] = e.detail.data;
+                            if (currentWord === word) renderDictionary(word, e.detail.data);
+                        } else {
+                            if (currentWord === word) renderDictionary(word, null);
+                        }
+                    }
+                };
 
-            els.phonetics.innerHTML = '';
-            if (ukPhone) els.phonetics.innerHTML += `<span>${ukPhone}</span>`;
-            if (usPhone) els.phonetics.innerHTML += `<span>${usPhone}</span>`;
+                window.addEventListener('TM_Dict_Response', tmHandler);
+                window.dispatchEvent(new CustomEvent('TM_Dict_Request', { detail: { word: word } }));
 
-            if (translations.length > 0) {
-                els.dictArea.innerHTML = translations.map(tr => 
-                    `<div class="dict-entry">${tr}</div>`
-                ).join('');
-            } else {
-                els.dictArea.innerHTML = '<div class="status-msg">⚠️ 暂无该词的释义数据</div>';
+                // 给油猴 5s 的超时兜底
+                setTimeout(() => {
+                    window.removeEventListener('TM_Dict_Response', tmHandler);
+                    if (currentWord === word && els.dictArea.innerHTML.includes('BYPASSING')) {
+                        renderDictionary(word, null);
+                    }
+                }, 5000);
             }
         }
 
-        // 绑定按钮事件
+        // 4. 解析并渲染数据 (移植自参考代码的高级渲染逻辑)
+        function renderDictionary(targetWord, data) {
+            if (currentWord !== targetWord) return; // 防止快速点击导致的数据错位
+
+            if (!data) {
+                els.dictArea.innerHTML = `<div class="status-msg error">❌ 接口响应超时或跨域被拦截。<br>请确保油猴脚本已启用。</div>`;
+                return;
+            }
+
+            let phonetic = '';
+            let meaningsHtml = '';
+            let exampleHtml = '';
+            
+            // 提取音标
+            if (data.simple?.word?.[0]) {
+                const w = data.simple.word[0];
+                const p = w.usphone || w.ukphone || w.phone;
+                if (p) phonetic = `/${p}/`;
+            } else if (data.ec?.word?.[0]?.usphone) {
+                phonetic = `/${data.ec.word[0].usphone}/`;
+            }
+
+            // 渲染音标区域
+            const bigSpk = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+            if (phonetic) {
+                els.phonetics.innerHTML = `
+                    <span>${phonetic}</span>
+                    <div class="speaker-btn" data-speak="${targetWord}" onclick="playAudio(this.getAttribute('data-speak'), event)">${bigSpk}</div>
+                `;
+            } else {
+                els.phonetics.innerHTML = `<div class="speaker-btn" data-speak="${targetWord}" onclick="playAudio(this.getAttribute('data-speak'), event)">${bigSpk}</div>`;
+            }
+
+            // 提取释义
+            if (data.ec?.word?.[0]?.trs) {
+                data.ec.word[0].trs.forEach(item => {
+                    const text = item.tr?.[0]?.l?.i?.join('；');
+                    if (text) {
+                        const match = text.match(/^([a-z]+\.)\s*(.+)/);
+                        if (match) {
+                            meaningsHtml += `<li><span class="gt-pos">${match[1]}</span><span class="gt-def">${match[2]}</span></li>`;
+                        } else {
+                            meaningsHtml += `<li><span class="gt-def">${text}</span></li>`;
+                        }
+                    }
+                });
+            } else if (data.web_trans?.["web-translation"]) {
+                data.web_trans["web-translation"].slice(0, 3).forEach(item => {
+                    meaningsHtml += `<li><span class="gt-pos">Web</span><span class="gt-def">${item.trans.map(t=>t.value).join('; ')}</span></li>`;
+                });
+            } else {
+                meaningsHtml = `<li><span class="gt-def" style="color: #7dd3fc;">暂无常用释义数据</span></li>`;
+            }
+
+            // 提取例句
+            const sents = data.blng_sents_part?.["sentence-pair"];
+            if (sents && sents.length > 0) {
+                const en = sents[0].sentence;
+                const zh = sents[0]["sentence-translation"];
+                if (en && zh) {
+                    const cleanEnText = en.replace(/<[^>]+>/g, '');
+                    const smSpk = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+                    exampleHtml = `
+                        <div class="gt-ex-box">
+                            <div class="gt-ex-en">
+                                <div style="padding-right: 10px;">${en}</div>
+                                <div class="speaker-btn" style="width:24px;height:24px;flex-shrink:0;" data-speak="${cleanEnText}" onclick="playAudio(this.getAttribute('data-speak'), event)">${smSpk}</div>
+                            </div>
+                            <div class="gt-ex-zh">${zh}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // 装载入 DOM
+            els.dictArea.innerHTML = `<ul class="gt-meanings">${meaningsHtml}</ul>${exampleHtml}`;
+        }
+
+        // 绑定事件
         els.btn.addEventListener('click', showRandomWord);
+        window.addEventListener('resize', () => { if (currentWord) adjustFontSize(); });
 
-        // 如果遇到手机屏幕旋转或分屏，自动重新计算字体大小
-        window.addEventListener('resize', () => {
-            if (currentWord) adjustFontSize();
-        });
-
-        // 启动
+        // 启动系统
         fetchWords();
     </script>
 </body>
