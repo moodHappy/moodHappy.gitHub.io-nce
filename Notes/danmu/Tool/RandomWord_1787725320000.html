@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Porcelain Engine</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --accent: #007aff;
+            --divider: #e5e5ea;
+            --danger: #ff3b30;
+            --btn-bg: #1d1d1f;
+            --btn-text: #ffffff;
+            --star-gold: #ffcc00;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0; 
+            left: 0;
+        }
+        .page.active {
+            display: flex;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .card {
+            width: 90%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border-radius: 28px;
+            padding: 40px 25px 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative; 
+        }
+
+        .main-star-btn {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            color: #d1d1d6;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .main-star-btn:active { transform: scale(0.8); background: rgba(0,0,0,0.05); }
+        .main-star-btn.active { color: var(--star-gold); }
+        .main-star-btn.hidden { opacity: 0; pointer-events: none; }
+
+        .word-display {
+            width: 100%;
+            text-align: center;
+            font-size: 4.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: var(--danger); 
+            white-space: nowrap; 
+            overflow: hidden;
+            line-height: 1.1;
+            min-height: 1.1em;
+            margin-bottom: 12px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            padding: 0 20px; 
+        }
+
+        .phonetics-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-family: "Lucida Sans Unicode", "Arial", sans-serif;
+            margin-bottom: 8px; 
+            min-height: 30px;
+        }
+
+        .speaker-btn {
+            color: var(--accent);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(0, 122, 255, 0.08);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .speaker-btn:active { 
+            background: rgba(0, 122, 255, 0.15); 
+            transform: scale(0.92); 
+        }
+
+        /* 🌟 相遇星星 & 毕业提示合并区 */
+        .encounter-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 25px;
+            min-height: 24px;
+        }
+        .encounter-stars {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            color: var(--star-gold);
+        }
+        .encounter-stars svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            animation: fadeIn 0.3s ease;
+        }
+        .graduated-text {
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+            display: none; 
+        }
+
+        .dictionary-area {
+            width: 100%;
+            min-height: 150px;
+            max-height: 40vh;
+            overflow-y: auto;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            padding: 0 10px;
+            text-align: left;
+        }
+        
+        .dictionary-area::-webkit-scrollbar { width: 4px; }
+        .dictionary-area::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 4px; }
+
+        .gt-meanings { list-style: none; padding: 0; margin: 0; }
+        .gt-meanings li { margin-bottom: 10px; display: flex; align-items: baseline; animation: fadeIn 0.4s ease forwards; }
+        .gt-pos { 
+            color: var(--text-muted); 
+            font-size: 0.85rem; 
+            background: #f2f2f7; 
+            padding: 3px 8px; 
+            border-radius: 6px; 
+            margin-right: 12px; 
+            flex-shrink: 0; 
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .gt-def { color: var(--text-main); word-break: break-word; font-weight: 400; }
+
+        .gt-ex-box {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--divider);
+            font-size: 0.95rem;
+        }
+        .gt-ex-en { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; color: var(--text-main); line-height: 1.5; }
+        .gt-ex-en-text { flex: 1; padding-right: 10px; }
+        .gt-ex-en-text strong { color: var(--danger); font-weight: 700; } 
+        .gt-ex-zh { color: var(--text-muted); line-height: 1.4; }
+
+        .status-msg {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            text-align: center;
+            letter-spacing: 0.5px;
+            line-height: 1.6;
+        }
+        .status-msg.error { color: var(--danger); height: auto; padding: 20px 0; }
+
+        .retry-btn {
+            margin-top: 18px;
+            padding: 10px 24px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #fff;
+            background: var(--text-main);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        .retry-btn:active { transform: scale(0.92); }
+
+        button.action-btn {
+            margin-top: 30px;
+            width: 100%;
+            padding: 18px 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--btn-text);
+            background: var(--btn-bg);
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        button.action-btn:active {
+            transform: scale(0.96);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-card {
+            align-items: stretch;
+            padding: 30px 20px;
+        }
+        .history-stats {
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .history-header {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--text-main);
+            letter-spacing: 1px;
+        }
+        
+        .history-search-container {
+            margin-bottom: 15px;
+            padding: 0 5px;
+        }
+        .history-search-input {
+            width: 100%;
+            padding: 12px 18px;
+            background-color: var(--bg-color);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .history-search-input:focus {
+            background-color: #fff;
+            border-color: var(--text-muted);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .history-search-input::placeholder { color: #aaa; }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            max-height: 55vh;
+            padding-right: 5px;
+        }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 4px; }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--bg-color);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item.hidden { display: none !important; }
+        .history-item:active {
+            transform: scale(0.96);
+            background: #e5e5ea;
+        }
+        .history-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .star-btn {
+            color: #d1d1d6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            margin-left: -4px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .star-btn:active {
+            transform: scale(0.8);
+            background: rgba(0,0,0,0.05);
+        }
+        .star-btn.active {
+            color: var(--star-gold);
+        }
+        .history-word {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--danger); 
+        }
+        .history-time {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .page-indicator {
+            position: absolute;
+            bottom: 25px;
+            left: 0; 
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .dot {
+            width: 6px; 
+            height: 6px; 
+            border-radius: 50%; 
+            background: #d1d1d6; 
+            transition: all 0.3s ease;
+        }
+        .dot.active {
+            width: 18px; 
+            border-radius: 3px; 
+            background: var(--text-muted);
+        }
+
+        .settings-icon {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            color: var(--text-muted);
+            cursor: pointer;
+            z-index: 100;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .settings-icon:active { opacity: 1; transform: scale(0.9); }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            width: 85%;
+            max-width: 350px;
+            border-radius: 24px;
+            padding: 30px 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
+        .modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; text-align: center; }
+        .sync-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--divider);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 15px;
+            transition: border-color 0.2s;
+        }
+        .sync-input:focus { border-color: var(--text-main); }
+        .sync-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .sync-btn:active { transform: scale(0.96); }
+        .btn-push { background: var(--text-main); color: #fff; }
+        .btn-pull { background: var(--divider); color: var(--text-main); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse { animation: pulse 1.5s infinite ease-in-out; }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+
+    <div class="settings-icon" onclick="toggleSettings(true)">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </div>
+
+    <div class="modal-overlay" id="settings-modal" onclick="toggleSettings(false)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-title">SYNC</div>
+            <input type="password" id="gh-token" class="sync-input" placeholder="GitHub Token">
+            <button class="sync-btn btn-push" onclick="syncData('push')">PUSH</button>
+            <button class="sync-btn btn-pull" onclick="syncData('pull')">PULL</button>
+        </div>
+    </div>
+
+    <div id="page-main" class="page active">
+        <div class="card">
+            <div class="main-star-btn hidden" id="main-star-btn" onclick="toggleMainStar()">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="var(--fill-color, none)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            
+            <div id="word-display" class="word-display pulse">LOADING</div>
+            <div id="phonetics" class="phonetics-row"></div>
+            
+            <!-- 🌟 相遇与毕业记录区 -->
+            <div class="encounter-area">
+                <div id="encounter-stars" class="encounter-stars"></div>
+                <div id="graduated-text" class="graduated-text">Graduated & Excluded</div>
+            </div>
+            
+            <div id="dictionary-area" class="dictionary-area">
+                <div class="status-msg pulse">Fetching Database...</div>
+            </div>
+            <button id="random-btn" class="action-btn">NEXT</button>
+        </div>
+    </div>
+
+    <div id="page-history" class="page">
+        <div class="card history-card">
+            <div class="history-stats" id="history-stats">0 / 0</div>
+            <div class="history-header">Recent 24h & Favorites</div>
+            
+            <div class="history-search-container">
+                <input type="text" id="history-search" class="history-search-input" placeholder="Search..." onkeyup="filterHistory()">
+            </div>
+
+            <div class="history-list" id="history-list"></div>
+        </div>
+    </div>
+
+    <div class="page-indicator">
+        <div class="dot active" id="dot-main"></div>
+        <div class="dot" id="dot-history"></div>
+    </div>
+
+    <script>
+        let wordsList = []; 
+        let fullWordsList = []; 
+        let currentWord = "";
+        const activeAudio = new Audio();
+        let dictCache = {}; 
+
+        let wordHistory = JSON.parse(localStorage.getItem('PorcelainHistory_v2')) || 
+                          JSON.parse(localStorage.getItem('PorcelainHistory_v1')) || [];
+        
+        let appStats = JSON.parse(localStorage.getItem('PorcelainStats_v1')) || { total: 0 };
+        let wordEncounters = JSON.parse(localStorage.getItem('PorcelainEncounters_v1')) || {};
+        let graduatedWords = JSON.parse(localStorage.getItem('PorcelainGraduated_v1')) || {};
+
+        const GITHUB_REPO = "moodHappy/moodHappy.gitHub.io-nce";
+        const GITHUB_PATH = "config/porcelain_sync.json";
+
+        const els = {
+            word: document.getElementById('word-display'),
+            phonetics: document.getElementById('phonetics'),
+            encounterStars: document.getElementById('encounter-stars'),
+            graduatedText: document.getElementById('graduated-text'),
+            dictArea: document.getElementById('dictionary-area'),
+            btn: document.getElementById('random-btn'),
+            historyList: document.getElementById('history-list'),
+            dotMain: document.getElementById('dot-main'),
+            dotHistory: document.getElementById('dot-history'),
+            stats: document.getElementById('history-stats'),
+            tokenInput: document.getElementById('gh-token'),
+            mainStarBtn: document.getElementById('main-star-btn'),
+            searchInput: document.getElementById('history-search')
+        };
+
+        els.tokenInput.value = localStorage.getItem('GH_TOKEN') || '';
+
+        function toggleSettings(show) {
+            const modal = document.getElementById('settings-modal');
+            if (show) modal.classList.add('show');
+            else modal.classList.remove('show');
+        }
+
+        function utf8_to_b64(str) { return btoa(unescape(encodeURIComponent(str))); }
+        function b64_to_utf8(str) { return decodeURIComponent(escape(atob(str))); }
+
+        async function syncData(action) {
+            const token = els.tokenInput.value.trim();
+            if (!token) return;
+            localStorage.setItem('GH_TOKEN', token);
+
+            try {
+                if (action === 'push') {
+                    cleanAndSaveHistory();
+                    const payload = JSON.stringify({ 
+                        history: wordHistory, 
+                        stats: appStats,
+                        encounters: wordEncounters,
+                        graduated: graduatedWords
+                    });
+                    if (payload.length > 900000) return alert('Size Limit Exceeded (1MB)');
+
+                    let sha = '';
+                    try {
+                        let r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (r.ok) sha = (await r.json()).sha;
+                    } catch(e) {}
+
+                    let res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: 'Sync Porcelain Data (Include Exclusions)',
+                            content: utf8_to_b64(payload),
+                            sha: sha || undefined
+                        })
+                    });
+                    if (res.ok) alert('PUSH SUCCESS');
+                } else if (action === 'pull') {
+                    let res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+                        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if (res.ok) {
+                        let data = await res.json();
+                        let content = JSON.parse(b64_to_utf8(data.content.replace(/\n/g, '')));
+                        
+                        if (content.history) {
+                            wordHistory = content.history;
+                            localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
+                        }
+                        if (content.stats) {
+                            appStats = content.stats;
+                            localStorage.setItem('PorcelainStats_v1', JSON.stringify(appStats));
+                        }
+                        if (content.encounters) {
+                            wordEncounters = content.encounters;
+                            localStorage.setItem('PorcelainEncounters_v1', JSON.stringify(wordEncounters));
+                        }
+                        if (content.graduated) {
+                            graduatedWords = content.graduated;
+                            localStorage.setItem('PorcelainGraduated_v1', JSON.stringify(graduatedWords));
+                            applyExclusions(); 
+                        }
+                        
+                        renderHistory();
+                        updateMainStarState();
+                        updateEncounterStars(currentWord);
+                        alert('PULL SUCCESS');
+                    }
+                }
+            } catch (e) {
+                alert('SYNC ERROR');
+            }
+            toggleSettings(false);
+        }
+
+        function adjustFontSize() {
+            els.word.style.fontSize = '4.5rem';
+            let currentSize = 4.5;
+            while (els.word.scrollWidth > els.word.clientWidth && currentSize > 1) {
+                currentSize -= 0.1;
+                els.word.style.fontSize = currentSize + 'rem';
+            }
+        }
+
+        function playAudio(text, event) {
+            if(event) event.stopPropagation();
+            if(!text) return;
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`;
+            activeAudio.src = url;
+            activeAudio.play().catch(e => {});
+        }
+
+        function saveToHistory(word, forceStar = false) {
+            let existingItem = wordHistory.find(item => item.word === word);
+            let isStarred = forceStar ? true : (existingItem ? existingItem.starred : false);
+            
+            wordHistory = wordHistory.filter(item => item.word !== word);
+            wordHistory.unshift({ word: word, time: Date.now(), starred: isStarred });
+            
+            cleanAndSaveHistory();
+            updateMainStarState();
+        }
+
+        window.toggleMainStar = function() {
+            if(!currentWord) return;
+            let index = wordHistory.findIndex(item => item.word === currentWord);
+            if (index > -1) {
+                wordHistory[index].starred = !wordHistory[index].starred;
+            } else {
+                wordHistory.unshift({ word: currentWord, time: Date.now(), starred: true });
+            }
+            cleanAndSaveHistory();
+            updateMainStarState();
+        }
+
+        function updateMainStarState() {
+            if(!currentWord) {
+                els.mainStarBtn.classList.add('hidden');
+                return;
+            }
+            els.mainStarBtn.classList.remove('hidden');
+            let item = wordHistory.find(i => i.word === currentWord);
+            if(item && item.starred) {
+                els.mainStarBtn.classList.add('active');
+                els.mainStarBtn.style.setProperty('--fill-color', 'currentColor');
+            } else {
+                els.mainStarBtn.classList.remove('active');
+                els.mainStarBtn.style.setProperty('--fill-color', 'none');
+            }
+        }
+
+        function updateEncounterStars(word) {
+            if(!word) {
+                els.encounterStars.innerHTML = '';
+                els.graduatedText.style.display = 'none';
+                return;
+            }
+            const count = Math.min(wordEncounters[word] || 0, 5);
+            const starSvg = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="none" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+            let html = '';
+            for(let i = 0; i < count; i++) { html += starSvg; }
+            els.encounterStars.innerHTML = html;
+            
+            if (count >= 5 || graduatedWords[word]) {
+                els.graduatedText.style.display = 'block';
+            } else {
+                els.graduatedText.style.display = 'none';
+            }
+        }
+
+        window.toggleStar = function(event, word) {
+            event.stopPropagation();
+            let index = wordHistory.findIndex(item => item.word === word);
+            if (index > -1) {
+                wordHistory[index].starred = !wordHistory[index].starred;
+                cleanAndSaveHistory();
+                renderHistory();
+                if(word === currentWord) updateMainStarState();
+            }
+        };
+
+        function cleanAndSaveHistory() {
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000;
+            
+            wordHistory = wordHistory.filter(item => item.starred || (now - item.time < oneDay));
+            
+            wordHistory.sort((a, b) => {
+                if (a.starred === b.starred) { return b.time - a.time; }
+                return a.starred ? -1 : 1;
+            });
+            
+            if (wordHistory.length > 500) { wordHistory = wordHistory.slice(0, 500); }
+            localStorage.setItem('PorcelainHistory_v2', JSON.stringify(wordHistory));
+        }
+
+        window.filterHistory = function() {
+            const filterValue = els.searchInput.value.toLowerCase().trim();
+            const items = els.historyList.querySelectorAll('.history-item');
+            
+            items.forEach(item => {
+                const word = item.querySelector('.history-word').innerText.toLowerCase();
+                if (word.includes(filterValue)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        };
+
+        function renderHistory() {
+            cleanAndSaveHistory();
+            
+            const now = Date.now();
+            const recent24hCount = wordHistory.filter(item => now - item.time < 86400000).length;
+            els.stats.innerText = `${recent24hCount} / ${appStats.total}`;
+
+            if (wordHistory.length === 0) {
+                els.historyList.innerHTML = '<div style="text-align:center;color:var(--text-muted);margin-top:40px;">No records yet.</div>';
+                return;
+            }
+            
+            const starSvg = `<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="var(--fill-color, none)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+            
+            els.historyList.innerHTML = wordHistory.map(item => {
+                const timeStr = new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const starClass = item.starred ? 'active' : '';
+                const fillStyle = item.starred ? 'style="--fill-color: currentColor;"' : '';
+                
+                return `
+                    <div class="history-item">
+                        <div class="history-item-left" onclick="loadFromHistory('${item.word}')">
+                            <div class="star-btn ${starClass}" onclick="toggleStar(event, '${item.word}')" ${fillStyle}>
+                                ${starSvg}
+                            </div>
+                            <span class="history-word">${item.word}</span>
+                        </div>
+                        <span class="history-time" onclick="loadFromHistory('${item.word}')">${timeStr}</span>
+                    </div>
+                `;
+            }).join('');
+
+            if(els.searchInput.value) { filterHistory(); }
+        }
+
+        window.loadFromHistory = function(word) {
+            switchPage('page-main');
+            currentWord = word;
+            
+            els.word.innerText = currentWord;
+            els.word.classList.remove('pulse');
+            adjustFontSize();
+            els.word.style.opacity = 1;
+            
+            els.phonetics.innerHTML = '';
+            els.encounterStars.innerHTML = ''; 
+            els.graduatedText.style.display = 'none';
+            els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
+
+            setTimeout(() => playAudio(currentWord), 150);
+            
+            saveToHistory(currentWord); 
+            updateEncounterStars(currentWord); 
+            requestDictionaryData(currentWord);
+        };
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            if (pageId === 'page-history') {
+                renderHistory();
+                els.dotMain.classList.remove('active');
+                els.dotHistory.classList.add('active');
+            } else {
+                els.dotHistory.classList.remove('active');
+                els.dotMain.classList.add('active');
+                els.searchInput.value = '';
+                filterHistory();
+            }
+        }
+
+        let twoFingerTouch = false;
+        let startX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                twoFingerTouch = true;
+                startX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            } else {
+                twoFingerTouch = false;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!twoFingerTouch) return;
+            if (e.touches.length === 2) {
+                let currentX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                let diffX = startX - currentX;
+                
+                if (diffX > 60) {
+                    switchPage('page-history');
+                    twoFingerTouch = false; 
+                } else if (diffX < -60) {
+                    switchPage('page-main');
+                    twoFingerTouch = false;
+                }
+            }
+        }, { passive: true });
+
+        function applyExclusions() {
+            if (fullWordsList.length > 0) {
+                wordsList = fullWordsList.filter(w => !graduatedWords[w]);
+            }
+        }
+
+        async function fetchWords() {
+            els.mainStarBtn.classList.add('hidden'); 
+
+            const fetchUrls = [
+                'https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt',
+                'https://cdn.jsdelivr.net/gh/moodHappy/HelloWorld@master/Notes/one.txt',
+                'https://ghproxy.net/https://raw.githubusercontent.com/moodHappy/HelloWorld/refs/heads/master/Notes/one.txt'
+            ];
+
+            for (let url of fetchUrls) {
+                try {
+                    const response = await fetch(url, { timeout: 5000 });
+                    if (response.ok) {
+                        const text = await response.text();
+                        fullWordsList = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                        
+                        if (fullWordsList.length > 0) {
+                            applyExclusions(); 
+                            showRandomWord();
+                            return; 
+                        }
+                    }
+                } catch (error) {}
+            }
+            
+            els.word.innerText = 'ERROR';
+            els.word.classList.remove('pulse');
+            els.dictArea.innerHTML = '<div class="status-msg error">Failed to load words.<br>Check your network.</div>';
+        }
+
+        function showRandomWord() {
+            if (wordsList.length === 0) {
+                els.word.innerText = 'CLEAR';
+                els.word.classList.remove('pulse');
+                els.dictArea.innerHTML = '<div class="status-msg" style="color:var(--accent);">🎉 All words have graduated!</div>';
+                return;
+            }
+            
+            els.word.style.opacity = 0;
+            els.mainStarBtn.classList.add('hidden');
+            
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * wordsList.length);
+                currentWord = wordsList[randomIndex];
+                
+                appStats.total++;
+                localStorage.setItem('PorcelainStats_v1', JSON.stringify(appStats));
+
+                wordEncounters[currentWord] = (wordEncounters[currentWord] || 0) + 1;
+                localStorage.setItem('PorcelainEncounters_v1', JSON.stringify(wordEncounters));
+                
+                let autoFavorite = false;
+                if (wordEncounters[currentWord] >= 5) {
+                    autoFavorite = true;
+                    graduatedWords[currentWord] = true;
+                    localStorage.setItem('PorcelainGraduated_v1', JSON.stringify(graduatedWords));
+                    applyExclusions(); 
+                }
+
+                els.word.innerText = currentWord;
+                els.word.classList.remove('pulse');
+                adjustFontSize();
+                els.word.style.opacity = 1;
+                
+                els.phonetics.innerHTML = '';
+                els.encounterStars.innerHTML = ''; 
+                els.graduatedText.style.display = 'none';
+                els.dictArea.innerHTML = '<div class="status-msg pulse">Fetching Definition...</div>';
+
+                setTimeout(() => playAudio(currentWord), 150);
+                saveToHistory(currentWord, autoFavorite);
+                updateEncounterStars(currentWord);
+
+                requestDictionaryData(currentWord);
+            }, 200);
+        }
+
+        window.retryFetch = function() {
+            els.dictArea.innerHTML = '<div class="status-msg pulse">Retrying...</div>';
+            requestDictionaryData(currentWord);
+        };
+
+        async function requestDictionaryData(word) {
+            if (dictCache[word]) {
+                renderDictionary(word, dictCache[word]);
+                return;
+            }
+
+            const url = `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`;
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500); 
+                
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                const data = await res.json();
+                
+                dictCache[word] = data;
+                if (currentWord === word) renderDictionary(word, data);
+            } 
+            catch (err) {
+                els.dictArea.innerHTML = '<div class="status-msg pulse" style="color: var(--accent);">Bypassing CORS...</div>';
+
+                const tmHandler = (e) => {
+                    if (e.detail.word === word) {
+                        window.removeEventListener('TM_Dict_Response', tmHandler);
+                        if (e.detail.data) {
+                            dictCache[word] = e.detail.data;
+                            if (currentWord === word) renderDictionary(word, e.detail.data);
+                        } else {
+                            if (currentWord === word) renderDictionary(word, null);
+                        }
+                    }
+                };
+
+                window.addEventListener('TM_Dict_Response', tmHandler);
+                window.dispatchEvent(new CustomEvent('TM_Dict_Request', { detail: { word: word } }));
+
+                setTimeout(() => {
+                    window.removeEventListener('TM_Dict_Response', tmHandler);
+                    if (currentWord === word && els.dictArea.innerHTML.includes('Bypassing')) {
+                        renderDictionary(word, null);
+                    }
+                }, 5000);
+            }
+        }
+
+        function highlightKeyword(sentence, keyword) {
+            if (!keyword || !sentence) return sentence;
+            const regex = new RegExp(`(${keyword})`, 'gi');
+            return sentence.replace(regex, '<strong>$1</strong>');
+        }
+
+        function renderDictionary(targetWord, data) {
+            if (currentWord !== targetWord) return; 
+
+            if (!data) {
+                els.dictArea.innerHTML = `
+                    <div class="status-msg error">
+                        ❌ Timeout or blocked.<br>Ensure Tampermonkey is active.
+                        <button class="retry-btn" onclick="retryFetch()">RETRY</button>
+                    </div>
+                `;
+                return;
+            }
+
+            let phonetic = '';
+            let meaningsHtml = '';
+            let exampleHtml = '';
+            
+            if (data.simple?.word?.[0]) {
+                const w = data.simple.word[0];
+                const p = w.usphone || w.ukphone || w.phone;
+                if (p) phonetic = `/${p}/`;
+            } else if (data.ec?.word?.[0]?.usphone) {
+                phonetic = `/${data.ec.word[0].usphone}/`;
+            }
+
+            const bigSpk = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+            if (phonetic) {
+                els.phonetics.innerHTML = `
+                    <span>${phonetic}</span>
+                    <div class="speaker-btn" data-speak="${targetWord}" onclick="playAudio(this.getAttribute('data-speak'), event)">${bigSpk}</div>
+                `;
+            } else {
+                els.phonetics.innerHTML = `<div class="speaker-btn" data-speak="${targetWord}" onclick="playAudio(this.getAttribute('data-speak'), event)">${bigSpk}</div>`;
+            }
+
+            if (data.ec?.word?.[0]?.trs) {
+                data.ec.word[0].trs.forEach(item => {
+                    const text = item.tr?.[0]?.l?.i?.join('；');
+                    if (text) {
+                        const match = text.match(/^([a-z]+\.)\s*(.+)/);
+                        if (match) {
+                            meaningsHtml += `<li><span class="gt-pos">${match[1]}</span><span class="gt-def">${match[2]}</span></li>`;
+                        } else {
+                            meaningsHtml += `<li><span class="gt-def">${text}</span></li>`;
+                        }
+                    }
+                });
+            } else if (data.web_trans?.["web-translation"]) {
+                data.web_trans["web-translation"].slice(0, 3).forEach(item => {
+                    meaningsHtml += `<li><span class="gt-pos">Web</span><span class="gt-def">${item.trans.map(t=>t.value).join('; ')}</span></li>`;
+                });
+            } else {
+                meaningsHtml = `<li><span class="gt-def" style="color: var(--text-muted);">No definition found.</span></li>`;
+            }
+
+            const sents = data.blng_sents_part?.["sentence-pair"];
+            if (sents && sents.length > 0) {
+                const en = sents[0].sentence;
+                const zh = sents[0]["sentence-translation"];
+                if (en && zh) {
+                    const cleanEnText = en.replace(/<[^>]+>/g, '');
+                    const highlightedEn = highlightKeyword(cleanEnText, targetWord);
+                    const smSpk = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+                    exampleHtml = `
+                        <div class="gt-ex-box">
+                            <div class="gt-ex-en">
+                                <div class="gt-ex-en-text">${highlightedEn}</div>
+                                <div class="speaker-btn" style="width:26px;height:26px;flex-shrink:0;background:rgba(0,122,255,0.05);" data-speak="${cleanEnText}" onclick="playAudio(this.getAttribute('data-speak'), event)">${smSpk}</div>
+                            </div>
+                            <div class="gt-ex-zh">${zh}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            els.dictArea.innerHTML = `<ul class="gt-meanings">${meaningsHtml}</ul>${exampleHtml}`;
+        }
+
+        els.btn.addEventListener('click', showRandomWord);
+        window.addEventListener('resize', () => { if (currentWord) adjustFontSize(); });
+
+        fetchWords();
+    </script>
+</body>
+</html>
