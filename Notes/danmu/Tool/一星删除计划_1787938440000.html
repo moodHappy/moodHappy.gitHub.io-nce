@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub WordSync Pro</title>
+    <title>GitHub WordSync Pro (精选学习池版)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -107,6 +107,7 @@
                     <div class="flex items-center gap-2">
                         <span id="today-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">今日已删: 0</span>
                         <span id="word-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">剩余: 0</span>
+                        <span id="pool-count" class="text-[11px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold shadow-sm">学习池: 0</span>
                     </div>
                     <span class="text-[10px] text-slate-400 font-medium tracking-wide">💡 双击卡片区全屏</span>
                 </div>
@@ -319,6 +320,7 @@
             wordListEl: document.getElementById('word-list'),
             wordCountEl: document.getElementById('word-count'),
             todayCountEl: document.getElementById('today-count'),
+            poolCountEl: document.getElementById('pool-count'),
             fsrsBadge: document.getElementById('fsrs-badge'),
             searchInput: document.getElementById('search-input'),
             statusBar: document.getElementById('status-bar'),
@@ -504,6 +506,9 @@
             btn.addEventListener('click', (e) => switchMode(e.currentTarget.dataset.mode));
         });
 
+        // ==========================================
+        // 核心模式切换：大池子 -> 小池子筛选机制
+        // ==========================================
         function switchMode(newMode) {
             viewMode = newMode;
             DOM.modeBtns.forEach(btn => {
@@ -524,9 +529,10 @@
                 displayWords = filtered.filter(w => oneTxtSet.has(w.toLowerCase()));
             } else if (viewMode === 'fsrs') {
                 const now = Date.now();
+                // 【核心修复】：必须且仅当 memoryStats[w] 存在（被主动加入过小池子）且到期时，才进入 FSRS 学习卡片
                 displayWords = filtered.filter(w => {
                     const card = memoryStats[w];
-                    return !card || !card.nextDate || card.nextDate <= now;
+                    return card && card.nextDate && card.nextDate <= now;
                 });
             }
             
@@ -535,18 +541,25 @@
         }
 
         // ==========================================
-        // 将单词加入 FSRS 学习队列
+        // 将单词从“大池子”加入“FSRS学习小池子”
         // ==========================================
         window.addToFSRS = async function(word) {
             if (!FSRS_API) return showStatus("FSRS 模块未就绪", "error");
             
+            const now = Date.now();
+            const isNew = !memoryStats[word];
             let card = hydrateCard(memoryStats[word]);
-            card.nextDate = Date.now(); // 立即安排进入复习待学队列
+            card.nextDate = now; // 设定当前立即可背
             
             memoryStats[word] = card;
             await idbSet('memory_stats', memoryStats);
             
-            showStatus(`已将 "${word}" 加入 FSRS 学习队列！🧠`, 'success');
+            if (isNew) {
+                showStatus(`✨ "${word}" 已成功加入学习池并立即可背！`, 'success');
+            } else {
+                showStatus(`⚡ "${word}" 已提前调入今日待背队列！`, 'info');
+            }
+            
             renderWords();
         };
 
@@ -803,7 +816,7 @@
         };
 
         window.removeWord = async function(wordTarget) {
-            if (confirmDeleteEnabled && !confirm(`确认将 "${wordTarget}" 踢出词库吗？\n如果它是星标词，也会一并被踢出！`)) return;
+            if (confirmDeleteEnabled && !confirm(`确认将 "${wordTarget}" 踢出词库吗？\n如果它是星标词或正在学习池中，也会一并被清退！`)) return;
 
             let inMain = false;
             let inOne = false;
@@ -818,6 +831,12 @@
                 oneTxtSet.delete(lowerTarget);
                 inOne = true;
                 await idbSet('one_dirty', true);
+            }
+
+            // 清理学习小池子记录
+            if (memoryStats[wordTarget]) {
+                delete memoryStats[wordTarget];
+                await idbSet('memory_stats', memoryStats);
             }
 
             if (inMain || inOne) {
@@ -841,12 +860,17 @@
         };
 
         function renderWords() {
-            DOM.wordCountEl.textContent = `剩余: ${words.length}`;
+            DOM.wordCountEl.textContent = `总词库: ${words.length}`;
+            
+            // 统计学习池中有效的词数
+            const poolWords = Object.keys(memoryStats).filter(w => words.includes(w));
+            DOM.poolCountEl.textContent = `学习池: ${poolWords.length}`;
             
             const now = Date.now();
-            const dueCount = words.filter(w => {
+            // 待复习计数仅统计已经在小池子里的词
+            const dueCount = poolWords.filter(w => {
                 const card = memoryStats[w];
-                return !card || !card.nextDate || card.nextDate <= now;
+                return card && card.nextDate && card.nextDate <= now;
             }).length;
 
             if (dueCount > 0) {
@@ -856,8 +880,15 @@
 
             if (displayWords.length === 0) {
                 let emptyMsg = '没有找到匹配的单词。';
-                if (viewMode === 'fsrs') emptyMsg = '🎉 太棒了！今天凌晨 4 点前该背的单词已全部消灭！\n可以去列表模式添加或巡视~';
-                if (viewMode === 'star_list') emptyMsg = '⭐ 当前星标联动库 (one.txt) 中暂无词汇。';
+                if (viewMode === 'fsrs') {
+                    if (poolWords.length === 0) {
+                        emptyMsg = '📭 FSRS 学习池当前为空\n\n大池子有 7000+ 词，请在「全部列表」或「五星列表」中\n点击【+ 加入】挑选你想背的单词进入小池子！';
+                    } else {
+                        emptyMsg = '🎉 太棒了！今日待背单词已全部消灭！\n可以去列表添加新词，或稍后再来~';
+                    }
+                } else if (viewMode === 'star_list') {
+                    emptyMsg = '⭐ 当前星标联动库 (one.txt) 中暂无词汇。';
+                }
                 DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold whitespace-pre-line leading-relaxed">${emptyMsg}</div>`;
                 return;
             }
@@ -870,15 +901,19 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 sm:pt-0">
                             ${displayWords.map((word) => {
                                 const isStar = oneTxtSet.has(word.toLowerCase());
+                                const inPool = !!memoryStats[word];
                                 return `
                                     <div class="flex items-center justify-between p-3.5 bg-slate-50 sm:bg-white sm:shadow-sm hover:bg-slate-100 border border-slate-200 rounded-2xl transition group relative overflow-hidden">
                                         <div class="flex flex-col truncate pr-2">
-                                            <span class="font-extrabold text-slate-800 text-base truncate">${escapeHtml(word)}</span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="font-extrabold text-slate-800 text-base truncate">${escapeHtml(word)}</span>
+                                                ${inPool ? '<span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">已在池</span>' : ''}
+                                            </div>
                                             ${isStar ? '<span class="text-[10px] text-yellow-500 tracking-widest leading-none mt-1">⭐⭐⭐⭐⭐</span>' : ''}
                                         </div>
                                         <div class="flex items-center gap-1.5 shrink-0">
-                                            <button onclick="addToFSRS('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95" title="加入即刻学习复习队列">
-                                                + 加入
+                                            <button onclick="addToFSRS('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs ${inPool ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white' : 'bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white'} rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95" title="${inPool ? '已在学习池，点击立强调入今日待背' : '加入 FSRS 精选学习池'}">
+                                                ${inPool ? '⚡ 调入' : '+ 加入'}
                                             </button>
                                             <button onclick="removeWord('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs bg-red-50 border border-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95">
                                                 删除
@@ -915,7 +950,7 @@
                         </button>
                     </div>
                     <div class="mt-3 flex justify-center w-full pb-6 sm:pb-8 shrink-0">
-                         <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离星标库)</button>
+                         <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离词库与学习池)</button>
                     </div>
                 `;
 
@@ -959,7 +994,6 @@
         // ==========================================
         // 云端同步逻辑
         // ==========================================
-        
         DOM.btnSync.addEventListener('click', async () => {
             const config = await idbGet('config');
             if (!config || !config.token) return alert('请先配置 Token');
