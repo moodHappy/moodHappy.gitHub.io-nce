@@ -1,1 +1,421 @@
-1
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 单词背诵管理器 (IndexedDB版)</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-2">
+            <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span>📚</span> 单词同步管理器
+            </h1>
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <span id="today-count" class="text-xs sm:text-sm bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-medium">今日已删: 0</span>
+                <span id="word-count" class="text-xs sm:text-sm bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-medium">剩余: 0</span>
+                <button id="btn-settings" class="px-3 py-1.5 text-xs sm:text-sm bg-slate-200 hover:bg-slate-300 rounded-lg transition font-medium">⚙️ 配置</button>
+                <button id="btn-sync" class="px-3 py-1.5 text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium shadow-sm disabled:opacity-50" disabled>☁️ 同步到GitHub</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 配置模态框 -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold">GitHub API 配置</h2>
+                <button id="close-settings" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+            <p class="text-xs text-slate-500">数据已全面迁移至 <strong>IndexedDB</strong> 本地数据库存储，彻底告别容量限制！需要具有 <code>repo</code> 权限的 GitHub Token (PAT)。</p>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">GitHub Token (PAT)</label>
+                    <input type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">仓库所有者 (Owner)</label>
+                    <input type="text" id="cfg-owner" value="moodHappy" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">仓库名称 (Repo)</label>
+                    <input type="text" id="cfg-repo" value="HelloWorld" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">文件路径 (Path)</label>
+                    <input type="text" id="cfg-path" value="Notes/Featured1.txt" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="btn-save-config" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">保存并加载</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主体区域 -->
+    <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full flex flex-col gap-4">
+        <!-- 状态提示栏 -->
+        <div id="status-bar" class="hidden p-3 rounded-lg text-sm transition-all"></div>
+
+        <!-- 搜索与工具栏 -->
+        <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text" id="search-input" placeholder="🔍 快速搜索单词..." class="flex-1 px-4 py-2 bg-white border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+            <div class="flex gap-2">
+                <button id="btn-reload" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">🔄 重新加载</button>
+            </div>
+        </div>
+
+        <!-- 单词列表展示 -->
+        <div class="bg-white rounded-2xl shadow-sm border p-4 flex-1">
+            <div id="word-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div class="col-span-full text-center py-12 text-slate-400 text-sm">
+                    正在从 IndexedDB 加载缓存或准备连接 GitHub...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="py-4 text-center text-xs text-slate-400">
+        GitHub Word Manager • Powered by IndexedDB & GitHub API
+    </footer>
+
+    <!-- JavaScript 核心逻辑 -->
+    <script>
+        // --- IndexedDB 核心封装 ---
+        const DB_NAME = 'GitHubWordDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'app_store';
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => reject(e.target.error);
+            });
+        }
+
+        async function idbGet(key) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbSet(key, val) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.put(val, key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // --- DOM 元素绑定 ---
+        const btnSettings = document.getElementById('btn-settings');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettings = document.getElementById('close-settings');
+        const btnSaveConfig = document.getElementById('btn-save-config');
+        const btnSync = document.getElementById('btn-sync');
+        const btnReload = document.getElementById('btn-reload');
+        const wordListEl = document.getElementById('word-list');
+        const wordCountEl = document.getElementById('word-count');
+        const todayCountEl = document.getElementById('today-count');
+        const searchInput = document.getElementById('search-input');
+        const statusBar = document.getElementById('status-bar');
+
+        const cfgToken = document.getElementById('cfg-token');
+        const cfgOwner = document.getElementById('cfg-owner');
+        const cfgRepo = document.getElementById('cfg-repo');
+        const cfgPath = document.getElementById('cfg-path');
+
+        let words = []; 
+        let fileSha = '';
+        let currentFilter = '';
+
+        // --- 初始化加载 ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            // 1. 读取配置
+            const config = await idbGet('config') || {
+                token: '',
+                owner: 'moodHappy',
+                repo: 'HelloWorld',
+                path: 'Notes/Featured1.txt'
+            };
+
+            cfgToken.value = config.token;
+            cfgOwner.value = config.owner;
+            cfgRepo.value = config.repo;
+            cfgPath.value = config.path;
+
+            // 2. 读取并更新今日统计
+            await updateTodayCountDisplay(false);
+
+            // 3. 优先加载本地 IndexedDB 缓存的单词（秒开体验）
+            const cached = await idbGet('words_cache');
+            if (cached && cached.words) {
+                words = cached.words;
+                fileSha = cached.fileSha || '';
+                renderWords();
+                btnSync.removeAttribute('disabled');
+            }
+
+            // 4. 如果有 Token，自动从 GitHub 后台静默刷新/拉取最新
+            if (config.token) {
+                loadWordsFromGitHub();
+            } else {
+                if (!cached || !cached.words) {
+                    settingsModal.classList.remove('hidden');
+                }
+            }
+        });
+
+        // 弹窗控制
+        btnSettings.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+        closeSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) settingsModal.classList.add('hidden');
+        });
+
+        // 保存配置到 IndexedDB
+        btnSaveConfig.addEventListener('click', async () => {
+            const token = cfgToken.value.trim();
+            const owner = cfgOwner.value.trim();
+            const repo = cfgRepo.value.trim();
+            const path = cfgPath.value.trim();
+
+            if (!token) {
+                alert('请填写 GitHub Token！');
+                return;
+            }
+
+            await idbSet('config', { token, owner, repo, path });
+
+            settingsModal.classList.add('hidden');
+            loadWordsFromGitHub();
+        });
+
+        btnReload.addEventListener('click', loadWordsFromGitHub);
+
+        // 状态提示函数
+        function showStatus(msg, type = 'info') {
+            statusBar.classList.remove('hidden', 'bg-blue-50', 'text-blue-700', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700');
+            if (type === 'success') {
+                statusBar.classList.add('bg-green-50', 'text-green-700');
+            } else if (type === 'error') {
+                statusBar.classList.add('bg-red-50', 'text-red-700');
+            } else {
+                statusBar.classList.add('bg-blue-50', 'text-blue-700');
+            }
+            statusBar.textContent = msg;
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => statusBar.classList.add('hidden'), 5000);
+            }
+        }
+
+        // 今日删除计数（基于 IndexedDB 存储）
+        async function updateTodayCountDisplay(increment = false) {
+            const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            let stats = await idbGet('stats') || { date: todayStr, count: 0 };
+
+            if (stats.date !== todayStr) {
+                stats.date = todayStr;
+                stats.count = 0;
+            }
+
+            if (increment) {
+                stats.count++;
+                await idbSet('stats', stats);
+            }
+
+            todayCountEl.textContent = `今日已删: ${stats.count}`;
+        }
+
+        // UTF-8 与 Base64 编解码转换
+        function utf8ToBase64(str) {
+            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+        }
+        function base64ToUtf8(base64) {
+            try {
+                return decodeURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+            } catch (e) {
+                return atob(base64);
+            }
+        }
+
+        // 从 GitHub 获取文件内容
+        async function loadWordsFromGitHub() {
+            const config = await idbGet('config');
+            const token = config?.token;
+            const owner = config?.owner;
+            const repo = config?.repo;
+            const path = config?.path;
+
+            if (!token) {
+                settingsModal.classList.remove('hidden');
+                return;
+            }
+
+            showStatus('正在从 GitHub 加载单词...', 'info');
+            if (words.length === 0) {
+                wordListEl.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm animate-pulse">正在获取仓库文件...</div>`;
+            }
+
+            try {
+                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                const res = await fetch(url, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`GitHub API 错误: ${res.status} ${res.statusText}`);
+                }
+
+                const data = await res.json();
+                fileSha = data.sha;
+                const content = base64ToUtf8(data.content);
+
+                words = content.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+
+                // 同步保存到 IndexedDB 缓存
+                await idbSet('words_cache', { words, fileSha });
+
+                renderWords();
+                showStatus(`成功加载 ${words.length} 个单词`, 'success');
+                btnSync.removeAttribute('disabled');
+            } catch (err) {
+                console.error(err);
+                showStatus(`加载失败: ${err.message}`, 'error');
+                if (words.length === 0) {
+                    wordListEl.innerHTML = `<div class="col-span-full text-center py-12 text-red-400 text-sm">加载失败: ${err.message}<br>请检查 Token 权限或仓库路径。</div>`;
+                }
+            }
+        }
+
+        // 渲染单词列表
+        function renderWords() {
+            wordCountEl.textContent = `剩余: ${words.length}`;
+            const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
+
+            if (filtered.length === 0) {
+                wordListEl.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">没有找到匹配的单词。</div>`;
+                return;
+            }
+
+            wordListEl.innerHTML = filtered.map((word) => {
+                const originalIndex = words.indexOf(word);
+                return `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition group">
+                        <span class="font-medium text-slate-700 text-sm break-all pr-2">${escapeHtml(word)}</span>
+                        <button onclick="removeWord(${originalIndex})" class="px-2.5 py-1 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-lg transition font-medium shrink-0">
+                            ✓ 学会/删除
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // 前端删除指定索引的单词，并同步更新 IndexedDB 缓存
+        window.removeWord = async function(index) {
+            if (index > -1 && index < words.length) {
+                words.splice(index, 1);
+                renderWords();
+                
+                // 更新 IndexedDB 中的单词缓存
+                await idbSet('words_cache', { words, fileSha });
+                // 累计今日删除数量
+                await updateTodayCountDisplay(true);
+
+                showStatus('已从本地数据库移除，请点击「同步到GitHub」保存到云端。', 'info');
+            }
+        };
+
+        // 搜索过滤
+        searchInput.addEventListener('input', (e) => {
+            currentFilter = e.target.value;
+            renderWords();
+        });
+
+        // 同步更改到 GitHub
+        btnSync.addEventListener('click', async () => {
+            const config = await idbGet('config');
+            const token = config?.token;
+            const owner = config?.owner;
+            const repo = config?.repo;
+            const path = config?.path;
+
+            if (!token) {
+                alert('未配置 Token');
+                return;
+            }
+
+            if (!confirm(`确定要将更新后的单词表（共剩 ${words.length} 个单词）同步覆盖 GitHub 源文件吗？`)) {
+                return;
+            }
+
+            btnSync.setAttribute('disabled', 'true');
+            showStatus('正在同步到 GitHub...', 'info');
+
+            try {
+                const newContentStr = words.join('\n') + '\n';
+                const encodedContent = utf8ToBase64(newContentStr);
+
+                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        message: `Update ${path}: remove learned words (${new Date().toISOString().slice(0,10)})`,
+                        content: encodedContent,
+                        sha: fileSha
+                    })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.message || res.statusText);
+                }
+
+                const data = await res.json();
+                fileSha = data.content.sha;
+
+                // 更新缓存中的最新文件 SHA
+                await idbSet('words_cache', { words, fileSha });
+
+                showStatus('🎉 成功同步到 GitHub 源文件！', 'success');
+            } catch (err) {
+                console.error(err);
+                showStatus(`同步失败: ${err.message}`, 'error');
+            } finally {
+                btnSync.removeAttribute('disabled');
+            }
+        });
+    </script>
+</body>
+</html>
