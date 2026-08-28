@@ -196,6 +196,7 @@
         // ==========================================
         let currentAudio = null;
         window.playYoudaoAudio = function(text) {
+            if (!text) return;
             if (currentAudio) {
                 currentAudio.pause();
                 currentAudio.currentTime = 0;
@@ -203,8 +204,22 @@
             const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=0`;
             currentAudio = new Audio(url);
             currentAudio.play().catch(e => {
-                console.error("有道音频播放失败:", e);
+                console.warn("有道音频自动播放限制或失败:", e);
             });
+        };
+
+        // 切换卡片模糊与清晰状态
+        window.toggleCardBlur = function() {
+            const targetContent = document.getElementById('target-content');
+            const hintText = document.getElementById('blur-hint-text');
+            if (targetContent) {
+                targetContent.classList.toggle('revealed');
+                if (hintText) {
+                    hintText.textContent = targetContent.classList.contains('revealed') 
+                        ? '点击此处及以下空白区域重新模糊审查' 
+                        : '👇 点击此处及以下空白区显示释义核对';
+                }
+            }
         };
 
         // ==========================================
@@ -321,7 +336,7 @@
         };
 
         // ==========================================
-        // 解析并渲染有道词典 JSON 数据 (专属触发区解除模糊)
+        // 解析并渲染有道词典 JSON 数据 (支持大范围盲猜触发区)
         // ==========================================
         function parseAndRenderDict(data, currentWord) {
             const dictArea = document.getElementById('dict-area');
@@ -348,7 +363,7 @@
                             <span class="text-[13px] sm:text-sm text-slate-400 font-mono tracking-wide">
                                 ${us ? `US: [${us}]` : `UK: [${uk}]`}
                             </span>
-                            <button onclick="playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
+                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
                                 ${speakerIcon}
                             </button>
                         </div>
@@ -356,7 +371,7 @@
                 } else {
                     phoneticHTML = `
                         <div class="flex items-center justify-center mb-3 mt-1">
-                            <button onclick="playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
+                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
                                 ${speakerIcon}
                             </button>
                         </div>
@@ -393,7 +408,7 @@
                         <div class="mt-3 pt-3 border-t border-slate-100 border-dashed text-left w-full max-w-sm mx-auto">
                             <div class="flex items-center justify-between gap-3 mb-1">
                                 <div class="text-[14px] text-slate-800 leading-snug dict-sentence pt-1">${eng}</div>
-                                <button onclick="playYoudaoAudio('${escapeHtml(cleanEngForSpeech)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读例句">
+                                <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(cleanEngForSpeech)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读例句">
                                     ${speakerIcon}
                                 </button>
                             </div>
@@ -408,18 +423,21 @@
 
             if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
 
-            // 【核心修复】：将模糊类 dict-blur-content 仅仅作用于实际文本内容区，彻底避免覆盖发音按钮触发冲突
+            // 释义内容保持模糊，点击大块空白区域亦可触发解脱模糊
             dictArea.innerHTML = `
-                <div id="target-content" class="dict-blur-content w-full flex flex-col items-center">
+                <div id="target-content" class="dict-blur-content w-full flex flex-col items-center pointer-events-auto">
                     ${phoneticHTML}
                     <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
                     ${sentenceHTML}
                 </div>
                 
-                <!-- 专属的空白/提示触发区域，点击这里切换清晰，绝不和喇叭按钮冲突 -->
-                <div onclick="document.getElementById('target-content').classList.toggle('revealed'); this.querySelector('span').textContent = document.getElementById('target-content').classList.contains('revealed') ? '点击重新模糊审查' : '👇 点击此处显示释义核对';" 
-                     class="mt-4 py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl text-xs font-bold transition cursor-pointer select-none shadow-sm flex items-center gap-1.5 shrink-0">
-                    <span>👇 点击此处显示释义核对</span>
+                <!-- 专属大触发区：包含按钮及下方所有空白，点击均可切换清晰/模糊 -->
+                <div onclick="toggleCardBlur()" 
+                     class="mt-4 flex-1 w-full min-h-[140px] flex flex-col items-center justify-start pt-2 cursor-pointer select-none group">
+                    <div class="py-2.5 px-6 bg-slate-100 group-hover:bg-slate-200 text-slate-500 rounded-2xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0">
+                        <span id="blur-hint-text">👇 点击此处及以下空白区显示释义核对</span>
+                    </div>
+                    <div class="w-full flex-1 min-h-[80px]"></div>
                 </div>
             `;
         }
@@ -912,19 +930,22 @@
                         <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar">
                             
                             <!-- 单词主体 -->
-                            <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-1 mt-2 shrink-0">${escapeHtml(currentWord)}</span>
+                            <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-1 mt-2 shrink-0 cursor-pointer" onclick="playYoudaoAudio('${escapeHtml(currentWord)}')">${escapeHtml(currentWord)}</span>
                             
-                            <!-- 有道词典渲染区 (含专属下方触发按钮) -->
-                            <div id="dict-area" class="w-full text-center flex flex-col items-center justify-start mt-1">
+                            <!-- 有道词典渲染区 (含扩展大面积下方触发区) -->
+                            <div id="dict-area" class="w-full flex-1 flex flex-col items-center justify-start mt-1">
                                 <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4">📡 呼叫词典...</span>
                             </div>
 
-                            ${isStar ? '<div class="absolute top-4 right-5 text-yellow-400 text-xl tracking-[0.1em] drop-shadow-sm">⭐⭐⭐⭐⭐</div>' : ''}
+                            ${isStar ? '<div class="absolute top-4 right-5 text-yellow-400 text-xl tracking-[0.1em] drop-shadow-sm pointer-events-none">⭐⭐⭐⭐⭐</div>' : ''}
                         </div>
                         
                         ${controlsHtml}
                     </div>
                 `;
+
+                // 切换卡片时：单词默认自动播放发音
+                playYoudaoAudio(currentWord);
 
                 if (currentWord) {
                     const lowerWord = currentWord.toLowerCase();
