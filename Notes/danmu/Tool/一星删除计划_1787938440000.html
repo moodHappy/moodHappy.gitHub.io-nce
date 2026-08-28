@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub WordSync Pro (专属盲猜触发区版)</title>
+    <title>GitHub WordSync Pro</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -88,19 +88,16 @@
                     </button>
                 </div>
                 
-                <!-- 下排：模式切换 -->
-                <div class="grid grid-cols-4 bg-white border border-slate-200 p-1 rounded-xl shadow-sm gap-1 w-full relative z-0">
+                <!-- 下排：模式切换 (全部列表 / 五星列表 / FSRS算法) -->
+                <div class="grid grid-cols-3 bg-white border border-slate-200 p-1 rounded-xl shadow-sm gap-1 w-full relative z-0">
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="list">
-                        <span class="text-sm leading-none">📋</span> <span>列表</span>
+                        <span class="text-sm leading-none">📋</span> <span>全部列表</span>
                     </button>
-                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="card_seq">
-                        <span class="text-sm leading-none">📇</span> <span>顺序</span>
-                    </button>
-                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="card_rand">
-                        <span class="text-sm leading-none">🔀</span> <span>随机</span>
+                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="star_list">
+                        <span class="text-sm leading-none">⭐</span> <span>五星列表</span>
                     </button>
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100 relative" data-mode="fsrs">
-                        <span class="text-sm leading-none">🧠</span> <span>FSRS</span>
+                        <span class="text-sm leading-none">🧠</span> <span>FSRS算法</span>
                         <span id="fsrs-badge" class="hidden absolute top-0 right-0 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm border border-white leading-none transform translate-x-1 -translate-y-1">0</span>
                     </button>
                 </div>
@@ -204,7 +201,7 @@
             const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=0`;
             currentAudio = new Audio(url);
             currentAudio.play().catch(e => {
-                console.warn("有道音频自动播放限制或失败:", e);
+                console.warn("有道音频播放失败:", e);
             });
         };
 
@@ -336,7 +333,7 @@
         };
 
         // ==========================================
-        // 解析并渲染有道词典 JSON 数据 (支持大范围盲猜触发区)
+        // 解析并渲染有道词典 JSON 数据
         // ==========================================
         function parseAndRenderDict(data, currentWord) {
             const dictArea = document.getElementById('dict-area');
@@ -423,7 +420,6 @@
 
             if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
 
-            // 释义内容保持模糊，点击大块空白区域亦可触发解脱模糊
             dictArea.innerHTML = `
                 <div id="target-content" class="dict-blur-content w-full flex flex-col items-center pointer-events-auto">
                     ${phoneticHTML}
@@ -431,7 +427,7 @@
                     ${sentenceHTML}
                 </div>
                 
-                <!-- 专属大触发区：包含按钮及下方所有空白，点击均可切换清晰/模糊 -->
+                <!-- 专属盲猜大触发区 -->
                 <div onclick="toggleCardBlur()" 
                      class="mt-4 flex-1 w-full min-h-[140px] flex flex-col items-center justify-start pt-2 cursor-pointer select-none group">
                     <div class="py-2.5 px-6 bg-slate-100 group-hover:bg-slate-200 text-slate-500 rounded-2xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0">
@@ -455,7 +451,7 @@
                 await idbSet('youdao_dict_cache', dictCache);
             }
 
-            if (reqWord !== currentWord || viewMode === 'list') return;
+            if (reqWord !== currentWord || viewMode === 'list' || viewMode === 'star_list') return;
             parseAndRenderDict(data, currentWord);
         });
 
@@ -522,9 +518,11 @@
 
             const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
             
-            if (viewMode === 'list' || viewMode === 'card_seq') displayWords = [...filtered];
-            else if (viewMode === 'card_rand') displayWords = shuffleArray([...filtered]);
-            else if (viewMode === 'fsrs') {
+            if (viewMode === 'list') {
+                displayWords = [...filtered];
+            } else if (viewMode === 'star_list') {
+                displayWords = filtered.filter(w => oneTxtSet.has(w.toLowerCase()));
+            } else if (viewMode === 'fsrs') {
                 const now = Date.now();
                 displayWords = filtered.filter(w => {
                     const card = memoryStats[w];
@@ -536,13 +534,21 @@
             renderWords();
         }
 
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
+        // ==========================================
+        // 将单词加入 FSRS 学习队列
+        // ==========================================
+        window.addToFSRS = async function(word) {
+            if (!FSRS_API) return showStatus("FSRS 模块未就绪", "error");
+            
+            let card = hydrateCard(memoryStats[word]);
+            card.nextDate = Date.now(); // 立即安排进入复习待学队列
+            
+            memoryStats[word] = card;
+            await idbSet('memory_stats', memoryStats);
+            
+            showStatus(`已将 "${word}" 加入 FSRS 学习队列！🧠`, 'success');
+            renderWords();
+        };
 
         // ==========================================
         // 配置与系统操作
@@ -834,9 +840,6 @@
             }
         };
 
-        window.prevCard = () => { if (currentCardIndex > 0) { currentCardIndex--; renderWords(); } };
-        window.nextCard = () => { if (currentCardIndex < displayWords.length - 1) { currentCardIndex++; renderWords(); } };
-
         function renderWords() {
             DOM.wordCountEl.textContent = `剩余: ${words.length}`;
             
@@ -853,14 +856,15 @@
 
             if (displayWords.length === 0) {
                 let emptyMsg = '没有找到匹配的单词。';
-                if (viewMode === 'fsrs') emptyMsg = '🎉 太棒了！今天凌晨 4 点前该背的单词已全部消灭！\n可以去列表模式巡视一下~';
+                if (viewMode === 'fsrs') emptyMsg = '🎉 太棒了！今天凌晨 4 点前该背的单词已全部消灭！\n可以去列表模式添加或巡视~';
+                if (viewMode === 'star_list') emptyMsg = '⭐ 当前星标联动库 (one.txt) 中暂无词汇。';
                 DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold whitespace-pre-line leading-relaxed">${emptyMsg}</div>`;
                 return;
             }
 
             if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
 
-            if (viewMode === 'list') {
+            if (viewMode === 'list' || viewMode === 'star_list') {
                 DOM.wordListEl.innerHTML = `
                     <div class="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2 pb-24">
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 sm:pt-0">
@@ -872,9 +876,14 @@
                                             <span class="font-extrabold text-slate-800 text-base truncate">${escapeHtml(word)}</span>
                                             ${isStar ? '<span class="text-[10px] text-yellow-500 tracking-widest leading-none mt-1">⭐⭐⭐⭐⭐</span>' : ''}
                                         </div>
-                                        <button onclick="removeWord('${escapeHtml(word)}')" class="px-3 py-1.5 text-xs bg-red-50 border border-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95">
-                                            删除
-                                        </button>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button onclick="addToFSRS('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95" title="加入即刻学习复习队列">
+                                                + 加入
+                                            </button>
+                                            <button onclick="removeWord('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs bg-red-50 border border-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95">
+                                                删除
+                                            </button>
+                                        </div>
                                     </div>
                                 `;
                             }).join('')}
@@ -885,46 +894,35 @@
                 const currentWord = displayWords[currentCardIndex];
                 const isStar = oneTxtSet.has(currentWord.toLowerCase());
                 
-                let controlsHtml = '';
-                if (viewMode === 'fsrs') {
-                    const int1 = getSimulatedInterval(currentWord, 1);
-                    const int2 = getSimulatedInterval(currentWord, 2);
-                    const int3 = getSimulatedInterval(currentWord, 3);
-                    const int4 = getSimulatedInterval(currentWord, 4);
+                const int1 = getSimulatedInterval(currentWord, 1);
+                const int2 = getSimulatedInterval(currentWord, 2);
+                const int3 = getSimulatedInterval(currentWord, 3);
+                const int4 = getSimulatedInterval(currentWord, 4);
 
-                    controlsHtml = `
-                        <div class="grid grid-cols-4 gap-2 w-full mt-3 shrink-0 px-1 sm:px-2">
-                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 1)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl transition shadow-sm text-red-700 active:scale-95">
-                                <span class="text-sm font-extrabold">重来</span><span class="text-[10px] opacity-70 mt-0.5">${int1}</span>
-                            </button>
-                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 2)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl transition shadow-sm text-orange-700 active:scale-95">
-                                <span class="text-sm font-extrabold">困难</span><span class="text-[10px] opacity-70 mt-0.5">${int2}</span>
-                            </button>
-                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 3)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition shadow-sm text-blue-700 active:scale-95">
-                                <span class="text-sm font-extrabold">良好</span><span class="text-[10px] opacity-70 mt-0.5">${int3}</span>
-                            </button>
-                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 4)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl transition shadow-sm text-green-700 active:scale-95">
-                                <span class="text-sm font-extrabold">简单</span><span class="text-[10px] opacity-70 mt-0.5">${int4}</span>
-                            </button>
-                        </div>
-                        <div class="mt-3 flex justify-center w-full pb-6 sm:pb-8 shrink-0">
-                             <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离星标库)</button>
-                        </div>
-                    `;
-                } else {
-                    controlsHtml = `
-                        <div class="flex items-center gap-3 mt-3 w-full justify-center shrink-0 px-2 pb-6 sm:pb-8">
-                            <button onclick="prevCard()" class="px-5 py-3.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-2xl text-base font-extrabold transition shadow-sm active:scale-95">⬅️</button>
-                            <button onclick="removeWord('${escapeHtml(currentWord)}')" class="flex-1 px-6 py-3.5 bg-red-50 text-red-600 border border-red-100 hover:bg-red-500 hover:text-white rounded-2xl text-sm font-extrabold transition shadow-sm active:scale-95">🗑️ 彻底删除</button>
-                            <button onclick="nextCard()" class="px-5 py-3.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-2xl text-base font-extrabold transition shadow-sm active:scale-95">➡️</button>
-                        </div>
-                    `;
-                }
+                const controlsHtml = `
+                    <div class="grid grid-cols-4 gap-2 w-full mt-3 shrink-0 px-1 sm:px-2">
+                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 1)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl transition shadow-sm text-red-700 active:scale-95">
+                            <span class="text-sm font-extrabold">重来</span><span class="text-[10px] opacity-70 mt-0.5">${int1}</span>
+                        </button>
+                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 2)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl transition shadow-sm text-orange-700 active:scale-95">
+                            <span class="text-sm font-extrabold">困难</span><span class="text-[10px] opacity-70 mt-0.5">${int2}</span>
+                        </button>
+                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 3)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition shadow-sm text-blue-700 active:scale-95">
+                            <span class="text-sm font-extrabold">良好</span><span class="text-[10px] opacity-70 mt-0.5">${int3}</span>
+                        </button>
+                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 4)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl transition shadow-sm text-green-700 active:scale-95">
+                            <span class="text-sm font-extrabold">简单</span><span class="text-[10px] opacity-70 mt-0.5">${int4}</span>
+                        </button>
+                    </div>
+                    <div class="mt-3 flex justify-center w-full pb-6 sm:pb-8 shrink-0">
+                         <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离星标库)</button>
+                    </div>
+                `;
 
                 DOM.wordListEl.innerHTML = `
                     <div class="flex flex-col items-center flex-1 min-h-0 w-full max-w-lg mx-auto animate-fade-in pt-1 px-1 sm:px-2">
                         <div class="w-full flex justify-between items-center mb-2 px-2 shrink-0">
-                            <div class="text-[11px] font-bold text-slate-400 bg-slate-100/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">${viewMode === 'fsrs' ? '待复习' : '进度'} : ${currentCardIndex + 1} / ${displayWords.length}</div>
+                            <div class="text-[11px] font-bold text-slate-400 bg-slate-100/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">待复习 : ${currentCardIndex + 1} / ${displayWords.length}</div>
                         </div>
                         
                         <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar">
@@ -932,7 +930,7 @@
                             <!-- 单词主体 -->
                             <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-1 mt-2 shrink-0 cursor-pointer" onclick="playYoudaoAudio('${escapeHtml(currentWord)}')">${escapeHtml(currentWord)}</span>
                             
-                            <!-- 有道词典渲染区 (含扩展大面积下方触发区) -->
+                            <!-- 有道词典渲染区 (含扩展大面积盲猜触发区) -->
                             <div id="dict-area" class="w-full flex-1 flex flex-col items-center justify-start mt-1">
                                 <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4">📡 呼叫词典...</span>
                             </div>
