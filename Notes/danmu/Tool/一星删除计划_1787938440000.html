@@ -479,6 +479,7 @@
         memoryStats = await idbGet('memory_stats') || {};
         dictCache = await idbGet('youdao_dict_cache') || {}; 
         trash = await idbGet('trash_bin') || [];
+        backupFileSha = await idbGet('backup_file_sha') || '';
         
         const oneCache = await idbGet('one_cache');
         if (oneCache && oneCache.fileSha) {
@@ -628,10 +629,25 @@
         function utf8ToBase64(str) { return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))); }
 
         async function fetchGitHubFile(config, owner, repo, filepath) {
-            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filepath}`;
-            const res = await fetch(url, { headers: { 'Authorization': `token ${config.token}`, 'Accept': 'application/vnd.github.v3+json', 'If-None-Match': '' } });
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filepath}?t=${Date.now()}`;
+            const res = await fetch(url, { headers: { 'Authorization': `token ${config.token}`, 'Accept': 'application/vnd.github.v3+json' } });
             if (!res.ok) throw new Error(`请求 ${filepath} 失败: ${res.status}`);
             return await res.json();
+        }
+
+        // 强效辅助函数：自动前置拉取远程文件的实时 SHA，确保 PUT 不会因缺 SHA 报错
+        async function getRemoteFileSha(config, owner, repo, filepath) {
+            try {
+                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filepath}?t=${Date.now()}`;
+                const res = await fetch(url, { headers: { 'Authorization': `token ${config.token}`, 'Accept': 'application/vnd.github.v3+json' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.sha;
+                }
+            } catch (e) {
+                console.warn(`检测远程 ${filepath} SHA 异常:`, e);
+            }
+            return null;
         }
 
         async function loadWordsFromGitHub() {
@@ -669,6 +685,7 @@
 
                 if (backupData) {
                     backupFileSha = backupData.sha;
+                    await idbSet('backup_file_sha', backupFileSha);
                     const jsonStr = base64ToUtf8(backupData.content);
                     const backupJson = JSON.parse(jsonStr);
                     
@@ -924,7 +941,7 @@
                     </div>
                 `;
 
-                // 完美还原之前的滚动条位置，彻底解决跳顶 bug
+                // 还原滚动条位置，彻底杜绝跳顶
                 const newScrollContainer = DOM.wordListEl.querySelector('.overflow-y-auto');
                 if (newScrollContainer && savedScrollTop > 0) {
                     newScrollContainer.scrollTop = savedScrollTop;
@@ -997,7 +1014,7 @@
         }
 
         // ==========================================
-        // 云端同步逻辑
+        // 云端同步与安全备份逻辑（自动前置获取最新 SHA）
         // ==========================================
         DOM.btnSync.addEventListener('click', async () => {
             const config = await idbGet('config');
@@ -1005,17 +1022,25 @@
             if (!confirm(`准备更新云端词汇表。这将会覆盖远程的主词库与星标联动库，是否继续？`)) return;
 
             DOM.btnSync.setAttribute('disabled', 'true');
-            showStatus('🚀 正在推送修改后的词库...', 'info');
+            showStatus('🚀 正在获取最新云端状态并推送词库...', 'info');
 
             let syncSuccess = true;
             let msgs = [];
 
             try {
+                // 实时获取主库远程 SHA，彻底杜绝 SHA 丢失或冲突报错
+                const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path) || fileSha;
                 const encMain = utf8ToBase64(words.join('\n') + '\n');
+                const putMainBody = { 
+                    message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, 
+                    content: encMain 
+                };
+                if (curMainSha) putMainBody.sha = curMainSha;
+
                 const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                    body: JSON.stringify({ message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain, sha: fileSha })
+                    body: JSON.stringify(putMainBody)
                 });
                 if (!resMain.ok) throw new Error((await resMain.json()).message);
                 const dataMain = await resMain.json();
@@ -1025,13 +1050,20 @@
             } catch(err) { syncSuccess = false; msgs.push(`主库失败: ${err.message}`); }
 
             const isOneDirty = await idbGet('one_dirty');
-            if (isOneDirty && config.pathTwo && oneFileSha) {
+            if (isOneDirty && config.pathTwo) {
                 try {
+                    const curOneSha = await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) || oneFileSha;
                     const encOne = utf8ToBase64(oneWords.join('\n') + '\n');
+                    const putOneBody = { 
+                        message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, 
+                        content: encOne 
+                    };
+                    if (curOneSha) putOneBody.sha = curOneSha;
+
                     const resOne = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.pathTwo}`, {
                         method: 'PUT',
                         headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                        body: JSON.stringify({ message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, content: encOne, sha: oneFileSha })
+                        body: JSON.stringify(putOneBody)
                     });
                     if (!resOne.ok) throw new Error((await resOne.json()).message);
                     const dataOne = await resOne.json();
@@ -1054,9 +1086,12 @@
             if (!config.backupRepo || !config.backupPath) return alert('请在配置中心填写正确的备份仓库与路径。');
 
             DOM.btnSyncSm2.setAttribute('disabled', 'true');
-            showStatus('🚀 正在备份 FSRS 进度与数据到云端...', 'info');
+            showStatus('🚀 正在校验云端状态并备份 FSRS 进度...', 'info');
 
             try {
+                // 【核心修复】：实时向 GitHub 获取备份文件的最新 SHA，绝不再出现 sha wasn't supplied 错误
+                const latestSha = await getRemoteFileSha(config, config.owner, config.backupRepo, config.backupPath) || backupFileSha;
+
                 const todayStats = await idbGet('stats');
                 const backupPayload = JSON.stringify({
                     updatedAt: Date.now(),
@@ -1070,7 +1105,10 @@
                     message: `WordSync Pro: Backup Study Record (${new Date().toISOString().slice(0,10)})`,
                     content: encBackup
                 };
-                if (backupFileSha) putBody.sha = backupFileSha; 
+                
+                if (latestSha) {
+                    putBody.sha = latestSha;
+                }
 
                 const resBackup = await fetch(`https://api.github.com/repos/${config.owner}/${config.backupRepo}/contents/${config.backupPath}`, {
                     method: 'PUT',
@@ -1080,7 +1118,9 @@
                 
                 if (!resBackup.ok) throw new Error((await resBackup.json()).message);
                 const dataBackup = await resBackup.json();
+                
                 backupFileSha = dataBackup.content.sha;
+                await idbSet('backup_file_sha', backupFileSha);
                 
                 showStatus('🎉 记忆记录与进度备份成功！', 'success');
             } catch(err) { 
