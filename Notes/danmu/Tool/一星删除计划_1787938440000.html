@@ -106,7 +106,7 @@
                 <div class="flex items-center justify-between px-1">
                     <div class="flex items-center gap-2">
                         <span id="today-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">今日已删: 0</span>
-                        <span id="word-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">剩余: 0</span>
+                        <span id="word-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">总词库: 0</span>
                         <span id="pool-count" class="text-[11px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold shadow-sm">学习池: 0</span>
                     </div>
                     <span class="text-[10px] text-slate-400 font-medium tracking-wide">💡 双击卡片区全屏</span>
@@ -529,7 +529,7 @@
                 displayWords = filtered.filter(w => oneTxtSet.has(w.toLowerCase()));
             } else if (viewMode === 'fsrs') {
                 const now = Date.now();
-                // 【核心修复】：必须且仅当 memoryStats[w] 存在（被主动加入过小池子）且到期时，才进入 FSRS 学习卡片
+                // 仅当单词已被主动加入且到期时，才进入 FSRS 学习卡片
                 displayWords = filtered.filter(w => {
                     const card = memoryStats[w];
                     return card && card.nextDate && card.nextDate <= now;
@@ -541,25 +541,19 @@
         }
 
         // ==========================================
-        // 将单词从“大池子”加入“FSRS学习小池子”
+        // 将单词加入 FSRS 学习池（统一使用“加入”）
         // ==========================================
         window.addToFSRS = async function(word) {
             if (!FSRS_API) return showStatus("FSRS 模块未就绪", "error");
             
             const now = Date.now();
-            const isNew = !memoryStats[word];
             let card = hydrateCard(memoryStats[word]);
             card.nextDate = now; // 设定当前立即可背
             
             memoryStats[word] = card;
             await idbSet('memory_stats', memoryStats);
             
-            if (isNew) {
-                showStatus(`✨ "${word}" 已成功加入学习池并立即可背！`, 'success');
-            } else {
-                showStatus(`⚡ "${word}" 已提前调入今日待背队列！`, 'info');
-            }
-            
+            showStatus(`✨ 已将 "${word}" 加入学习池！`, 'success');
             renderWords();
         };
 
@@ -833,7 +827,7 @@
                 await idbSet('one_dirty', true);
             }
 
-            // 清理学习小池子记录
+            // 清理学习池记录
             if (memoryStats[wordTarget]) {
                 delete memoryStats[wordTarget];
                 await idbSet('memory_stats', memoryStats);
@@ -878,6 +872,10 @@
                 DOM.fsrsBadge.classList.remove('hidden');
             } else { DOM.fsrsBadge.classList.add('hidden'); }
 
+            // 记录当前列表滚动位置，避免渲染后跳顶
+            const scrollContainer = DOM.wordListEl.querySelector('.overflow-y-auto');
+            const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+
             if (displayWords.length === 0) {
                 let emptyMsg = '没有找到匹配的单词。';
                 if (viewMode === 'fsrs') {
@@ -912,8 +910,8 @@
                                             ${isStar ? '<span class="text-[10px] text-yellow-500 tracking-widest leading-none mt-1">⭐⭐⭐⭐⭐</span>' : ''}
                                         </div>
                                         <div class="flex items-center gap-1.5 shrink-0">
-                                            <button onclick="addToFSRS('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs ${inPool ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white' : 'bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white'} rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95" title="${inPool ? '已在学习池，点击立强调入今日待背' : '加入 FSRS 精选学习池'}">
-                                                ${inPool ? '⚡ 调入' : '+ 加入'}
+                                            <button onclick="addToFSRS('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95" title="加入 FSRS 学习池">
+                                                + 加入
                                             </button>
                                             <button onclick="removeWord('${escapeHtml(word)}')" class="px-2.5 py-1.5 text-xs bg-red-50 border border-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95">
                                                 删除
@@ -925,6 +923,13 @@
                         </div>
                     </div>
                 `;
+
+                // 完美还原之前的滚动条位置，彻底解决跳顶 bug
+                const newScrollContainer = DOM.wordListEl.querySelector('.overflow-y-auto');
+                if (newScrollContainer && savedScrollTop > 0) {
+                    newScrollContainer.scrollTop = savedScrollTop;
+                }
+
             } else {
                 const currentWord = displayWords[currentCardIndex];
                 const isStar = oneTxtSet.has(currentWord.toLowerCase());
