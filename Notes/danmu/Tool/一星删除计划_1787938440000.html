@@ -2,534 +2,912 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub 单词背诵管理器 (离线优先版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GitHub WordSync Pro (终极沉浸版)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 20px; }
+        
+        /* 平滑折叠过渡效果 */
+        .controls-container {
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.3s ease, padding 0.3s ease;
+            max-height: 500px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .controls-container.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            pointer-events: none;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
-    <!-- 顶部导航栏 -->
-    <header class="bg-white shadow-sm sticky top-0 z-10">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-2">
-            <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <span>📚</span> 单词同步管理器
-            </h1>
-            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <span id="today-count" class="text-xs sm:text-sm bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-medium">今日已删: 0</span>
-                <span id="word-count" class="text-xs sm:text-sm bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-medium">剩余: 0</span>
-                <button id="btn-settings" class="px-3 py-1.5 text-xs sm:text-sm bg-slate-200 hover:bg-slate-300 rounded-lg transition font-medium">⚙️ 配置</button>
-                <button id="btn-sync" class="px-3 py-1.5 text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium shadow-sm disabled:opacity-50" disabled>☁️ 同步到GitHub</button>
+<!-- 使用 h-[100dvh] 完美避开手机浏览器自带的上下工具栏 -->
+<body class="bg-slate-50 h-[100dvh] w-screen text-slate-800 flex flex-col font-sans overflow-hidden">
+    
+    <!-- 顶部控制面板区 -->
+    <div id="controls-panel" class="controls-container flex flex-col shrink-0">
+        
+        <!-- 顶部导航栏 -->
+        <header class="bg-white shadow-sm border-b border-slate-100 z-10 shrink-0">
+            <div class="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex justify-between items-center flex-wrap gap-2">
+                <h1 class="text-xl font-extrabold text-slate-900 flex items-center gap-1.5 tracking-tight">
+                    <span>📚</span> WordSync <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 tracking-wider leading-none mt-0.5">PRO</span>
+                </h1>
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <button id="btn-trash" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 rounded-xl transition font-bold shadow-sm flex items-center gap-1">
+                        ♻️<span class="hidden sm:inline">恢复站</span><span id="trash-count" class="bg-orange-500 text-white font-extrabold px-1.5 rounded-full text-[10px] min-w-[1.25rem] text-center">0</span>
+                    </button>
+                    <button id="btn-settings" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition font-medium shadow-sm">⚙️<span class="hidden sm:inline">配置</span></button>
+                    
+                    <button id="btn-sync-sm2" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl transition font-bold shadow-sm flex items-center gap-1">
+                        💾 备份进度
+                    </button>
+
+                    <button id="btn-sync" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition font-semibold shadow-md disabled:opacity-50 disabled:shadow-none" disabled>☁️ 同步词库</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 工具栏区域 -->
+        <div class="w-full bg-slate-50 py-2.5 shrink-0">
+            <div class="max-w-4xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
+                <!-- 上排：检索框 + 删审开关 + 刷新 -->
+                <div class="flex gap-2 w-full">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-slate-400 text-sm">🔍</span>
+                        </div>
+                        <input type="text" id="search-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="快速检索..." class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition min-w-0 font-medium">
+                    </div>
+                    <button id="btn-toggle-confirm" class="px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center whitespace-nowrap active:scale-95">
+                    </button>
+                    <button id="btn-reload" class="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center active:scale-95" aria-label="强制拉取">
+                        🔄
+                    </button>
+                </div>
+                
+                <!-- 下排：模式切换 (4等分网格) -->
+                <div class="grid grid-cols-4 bg-white border border-slate-200 p-1 rounded-xl shadow-sm gap-1 w-full relative z-0">
+                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="list">
+                        <span class="text-sm leading-none">📋</span> <span>列表</span>
+                    </button>
+                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="card_seq">
+                        <span class="text-sm leading-none">📇</span> <span>顺序</span>
+                    </button>
+                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="card_rand">
+                        <span class="text-sm leading-none">🔀</span> <span>随机</span>
+                    </button>
+                    <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100 relative" data-mode="sm2">
+                        <span class="text-sm leading-none">🧠</span> <span>SM-2</span>
+                        <span id="sm2-badge" class="hidden absolute top-0 right-0 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm border border-white leading-none transform translate-x-1 -translate-y-1">0</span>
+                    </button>
+                </div>
+                
+                <!-- 统计条 -->
+                <div class="flex items-center justify-between px-1">
+                    <div class="flex items-center gap-2">
+                        <span id="today-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">今日已删: 0</span>
+                        <span id="word-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">剩余: 0</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-medium tracking-wide">💡 双击卡片区全屏</span>
+                </div>
             </div>
         </div>
-    </header>
+    </div>
+    <!-- 顶部控制面板区 结束 -->
 
-    <!-- 配置模态框 -->
-    <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+    <!-- 配置模态框 (全面禁用自动填充) -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold">GitHub API 配置</h2>
-                <button id="close-settings" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                <h2 class="text-xl font-extrabold text-slate-800">数据库与 API 配置</h2>
+                <button id="close-settings" class="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded-full w-8 h-8 flex items-center justify-center transition font-bold">&times;</button>
             </div>
-            <p class="text-xs text-slate-500">数据安全存储在 <strong>IndexedDB</strong> 本地数据库中。需要具有 <code>repo</code> 权限的 GitHub Token (PAT)。</p>
+            <p class="text-xs text-slate-500 bg-blue-50 text-blue-700 p-3 rounded-xl border border-blue-100">
+                支持单词表与 SM-2 学习进度双向多设备云端备份。配合本地油猴脚本可获取跨域词典。
+            </p>
             <div class="space-y-3">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">GitHub Token (PAT)</label>
-                    <input type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">GitHub Token (PAT)</label>
+                    <input type="password" id="cfg-token" autocomplete="new-password" spellcheck="false" placeholder="ghp_xxxxxxxxxxxx" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">主库 Owner</label>
+                        <input type="text" id="cfg-owner" autocomplete="off" spellcheck="false" value="moodHappy" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">主库 Repo</label>
+                        <input type="text" id="cfg-repo" autocomplete="off" spellcheck="false" value="HelloWorld" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">仓库所有者 (Owner)</label>
-                    <input type="text" id="cfg-owner" value="moodHappy" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">主词库路径 (Featured1.txt)</label>
+                    <input type="text" id="cfg-path" autocomplete="off" spellcheck="false" value="Notes/Featured1.txt" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">仓库名称 (Repo)</label>
-                    <input type="text" id="cfg-repo" value="HelloWorld" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">星标联动库路径 (one.txt)</label>
+                    <input type="text" id="cfg-path-two" autocomplete="off" spellcheck="false" value="Notes/one.txt" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
+                </div>
+                <div class="border-t border-slate-100 pt-3">
+                    <label class="block text-xs font-bold text-indigo-600 mb-1">备份存储库 (学习记录同步仓库)</label>
+                    <input type="text" id="cfg-backup-repo" autocomplete="off" spellcheck="false" value="moodHappy.gitHub.io-nce" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition font-mono text-xs">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">文件路径 (Path)</label>
-                    <input type="text" id="cfg-path" value="Notes/Featured1.txt" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-indigo-600 mb-1">备份文件路径</label>
+                    <input type="text" id="cfg-backup-path" autocomplete="off" spellcheck="false" value="config/sm2_backup.json" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition font-mono text-xs">
                 </div>
             </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button id="btn-save-config" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">保存并加载</button>
+            <div class="flex justify-end pt-2">
+                <button id="btn-save-config" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-slate-200">保存并拉取云端全量数据</button>
             </div>
         </div>
     </div>
 
-    <!-- 主体区域 -->
-    <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full flex flex-col gap-4">
-        <!-- 状态提示栏 -->
-        <div id="status-bar" class="hidden p-3 rounded-lg text-sm transition-all"></div>
-
-        <!-- 搜索与工具栏 -->
-        <div class="flex flex-col sm:flex-row gap-3">
-            <input type="text" id="search-input" placeholder="🔍 快速搜索单词..." class="flex-1 px-4 py-2 bg-white border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
-            <!-- 给这里的 flex 增加了 justify-center 保证按钮居中 -->
-            <div class="flex gap-2 flex-wrap justify-center">
-                <button id="btn-toggle-confirm" class="px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-xl text-sm font-medium transition shadow-sm">🛡️ 确认删除: 开</button>
-                <button id="btn-toggle-mode" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">📇 卡片模式</button>
-                <button id="btn-reload" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">🔄 重新加载</button>
+    <!-- 恢复站模态框 -->
+    <div id="trash-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
+        <div class="bg-white rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">♻️ 回收恢复站</h2>
+                <button id="close-trash" class="text-slate-400 hover:text-red-500 bg-white hover:bg-red-50 border border-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition font-bold shadow-sm">&times;</button>
+            </div>
+            <div class="overflow-y-auto p-2 flex-1 min-h-0 bg-white custom-scrollbar" id="trash-list">
+                <!-- 恢复站列表 -->
             </div>
         </div>
+    </div>
 
-        <!-- 单词展示容器 -->
-        <div class="bg-white rounded-2xl shadow-sm border p-4 flex-1 flex flex-col">
-            <div id="word-list" class="w-full">
-                <div class="text-center py-12 text-slate-400 text-sm">
-                    正在读取本地数据库...
+    <!-- 主体区域：承载卡片或列表 -->
+    <main class="flex-1 w-full flex flex-col relative overflow-hidden bg-white sm:bg-slate-50">
+        
+        <!-- 全局状态提示悬浮 -->
+        <div id="status-bar" class="hidden p-3 rounded-xl text-sm font-medium transition-all shadow-md absolute left-4 right-4 top-2 z-50 text-center pointer-events-none"></div>
+
+        <!-- 绝对严格的高度控制，内部溢出才出滚动条，外部死死钉住 -->
+        <div id="learning-container" class="w-full h-full max-w-4xl mx-auto sm:px-4 flex flex-col relative overflow-hidden select-none">
+            <div id="word-list" class="w-full flex-1 min-h-0 flex flex-col">
+                <div class="text-center py-20 text-slate-400 text-sm font-medium animate-pulse">
+                    正在读取本地数据库与算法模块...
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- 页脚 -->
-    <footer class="py-4 text-center text-xs text-slate-400">
-        GitHub Word Manager • Powered by IndexedDB & GitHub API
-    </footer>
-
-    <!-- JavaScript 核心逻辑 -->
+    <!-- 核心 JavaScript 逻辑 -->
     <script>
-        // --- IndexedDB 核心封装 ---
-        const DB_NAME = 'GitHubWordDB';
+        // ==========================================
+        // 双击全屏沉浸逻辑
+        // ==========================================
+        const controlsPanel = document.getElementById('controls-panel');
+        const learningContainer = document.getElementById('learning-container');
+        
+        learningContainer.addEventListener('dblclick', function(e) {
+            if(e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return;
+            controlsPanel.classList.toggle('collapsed');
+        });
+
+        // ==========================================
+        // 1. IndexedDB 核心封装
+        // ==========================================
+        const DB_NAME = 'WordSyncProDB_Max_V4';
         const DB_VERSION = 1;
-        const STORE_NAME = 'app_store';
+        const STORE_APP = 'app_store';
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = e => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME);
-                    }
+                    if (!e.target.result.objectStoreNames.contains(STORE_APP)) e.target.result.createObjectStore(STORE_APP);
                 };
                 req.onsuccess = e => resolve(e.target.result);
                 req.onerror = e => reject(e.target.error);
             });
         }
-
         async function idbGet(key) {
             const db = await openDB();
             return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const req = store.get(key);
+                const req = db.transaction(STORE_APP, 'readonly').objectStore(STORE_APP).get(key);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
         }
-
         async function idbSet(key, val) {
             const db = await openDB();
             return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                const req = store.put(val, key);
+                const req = db.transaction(STORE_APP, 'readwrite').objectStore(STORE_APP).put(val, key);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
         }
 
-        // --- DOM 元素绑定 ---
-        const btnSettings = document.getElementById('btn-settings');
-        const settingsModal = document.getElementById('settings-modal');
-        const closeSettings = document.getElementById('close-settings');
-        const btnSaveConfig = document.getElementById('btn-save-config');
-        const btnSync = document.getElementById('btn-sync');
-        const btnReload = document.getElementById('btn-reload');
-        const btnToggleMode = document.getElementById('btn-toggle-mode');
-        const btnToggleConfirm = document.getElementById('btn-toggle-confirm');
-        const wordListEl = document.getElementById('word-list');
-        const wordCountEl = document.getElementById('word-count');
-        const todayCountEl = document.getElementById('today-count');
-        const searchInput = document.getElementById('search-input');
-        const statusBar = document.getElementById('status-bar');
+        // ==========================================
+        // 2. 状态变量与外部库引入
+        // ==========================================
+        let supermemoAlgorithm = null;
+        import('https://cdn.jsdelivr.net/npm/supermemo@2.0.0/+esm').then(module => {
+            supermemoAlgorithm = module.supermemo;
+        }).catch(err => {
+            console.error("加载外部 SM-2 库失败", err);
+            supermemoAlgorithm = (item, grade) => {
+                let { interval, repetition, efactor } = item;
+                if (grade < 3) { repetition = 0; interval = 1; } 
+                else {
+                    if (repetition === 0) interval = 1;
+                    else if (repetition === 1) interval = 6;
+                    else interval = Math.round(interval * efactor);
+                    repetition++;
+                }
+                efactor += (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+                if (efactor < 1.3) efactor = 1.3;
+                return { interval, repetition, efactor };
+            };
+        });
 
-        const cfgToken = document.getElementById('cfg-token');
-        const cfgOwner = document.getElementById('cfg-owner');
-        const cfgRepo = document.getElementById('cfg-repo');
-        const cfgPath = document.getElementById('cfg-path');
-
-        let words = []; 
-        let fileSha = '';
+        let words = [];             
+        let displayWords = [];      
+        let fileSha = '';           
+        
+        let oneWords = [];          
+        let oneFileSha = '';        
+        let oneTxtSet = new Set();  
+        
+        let backupFileSha = '';     
+        let sm2Stats = {};          
+        let trash = []; 
+        
         let currentFilter = '';
-        let viewMode = 'list'; // 'list' 或 'card'
+        let viewMode = 'list';      
         let currentCardIndex = 0;
         let confirmDeleteEnabled = true;
 
-        // --- 初始化加载 ---
+        const DOM = {
+            btnSettings: document.getElementById('btn-settings'),
+            modalSettings: document.getElementById('settings-modal'),
+            btnCloseSettings: document.getElementById('close-settings'),
+            btnSaveConfig: document.getElementById('btn-save-config'),
+            btnSync: document.getElementById('btn-sync'),
+            btnSyncSm2: document.getElementById('btn-sync-sm2'), 
+            btnReload: document.getElementById('btn-reload'),
+            btnToggleConfirm: document.getElementById('btn-toggle-confirm'),
+            
+            btnTrash: document.getElementById('btn-trash'),
+            modalTrash: document.getElementById('trash-modal'),
+            btnCloseTrash: document.getElementById('close-trash'),
+            trashList: document.getElementById('trash-list'),
+            trashCount: document.getElementById('trash-count'),
+            
+            modeBtns: document.querySelectorAll('.mode-btn'),
+            wordListEl: document.getElementById('word-list'),
+            wordCountEl: document.getElementById('word-count'),
+            todayCountEl: document.getElementById('today-count'),
+            sm2Badge: document.getElementById('sm2-badge'),
+            searchInput: document.getElementById('search-input'),
+            statusBar: document.getElementById('status-bar'),
+            
+            cfgToken: document.getElementById('cfg-token'),
+            cfgOwner: document.getElementById('cfg-owner'),
+            cfgRepo: document.getElementById('cfg-repo'),
+            cfgPath: document.getElementById('cfg-path'),
+            cfgPathTwo: document.getElementById('cfg-path-two'),
+            cfgBackupRepo: document.getElementById('cfg-backup-repo'),
+            cfgBackupPath: document.getElementById('cfg-backup-path')
+        };
+
+        // ==========================================
+        // 3. 跨域油猴词典监听 (有道解析)
+        // ==========================================
+        window.addEventListener('TM_Dict_Response', function(e) {
+            const reqWord = e.detail.word;
+            const data = e.detail.data;
+            const currentWord = displayWords[currentCardIndex];
+            
+            if (reqWord !== currentWord || viewMode === 'list') return;
+            
+            const dictArea = document.getElementById('dict-area');
+            if (!dictArea) return;
+
+            if (!data) {
+                dictArea.innerHTML = `<span class="text-xs text-slate-400 font-medium py-4">未找到释义或网络异常</span>`;
+                return;
+            }
+
+            let phoneticHTML = '';
+            let transHTML = '';
+            
+            try {
+                let us = data?.ec?.word?.[0]?.usphone || data?.simple?.word?.[0]?.usphone || '';
+                let uk = data?.ec?.word?.[0]?.ukphone || data?.simple?.word?.[0]?.ukphone || '';
+                if (us || uk) {
+                    phoneticHTML = `<div class="text-[11px] sm:text-xs text-slate-400 font-mono mb-2 flex gap-3 justify-center">
+                        ${us ? `<span>US: [${us}]</span>` : ''} 
+                        ${uk ? `<span>UK: [${uk}]</span>` : ''}
+                    </div>`;
+                }
+                
+                let trs = data?.ec?.word?.[0]?.trs;
+                if (trs && trs.length > 0) {
+                    transHTML = trs.map(t => t.tr?.[0]?.l?.i?.[0]).filter(Boolean).join('<br>');
+                } else if (data?.web_trans?.web_translation?.[0]?.trans) {
+                    transHTML = data.web_trans.web_translation.slice(0,3).map(t => t.trans.map(x=>x.value).join(',')).join('<br>');
+                }
+            } catch(err) {
+                console.error("词典解析错误", err);
+            }
+
+            if (!transHTML) transHTML = "未匹配到具体释义";
+
+            dictArea.innerHTML = `
+                ${phoneticHTML}
+                <div class="text-[13px] sm:text-sm font-medium text-slate-600 leading-relaxed text-center pb-2">${transHTML}</div>
+            `;
+        });
+
+        // ==========================================
+        // 4. 初始化加载
+        // ==========================================
         window.addEventListener('DOMContentLoaded', async () => {
             const config = await idbGet('config') || {
-                token: '',
-                owner: 'moodHappy',
-                repo: 'HelloWorld',
-                path: 'Notes/Featured1.txt',
-                confirmDelete: true
+                token: '', owner: 'moodHappy', repo: 'HelloWorld', path: 'Notes/Featured1.txt', pathTwo: 'Notes/one.txt',
+                backupRepo: 'moodHappy.gitHub.io-nce', backupPath: 'config/sm2_backup.json', confirmDelete: true
             };
-
-            cfgToken.value = config.token;
-            cfgOwner.value = config.owner;
-            cfgRepo.value = config.repo;
-            cfgPath.value = config.path;
+            DOM.cfgToken.value = config.token;
+            DOM.cfgOwner.value = config.owner;
+            DOM.cfgRepo.value = config.repo;
+            DOM.cfgPath.value = config.path;
+            DOM.cfgPathTwo.value = config.pathTwo || 'Notes/one.txt';
+            DOM.cfgBackupRepo.value = config.backupRepo || 'moodHappy.gitHub.io-nce';
+            DOM.cfgBackupPath.value = config.backupPath || 'config/sm2_backup.json';
             
-            // 读取确认删除开关状态
             confirmDeleteEnabled = config.confirmDelete !== undefined ? config.confirmDelete : true;
             updateConfirmButtonUI();
+            await updateTodayCountDisplay(false, false);
 
-            await updateTodayCountDisplay(false);
-
-            // 优先检查本地缓存，只要有 SHA 就可以认为是有效的离线缓存
-            const cached = await idbGet('words_cache');
+            sm2Stats = await idbGet('sm2_stats') || {};
+            trash = await idbGet('trash_bin') || [];
             
+            const oneCache = await idbGet('one_cache');
+            if (oneCache && oneCache.fileSha) {
+                oneWords = oneCache.words || [];
+                oneFileSha = oneCache.fileSha;
+                oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
+            }
+
+            const cached = await idbGet('words_cache');
             if (cached && cached.fileSha) {
-                // 如果有本地缓存，直接使用，不再自动请求 GitHub
                 words = cached.words || [];
                 fileSha = cached.fileSha;
-                renderWords();
-                btnSync.removeAttribute('disabled');
+                switchMode('list');
+                DOM.btnSync.removeAttribute('disabled');
+                renderTrash();
             } else {
-                // 如果没有本地缓存，且有配置 Token，则自动从 GitHub 拉取初次数据
-                if (config.token) {
-                    loadWordsFromGitHub();
-                } else {
-                    settingsModal.classList.remove('hidden');
-                    wordListEl.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">请先配置 GitHub Token 获取单词列表。</div>`;
+                if (config.token) { loadWordsFromGitHub(); } 
+                else {
+                    DOM.modalSettings.classList.remove('hidden');
+                    DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-slate-400 text-sm flex flex-col items-center"><span class="text-4xl mb-2">⚙️</span><span>请先配置 API 获取词库</span></div>`;
                 }
             }
         });
 
-        // 弹窗控制
-        btnSettings.addEventListener('click', () => settingsModal.classList.remove('hidden'));
-        closeSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
-        settingsModal.addEventListener('click', (e) => {
-            if (e.target === settingsModal) settingsModal.classList.add('hidden');
+        DOM.modeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => switchMode(e.currentTarget.dataset.mode));
         });
 
-        // 保存配置到 IndexedDB
-        btnSaveConfig.addEventListener('click', async () => {
-            const token = cfgToken.value.trim();
-            const owner = cfgOwner.value.trim();
-            const repo = cfgRepo.value.trim();
-            const path = cfgPath.value.trim();
+        function switchMode(newMode) {
+            viewMode = newMode;
+            DOM.modeBtns.forEach(btn => {
+                if (btn.dataset.mode === viewMode) {
+                    btn.classList.add('bg-slate-800', 'text-white', 'shadow-md');
+                    btn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+                } else {
+                    btn.classList.remove('bg-slate-800', 'text-white', 'shadow-md');
+                    btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+                }
+            });
 
-            if (!token) {
-                alert('请填写 GitHub Token！');
-                return;
+            const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
+            
+            if (viewMode === 'list' || viewMode === 'card_seq') displayWords = [...filtered];
+            else if (viewMode === 'card_rand') displayWords = shuffleArray([...filtered]);
+            else if (viewMode === 'sm2') {
+                const now = Date.now();
+                displayWords = filtered.filter(w => !sm2Stats[w] || sm2Stats[w].nextDate <= now);
             }
-
-            const config = await idbGet('config') || {};
-            config.token = token;
-            config.owner = owner;
-            config.repo = repo;
-            config.path = path;
-
-            await idbSet('config', config);
-            settingsModal.classList.add('hidden');
-            loadWordsFromGitHub(); // 配置改变后，主动拉取一次
-        });
-
-        // 仅在手动点击时，才会耗费 API 去拉取
-        btnReload.addEventListener('click', loadWordsFromGitHub);
-
-        // 切换视图模式
-        btnToggleMode.addEventListener('click', () => {
-            if (viewMode === 'list') {
-                viewMode = 'card';
-                btnToggleMode.innerHTML = '📋 切换列表模式';
-                currentCardIndex = 0;
-            } else {
-                viewMode = 'list';
-                btnToggleMode.innerHTML = '📇 切换卡片模式';
-            }
+            
+            currentCardIndex = 0;
             renderWords();
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // ==========================================
+        // 5. 配置与系统操作
+        // ==========================================
+        DOM.btnSaveConfig.addEventListener('click', async () => {
+            const config = {
+                token: DOM.cfgToken.value.trim(), owner: DOM.cfgOwner.value.trim(),
+                repo: DOM.cfgRepo.value.trim(), path: DOM.cfgPath.value.trim(),
+                pathTwo: DOM.cfgPathTwo.value.trim(),
+                backupRepo: DOM.cfgBackupRepo.value.trim(),
+                backupPath: DOM.cfgBackupPath.value.trim(),
+                confirmDelete: confirmDeleteEnabled
+            };
+            if (!config.token) return alert('请填写 GitHub Token！');
+            await idbSet('config', config);
+            DOM.modalSettings.classList.add('hidden');
+            loadWordsFromGitHub();
         });
 
-        // 切换确认删除开关
-        btnToggleConfirm.addEventListener('click', async () => {
+        [DOM.btnSettings, DOM.btnCloseSettings].forEach(b => b.addEventListener('click', () => DOM.modalSettings.classList.toggle('hidden')));
+        DOM.modalSettings.addEventListener('click', e => { if (e.target === DOM.modalSettings) DOM.modalSettings.classList.add('hidden'); });
+        
+        [DOM.btnTrash, DOM.btnCloseTrash].forEach(b => b.addEventListener('click', () => { renderTrash(); DOM.modalTrash.classList.toggle('hidden'); }));
+        DOM.modalTrash.addEventListener('click', e => { if (e.target === DOM.modalTrash) DOM.modalTrash.classList.add('hidden'); });
+
+        DOM.btnReload.addEventListener('click', loadWordsFromGitHub);
+        DOM.searchInput.addEventListener('input', (e) => { currentFilter = e.target.value; switchMode(viewMode); });
+
+        DOM.btnToggleConfirm.addEventListener('click', async () => {
             confirmDeleteEnabled = !confirmDeleteEnabled;
             updateConfirmButtonUI();
-
             const config = await idbGet('config') || {};
             config.confirmDelete = confirmDeleteEnabled;
             await idbSet('config', config);
-
-            showStatus(`确认删除已${confirmDeleteEnabled ? '开启' : '关闭'}`, 'info');
         });
 
         function updateConfirmButtonUI() {
             if (confirmDeleteEnabled) {
-                btnToggleConfirm.className = "px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-xl text-sm font-medium transition shadow-sm";
-                btnToggleConfirm.textContent = "🛡️ 确认删除: 开";
+                DOM.btnToggleConfirm.className = "px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center whitespace-nowrap active:scale-95";
+                DOM.btnToggleConfirm.innerHTML = `<span class="text-base leading-none mr-1">🛡️</span> <span class="hidden sm:inline">删审:</span>开`;
             } else {
-                btnToggleConfirm.className = "px-3 py-2 bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 rounded-xl text-sm font-medium transition shadow-sm";
-                btnToggleConfirm.textContent = "🔓 确认删除: 关";
+                DOM.btnToggleConfirm.className = "px-3 py-2 bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center whitespace-nowrap active:scale-95";
+                DOM.btnToggleConfirm.innerHTML = `<span class="text-base leading-none mr-1">🔓</span> <span class="hidden sm:inline">删审:</span>关`;
             }
         }
 
-        // 状态提示函数
         function showStatus(msg, type = 'info') {
-            statusBar.classList.remove('hidden', 'bg-blue-50', 'text-blue-700', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700');
-            if (type === 'success') {
-                statusBar.classList.add('bg-green-50', 'text-green-700');
-            } else if (type === 'error') {
-                statusBar.classList.add('bg-red-50', 'text-red-700');
-            } else {
-                statusBar.classList.add('bg-blue-50', 'text-blue-700');
-            }
-            statusBar.textContent = msg;
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => statusBar.classList.add('hidden'), 5000);
-            }
+            DOM.statusBar.className = `absolute left-4 right-4 top-2 z-50 text-center p-3 rounded-2xl text-sm font-bold transition-all shadow-md transform translate-y-2 ${
+                type === 'success' ? 'bg-green-600 text-white' : type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'
+            }`;
+            DOM.statusBar.textContent = msg;
+            DOM.statusBar.classList.remove('hidden');
+            setTimeout(() => { DOM.statusBar.classList.add('hidden'); }, 3000);
         }
 
-        // 今日删除计数
-        async function updateTodayCountDisplay(increment = false) {
+        async function updateTodayCountDisplay(increment = false, decrement = false) {
             const todayStr = new Date().toISOString().slice(0, 10);
             let stats = await idbGet('stats') || { date: todayStr, count: 0 };
-
-            if (stats.date !== todayStr) {
-                stats.date = todayStr;
-                stats.count = 0;
-            }
-
-            if (increment) {
-                stats.count++;
-                await idbSet('stats', stats);
-            }
-
-            todayCountEl.textContent = `今日已删: ${stats.count}`;
+            if (stats.date !== todayStr) { stats.date = todayStr; stats.count = 0; }
+            if (increment) stats.count++;
+            if (decrement && stats.count > 0) stats.count--;
+            await idbSet('stats', stats);
+            DOM.todayCountEl.textContent = `今日已删: ${stats.count}`;
         }
 
-        // UTF-8 与 Base64 编解码转换
-        function utf8ToBase64(str) {
-            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
-        }
-        function base64ToUtf8(base64) {
-            try {
-                return decodeURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-            } catch (e) {
-                return atob(base64);
-            }
+        // ==========================================
+        // 6. GitHub API 交互与多设备云端备份
+        // ==========================================
+        function base64ToUtf8(base64) { try { return decodeURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')); } catch (e) { return atob(base64); } }
+        function utf8ToBase64(str) { return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))); }
+
+        async function fetchGitHubFile(config, owner, repo, filepath) {
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filepath}`;
+            const res = await fetch(url, { headers: { 'Authorization': `token ${config.token}`, 'Accept': 'application/vnd.github.v3+json', 'If-None-Match': '' } });
+            if (!res.ok) throw new Error(`请求 ${filepath} 失败: ${res.status}`);
+            return await res.json();
         }
 
-        // 从 GitHub 获取文件内容
         async function loadWordsFromGitHub() {
             const config = await idbGet('config');
-            const token = config?.token;
-            const owner = config?.owner;
-            const repo = config?.repo;
-            const path = config?.path;
+            if (!config || !config.token) return DOM.modalSettings.classList.remove('hidden');
 
-            if (!token) {
-                settingsModal.classList.remove('hidden');
-                return;
-            }
-
-            showStatus('正在从 GitHub 加载单词...', 'info');
-            if (words.length === 0) {
-                wordListEl.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm animate-pulse">正在连接 GitHub API 获取数据...</div>`;
-            }
+            showStatus('🚀 正在拉取词库与云端记录...', 'info');
+            DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-blue-500 font-bold text-sm animate-pulse flex flex-col items-center"><span class="text-3xl mb-2">🔄</span>正在连接 GitHub 并同步数据...</div>`;
 
             try {
-                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-                const res = await fetch(url, {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'If-None-Match': '' // 禁用自带的浏览器缓存确保拉取最新
-                    }
-                });
+                const fetchPromises = [
+                    fetchGitHubFile(config, config.owner, config.repo, config.path)
+                ];
+                if (config.pathTwo) fetchPromises.push(fetchGitHubFile(config, config.owner, config.repo, config.pathTwo).catch(e => null)); 
+                if (config.backupRepo && config.backupPath) fetchPromises.push(fetchGitHubFile(config, config.owner, config.backupRepo, config.backupPath).catch(e => null));
 
-                if (!res.ok) {
-                    throw new Error(`GitHub API 错误: ${res.status} ${res.statusText}`);
-                }
+                const results = await Promise.all(fetchPromises);
+                const mainData = results[0];
+                const oneData = results[1];
+                const backupData = results[2];
 
-                const data = await res.json();
-                fileSha = data.sha;
-                const content = base64ToUtf8(data.content);
-
+                fileSha = mainData.sha;
+                const content = base64ToUtf8(mainData.content);
                 words = content.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-
                 await idbSet('words_cache', { words, fileSha });
 
-                renderWords();
-                showStatus(`成功从云端刷新了 ${words.length} 个单词`, 'success');
-                btnSync.removeAttribute('disabled');
-            } catch (err) {
-                console.error(err);
-                showStatus(`加载失败: ${err.message}`, 'error');
-                if (words.length === 0) {
-                    wordListEl.innerHTML = `<div class="text-center py-12 text-red-400 text-sm">加载失败: ${err.message}<br>请检查 Token 权限或网络。</div>`;
+                if (oneData) {
+                    const oneContent = base64ToUtf8(oneData.content);
+                    oneWords = oneContent.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                    oneFileSha = oneData.sha;
+                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                    await idbSet('one_dirty', false);
+                    oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
                 }
+
+                if (backupData) {
+                    backupFileSha = backupData.sha;
+                    const jsonStr = base64ToUtf8(backupData.content);
+                    const backupJson = JSON.parse(jsonStr);
+                    
+                    if (backupJson.sm2Stats) {
+                        sm2Stats = { ...sm2Stats, ...backupJson.sm2Stats };
+                        await idbSet('sm2_stats', sm2Stats);
+                    }
+                    if (backupJson.trash && Array.isArray(backupJson.trash)) {
+                        trash = backupJson.trash;
+                        await idbSet('trash_bin', trash);
+                        renderTrash();
+                    }
+                    if (backupJson.stats) {
+                        await idbSet('stats', backupJson.stats);
+                        await updateTodayCountDisplay(false, false);
+                    }
+                }
+
+                showStatus(`全量同步成功！加载 ${words.length} 词`, 'success');
+                DOM.btnSync.removeAttribute('disabled');
+                switchMode(viewMode);
+            } catch (err) {
+                showStatus(`拉取失败: ${err.message}`, 'error');
+                DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-red-500 font-bold text-sm">加载失败: ${err.message}</div>`;
             }
         }
 
-        // 渲染单词列表
-        function renderWords() {
-            wordCountEl.textContent = `剩余: ${words.length}`;
-            const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
+        // ==========================================
+        // 7. 核心：凌晨 4 点分割线与 SM-2 算法
+        // ==========================================
+        function getNextReviewTime(intervalDays) {
+            const now = new Date();
+            const logicalNow = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+            logicalNow.setHours(0, 0, 0, 0);
+            logicalNow.setDate(logicalNow.getDate() + intervalDays);
+            return logicalNow.getTime() + 4 * 60 * 60 * 1000;
+        }
 
-            if (filtered.length === 0) {
-                wordListEl.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">没有找到匹配的单词，或者列表已全部删完！</div>`;
+        function getSimulatedInterval(word, grade) {
+            if (!supermemoAlgorithm) return "?";
+            let state = sm2Stats[word] || { interval: 0, repetition: 0, efactor: 2.5 };
+            const clone = { interval: state.interval, repetition: state.repetition, efactor: state.efactor };
+            const nextState = supermemoAlgorithm(clone, grade);
+            return nextState.interval;
+        }
+
+        window.rateWordSM2 = async function(word, quality) {
+            if (!supermemoAlgorithm) return showStatus("SM-2算法库仍在加载中...", "error");
+            
+            let state = sm2Stats[word] || { interval: 0, repetition: 0, efactor: 2.5 };
+            state = supermemoAlgorithm(state, quality);
+            state.nextDate = getNextReviewTime(state.interval);
+            
+            sm2Stats[word] = state;
+            await idbSet('sm2_stats', sm2Stats);
+
+            displayWords.splice(currentCardIndex, 1);
+            if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
+            
+            renderWords();
+            const msg = quality < 3 ? '🔴 明天重来' : quality === 3 ? '🟠 稍后巩固' : quality === 4 ? `🟢 ${state.interval}天后复习` : `🔵 极简! ${state.interval}天后见`;
+            showStatus(msg, 'info');
+        }
+
+        // ==========================================
+        // 8. 渲染 UI 与恢复站操作
+        // ==========================================
+        function escapeHtml(str) { return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+        function renderTrash() {
+            DOM.trashCount.textContent = trash.length;
+            if (trash.length === 0) {
+                DOM.trashList.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm font-medium">回收站是空的</div>`;
                 return;
             }
-
-            // 1. 列表模式
-            if (viewMode === 'list') {
-                wordListEl.innerHTML = `
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        ${filtered.map((word) => {
-                            const originalIndex = words.indexOf(word);
-                            return `
-                                <div class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition group">
-                                    <span class="font-medium text-slate-700 text-sm break-all pr-2">${escapeHtml(word)}</span>
-                                    <button onclick="removeWord(${originalIndex})" class="px-2.5 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-600 hover:text-white rounded-lg transition font-medium shrink-0 shadow-sm">
-                                        🗑️ 删除
-                                    </button>
-                                </div>
-                            `;
-                        }).join('')}
+            DOM.trashList.innerHTML = trash.map((item, idx) => {
+                const d = new Date(item.deletedAt);
+                const timeStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+                return `
+                    <div class="flex items-center justify-between p-3.5 mb-2 bg-slate-50 border border-slate-100 rounded-2xl hover:border-blue-200 transition">
+                        <div class="flex flex-col truncate pr-2">
+                            <span class="font-extrabold text-slate-700 text-sm truncate">${escapeHtml(item.word)}</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">删于 ${timeStr} ${item.inOne ? '<span class="text-yellow-500 font-bold ml-1">★ 曾属星标</span>' : ''}</span>
+                        </div>
+                        <button onclick="restoreWord(${idx})" class="px-4 py-1.5 bg-green-50 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-extrabold shadow-sm transition active:scale-95">恢复</button>
                     </div>
                 `;
-            } 
-            // 2. 卡片模式
-            else {
-                if (currentCardIndex >= filtered.length) {
-                    currentCardIndex = Math.max(0, filtered.length - 1);
-                }
-                const currentWord = filtered[currentCardIndex];
-                const originalIndex = words.indexOf(currentWord);
+            }).join('');
+        }
 
-                wordListEl.innerHTML = `
-                    <div class="flex flex-col items-center pt-2 pb-4 px-2 space-y-4">
-                        <div class="text-xs text-slate-400 font-medium tracking-wide">当前进度: ${currentCardIndex + 1} / ${filtered.length}</div>
-                        
-                        <div class="bg-gradient-to-br from-white to-slate-50 border border-slate-200 shadow-lg rounded-3xl p-8 w-full max-w-md text-center flex flex-col items-center justify-center min-h-[180px]">
-                            <span class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-wide break-all">${escapeHtml(currentWord)}</span>
-                        </div>
-
-                        <div class="flex items-center gap-3 pt-1">
-                            <button onclick="prevCard()" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">⬅️ 上一个</button>
-                            <button onclick="removeWord(${originalIndex})" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md flex items-center gap-1">🗑️ 删除</button>
-                            <button onclick="nextCard()" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">下一个 ➡️</button>
-                        </div>
-                    </div>
-                `;
+        window.restoreWord = async function(index) {
+            const item = trash[index];
+            if (item.inMain) words.push(item.word);
+            if (item.inOne) {
+                oneWords.push(item.word);
+                oneTxtSet.add(item.word.toLowerCase());
+                await idbSet('one_dirty', true);
             }
-        }
+            
+            trash.splice(index, 1);
+            await idbSet('trash_bin', trash);
+            await idbSet('words_cache', { words, fileSha });
+            await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+            
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const delStr = new Date(item.deletedAt).toISOString().slice(0, 10);
+            if (todayStr === delStr) await updateTodayCountDisplay(false, true);
+            
+            renderTrash();
+            switchMode(viewMode);
+            showStatus(`已成功恢复 "${item.word}" 💊`, 'success');
+        };
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
+        window.removeWord = async function(wordTarget) {
+            if (confirmDeleteEnabled && !confirm(`确认将 "${wordTarget}" 踢出词库吗？\n如果它是星标词，也会一并被踢出！`)) return;
 
-        // 卡片模式翻页函数
-        window.prevCard = function() {
-            if (currentCardIndex > 0) {
-                currentCardIndex--;
-                renderWords();
+            let inMain = false;
+            let inOne = false;
+
+            const mainIdx = words.indexOf(wordTarget);
+            if (mainIdx > -1) { words.splice(mainIdx, 1); inMain = true; }
+
+            const lowerTarget = wordTarget.toLowerCase();
+            const oneIdx = oneWords.findIndex(w => w.toLowerCase() === lowerTarget);
+            if (oneIdx > -1) {
+                oneWords.splice(oneIdx, 1);
+                oneTxtSet.delete(lowerTarget);
+                inOne = true;
+                await idbSet('one_dirty', true);
             }
-        }
 
-        window.nextCard = function() {
-            const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
-            if (currentCardIndex < filtered.length - 1) {
-                currentCardIndex++;
-                renderWords();
-            }
-        }
-
-        // 删除指定索引的单词
-        window.removeWord = async function(index) {
-            if (index > -1 && index < words.length) {
-                const targetWord = words[index];
-
-                // 如果开启了确认删除
-                if (confirmDeleteEnabled) {
-                    if (!confirm(`确定要删除单词 "${targetWord}" 吗？`)) {
-                        return;
-                    }
-                }
-
-                words.splice(index, 1);
+            if (inMain || inOne) {
+                trash.unshift({ word: wordTarget, inMain, inOne, deletedAt: Date.now() });
+                await idbSet('trash_bin', trash);
                 
-                const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
-                if (currentCardIndex >= filtered.length && currentCardIndex > 0) {
-                    currentCardIndex--;
+                const displayIndex = displayWords.indexOf(wordTarget);
+                if (displayIndex > -1) {
+                    displayWords.splice(displayIndex, 1);
+                    if (currentCardIndex >= displayWords.length) currentCardIndex--; 
                 }
 
-                renderWords();
-                
                 await idbSet('words_cache', { words, fileSha });
-                await updateTodayCountDisplay(true);
-
-                // 移除状态提示框的视觉干扰，提升刷单词效率
-                // showStatus(`已删除 "${targetWord}"，可随时点击「同步到GitHub」保存云端。`, 'info'); 
+                if (inOne) await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                await updateTodayCountDisplay(true, false);
+                
+                renderWords();
+                renderTrash();
+                DOM.trashCount.textContent = trash.length;
             }
         };
 
-        // 搜索过滤
-        searchInput.addEventListener('input', (e) => {
-            currentFilter = e.target.value;
-            currentCardIndex = 0;
-            renderWords();
-        });
+        function renderWords() {
+            DOM.wordCountEl.textContent = `剩余: ${words.length}`;
+            
+            const now = Date.now();
+            const dueCount = words.filter(w => !sm2Stats[w] || sm2Stats[w].nextDate <= now).length;
+            if (dueCount > 0) {
+                DOM.sm2Badge.textContent = dueCount > 99 ? '99+' : dueCount;
+                DOM.sm2Badge.classList.remove('hidden');
+            } else { DOM.sm2Badge.classList.add('hidden'); }
 
-        // 同步更改到 GitHub
-        btnSync.addEventListener('click', async () => {
-            const config = await idbGet('config');
-            const token = config?.token;
-            const owner = config?.owner;
-            const repo = config?.repo;
-            const path = config?.path;
-
-            if (!token) {
-                alert('未配置 Token');
+            if (displayWords.length === 0) {
+                let emptyMsg = '没有找到匹配的单词。';
+                if (viewMode === 'sm2') emptyMsg = '🎉 太棒了！今天凌晨 4 点前该背的单词已全部消灭！\n可以去列表模式巡视一下~';
+                DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold whitespace-pre-line leading-relaxed">${emptyMsg}</div>`;
                 return;
             }
 
-            if (!confirm(`确定要将更新后的单词表（共剩 ${words.length} 个单词）同步覆盖 GitHub 源文件吗？`)) {
-                return;
-            }
+            if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
 
-            btnSync.setAttribute('disabled', 'true');
-            showStatus('正在同步到 GitHub...', 'info');
+            if (viewMode === 'list') {
+                DOM.wordListEl.innerHTML = `
+                    <div class="w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2 pb-24">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 sm:pt-0">
+                            ${displayWords.map((word) => {
+                                const isStar = oneTxtSet.has(word.toLowerCase());
+                                return `
+                                    <div class="flex items-center justify-between p-3.5 bg-slate-50 sm:bg-white sm:shadow-sm hover:bg-slate-100 border border-slate-200 rounded-2xl transition group relative overflow-hidden">
+                                        <div class="flex flex-col truncate pr-2">
+                                            <span class="font-extrabold text-slate-800 text-base truncate">${escapeHtml(word)}</span>
+                                            ${isStar ? '<span class="text-[10px] text-yellow-500 tracking-widest leading-none mt-1">⭐⭐⭐⭐⭐</span>' : ''}
+                                        </div>
+                                        <button onclick="removeWord('${escapeHtml(word)}')" class="px-3 py-1.5 text-xs bg-red-50 border border-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition font-bold shrink-0 shadow-sm active:scale-95">
+                                            删除
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                const currentWord = displayWords[currentCardIndex];
+                const isStar = oneTxtSet.has(currentWord.toLowerCase());
+                
+                let controlsHtml = '';
+                // 底部按钮区域严禁收缩 (shrink-0)，并留足底部安全距离 (pb-4/pb-8)
+                if (viewMode === 'sm2') {
+                    const int1 = getSimulatedInterval(currentWord, 1);
+                    const int3 = getSimulatedInterval(currentWord, 3);
+                    const int4 = getSimulatedInterval(currentWord, 4);
+                    const int5 = getSimulatedInterval(currentWord, 5);
 
-            try {
-                const newContentStr = words.join('\n') + '\n';
-                const encodedContent = utf8ToBase64(newContentStr);
-
-                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-                const res = await fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    body: JSON.stringify({
-                        message: `Update ${path}: remove learned words (${new Date().toISOString().slice(0,10)})`,
-                        content: encodedContent,
-                        sha: fileSha
-                    })
-                });
-
-                if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.message || res.statusText);
+                    controlsHtml = `
+                        <div class="grid grid-cols-4 gap-2 w-full mt-3 shrink-0 px-1 sm:px-2">
+                            <button onclick="rateWordSM2('${escapeHtml(currentWord)}', 1)" class="flex flex-col items-center justify-center py-3 bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl transition shadow-sm text-red-700 active:scale-95">
+                                <span class="text-sm font-extrabold">重来</span><span class="text-[10px] opacity-70 mt-0.5">${int1}天</span>
+                            </button>
+                            <button onclick="rateWordSM2('${escapeHtml(currentWord)}', 3)" class="flex flex-col items-center justify-center py-3 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl transition shadow-sm text-orange-700 active:scale-95">
+                                <span class="text-sm font-extrabold">困难</span><span class="text-[10px] opacity-70 mt-0.5">${int3}天</span>
+                            </button>
+                            <button onclick="rateWordSM2('${escapeHtml(currentWord)}', 4)" class="flex flex-col items-center justify-center py-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition shadow-sm text-blue-700 active:scale-95">
+                                <span class="text-sm font-extrabold">良好</span><span class="text-[10px] opacity-70 mt-0.5">${int4}天</span>
+                            </button>
+                            <button onclick="rateWordSM2('${escapeHtml(currentWord)}', 5)" class="flex flex-col items-center justify-center py-3 bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl transition shadow-sm text-green-700 active:scale-95">
+                                <span class="text-sm font-extrabold">简单</span><span class="text-[10px] opacity-70 mt-0.5">${int5}天</span>
+                            </button>
+                        </div>
+                        <div class="mt-3 flex justify-center w-full pb-6 sm:pb-8 shrink-0">
+                             <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离星标库)</button>
+                        </div>
+                    `;
+                } else {
+                    controlsHtml = `
+                        <div class="flex items-center gap-3 mt-3 w-full justify-center shrink-0 px-2 pb-6 sm:pb-8">
+                            <button onclick="prevCard()" class="px-5 py-3.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-2xl text-base font-extrabold transition shadow-sm active:scale-95">⬅️</button>
+                            <button onclick="removeWord('${escapeHtml(currentWord)}')" class="flex-1 px-6 py-3.5 bg-red-50 text-red-600 border border-red-100 hover:bg-red-500 hover:text-white rounded-2xl text-sm font-extrabold transition shadow-sm active:scale-95">🗑️ 彻底删除</button>
+                            <button onclick="nextCard()" class="px-5 py-3.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-2xl text-base font-extrabold transition shadow-sm active:scale-95">➡️</button>
+                        </div>
+                    `;
                 }
 
-                const data = await res.json();
-                fileSha = data.content.sha;
+                // 【核心修复】：彻底干掉强制居中。改为 flex-col，内部包含一个 overflow-y-auto 的独立滚动区域
+                DOM.wordListEl.innerHTML = `
+                    <div class="flex flex-col items-center flex-1 min-h-0 w-full max-w-lg mx-auto animate-fade-in pt-1 px-1 sm:px-2">
+                        <div class="w-full flex justify-between items-center mb-2 px-2 shrink-0">
+                            <div class="text-[11px] font-bold text-slate-400 bg-slate-100/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">${viewMode === 'sm2' ? '待复习' : '进度'} : ${currentCardIndex + 1} / ${displayWords.length}</div>
+                        </div>
+                        
+                        <!-- 这里的卡片框内部支持滚动 (overflow-y-auto)，绝不会把外面的底栏挤飞 -->
+                        <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar">
+                            
+                            <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-4 mt-2 shrink-0">${escapeHtml(currentWord)}</span>
+                            
+                            <div id="dict-area" class="w-full text-center flex flex-col items-center justify-start mt-2">
+                                <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4">📡 等待词典响应...</span>
+                            </div>
 
+                            ${isStar ? '<div class="absolute top-4 right-5 text-yellow-400 text-xl tracking-[0.1em] drop-shadow-sm">⭐⭐⭐⭐⭐</div>' : ''}
+                        </div>
+                        
+                        ${controlsHtml}
+                    </div>
+                `;
+
+                if (currentWord) {
+                    window.dispatchEvent(new CustomEvent('TM_Dict_Request', { detail: { word: currentWord } }));
+                }
+            }
+        }
+
+        window.prevCard = () => { if (currentCardIndex > 0) { currentCardIndex--; renderWords(); } };
+        window.nextCard = () => { if (currentCardIndex < displayWords.length - 1) { currentCardIndex++; renderWords(); } };
+
+        // ==========================================
+        // 9. 解耦的云端同步：词库同步 与 进度备份
+        // ==========================================
+        
+        DOM.btnSync.addEventListener('click', async () => {
+            const config = await idbGet('config');
+            if (!config || !config.token) return alert('请先配置 Token');
+            if (!confirm(`准备更新云端词汇表。这将会覆盖远程的主词库与星标联动库，是否继续？`)) return;
+
+            DOM.btnSync.setAttribute('disabled', 'true');
+            showStatus('🚀 正在推送修改后的词库...', 'info');
+
+            let syncSuccess = true;
+            let msgs = [];
+
+            try {
+                const encMain = utf8ToBase64(words.join('\n') + '\n');
+                const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify({ message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain, sha: fileSha })
+                });
+                if (!resMain.ok) throw new Error((await resMain.json()).message);
+                const dataMain = await resMain.json();
+                fileSha = dataMain.content.sha;
                 await idbSet('words_cache', { words, fileSha });
+                msgs.push('主库成功');
+            } catch(err) { syncSuccess = false; msgs.push(`主库失败: ${err.message}`); }
 
-                showStatus('🎉 成功同步到 GitHub 源文件！', 'success');
-            } catch (err) {
-                console.error(err);
-                showStatus(`同步失败: ${err.message}`, 'error');
+            const isOneDirty = await idbGet('one_dirty');
+            if (isOneDirty && config.pathTwo && oneFileSha) {
+                try {
+                    const encOne = utf8ToBase64(oneWords.join('\n') + '\n');
+                    const resOne = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.pathTwo}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                        body: JSON.stringify({ message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, content: encOne, sha: oneFileSha })
+                    });
+                    if (!resOne.ok) throw new Error((await resOne.json()).message);
+                    const dataOne = await resOne.json();
+                    oneFileSha = dataOne.content.sha;
+                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                    await idbSet('one_dirty', false);
+                    msgs.push('星标库成功');
+                } catch(err) { syncSuccess = false; msgs.push(`星标库失败: ${err.message}`); }
+            }
+
+            if (syncSuccess) { showStatus(`🎉 词库同步成功！(${msgs.join(', ')})`, 'success'); } 
+            else { showStatus(`⚠ 同步存在异常: ${msgs.join(' | ')}`, 'error'); }
+            
+            DOM.btnSync.removeAttribute('disabled');
+        });
+
+        DOM.btnSyncSm2.addEventListener('click', async () => {
+            const config = await idbGet('config');
+            if (!config || !config.token) return alert('请先配置 Token');
+            if (!config.backupRepo || !config.backupPath) return alert('请在配置中心填写正确的备份仓库与路径。');
+
+            DOM.btnSyncSm2.setAttribute('disabled', 'true');
+            showStatus('🚀 正在备份 SM-2 进度与数据到云端...', 'info');
+
+            try {
+                const todayStats = await idbGet('stats');
+                const backupPayload = JSON.stringify({
+                    updatedAt: Date.now(),
+                    sm2Stats: sm2Stats,
+                    trash: trash,
+                    stats: todayStats
+                }, null, 2);
+                
+                const encBackup = utf8ToBase64(backupPayload);
+                const putBody = {
+                    message: `WordSync Pro: Backup Study Record (${new Date().toISOString().slice(0,10)})`,
+                    content: encBackup
+                };
+                if (backupFileSha) putBody.sha = backupFileSha; 
+
+                const resBackup = await fetch(`https://api.github.com/repos/${config.owner}/${config.backupRepo}/contents/${config.backupPath}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify(putBody)
+                });
+                
+                if (!resBackup.ok) throw new Error((await resBackup.json()).message);
+                const dataBackup = await resBackup.json();
+                backupFileSha = dataBackup.content.sha;
+                
+                showStatus('🎉 学习记录与进度备份成功！', 'success');
+            } catch(err) { 
+                showStatus(`备份失败: ${err.message}`, 'error'); 
             } finally {
-                btnSync.removeAttribute('disabled');
+                DOM.btnSyncSm2.removeAttribute('disabled');
             }
         });
+
     </script>
 </body>
 </html>
