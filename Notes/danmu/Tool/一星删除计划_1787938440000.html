@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub WordSync Pro (默认FSRS+释义模糊审查版)</title>
+    <title>GitHub WordSync Pro (专属盲猜触发区版)</title>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -14,7 +15,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 20px; }
         
-        /* 平滑折叠过渡效果 */
         .controls-container {
             transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.3s ease, padding 0.3s ease;
             max-height: 500px;
@@ -31,25 +31,25 @@
             pointer-events: none;
         }
 
-        /* 有道例句中自带的 <b> 标签高亮 */
         .dict-sentence b { color: #ef4444; font-weight: 700; }
 
-        /* 释义默认模糊与点击解除模糊的过渡效果 */
-        .dict-blur {
+        /* 释义默认模糊，与点击事件彻底解耦 */
+        .dict-blur-content {
             filter: blur(6px);
             transition: filter 0.25s ease;
-            cursor: pointer;
+            user-select: none;
         }
-        .dict-blur.revealed {
+        .dict-blur-content.revealed {
             filter: blur(0px);
-            cursor: default;
         }
     </style>
 </head>
 <body class="bg-slate-50 h-[100dvh] w-screen text-slate-800 flex flex-col font-sans overflow-hidden">
     
+    <!-- 顶部控制面板区 -->
     <div id="controls-panel" class="controls-container flex flex-col shrink-0">
         
+        <!-- 顶部导航栏 -->
         <header class="bg-white shadow-sm border-b border-slate-100 z-10 shrink-0">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex justify-between items-center flex-wrap gap-2">
                 <h1 class="text-xl font-extrabold text-slate-900 flex items-center gap-1.5 tracking-tight">
@@ -70,8 +70,10 @@
             </div>
         </header>
 
+        <!-- 工具栏区域 -->
         <div class="w-full bg-slate-50 py-2.5 shrink-0">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
+                <!-- 上排：检索框 + 删审开关 + 刷新 -->
                 <div class="flex gap-2 w-full">
                     <div class="relative flex-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -86,6 +88,7 @@
                     </button>
                 </div>
                 
+                <!-- 下排：模式切换 -->
                 <div class="grid grid-cols-4 bg-white border border-slate-200 p-1 rounded-xl shadow-sm gap-1 w-full relative z-0">
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="list">
                         <span class="text-sm leading-none">📋</span> <span>列表</span>
@@ -97,11 +100,12 @@
                         <span class="text-sm leading-none">🔀</span> <span>随机</span>
                     </button>
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100 relative" data-mode="fsrs">
-                        <span class="text-sm leading-none">🧠</span> <span>FSRS算法</span>
+                        <span class="text-sm leading-none">🧠</span> <span>FSRS</span>
                         <span id="fsrs-badge" class="hidden absolute top-0 right-0 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm border border-white leading-none transform translate-x-1 -translate-y-1">0</span>
                     </button>
                 </div>
                 
+                <!-- 统计条 -->
                 <div class="flex items-center justify-between px-1">
                     <div class="flex items-center gap-2">
                         <span id="today-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">今日已删: 0</span>
@@ -113,6 +117,7 @@
         </div>
     </div>
 
+    <!-- 配置模态框 -->
     <div id="settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center">
@@ -160,6 +165,7 @@
         </div>
     </div>
 
+    <!-- 恢复站模态框 -->
     <div id="trash-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
         <div class="bg-white rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
@@ -170,6 +176,7 @@
         </div>
     </div>
 
+    <!-- 主体区域 -->
     <main class="flex-1 w-full flex flex-col relative overflow-hidden bg-white sm:bg-slate-50">
         <div id="status-bar" class="hidden p-3 rounded-xl text-sm font-medium transition-all shadow-md absolute left-4 right-4 top-2 z-50 text-center pointer-events-none"></div>
 
@@ -182,6 +189,7 @@
         </div>
     </main>
 
+    <!-- 核心 JavaScript 逻辑 -->
     <script type="module">
         // ==========================================
         // 有道原声播放引擎
@@ -275,7 +283,7 @@
         let trash = []; 
         
         let currentFilter = '';
-        let viewMode = 'fsrs';      // 【默认启动为 fsrs 算法模式】
+        let viewMode = 'fsrs';      
         let currentCardIndex = 0;
         let confirmDeleteEnabled = true;
 
@@ -313,7 +321,7 @@
         };
 
         // ==========================================
-        // 解析并渲染有道词典 JSON 数据 (带模糊审查交互)
+        // 解析并渲染有道词典 JSON 数据 (专属触发区解除模糊)
         // ==========================================
         function parseAndRenderDict(data, currentWord) {
             const dictArea = document.getElementById('dict-area');
@@ -336,7 +344,7 @@
                 
                 if (us || uk) {
                     phoneticHTML = `
-                        <div class="flex items-center justify-center gap-3 mb-4 mt-2">
+                        <div class="flex items-center justify-center gap-3 mb-3 mt-1">
                             <span class="text-[13px] sm:text-sm text-slate-400 font-mono tracking-wide">
                                 ${us ? `US: [${us}]` : `UK: [${uk}]`}
                             </span>
@@ -347,7 +355,7 @@
                     `;
                 } else {
                     phoneticHTML = `
-                        <div class="flex items-center justify-center mb-4 mt-2">
+                        <div class="flex items-center justify-center mb-3 mt-1">
                             <button onclick="playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
                                 ${speakerIcon}
                             </button>
@@ -361,12 +369,12 @@
                         let text = t.tr?.[0]?.l?.i?.[0] || '';
                         let match = text.match(/^([a-z]+\.)\s+(.*)/);
                         if (match) {
-                            return `<div class="flex items-start gap-2.5 mb-2.5 text-left w-full">
+                            return `<div class="flex items-start gap-2.5 mb-2 text-left w-full">
                                 <span class="bg-slate-100 text-slate-400 text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-[3px] shadow-sm">${match[1]}</span>
                                 <span class="text-[14px] text-slate-700 leading-relaxed">${match[2]}</span>
                             </div>`;
                         } else {
-                            return `<div class="mb-2.5 text-[14px] text-slate-700 leading-relaxed text-left w-full">${text}</div>`;
+                            return `<div class="mb-2 text-[14px] text-slate-700 leading-relaxed text-left w-full">${text}</div>`;
                         }
                     }).join('');
                 } else if (data?.web_trans?.web_translation?.[0]?.trans) {
@@ -382,8 +390,8 @@
                     let cleanEngForSpeech = eng.replace(/<[^>]*>?/gm, '');
 
                     sentenceHTML = `
-                        <div class="mt-4 pt-4 border-t border-slate-100 border-dashed text-left w-full max-w-sm mx-auto">
-                            <div class="flex items-center justify-between gap-3 mb-1.5">
+                        <div class="mt-3 pt-3 border-t border-slate-100 border-dashed text-left w-full max-w-sm mx-auto">
+                            <div class="flex items-center justify-between gap-3 mb-1">
                                 <div class="text-[14px] text-slate-800 leading-snug dict-sentence pt-1">${eng}</div>
                                 <button onclick="playYoudaoAudio('${escapeHtml(cleanEngForSpeech)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读例句">
                                     ${speakerIcon}
@@ -400,14 +408,19 @@
 
             if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
 
-            // 核心功能：默认加上 dict-blur 模糊类，点击一下触发 reveal 切换变清晰
+            // 【核心修复】：将模糊类 dict-blur-content 仅仅作用于实际文本内容区，彻底避免覆盖发音按钮触发冲突
             dictArea.innerHTML = `
-                <div id="blur-wrapper" class="dict-blur w-full flex flex-col items-center" onclick="this.classList.toggle('revealed')" title="点击显示/隐藏释义">
+                <div id="target-content" class="dict-blur-content w-full flex flex-col items-center">
                     ${phoneticHTML}
                     <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
                     ${sentenceHTML}
                 </div>
-                <div class="text-[10px] text-slate-400 mt-2 italic select-none">💡 点击上方模糊区域可核对释义</div>
+                
+                <!-- 专属的空白/提示触发区域，点击这里切换清晰，绝不和喇叭按钮冲突 -->
+                <div onclick="document.getElementById('target-content').classList.toggle('revealed'); this.querySelector('span').textContent = document.getElementById('target-content').classList.contains('revealed') ? '点击重新模糊审查' : '👇 点击此处显示释义核对';" 
+                     class="mt-4 py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl text-xs font-bold transition cursor-pointer select-none shadow-sm flex items-center gap-1.5 shrink-0">
+                    <span>👇 点击此处显示释义核对</span>
+                </div>
             `;
         }
 
@@ -462,7 +475,7 @@
         if (cached && cached.fileSha && FSRS_API) {
             words = cached.words || [];
             fileSha = cached.fileSha;
-            switchMode('fsrs'); // 【默认直接进入 fsrs 模式】
+            switchMode('fsrs'); 
             DOM.btnSync.removeAttribute('disabled');
             renderTrash();
         } else if (FSRS_API) {
@@ -898,8 +911,10 @@
                         
                         <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar">
                             
+                            <!-- 单词主体 -->
                             <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-1 mt-2 shrink-0">${escapeHtml(currentWord)}</span>
                             
+                            <!-- 有道词典渲染区 (含专属下方触发按钮) -->
                             <div id="dict-area" class="w-full text-center flex flex-col items-center justify-start mt-1">
                                 <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4">📡 呼叫词典...</span>
                             </div>
