@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub WordSync Pro (词典缓存秒开版)</title>
+    <title>GitHub WordSync Pro (默认FSRS+释义模糊审查版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -31,8 +31,19 @@
             pointer-events: none;
         }
 
-        /* 针对有道例句高亮词的样式定制 (红字加粗) */
+        /* 有道例句中自带的 <b> 标签高亮 */
         .dict-sentence b { color: #ef4444; font-weight: 700; }
+
+        /* 释义默认模糊与点击解除模糊的过渡效果 */
+        .dict-blur {
+            filter: blur(6px);
+            transition: filter 0.25s ease;
+            cursor: pointer;
+        }
+        .dict-blur.revealed {
+            filter: blur(0px);
+            cursor: default;
+        }
     </style>
 </head>
 <body class="bg-slate-50 h-[100dvh] w-screen text-slate-800 flex flex-col font-sans overflow-hidden">
@@ -86,7 +97,7 @@
                         <span class="text-sm leading-none">🔀</span> <span>随机</span>
                     </button>
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100 relative" data-mode="fsrs">
-                        <span class="text-sm leading-none">🧠</span> <span>FSRS</span>
+                        <span class="text-sm leading-none">🧠</span> <span>FSRS算法</span>
                         <span id="fsrs-badge" class="hidden absolute top-0 right-0 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm border border-white leading-none transform translate-x-1 -translate-y-1">0</span>
                     </button>
                 </div>
@@ -173,7 +184,7 @@
 
     <script type="module">
         // ==========================================
-        // 全局：有道原声播放引擎
+        // 有道原声播放引擎
         // ==========================================
         let currentAudio = null;
         window.playYoudaoAudio = function(text) {
@@ -260,11 +271,11 @@
         
         let backupFileSha = '';     
         let memoryStats = {};       
-        let dictCache = {};         // 【新增】有道词典本地缓存哈希表
+        let dictCache = {};         
         let trash = []; 
         
         let currentFilter = '';
-        let viewMode = 'list';      
+        let viewMode = 'fsrs';      // 【默认启动为 fsrs 算法模式】
         let currentCardIndex = 0;
         let confirmDeleteEnabled = true;
 
@@ -302,7 +313,7 @@
         };
 
         // ==========================================
-        // 解析并渲染有道词典 JSON 数据
+        // 解析并渲染有道词典 JSON 数据 (带模糊审查交互)
         // ==========================================
         function parseAndRenderDict(data, currentWord) {
             const dictArea = document.getElementById('dict-area');
@@ -320,7 +331,6 @@
             const speakerIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>`;
             
             try {
-                // 1. 音标解析与发音按钮
                 let us = data?.ec?.word?.[0]?.usphone || data?.simple?.word?.[0]?.usphone || '';
                 let uk = data?.ec?.word?.[0]?.ukphone || data?.simple?.word?.[0]?.ukphone || '';
                 
@@ -345,7 +355,6 @@
                     `;
                 }
                 
-                // 2. 释义解析
                 let trs = data?.ec?.word?.[0]?.trs;
                 if (trs && trs.length > 0) {
                     transHTML = trs.map(t => {
@@ -366,7 +375,6 @@
                                 `</div>`;
                 }
 
-                // 3. 提取双语例句
                 let sents = data?.blng_sents_part?.["sentence-pair"];
                 if (sents && sents.length > 0) {
                     let eng = sents[0].sentence || ''; 
@@ -392,22 +400,25 @@
 
             if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
 
+            // 核心功能：默认加上 dict-blur 模糊类，点击一下触发 reveal 切换变清晰
             dictArea.innerHTML = `
-                ${phoneticHTML}
-                <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
-                ${sentenceHTML}
+                <div id="blur-wrapper" class="dict-blur w-full flex flex-col items-center" onclick="this.classList.toggle('revealed')" title="点击显示/隐藏释义">
+                    ${phoneticHTML}
+                    <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
+                    ${sentenceHTML}
+                </div>
+                <div class="text-[10px] text-slate-400 mt-2 italic select-none">💡 点击上方模糊区域可核对释义</div>
             `;
         }
 
         // ==========================================
-        // 跨域油猴词典监听 (并写入 IndexedDB 缓存)
+        // 跨域油猴词典监听
         // ==========================================
         window.addEventListener('TM_Dict_Response', async function(e) {
             const reqWord = e.detail.word;
             const data = e.detail.data;
             const currentWord = displayWords[currentCardIndex];
             
-            // 写入本地 IndexedDB 词典缓存
             if (reqWord && data) {
                 dictCache[reqWord.toLowerCase()] = data;
                 await idbSet('youdao_dict_cache', dictCache);
@@ -437,7 +448,7 @@
         await updateTodayCountDisplay(false, false);
 
         memoryStats = await idbGet('memory_stats') || {};
-        dictCache = await idbGet('youdao_dict_cache') || {}; // 【加载词典缓存】
+        dictCache = await idbGet('youdao_dict_cache') || {}; 
         trash = await idbGet('trash_bin') || [];
         
         const oneCache = await idbGet('one_cache');
@@ -451,7 +462,7 @@
         if (cached && cached.fileSha && FSRS_API) {
             words = cached.words || [];
             fileSha = cached.fileSha;
-            switchMode('list');
+            switchMode('fsrs'); // 【默认直接进入 fsrs 模式】
             DOM.btnSync.removeAttribute('disabled');
             renderTrash();
         } else if (FSRS_API) {
@@ -900,14 +911,11 @@
                     </div>
                 `;
 
-                // 【核心改进】：渲染卡片时，优先查 IndexedDB 词典缓存！
                 if (currentWord) {
                     const lowerWord = currentWord.toLowerCase();
                     if (dictCache[lowerWord]) {
-                        // 本地有缓存，直接瞬间渲染，零等待！
                         parseAndRenderDict(dictCache[lowerWord], currentWord);
                     } else {
-                        // 本地没缓存，触发油猴跨域去拉取
                         window.dispatchEvent(new CustomEvent('TM_Dict_Request', { detail: { word: currentWord } }));
                     }
                 }
