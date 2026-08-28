@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub WordSync Pro (纯血 FSRS 引擎版)</title>
+    <title>GitHub WordSync Pro (有道原声+完美排版)</title>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -30,12 +31,17 @@
             padding-bottom: 0;
             pointer-events: none;
         }
+
+        /* 针对有道例句高亮词的样式定制 (红字加粗) */
+        .dict-sentence b { color: #ef4444; font-weight: 700; }
     </style>
 </head>
 <body class="bg-slate-50 h-[100dvh] w-screen text-slate-800 flex flex-col font-sans overflow-hidden">
     
+    <!-- 顶部控制面板区 -->
     <div id="controls-panel" class="controls-container flex flex-col shrink-0">
         
+        <!-- 顶部导航栏 -->
         <header class="bg-white shadow-sm border-b border-slate-100 z-10 shrink-0">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex justify-between items-center flex-wrap gap-2">
                 <h1 class="text-xl font-extrabold text-slate-900 flex items-center gap-1.5 tracking-tight">
@@ -56,8 +62,10 @@
             </div>
         </header>
 
+        <!-- 工具栏区域 -->
         <div class="w-full bg-slate-50 py-2.5 shrink-0">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
+                <!-- 上排：检索框 + 删审开关 + 刷新 -->
                 <div class="flex gap-2 w-full">
                     <div class="relative flex-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -72,6 +80,7 @@
                     </button>
                 </div>
                 
+                <!-- 下排：模式切换 -->
                 <div class="grid grid-cols-4 bg-white border border-slate-200 p-1 rounded-xl shadow-sm gap-1 w-full relative z-0">
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100" data-mode="list">
                         <span class="text-sm leading-none">📋</span> <span>列表</span>
@@ -83,11 +92,12 @@
                         <span class="text-sm leading-none">🔀</span> <span>随机</span>
                     </button>
                     <button class="mode-btn py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex justify-center items-center gap-1 text-slate-600 hover:bg-slate-100 relative" data-mode="fsrs">
-                        <span class="text-sm leading-none">🧠</span> <span>FSRS</span>
+                        <span class="text-sm leading-none">🧠</span> <span>FSRS算法</span>
                         <span id="fsrs-badge" class="hidden absolute top-0 right-0 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm border border-white leading-none transform translate-x-1 -translate-y-1">0</span>
                     </button>
                 </div>
                 
+                <!-- 统计条 -->
                 <div class="flex items-center justify-between px-1">
                     <div class="flex items-center gap-2">
                         <span id="today-count" class="text-[11px] bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold shadow-sm">今日已删: 0</span>
@@ -99,6 +109,7 @@
         </div>
     </div>
 
+    <!-- 配置模态框 (全面禁用自动填充) -->
     <div id="settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center">
@@ -146,6 +157,7 @@
         </div>
     </div>
 
+    <!-- 恢复站模态框 -->
     <div id="trash-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
         <div class="bg-white rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
@@ -156,32 +168,50 @@
         </div>
     </div>
 
+    <!-- 主体区域：承载卡片或列表 -->
     <main class="flex-1 w-full flex flex-col relative overflow-hidden bg-white sm:bg-slate-50">
         <div id="status-bar" class="hidden p-3 rounded-xl text-sm font-medium transition-all shadow-md absolute left-4 right-4 top-2 z-50 text-center pointer-events-none"></div>
 
         <div id="learning-container" class="w-full h-full max-w-4xl mx-auto sm:px-4 flex flex-col relative overflow-hidden select-none">
             <div id="word-list" class="w-full flex-1 min-h-0 flex flex-col">
-                <div class="text-center py-20 text-blue-500 text-sm font-bold animate-pulse">
-                    🚀 正在装载 FSRS 记忆引擎模块...
+                <div class="text-center py-20 text-slate-400 text-sm font-medium animate-pulse">
+                    正在读取本地数据库与算法模块...
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- 核心 JavaScript 逻辑 -->
     <script type="module">
         // ==========================================
-        // 外部 FSRS 算法库加载与配置
+        // 全局：有道原声播放引擎
+        // ==========================================
+        let currentAudio = null;
+        window.playYoudaoAudio = function(text) {
+            // 如果有正在播放的语音，先停止它
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            // type=0 为美音
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=0`;
+            currentAudio = new Audio(url);
+            currentAudio.play().catch(e => {
+                console.error("有道音频播放失败:", e);
+            });
+        };
+
+        // ==========================================
+        // 外部 FSRS 算法库加载
         // ==========================================
         let FSRS_API = null;
         let fsrsEngine = null;
         try {
-            // 通过 jsDelivr CDN 动态引入 ts-fsrs
             const module = await import('https://cdn.jsdelivr.net/npm/ts-fsrs@3.5.0/+esm');
             FSRS_API = module;
-            fsrsEngine = module.fsrs(); // 实例化 FSRS 引擎
-            console.log("🔥 成功加载并实例化外部顶尖 FSRS 记忆算法引擎!");
+            fsrsEngine = module.fsrs(); 
         } catch (err) {
-            alert("加载外部 FSRS 库失败，请检查网络连接或更换代理环境。");
+            alert("加载外部 FSRS 库失败，请检查网络。");
             console.error(err);
         }
 
@@ -199,7 +229,7 @@
         // ==========================================
         // IndexedDB 核心封装
         // ==========================================
-        const DB_NAME = 'WordSyncProDB_Max_V7'; // 升级版本号清洗旧的SM2脏数据
+        const DB_NAME = 'WordSyncProDB_Max_V7'; 
         const DB_VERSION = 1;
         const STORE_APP = 'app_store';
 
@@ -242,7 +272,7 @@
         let oneTxtSet = new Set();  
         
         let backupFileSha = '';     
-        let memoryStats = {};       // FSRS 核心状态库
+        let memoryStats = {};       
         let trash = []; 
         
         let currentFilter = '';
@@ -284,7 +314,7 @@
         };
 
         // ==========================================
-        // 跨域油猴词典监听 (有道解析)
+        // 跨域油猴词典监听 (有道解析 + 蓝底发音按钮 + 例句)
         // ==========================================
         window.addEventListener('TM_Dict_Response', function(e) {
             const reqWord = e.detail.word;
@@ -303,39 +333,98 @@
 
             let phoneticHTML = '';
             let transHTML = '';
+            let sentenceHTML = '';
+
+            // SVG 喇叭图标复用
+            const speakerIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>`;
             
             try {
+                // 1. 音标解析与优雅发音按钮
                 let us = data?.ec?.word?.[0]?.usphone || data?.simple?.word?.[0]?.usphone || '';
                 let uk = data?.ec?.word?.[0]?.ukphone || data?.simple?.word?.[0]?.ukphone || '';
+                
                 if (us || uk) {
-                    phoneticHTML = `<div class="text-[11px] sm:text-xs text-slate-400 font-mono mb-2 flex gap-3 justify-center">
-                        ${us ? `<span>US: [${us}]</span>` : ''} 
-                        ${uk ? `<span>UK: [${uk}]</span>` : ''}
-                    </div>`;
+                    phoneticHTML = `
+                        <div class="flex items-center justify-center gap-3 mb-4 mt-2">
+                            <span class="text-[13px] sm:text-sm text-slate-400 font-mono tracking-wide">
+                                ${us ? `US: [${us}]` : `UK: [${uk}]`}
+                            </span>
+                            <button onclick="playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
+                                ${speakerIcon}
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // 如果没音标，也要有发音按钮
+                    phoneticHTML = `
+                        <div class="flex items-center justify-center mb-4 mt-2">
+                            <button onclick="playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
+                                ${speakerIcon}
+                            </button>
+                        </div>
+                    `;
                 }
                 
+                // 2. 释义解析与词性排版
                 let trs = data?.ec?.word?.[0]?.trs;
                 if (trs && trs.length > 0) {
-                    transHTML = trs.map(t => t.tr?.[0]?.l?.i?.[0]).filter(Boolean).join('<br>');
+                    transHTML = trs.map(t => {
+                        let text = t.tr?.[0]?.l?.i?.[0] || '';
+                        // 提取词性 (如 n., adj., vt.)
+                        let match = text.match(/^([a-z]+\.)\s+(.*)/);
+                        if (match) {
+                            return `<div class="flex items-start gap-2.5 mb-2.5 text-left w-full">
+                                <span class="bg-slate-100 text-slate-400 text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-[3px] shadow-sm">${match[1]}</span>
+                                <span class="text-[14px] text-slate-700 leading-relaxed">${match[2]}</span>
+                            </div>`;
+                        } else {
+                            return `<div class="mb-2.5 text-[14px] text-slate-700 leading-relaxed text-left w-full">${text}</div>`;
+                        }
+                    }).join('');
                 } else if (data?.web_trans?.web_translation?.[0]?.trans) {
-                    transHTML = data.web_trans.web_translation.slice(0,3).map(t => t.trans.map(x=>x.value).join(',')).join('<br>');
+                    transHTML = `<div class="text-[14px] text-slate-700 leading-relaxed text-center w-full">` + 
+                                data.web_trans.web_translation.slice(0,3).map(t => t.trans.map(x=>x.value).join(', ')).join('<br>') + 
+                                `</div>`;
                 }
+
+                // 3. 提取双语例句
+                let sents = data?.blng_sents_part?.["sentence-pair"];
+                if (sents && sents.length > 0) {
+                    let eng = sents[0].sentence || ''; 
+                    let chn = sents[0]["sentence-translation"] || '';
+                    
+                    // 去除 HTML 用于发音参数
+                    let cleanEngForSpeech = eng.replace(/<[^>]*>?/gm, '');
+
+                    sentenceHTML = `
+                        <div class="mt-4 pt-4 border-t border-slate-100 border-dashed text-left w-full max-w-sm mx-auto">
+                            <div class="flex items-center justify-between gap-3 mb-1.5">
+                                <div class="text-[14px] text-slate-800 leading-snug dict-sentence pt-1">${eng}</div>
+                                <button onclick="playYoudaoAudio('${escapeHtml(cleanEngForSpeech)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读例句">
+                                    ${speakerIcon}
+                                </button>
+                            </div>
+                            <div class="text-[13px] text-slate-500 leading-relaxed">${chn}</div>
+                        </div>
+                    `;
+                }
+
             } catch(err) {
                 console.error("词典解析错误", err);
             }
 
-            if (!transHTML) transHTML = "未匹配到具体释义";
+            if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
 
             dictArea.innerHTML = `
                 ${phoneticHTML}
-                <div class="text-[13px] sm:text-sm font-medium text-slate-600 leading-relaxed text-center pb-2">${transHTML}</div>
+                <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
+                ${sentenceHTML}
             `;
         });
 
         // ==========================================
         // 初始化加载
         // ==========================================
-        // 等待整个 DOM 解析并且 FSRS API 加载完成后再执行后续逻辑
         const config = await idbGet('config') || {
             token: '', owner: 'moodHappy', repo: 'HelloWorld', path: 'Notes/Featured1.txt', pathTwo: 'Notes/one.txt',
             backupRepo: 'moodHappy.gitHub.io-nce', backupPath: 'config/fsrs_backup.json', confirmDelete: true
@@ -401,7 +490,6 @@
                 const now = Date.now();
                 displayWords = filtered.filter(w => {
                     const card = memoryStats[w];
-                    // 没有记录，或者 nextDate <= 现在，或者由于兼容性没有 nextDate 的统统挑出来
                     return !card || !card.nextDate || card.nextDate <= now;
                 });
             }
@@ -558,10 +646,9 @@
         }
 
         // ==========================================
-        // 核心：严格处理序列化及 FSRS 调度逻辑
+        // 核心：处理序列化及 FSRS 调度逻辑
         // ==========================================
         function getNextReviewTime(intervalDays) {
-            // FSRS 如果判定当前就该复习（0天），则立刻锁定
             if (intervalDays <= 0) return Date.now(); 
             const now = new Date();
             const logicalNow = new Date(now.getTime() - 4 * 60 * 60 * 1000);
@@ -570,7 +657,6 @@
             return logicalNow.getTime() + 4 * 60 * 60 * 1000;
         }
 
-        // 核心注水函数：将 JSON 中的死字符串转化为原生 Date
         function hydrateCard(raw) {
             if (!raw || !raw.due) return FSRS_API.createEmptyCard(new Date());
             let card = { ...raw };
@@ -579,16 +665,13 @@
             return card;
         }
 
-        // 获取预测的间隔天数渲染在按钮上
         function getSimulatedInterval(word, gradeStr) {
             if (!FSRS_API) return "?";
             let card = hydrateCard(memoryStats[word]);
             let now = new Date();
             
             try {
-                // ts-fsrs repeat 返回一个包含4种结果的 Record
                 let scheduling_cards = fsrsEngine.repeat(card, now);
-                // 1=Again, 2=Hard, 3=Good, 4=Easy
                 let targetGrade = parseInt(gradeStr, 10);
                 let scheduled_days = scheduling_cards[targetGrade].card.scheduled_days;
                 return scheduled_days === 0 ? "今天" : `${scheduled_days}天`;
@@ -598,7 +681,6 @@
             }
         }
 
-        // 将该函数暴露给 window，方便 HTML 中的 onclick 调用
         window.rateWordFSRS = async function(word, qualityStr) {
             if (!FSRS_API) return showStatus("FSRS引擎异常", "error");
             
@@ -610,14 +692,11 @@
                 let scheduling_cards = fsrsEngine.repeat(card, now);
                 let next_card = scheduling_cards[targetGrade].card;
                 
-                // 将计算出的科学间隔套用我们的 4 点逻辑
                 next_card.nextDate = getNextReviewTime(next_card.scheduled_days);
                 
-                // 存回状态库
                 memoryStats[word] = next_card;
                 await idbSet('memory_stats', memoryStats);
 
-                // 在界面中移除并跳向下一张
                 displayWords.splice(currentCardIndex, 1);
                 if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
                 
@@ -770,7 +849,6 @@
                 
                 let controlsHtml = '';
                 if (viewMode === 'fsrs') {
-                    // Rating mapping: 1=Again, 2=Hard, 3=Good, 4=Easy
                     const int1 = getSimulatedInterval(currentWord, 1);
                     const int2 = getSimulatedInterval(currentWord, 2);
                     const int3 = getSimulatedInterval(currentWord, 3);
@@ -805,17 +883,21 @@
                     `;
                 }
 
+                // 完全去掉大喇叭，留出干净的主题区域
                 DOM.wordListEl.innerHTML = `
                     <div class="flex flex-col items-center flex-1 min-h-0 w-full max-w-lg mx-auto animate-fade-in pt-1 px-1 sm:px-2">
                         <div class="w-full flex justify-between items-center mb-2 px-2 shrink-0">
                             <div class="text-[11px] font-bold text-slate-400 bg-slate-100/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">${viewMode === 'fsrs' ? '待复习' : '进度'} : ${currentCardIndex + 1} / ${displayWords.length}</div>
                         </div>
                         
+                        <!-- 卡片主体：顶部对齐 (justify-start) 彻底消灭上方巨大空白 -->
                         <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar">
                             
-                            <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-4 mt-2 shrink-0">${escapeHtml(currentWord)}</span>
+                            <!-- 单词主体 -->
+                            <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-1 mt-2 shrink-0">${escapeHtml(currentWord)}</span>
                             
-                            <div id="dict-area" class="w-full text-center flex flex-col items-center justify-start mt-2">
+                            <!-- 有道词典渲染区 (含优雅的双语发音按钮) -->
+                            <div id="dict-area" class="w-full text-center flex flex-col items-center justify-start mt-1">
                                 <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4">📡 呼叫词典...</span>
                             </div>
 
