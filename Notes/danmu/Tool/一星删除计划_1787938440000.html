@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub 单词背诵管理器 (IndexedDB版)</title>
+    <title>GitHub 单词背诵管理器 (含确认删除开关)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -30,7 +30,7 @@
                 <h2 class="text-lg font-bold">GitHub API 配置</h2>
                 <button id="close-settings" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
             </div>
-            <p class="text-xs text-slate-500">数据已全面迁移至 <strong>IndexedDB</strong> 本地数据库存储，彻底告别容量限制！需要具有 <code>repo</code> 权限的 GitHub Token (PAT)。</p>
+            <p class="text-xs text-slate-500">数据安全存储在 <strong>IndexedDB</strong> 本地数据库中。需要具有 <code>repo</code> 权限的 GitHub Token (PAT)。</p>
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">GitHub Token (PAT)</label>
@@ -63,15 +63,17 @@
         <!-- 搜索与工具栏 -->
         <div class="flex flex-col sm:flex-row gap-3">
             <input type="text" id="search-input" placeholder="🔍 快速搜索单词..." class="flex-1 px-4 py-2 bg-white border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
+                <button id="btn-toggle-confirm" class="px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-xl text-sm font-medium transition shadow-sm">🛡️ 确认删除: 开</button>
+                <button id="btn-toggle-mode" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">📇 卡片模式</button>
                 <button id="btn-reload" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">🔄 重新加载</button>
             </div>
         </div>
 
-        <!-- 单词列表展示 -->
-        <div class="bg-white rounded-2xl shadow-sm border p-4 flex-1">
-            <div id="word-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div class="col-span-full text-center py-12 text-slate-400 text-sm">
+        <!-- 单词展示容器 -->
+        <div class="bg-white rounded-2xl shadow-sm border p-4 flex-1 flex flex-col">
+            <div id="word-list" class="w-full">
+                <div class="text-center py-12 text-slate-400 text-sm">
                     正在从 IndexedDB 加载缓存或准备连接 GitHub...
                 </div>
             </div>
@@ -133,6 +135,8 @@
         const btnSaveConfig = document.getElementById('btn-save-config');
         const btnSync = document.getElementById('btn-sync');
         const btnReload = document.getElementById('btn-reload');
+        const btnToggleMode = document.getElementById('btn-toggle-mode');
+        const btnToggleConfirm = document.getElementById('btn-toggle-confirm');
         const wordListEl = document.getElementById('word-list');
         const wordCountEl = document.getElementById('word-count');
         const todayCountEl = document.getElementById('today-count');
@@ -147,26 +151,31 @@
         let words = []; 
         let fileSha = '';
         let currentFilter = '';
+        let viewMode = 'list'; // 'list' 或 'card'
+        let currentCardIndex = 0;
+        let confirmDeleteEnabled = true; // 默认开启删除确认
 
         // --- 初始化加载 ---
         window.addEventListener('DOMContentLoaded', async () => {
-            // 1. 读取配置
             const config = await idbGet('config') || {
                 token: '',
                 owner: 'moodHappy',
                 repo: 'HelloWorld',
-                path: 'Notes/Featured1.txt'
+                path: 'Notes/Featured1.txt',
+                confirmDelete: true
             };
 
             cfgToken.value = config.token;
             cfgOwner.value = config.owner;
             cfgRepo.value = config.repo;
             cfgPath.value = config.path;
+            
+            // 读取确认删除开关状态
+            confirmDeleteEnabled = config.confirmDelete !== undefined ? config.confirmDelete : true;
+            updateConfirmButtonUI();
 
-            // 2. 读取并更新今日统计
             await updateTodayCountDisplay(false);
 
-            // 3. 优先加载本地 IndexedDB 缓存的单词（秒开体验）
             const cached = await idbGet('words_cache');
             if (cached && cached.words) {
                 words = cached.words;
@@ -175,7 +184,6 @@
                 btnSync.removeAttribute('disabled');
             }
 
-            // 4. 如果有 Token，自动从 GitHub 后台静默刷新/拉取最新
             if (config.token) {
                 loadWordsFromGitHub();
             } else {
@@ -204,13 +212,54 @@
                 return;
             }
 
-            await idbSet('config', { token, owner, repo, path });
+            const config = await idbGet('config') || {};
+            config.token = token;
+            config.owner = owner;
+            config.repo = repo;
+            config.path = path;
 
+            await idbSet('config', config);
             settingsModal.classList.add('hidden');
             loadWordsFromGitHub();
         });
 
         btnReload.addEventListener('click', loadWordsFromGitHub);
+
+        // 切换视图模式
+        btnToggleMode.addEventListener('click', () => {
+            if (viewMode === 'list') {
+                viewMode = 'card';
+                btnToggleMode.textContent = '📋 切换列表模式';
+                currentCardIndex = 0;
+            } else {
+                viewMode = 'list';
+                btnToggleMode.textContent = '📇 切换卡片模式';
+            }
+            renderWords();
+        });
+
+        // 切换确认删除开关
+        btnToggleConfirm.addEventListener('click', async () => {
+            confirmDeleteEnabled = !confirmDeleteEnabled;
+            updateConfirmButtonUI();
+
+            // 保存到 IndexedDB
+            const config = await idbGet('config') || {};
+            config.confirmDelete = confirmDeleteEnabled;
+            await idbSet('config', config);
+
+            showStatus(`确认删除已${confirmDeleteEnabled ? '开启' : '关闭'}`, 'info');
+        });
+
+        function updateConfirmButtonUI() {
+            if (confirmDeleteEnabled) {
+                btnToggleConfirm.className = "px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-xl text-sm font-medium transition shadow-sm";
+                btnToggleConfirm.textContent = "🛡️ 确认删除: 开";
+            } else {
+                btnToggleConfirm.className = "px-3 py-2 bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 rounded-xl text-sm font-medium transition shadow-sm";
+                btnToggleConfirm.textContent = "🔓 确认删除: 关";
+            }
+        }
 
         // 状态提示函数
         function showStatus(msg, type = 'info') {
@@ -228,9 +277,9 @@
             }
         }
 
-        // 今日删除计数（基于 IndexedDB 存储）
+        // 今日删除计数
         async function updateTodayCountDisplay(increment = false) {
-            const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            const todayStr = new Date().toISOString().slice(0, 10);
             let stats = await idbGet('stats') || { date: todayStr, count: 0 };
 
             if (stats.date !== todayStr) {
@@ -273,7 +322,7 @@
 
             showStatus('正在从 GitHub 加载单词...', 'info');
             if (words.length === 0) {
-                wordListEl.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm animate-pulse">正在获取仓库文件...</div>`;
+                wordListEl.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm animate-pulse">正在获取仓库文件...</div>`;
             }
 
             try {
@@ -295,7 +344,6 @@
 
                 words = content.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
 
-                // 同步保存到 IndexedDB 缓存
                 await idbSet('words_cache', { words, fileSha });
 
                 renderWords();
@@ -305,7 +353,7 @@
                 console.error(err);
                 showStatus(`加载失败: ${err.message}`, 'error');
                 if (words.length === 0) {
-                    wordListEl.innerHTML = `<div class="col-span-full text-center py-12 text-red-400 text-sm">加载失败: ${err.message}<br>请检查 Token 权限或仓库路径。</div>`;
+                    wordListEl.innerHTML = `<div class="text-center py-12 text-red-400 text-sm">加载失败: ${err.message}<br>请检查 Token 权限或仓库路径。</div>`;
                 }
             }
         }
@@ -316,45 +364,106 @@
             const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
 
             if (filtered.length === 0) {
-                wordListEl.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">没有找到匹配的单词。</div>`;
+                wordListEl.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">没有找到匹配的单词。</div>`;
                 return;
             }
 
-            wordListEl.innerHTML = filtered.map((word) => {
-                const originalIndex = words.indexOf(word);
-                return `
-                    <div class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition group">
-                        <span class="font-medium text-slate-700 text-sm break-all pr-2">${escapeHtml(word)}</span>
-                        <button onclick="removeWord(${originalIndex})" class="px-2.5 py-1 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-lg transition font-medium shrink-0">
-                            ✓ 学会/删除
-                        </button>
+            // 1. 列表模式
+            if (viewMode === 'list') {
+                wordListEl.innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        ${filtered.map((word) => {
+                            const originalIndex = words.indexOf(word);
+                            return `
+                                <div class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition group">
+                                    <span class="font-medium text-slate-700 text-sm break-all pr-2">${escapeHtml(word)}</span>
+                                    <button onclick="removeWord(${originalIndex})" class="px-2.5 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-600 hover:text-white rounded-lg transition font-medium shrink-0">
+                                        🗑️ 删除
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 `;
-            }).join('');
+            } 
+            // 2. 卡片模式
+            else {
+                if (currentCardIndex >= filtered.length) {
+                    currentCardIndex = Math.max(0, filtered.length - 1);
+                }
+                const currentWord = filtered[currentCardIndex];
+                const originalIndex = words.indexOf(currentWord);
+
+                wordListEl.innerHTML = `
+                    <div class="flex flex-col items-center pt-2 pb-4 px-2 space-y-4">
+                        <div class="text-xs text-slate-400 font-medium tracking-wide">当前进度: ${currentCardIndex + 1} / ${filtered.length}</div>
+                        
+                        <div class="bg-gradient-to-br from-white to-slate-50 border border-slate-200 shadow-lg rounded-3xl p-8 w-full max-w-md text-center flex flex-col items-center justify-center min-h-[180px]">
+                            <span class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-wide break-all">${escapeHtml(currentWord)}</span>
+                        </div>
+
+                        <div class="flex items-center gap-3 pt-1">
+                            <button onclick="prevCard()" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">⬅️ 上一个</button>
+                            <button onclick="removeWord(${originalIndex})" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md flex items-center gap-1">🗑️ 删除</button>
+                            <button onclick="nextCard()" class="px-4 py-2 bg-white border hover:bg-slate-100 rounded-xl text-sm font-medium transition shadow-sm">下一个 ➡️</button>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // 前端删除指定索引的单词，并同步更新 IndexedDB 缓存
+        // 卡片模式翻页函数
+        window.prevCard = function() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                renderWords();
+            }
+        }
+
+        window.nextCard = function() {
+            const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
+            if (currentCardIndex < filtered.length - 1) {
+                currentCardIndex++;
+                renderWords();
+            }
+        }
+
+        // 删除指定索引的单词（支持确认删除开关逻辑）
         window.removeWord = async function(index) {
             if (index > -1 && index < words.length) {
+                const targetWord = words[index];
+
+                // 如果开启了确认删除
+                if (confirmDeleteEnabled) {
+                    if (!confirm(`确定要删除单词 "${targetWord}" 吗？`)) {
+                        return;
+                    }
+                }
+
                 words.splice(index, 1);
+                
+                const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
+                if (currentCardIndex >= filtered.length && currentCardIndex > 0) {
+                    currentCardIndex--;
+                }
+
                 renderWords();
                 
-                // 更新 IndexedDB 中的单词缓存
                 await idbSet('words_cache', { words, fileSha });
-                // 累计今日删除数量
                 await updateTodayCountDisplay(true);
 
-                showStatus('已从本地数据库移除，请点击「同步到GitHub」保存到云端。', 'info');
+                showStatus(`已删除 "${targetWord}"，请点击「同步到GitHub」保存到云端。`, 'info');
             }
         };
 
         // 搜索过滤
         searchInput.addEventListener('input', (e) => {
             currentFilter = e.target.value;
+            currentCardIndex = 0;
             renderWords();
         });
 
@@ -405,7 +514,6 @@
                 const data = await res.json();
                 fileSha = data.content.sha;
 
-                // 更新缓存中的最新文件 SHA
                 await idbSet('words_cache', { words, fileSha });
 
                 showStatus('🎉 成功同步到 GitHub 源文件！', 'success');
