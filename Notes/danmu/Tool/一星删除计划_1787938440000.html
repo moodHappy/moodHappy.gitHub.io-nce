@@ -32,16 +32,6 @@
         }
 
         .dict-sentence b { color: #ef4444; font-weight: 700; }
-
-        /* 释义默认模糊，与点击事件彻底解耦 */
-        .dict-blur-content {
-            filter: blur(6px);
-            transition: filter 0.25s ease;
-            user-select: none;
-        }
-        .dict-blur-content.revealed {
-            filter: blur(0px);
-        }
     </style>
 </head>
 <body class="bg-slate-50 h-[100dvh] w-screen text-slate-800 flex flex-col font-sans overflow-hidden">
@@ -216,17 +206,20 @@
             });
         };
 
-        // 切换卡片模糊与清晰状态
-        window.toggleCardBlur = function() {
-            const targetContent = document.getElementById('target-content');
-            const hintText = document.getElementById('blur-hint-text');
-            if (targetContent) {
-                targetContent.classList.toggle('revealed');
-                if (hintText) {
-                    hintText.textContent = targetContent.classList.contains('revealed') 
-                        ? '点击此处及以下空白区域重新模糊审查' 
-                        : '👇 点击此处及以下空白区显示释义核对';
-                }
+        // 核心展示逻辑：点击翻转卡片
+        window.revealCard = function() {
+            const frontHint = document.getElementById('front-hint');
+            const dictArea = document.getElementById('dict-area');
+            const fsrsControls = document.getElementById('fsrs-controls');
+            
+            if (frontHint) frontHint.classList.add('hidden');
+            if (dictArea) {
+                dictArea.classList.remove('hidden');
+                dictArea.classList.add('flex');
+            }
+            if (fsrsControls) {
+                fsrsControls.classList.remove('hidden');
+                fsrsControls.classList.add('flex');
             }
         };
 
@@ -316,7 +309,6 @@
             btnCloseSettings: document.getElementById('close-settings'),
             btnSaveConfig: document.getElementById('btn-save-config'),
             
-            // 四个独立的同步按钮
             btnPullWords: document.getElementById('btn-pull-words'),
             btnPushWords: document.getElementById('btn-push-words'),
             btnPullProgress: document.getElementById('btn-pull-progress'),
@@ -349,7 +341,7 @@
         };
 
         // ==========================================
-        // 解析并渲染有道词典 JSON 数据（五星精致居中于音标下方）
+        // 解析并渲染有道词典 JSON 数据
         // ==========================================
         function parseAndRenderDict(data, currentWord) {
             const dictArea = document.getElementById('dict-area');
@@ -362,7 +354,7 @@
 
             if (!data) {
                 dictArea.innerHTML = `
-                    <div id="target-content" class="dict-blur-content w-full flex flex-col items-center pointer-events-auto">
+                    <div class="w-full flex flex-col items-center pointer-events-auto pb-4">
                         ${starHTML}
                         <span class="text-xs text-slate-400 font-medium py-4">未找到释义或网络异常</span>
                     </div>
@@ -386,7 +378,7 @@
                             <span class="text-[13px] sm:text-sm text-slate-400 font-mono tracking-wide">
                                 ${us ? `US: [${us}]` : `UK: [${uk}]`}
                             </span>
-                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
+                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正发音">
                                 ${speakerIcon}
                             </button>
                         </div>
@@ -394,7 +386,7 @@
                 } else {
                     phoneticHTML = `
                         <div class="flex items-center justify-center mb-1 mt-1">
-                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正美音">
+                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正发音">
                                 ${speakerIcon}
                             </button>
                         </div>
@@ -447,20 +439,11 @@
             if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
 
             dictArea.innerHTML = `
-                <div id="target-content" class="dict-blur-content w-full flex flex-col items-center pointer-events-auto">
+                <div class="w-full flex flex-col items-center pointer-events-auto pb-4">
                     ${phoneticHTML}
                     ${starHTML}
                     <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
                     ${sentenceHTML}
-                </div>
-                
-                <!-- 专属盲猜大触发区 -->
-                <div onclick="toggleCardBlur()" 
-                     class="mt-4 flex-1 w-full min-h-[140px] flex flex-col items-center justify-start pt-2 cursor-pointer select-none group">
-                    <div class="py-2.5 px-6 bg-slate-100 group-hover:bg-slate-200 text-slate-500 rounded-2xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0">
-                        <span id="blur-hint-text">👇 点击此处及以下空白区显示释义核对</span>
-                    </div>
-                    <div class="w-full flex-1 min-h-[80px]"></div>
                 </div>
             `;
         }
@@ -557,7 +540,6 @@
                 displayWords = filtered.filter(w => oneTxtSet.has(w.toLowerCase()));
             } else if (viewMode === 'fsrs') {
                 const now = Date.now();
-                // 仅当单词已被主动加入且到期时，才进入 FSRS 学习卡片
                 displayWords = filtered.filter(w => {
                     const card = memoryStats[w];
                     return card && card.nextDate && card.nextDate <= now;
@@ -569,14 +551,14 @@
         }
 
         // ==========================================
-        // 将单词加入 FSRS 学习池（统一使用“加入”）
+        // 将单词加入 FSRS 学习池
         // ==========================================
         window.addToFSRS = async function(word) {
             if (!FSRS_API) return showStatus("FSRS 模块未就绪", "error");
             
             const now = Date.now();
             let card = hydrateCard(memoryStats[word]);
-            card.nextDate = now; // 设定当前立即可背
+            card.nextDate = now; 
             
             memoryStats[word] = card;
             await idbSet('memory_stats', memoryStats);
@@ -677,10 +659,8 @@
         }
 
         // ==========================================
-        // 四大核心同步实现：Pull词库 / Push词库 / Pull进度 / Push进度
+        // 四大核心同步实现
         // ==========================================
-
-        // 1. Pull 词库
         async function pullWordsFromGitHub() {
             const config = await idbGet('config');
             if (!config || !config.token) return DOM.modalSettings.classList.remove('hidden');
@@ -722,7 +702,6 @@
             }
         }
 
-        // 2. Push 词库
         async function pushWordsToGitHub() {
             const config = await idbGet('config');
             if (!config || !config.token) return alert('请先配置 Token');
@@ -786,7 +765,6 @@
             DOM.btnPushWords.removeAttribute('disabled');
         }
 
-        // 3. Pull 进度 (新设备一键还原复习记录)
         async function pullProgressFromGitHub() {
             const config = await idbGet('config');
             if (!config || !config.token) return DOM.modalSettings.classList.remove('hidden');
@@ -826,7 +804,6 @@
             }
         }
 
-        // 4. Push 进度
         async function pushProgressToGitHub() {
             const config = await idbGet('config');
             if (!config || !config.token) return alert('请先配置 Token');
@@ -876,7 +853,6 @@
             }
         }
 
-        // 绑定四个按钮事件
         DOM.btnPullWords.addEventListener('click', pullWordsFromGitHub);
         DOM.btnPushWords.addEventListener('click', pushWordsToGitHub);
         DOM.btnPullProgress.addEventListener('click', pullProgressFromGitHub);
@@ -1013,7 +989,6 @@
                 await idbSet('one_dirty', true);
             }
 
-            // 清理学习池记录
             if (memoryStats[wordTarget]) {
                 delete memoryStats[wordTarget];
                 await idbSet('memory_stats', memoryStats);
@@ -1042,12 +1017,10 @@
         function renderWords() {
             DOM.wordCountEl.textContent = `总词库: ${words.length}`;
             
-            // 统计学习池中有效的词数
             const poolWords = Object.keys(memoryStats).filter(w => words.includes(w));
             DOM.poolCountEl.textContent = `学习池: ${poolWords.length}`;
             
             const now = Date.now();
-            // 待复习计数仅统计已经在小池子里的词
             const dueCount = poolWords.filter(w => {
                 const card = memoryStats[w];
                 return card && card.nextDate && card.nextDate <= now;
@@ -1058,7 +1031,6 @@
                 DOM.fsrsBadge.classList.remove('hidden');
             } else { DOM.fsrsBadge.classList.add('hidden'); }
 
-            // 记录当前列表滚动位置，避免渲染后跳顶
             const scrollContainer = DOM.wordListEl.querySelector('.overflow-y-auto');
             const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
 
@@ -1066,7 +1038,7 @@
                 let emptyMsg = '没有找到匹配的单词。';
                 if (viewMode === 'fsrs') {
                     if (poolWords.length === 0) {
-                        emptyMsg = '📭 FSRS 学习池当前为空\n\n大池子有 7000+ 词，请在「全部列表」或「五星列表」中\n点击【+ 加入】挑选你想背的单词进入小池子！';
+                        emptyMsg = '📭 FSRS 学习池当前为空\n\n大池子有众多词汇，请在「全部列表」或「五星列表」中\n点击【+ 加入】挑选你想背的单词进入小池子！';
                     } else {
                         emptyMsg = '🎉 太棒了！今日待背单词已全部消灭！\n可以去列表添加新词，或稍后再来~';
                     }
@@ -1110,7 +1082,6 @@
                     </div>
                 `;
 
-                // 还原滚动条位置，彻底杜绝跳顶
                 const newScrollContainer = DOM.wordListEl.querySelector('.overflow-y-auto');
                 if (newScrollContainer && savedScrollTop > 0) {
                     newScrollContainer.scrollTop = savedScrollTop;
@@ -1125,22 +1096,24 @@
                 const int4 = getSimulatedInterval(currentWord, 4);
 
                 const controlsHtml = `
-                    <div class="grid grid-cols-4 gap-2 w-full mt-3 shrink-0 px-1 sm:px-2">
-                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 1)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl transition shadow-sm text-red-700 active:scale-95">
-                            <span class="text-xs sm:text-sm font-extrabold">重来</span><span class="text-[10px] opacity-70 mt-0.5">${int1}</span>
-                        </button>
-                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 2)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl transition shadow-sm text-orange-700 active:scale-95">
-                            <span class="text-xs sm:text-sm font-extrabold">困难</span><span class="text-[10px] opacity-70 mt-0.5">${int2}</span>
-                        </button>
-                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 3)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition shadow-sm text-blue-700 active:scale-95">
-                            <span class="text-xs sm:text-sm font-extrabold">良好</span><span class="text-[10px] opacity-70 mt-0.5">${int3}</span>
-                        </button>
-                        <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 4)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl transition shadow-sm text-green-700 active:scale-95">
-                            <span class="text-xs sm:text-sm font-extrabold">简单</span><span class="text-[10px] opacity-70 mt-0.5">${int4}</span>
-                        </button>
-                    </div>
-                    <div class="mt-2.5 flex justify-center w-full pb-5 sm:pb-8 shrink-0">
-                         <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离词库与学习池)</button>
+                    <div id="fsrs-controls" class="hidden flex-col w-full">
+                        <div class="grid grid-cols-4 gap-2 w-full mt-3 shrink-0 px-1 sm:px-2">
+                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 1)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl transition shadow-sm text-red-700 active:scale-95">
+                                <span class="text-xs sm:text-sm font-extrabold">重来</span><span class="text-[10px] opacity-70 mt-0.5">${int1}</span>
+                            </button>
+                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 2)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl transition shadow-sm text-orange-700 active:scale-95">
+                                <span class="text-xs sm:text-sm font-extrabold">困难</span><span class="text-[10px] opacity-70 mt-0.5">${int2}</span>
+                            </button>
+                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 3)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition shadow-sm text-blue-700 active:scale-95">
+                                <span class="text-xs sm:text-sm font-extrabold">良好</span><span class="text-[10px] opacity-70 mt-0.5">${int3}</span>
+                            </button>
+                            <button onclick="rateWordFSRS('${escapeHtml(currentWord)}', 4)" class="flex flex-col items-center justify-center p-3 sm:py-4 bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl transition shadow-sm text-green-700 active:scale-95">
+                                <span class="text-xs sm:text-sm font-extrabold">简单</span><span class="text-[10px] opacity-70 mt-0.5">${int4}</span>
+                            </button>
+                        </div>
+                        <div class="mt-2.5 flex justify-center w-full pb-5 sm:pb-8 shrink-0">
+                             <button onclick="removeWord('${escapeHtml(currentWord)}')" class="text-xs text-slate-400 hover:text-red-500 underline decoration-dotted transition p-2">永远剔除 (脱离词库与学习池)</button>
+                        </div>
                     </div>
                 `;
 
@@ -1150,14 +1123,22 @@
                             <div class="text-[11px] font-bold text-slate-400 bg-slate-100/80 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm">待复习 : ${currentCardIndex + 1} / ${displayWords.length}</div>
                         </div>
                         
-                        <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar">
+                        <div class="w-full flex-1 min-h-0 bg-white border border-slate-200 shadow-sm sm:shadow-lg rounded-3xl p-5 sm:p-8 flex flex-col items-center justify-start relative transition-all overflow-y-auto custom-scrollbar cursor-pointer" onclick="revealCard()">
                             
                             <!-- 单词主体 -->
-                            <span class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight text-center break-words select-all mb-1 mt-2 shrink-0 cursor-pointer" onclick="playYoudaoAudio('${escapeHtml(currentWord)}')">${escapeHtml(currentWord)}</span>
+                            <span class="text-4xl sm:text-5xl font-black text-red-600 tracking-tight text-center break-words select-all mb-1 mt-4 shrink-0" onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')">${escapeHtml(currentWord)}</span>
                             
-                            <!-- 有道词典渲染区 (含音标下方精致五星 & 扩展大面积盲猜触发区) -->
-                            <div id="dict-area" class="w-full flex-1 flex flex-col items-center justify-start mt-1">
-                                <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4">📡 呼叫词典...</span>
+                            <!-- 正面引导区：点击任意区域翻开卡片 -->
+                            <div id="front-hint" class="flex flex-col items-center mt-6 w-full">
+                                <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>
+                                </button>
+                                <span class="text-[13px] text-slate-400 font-medium">点击卡片看释义</span>
+                            </div>
+
+                            <!-- 有道词典渲染区 (反面：初始隐藏) -->
+                            <div id="dict-area" class="w-full flex-1 flex-col items-center justify-start mt-1 hidden">
+                                <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4 text-center w-full block">📡 呼叫词典...</span>
                             </div>
                         </div>
                         
