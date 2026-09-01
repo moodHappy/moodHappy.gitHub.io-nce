@@ -60,19 +60,13 @@
         <div class="w-full bg-slate-50 py-2 shrink-0 border-b border-slate-200/60">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
                 
-                <!-- 核心同步操作栏 -->
-                <div class="grid grid-cols-4 gap-1.5 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                    <button id="btn-pull-words" class="py-1.5 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95" title="从云端拉取主库与星标库 (Pull)">
-                        <span>📥</span><span>Pull词库</span>
+                <!-- 核心同步操作栏：合并为智能双向同步 -->
+                <div class="grid grid-cols-2 gap-2 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                    <button id="btn-sync-words" class="py-2 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="自动比对时间戳，双向智能同步主库与星标库">
+                        <span class="text-sm">🔄</span><span>智能同步词库</span>
                     </button>
-                    <button id="btn-push-words" class="py-1.5 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95 disabled:opacity-50" title="推送修改后的词库至云端 (Push)">
-                        <span>📤</span><span>Push词库</span>
-                    </button>
-                    <button id="btn-pull-progress" class="py-1.5 px-1 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 rounded-xl transition font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95" title="从云端拉取 FSRS 学习记录 (Pull)">
-                        <span>📥</span><span>Pull进度</span>
-                    </button>
-                    <button id="btn-push-progress" class="py-1.5 px-1 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 rounded-xl transition font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95" title="推送 FSRS 学习记录至云端 (Push)">
-                        <span>📤</span><span>Push进度</span>
+                    <button id="btn-sync-progress" class="py-2 px-1 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="自动比对时间戳，双向智能同步学习进度与记录">
+                        <span class="text-sm">🔄</span><span>智能同步进度</span>
                     </button>
                 </div>
 
@@ -158,7 +152,7 @@
                 </div>
             </div>
             <div class="flex justify-end pt-2">
-                <button id="btn-save-config" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-slate-200">保存配置并一键拉取全部数据</button>
+                <button id="btn-save-config" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-slate-200">保存配置并一键触发智能同步</button>
             </div>
         </div>
     </div>
@@ -283,6 +277,19 @@
         }
 
         // ==========================================
+        // 标记修改以进行智能合并
+        // ==========================================
+        async function markWordsDirty() {
+            await idbSet('words_local_dirty', true);
+            await idbSet('local_words_updated_at', Date.now());
+        }
+        
+        async function markProgressDirty() {
+            await idbSet('progress_local_dirty', true);
+            await idbSet('local_progress_updated_at', Date.now());
+        }
+
+        // ==========================================
         // 状态变量与缓存数据
         // ==========================================
         let words = [];             
@@ -309,10 +316,8 @@
             btnCloseSettings: document.getElementById('close-settings'),
             btnSaveConfig: document.getElementById('btn-save-config'),
             
-            btnPullWords: document.getElementById('btn-pull-words'),
-            btnPushWords: document.getElementById('btn-push-words'),
-            btnPullProgress: document.getElementById('btn-pull-progress'),
-            btnPushProgress: document.getElementById('btn-push-progress'),
+            btnSyncWords: document.getElementById('btn-sync-words'),
+            btnSyncProgress: document.getElementById('btn-sync-progress'),
             
             btnToggleConfirm: document.getElementById('btn-toggle-confirm'),
             
@@ -501,12 +506,11 @@
             words = cached.words || [];
             fileSha = cached.fileSha;
             switchMode('fsrs'); 
-            DOM.btnPushWords.removeAttribute('disabled');
             renderTrash();
         } else if (FSRS_API) {
             if (config.token) { 
-                pullWordsFromGitHub(); 
-                pullProgressFromGitHub();
+                syncWordsAuto(); 
+                syncProgressAuto();
             } else {
                 DOM.modalSettings.classList.remove('hidden');
                 DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-slate-400 text-sm flex flex-col items-center"><span class="text-4xl mb-2">⚙️</span><span>请先配置 API 获取词库</span></div>`;
@@ -562,6 +566,7 @@
             
             memoryStats[word] = card;
             await idbSet('memory_stats', memoryStats);
+            await markProgressDirty(); // 标记进度变动
             
             showStatus(`✨ 已将 "${word}" 加入学习池！`, 'success');
             renderWords();
@@ -582,8 +587,8 @@
             if (!config.token) return alert('请填写 GitHub Token！');
             await idbSet('config', config);
             DOM.modalSettings.classList.add('hidden');
-            await pullWordsFromGitHub();
-            await pullProgressFromGitHub();
+            await syncWordsAuto();
+            await syncProgressAuto();
         });
 
         [DOM.btnSettings, DOM.btnCloseSettings].forEach(b => b.addEventListener('click', () => DOM.modalSettings.classList.toggle('hidden')));
@@ -628,6 +633,7 @@
             if (increment) stats.count++;
             if (decrement && stats.count > 0) stats.count--;
             await idbSet('stats', stats);
+            await markProgressDirty(); // 统计变动也属于进度变动
             DOM.todayCountEl.textContent = `今日已删: ${stats.count}`;
         }
 
@@ -648,79 +654,77 @@
             try {
                 const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filepath}?t=${Date.now()}`;
                 const res = await fetch(url, { headers: { 'Authorization': `token ${config.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-                if (res.ok) {
-                    const data = await res.json();
-                    return data.sha;
-                }
-            } catch (e) {
-                console.warn(`检测远程 ${filepath} SHA 异常:`, e);
-            }
+                if (res.ok) return (await res.json()).sha;
+            } catch (e) { console.warn(`检测远程 ${filepath} SHA 异常:`, e); }
             return null;
         }
 
+        async function getRemoteFileTime(config, owner, repo, filepath) {
+            try {
+                const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${filepath}&page=1&per_page=1&t=${Date.now()}`;
+                const res = await fetch(url, { headers: { 'Authorization': `token ${config.token}`, 'Accept': 'application/vnd.github.v3+json' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) return new Date(data[0].commit.committer.date).getTime();
+                }
+            } catch (e) { console.warn(`拉取远程 commit 时间异常:`, e); }
+            return 0;
+        }
+
         // ==========================================
-        // 四大核心同步实现
+        // 双向智能同步逻辑 (Words)
         // ==========================================
-        async function pullWordsFromGitHub() {
+        async function syncWordsAuto() {
             const config = await idbGet('config');
             if (!config || !config.token) return DOM.modalSettings.classList.remove('hidden');
 
-            showStatus('🚀 正在从云端拉取词库 (Pull)...', 'info');
-            DOM.btnPullWords.setAttribute('disabled', 'true');
+            DOM.btnSyncWords.setAttribute('disabled', 'true');
+            showStatus('🔄 正在比对云端词库状态...', 'info');
 
             try {
-                const fetchPromises = [
-                    fetchGitHubFile(config, config.owner, config.repo, config.path)
-                ];
-                if (config.pathTwo) fetchPromises.push(fetchGitHubFile(config, config.owner, config.repo, config.pathTwo).catch(e => null));
+                const isDirty = await idbGet('words_local_dirty') || false;
+                const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path);
 
-                const results = await Promise.all(fetchPromises);
-                const mainData = results[0];
-                const oneData = results[1];
-
-                fileSha = mainData.sha;
-                const content = base64ToUtf8(mainData.content);
-                words = content.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-                await idbSet('words_cache', { words, fileSha });
-
-                if (oneData) {
-                    const oneContent = base64ToUtf8(oneData.content);
-                    oneWords = oneContent.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-                    oneFileSha = oneData.sha;
-                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
-                    await idbSet('one_dirty', false);
-                    oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
+                if (curMainSha === fileSha) {
+                    // 云端文件未改变
+                    if (isDirty) {
+                        await pushWordsCore(config, curMainSha);
+                    } else {
+                        showStatus('✅ 词库已是最新，无需同步', 'success');
+                    }
+                } else {
+                    // 云端文件有改变
+                    if (isDirty) {
+                        // 产生冲突，精确比对最后修改时间
+                        const remoteTime = await getRemoteFileTime(config, config.owner, config.repo, config.path);
+                        const localTime = await idbGet('local_words_updated_at') || 0;
+                        
+                        if (localTime > remoteTime) {
+                            showStatus('⚠️ 冲突: 判定本地更新较新，强制覆盖云端...', 'info');
+                            await pushWordsCore(config, curMainSha);
+                        } else {
+                            showStatus('⚠️ 冲突: 判定云端较新，覆盖本地...', 'info');
+                            await pullWordsCore(config);
+                        }
+                    } else {
+                        // 只有云端有变，直接拉取
+                        await pullWordsCore(config);
+                    }
                 }
-
-                showStatus(`🎉 词库拉取成功 (Pull OK)！加载 ${words.length} 词`, 'success');
-                DOM.btnPushWords.removeAttribute('disabled');
-                switchMode(viewMode);
             } catch (err) {
-                showStatus(`词库拉取失败: ${err.message}`, 'error');
+                showStatus(`同步异常: ${err.message}`, 'error');
             } finally {
-                DOM.btnPullWords.removeAttribute('disabled');
+                DOM.btnSyncWords.removeAttribute('disabled');
             }
         }
 
-        async function pushWordsToGitHub() {
-            const config = await idbGet('config');
-            if (!config || !config.token) return alert('请先配置 Token');
-            if (!confirm(`准备更新云端词汇表。这将会覆盖远程的主词库与星标联动库，是否继续？`)) return;
-
-            DOM.btnPushWords.setAttribute('disabled', 'true');
-            showStatus('🚀 正在获取最新云端状态并推送词库 (Push)...', 'info');
-
+        async function pushWordsCore(config, mainSha) {
             let syncSuccess = true;
             let msgs = [];
-
             try {
-                const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path) || fileSha;
                 const encMain = utf8ToBase64(words.join('\n') + '\n');
-                const putMainBody = { 
-                    message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, 
-                    content: encMain 
-                };
-                if (curMainSha) putMainBody.sha = curMainSha;
+                const putMainBody = { message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain };
+                if (mainSha) putMainBody.sha = mainSha;
 
                 const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
                     method: 'PUT',
@@ -739,10 +743,7 @@
                 try {
                     const curOneSha = await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) || oneFileSha;
                     const encOne = utf8ToBase64(oneWords.join('\n') + '\n');
-                    const putOneBody = { 
-                        message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, 
-                        content: encOne 
-                    };
+                    const putOneBody = { message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, content: encOne };
                     if (curOneSha) putOneBody.sha = curOneSha;
 
                     const resOne = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.pathTwo}`, {
@@ -759,104 +760,144 @@
                 } catch(err) { syncSuccess = false; msgs.push(`星标库失败: ${err.message}`); }
             }
 
-            if (syncSuccess) { showStatus(`🎉 词库推送成功 (Push OK)！(${msgs.join(', ')})`, 'success'); } 
-            else { showStatus(`⚠ 同步存在异常: ${msgs.join(' | ')}`, 'error'); }
-            
-            DOM.btnPushWords.removeAttribute('disabled');
+            if (syncSuccess) {
+                await idbSet('words_local_dirty', false); // 消除标记
+                showStatus(`🎉 词库推送成功！(${msgs.join(', ')})`, 'success'); 
+            } else { 
+                showStatus(`⚠ 同步异常: ${msgs.join(' | ')}`, 'error'); 
+            }
         }
 
-        async function pullProgressFromGitHub() {
+        async function pullWordsCore(config) {
+            const fetchPromises = [fetchGitHubFile(config, config.owner, config.repo, config.path)];
+            if (config.pathTwo) fetchPromises.push(fetchGitHubFile(config, config.owner, config.repo, config.pathTwo).catch(e => null));
+            const results = await Promise.all(fetchPromises);
+            
+            const mainData = results[0];
+            const oneData = results[1];
+
+            fileSha = mainData.sha;
+            words = base64ToUtf8(mainData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+            await idbSet('words_cache', { words, fileSha });
+
+            if (oneData) {
+                oneWords = base64ToUtf8(oneData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                oneFileSha = oneData.sha;
+                await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                await idbSet('one_dirty', false);
+                oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
+            }
+
+            await idbSet('words_local_dirty', false); // 消除标记
+            showStatus(`🎉 词库拉取成功！加载 ${words.length} 词`, 'success');
+            switchMode(viewMode);
+        }
+
+        // ==========================================
+        // 双向智能同步逻辑 (Progress)
+        // ==========================================
+        async function syncProgressAuto() {
             const config = await idbGet('config');
             if (!config || !config.token) return DOM.modalSettings.classList.remove('hidden');
-            if (!config.backupRepo || !config.backupPath) return alert('请在配置中心填写正确的备份仓库与路径。');
+            if (!config.backupRepo || !config.backupPath) return alert('请配置正确的备份仓库与路径。');
 
-            showStatus('🚀 正在从云端拉取 FSRS 学习进度 (Pull)...', 'info');
-            DOM.btnPullProgress.setAttribute('disabled', 'true');
+            DOM.btnSyncProgress.setAttribute('disabled', 'true');
+            showStatus('🔄 正在比对进度状态...', 'info');
 
             try {
-                const backupData = await fetchGitHubFile(config, config.owner, config.backupRepo, config.backupPath);
-                backupFileSha = backupData.sha;
-                await idbSet('backup_file_sha', backupFileSha);
+                const isDirty = await idbGet('progress_local_dirty') || false;
+                const curSha = await getRemoteFileSha(config, config.owner, config.backupRepo, config.backupPath);
 
-                const jsonStr = base64ToUtf8(backupData.content);
-                const backupJson = JSON.parse(jsonStr);
-                
-                if (backupJson.memoryStats) {
-                    memoryStats = backupJson.memoryStats;
-                    await idbSet('memory_stats', memoryStats);
+                if (curSha === backupFileSha) {
+                    if (isDirty) await pushProgressCore(config, curSha);
+                    else showStatus('✅ 进度已是最新，无需同步', 'success');
+                } else {
+                    const backupData = await fetchGitHubFile(config, config.owner, config.backupRepo, config.backupPath);
+                    const backupJson = JSON.parse(base64ToUtf8(backupData.content));
+                    
+                    if (isDirty) {
+                        const remoteTime = backupJson.updatedAt || 0;
+                        const localTime = await idbGet('local_progress_updated_at') || 0;
+                        
+                        if (localTime > remoteTime) {
+                            showStatus('⚠️ 冲突: 本地进度较新，强制覆盖云端...', 'info');
+                            await pushProgressCore(config, backupData.sha);
+                        } else {
+                            showStatus('⚠️ 冲突: 云端进度较新，覆盖本地...', 'info');
+                            await applyProgressCore(backupData, backupJson);
+                        }
+                    } else {
+                        await applyProgressCore(backupData, backupJson);
+                    }
                 }
-                if (backupJson.trash && Array.isArray(backupJson.trash)) {
-                    trash = backupJson.trash;
-                    await idbSet('trash_bin', trash);
-                    renderTrash();
-                }
-                if (backupJson.stats) {
-                    await idbSet('stats', backupJson.stats);
-                    await updateTodayCountDisplay(false, false);
-                }
-
-                showStatus('🎉 学习记录拉取成功 (Pull OK)！已还原进度', 'success');
-                switchMode(viewMode);
             } catch (err) {
-                showStatus(`进度拉取失败: ${err.message}`, 'error');
-            } finally {
-                DOM.btnPullProgress.removeAttribute('disabled');
-            }
-        }
-
-        async function pushProgressToGitHub() {
-            const config = await idbGet('config');
-            if (!config || !config.token) return alert('请先配置 Token');
-            if (!config.backupRepo || !config.backupPath) return alert('请在配置中心填写正确的备份仓库与路径。');
-
-            DOM.btnPushProgress.setAttribute('disabled', 'true');
-            showStatus('🚀 正在校验云端状态并推送 FSRS 进度 (Push)...', 'info');
-
-            try {
-                const latestSha = await getRemoteFileSha(config, config.owner, config.backupRepo, config.backupPath) || backupFileSha;
-
-                const todayStats = await idbGet('stats');
-                const backupPayload = JSON.stringify({
-                    updatedAt: Date.now(),
-                    memoryStats: memoryStats, 
-                    trash: trash,
-                    stats: todayStats
-                }, null, 2);
-                
-                const encBackup = utf8ToBase64(backupPayload);
-                const putBody = {
-                    message: `WordSync Pro: Backup Study Record (${new Date().toISOString().slice(0,10)})`,
-                    content: encBackup
-                };
-                
-                if (latestSha) {
-                    putBody.sha = latestSha;
+                if (err.message.includes('404')) {
+                    showStatus('未找到云端进度文件，正尝试首次创建...', 'info');
+                    await pushProgressCore(config, null);
+                } else {
+                    showStatus(`进度同步异常: ${err.message}`, 'error');
                 }
-
-                const resBackup = await fetch(`https://api.github.com/repos/${config.owner}/${config.backupRepo}/contents/${config.backupPath}`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                    body: JSON.stringify(putBody)
-                });
-                
-                if (!resBackup.ok) throw new Error((await resBackup.json()).message);
-                const dataBackup = await resBackup.json();
-                
-                backupFileSha = dataBackup.content.sha;
-                await idbSet('backup_file_sha', backupFileSha);
-                
-                showStatus('🎉 学习记录与进度推送成功 (Push OK)！', 'success');
-            } catch(err) { 
-                showStatus(`进度推送失败: ${err.message}`, 'error'); 
             } finally {
-                DOM.btnPushProgress.removeAttribute('disabled');
+                DOM.btnSyncProgress.removeAttribute('disabled');
             }
         }
 
-        DOM.btnPullWords.addEventListener('click', pullWordsFromGitHub);
-        DOM.btnPushWords.addEventListener('click', pushWordsToGitHub);
-        DOM.btnPullProgress.addEventListener('click', pullProgressFromGitHub);
-        DOM.btnPushProgress.addEventListener('click', pushProgressToGitHub);
+        async function pushProgressCore(config, latestSha) {
+            const todayStats = await idbGet('stats');
+            const backupPayload = JSON.stringify({
+                updatedAt: Date.now(),
+                memoryStats: memoryStats, 
+                trash: trash,
+                stats: todayStats
+            }, null, 2);
+            
+            const putBody = {
+                message: `WordSync Pro: Backup Study Record (${new Date().toISOString().slice(0,10)})`,
+                content: utf8ToBase64(backupPayload)
+            };
+            if (latestSha) putBody.sha = latestSha;
+
+            const resBackup = await fetch(`https://api.github.com/repos/${config.owner}/${config.backupRepo}/contents/${config.backupPath}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(putBody)
+            });
+            
+            if (!resBackup.ok) throw new Error((await resBackup.json()).message);
+            const dataBackup = await resBackup.json();
+            
+            backupFileSha = dataBackup.content.sha;
+            await idbSet('backup_file_sha', backupFileSha);
+            await idbSet('progress_local_dirty', false); // 消除标记
+            
+            showStatus('🎉 学习进度推送成功！', 'success');
+        }
+
+        async function applyProgressCore(backupData, backupJson) {
+            backupFileSha = backupData.sha;
+            await idbSet('backup_file_sha', backupFileSha);
+
+            if (backupJson.memoryStats) {
+                memoryStats = backupJson.memoryStats;
+                await idbSet('memory_stats', memoryStats);
+            }
+            if (backupJson.trash && Array.isArray(backupJson.trash)) {
+                trash = backupJson.trash;
+                await idbSet('trash_bin', trash);
+                renderTrash();
+            }
+            if (backupJson.stats) {
+                await idbSet('stats', backupJson.stats);
+                await updateTodayCountDisplay(false, false);
+            }
+
+            await idbSet('progress_local_dirty', false); // 消除标记
+            showStatus('🎉 进度拉取成功！已还原', 'success');
+            switchMode(viewMode);
+        }
+
+        DOM.btnSyncWords.addEventListener('click', syncWordsAuto);
+        DOM.btnSyncProgress.addEventListener('click', syncProgressAuto);
 
         // ==========================================
         // 核心：处理序列化及 FSRS 调度逻辑
@@ -909,6 +950,7 @@
                 
                 memoryStats[word] = next_card;
                 await idbSet('memory_stats', memoryStats);
+                await markProgressDirty(); // 进度变动
 
                 displayWords.splice(currentCardIndex, 1);
                 if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
@@ -962,6 +1004,9 @@
             await idbSet('words_cache', { words, fileSha });
             await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
             
+            await markWordsDirty();
+            await markProgressDirty(); // Trash 变动也属于进度变动
+
             const todayStr = new Date().toISOString().slice(0, 10);
             const delStr = new Date(item.deletedAt).toISOString().slice(0, 10);
             if (todayStr === delStr) await updateTodayCountDisplay(false, true);
@@ -998,6 +1043,9 @@
                 trash.unshift({ word: wordTarget, inMain, inOne, deletedAt: Date.now() });
                 await idbSet('trash_bin', trash);
                 
+                await markWordsDirty();
+                await markProgressDirty(); // Trash 和 统计变动也属于进度变动
+
                 const displayIndex = displayWords.indexOf(wordTarget);
                 if (displayIndex > -1) {
                     displayWords.splice(displayIndex, 1);
