@@ -6,6 +6,9 @@
     <title>GitHub WordSync Pro</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 NLP 词形还原库与溯源双语语料库 -->
+    <script src="https://unpkg.com/compromise"></script>
+    <script src="https://fastly.jsdelivr.net/gh/moodHappy/moodHappy.gitHub.io-nce@main/config/_suyuan_db.js"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -218,6 +221,64 @@
         };
 
         // ==========================================
+        // 溯源双语语料库例句匹配算法
+        // ==========================================
+        function getWordForms(word) {
+            let forms = new Set([word.toLowerCase().trim()]);
+            try {
+                if (typeof nlp !== 'undefined') {
+                    let doc = nlp(word);
+                    let verbs = doc.verbs().conjugate();
+                    if (verbs && verbs.length > 0) {
+                        Object.values(verbs[0]).forEach(v => { if (v) forms.add(v.toLowerCase()); });
+                    }
+                    let nouns = doc.nouns();
+                    if (nouns && nouns.length > 0) {
+                        nouns.toPlural().out('array').forEach(n => forms.add(n.toLowerCase()));
+                        nlp(word).nouns().toSingular().out('array').forEach(n => forms.add(n.toLowerCase()));
+                    }
+                }
+            } catch(e) {}
+            return Array.from(forms);
+        }
+
+        function findRandomSuyuanSentence(word) {
+            if (!window.__SUYUAN_CORPUS__ || !Array.isArray(window.__SUYUAN_CORPUS__)) return null;
+            const forms = getWordForms(word);
+            const escapedForms = forms.map(f => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            const regex = new RegExp('\\b(' + escapedForms.join('|') + ')\\b', 'i');
+            
+            let matches = [];
+            for (const item of window.__SUYUAN_CORPUS__) {
+                if (!item.s || !Array.isArray(item.s)) continue;
+                for (const pair of item.s) {
+                    const en = pair[0];
+                    const zh = pair[1] || '';
+                    if (!en) continue;
+                    const m = en.match(regex);
+                    if (m) {
+                        matches.push({
+                            path: item.p,
+                            matchedWord: m[0],
+                            en: en,
+                            zh: zh
+                        });
+                    }
+                }
+            }
+            if (matches.length === 0) return null;
+            const chosen = matches[Math.floor(Math.random() * matches.length)];
+            
+            const hlRegex = new RegExp('\\b(' + escapedForms.join('|') + ')\\b', 'gi');
+            const highlightedEn = chosen.en.replace(hlRegex, '<span class="text-red-600 font-bold bg-red-50 px-1 py-0.5 rounded border border-red-100/60">$1</span>');
+            
+            return {
+                ...chosen,
+                highlightedEn
+            };
+        }
+
+        // ==========================================
         // 外部 FSRS 算法库加载
         // ==========================================
         let FSRS_API = null;
@@ -346,7 +407,7 @@
         };
 
         // ==========================================
-        // 解析并渲染有道词典 JSON 数据
+        // 解析并渲染有道词典 + 溯源例句
         // ==========================================
         function parseAndRenderDict(data, currentWord) {
             const dictArea = document.getElementById('dict-area');
@@ -354,14 +415,46 @@
 
             const isStar = oneTxtSet.has(currentWord.toLowerCase());
             const starHTML = isStar 
-                ? `<div class="flex items-center justify-center text-amber-400 text-xs tracking-[0.25em] mb-2.5 font-bold select-none drop-shadow-sm" title="五星重点词">★★★★★</div>` 
+                ? `<div class="flex items-center justify-center text-amber-400 text-xs tracking-[0.25em] mb-2 font-bold select-none drop-shadow-sm" title="五星重点词">★★★★★</div>` 
                 : '';
+
+            const speakerIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>`;
+
+            // 1. 抽取溯源例句
+            const suyuanItem = findRandomSuyuanSentence(currentWord);
+            let suyuanHTML = '';
+            if (suyuanItem) {
+                const cleanEng = suyuanItem.en.replace(/<[^>]*>?/gm, '');
+                const excerpt = suyuanItem.en.split(' ').slice(0, 5).join(' ');
+                const targetUrl = `https://moodhappy.github.io/MiyetsukoSeries/${encodeURIComponent(suyuanItem.path)}#:~:text=${encodeURIComponent(excerpt)}`;
+                
+                suyuanHTML = `
+                    <div class="mt-3 pt-3 border-t border-slate-100 border-dashed text-left w-full max-w-sm mx-auto">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                🧸 溯源原境双语
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <a href="${targetUrl}" target="_blank" class="text-[11px] text-blue-500 hover:text-blue-700 font-bold flex items-center gap-0.5 transition" title="跳转至全文">
+                                    全文 ➔
+                                </a>
+                                <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(cleanEng)}')" class="w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读语境例句">
+                                    ${speakerIcon}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-[13.5px] text-slate-800 leading-snug font-medium pt-0.5">${suyuanItem.highlightedEn}</div>
+                        ${suyuanItem.zh ? `<div class="text-[12.5px] text-slate-500 leading-relaxed mt-1">${suyuanItem.zh}</div>` : ''}
+                    </div>
+                `;
+            }
 
             if (!data) {
                 dictArea.innerHTML = `
                     <div class="w-full flex flex-col items-center pointer-events-auto pb-4">
                         ${starHTML}
-                        <span class="text-xs text-slate-400 font-medium py-4">未找到释义或网络异常</span>
+                        ${suyuanHTML}
+                        <span class="text-[11px] text-slate-300 font-medium py-3">（暂无在线词典释义）</span>
                     </div>
                 `;
                 return;
@@ -371,32 +464,18 @@
             let transHTML = '';
             let sentenceHTML = '';
 
-            const speakerIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>`;
-            
             try {
                 let us = data?.ec?.word?.[0]?.usphone || data?.simple?.word?.[0]?.usphone || '';
                 let uk = data?.ec?.word?.[0]?.ukphone || data?.simple?.word?.[0]?.ukphone || '';
                 
-                if (us || uk) {
-                    phoneticHTML = `
-                        <div class="flex items-center justify-center gap-3 mb-1 mt-1">
-                            <span class="text-[13px] sm:text-sm text-slate-400 font-mono tracking-wide">
-                                ${us ? `US: [${us}]` : `UK: [${uk}]`}
-                            </span>
-                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正发音">
-                                ${speakerIcon}
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    phoneticHTML = `
-                        <div class="flex items-center justify-center mb-1 mt-1">
-                            <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正发音">
-                                ${speakerIcon}
-                            </button>
-                        </div>
-                    `;
-                }
+                phoneticHTML = `
+                    <div class="flex items-center justify-center gap-3 mb-1 mt-0.5">
+                        ${(us || uk) ? `<span class="text-[13px] sm:text-sm text-slate-400 font-mono tracking-wide">${us ? `US: [${us}]` : `UK: [${uk}]`}</span>` : ''}
+                        <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="纯正发音">
+                            ${speakerIcon}
+                        </button>
+                    </div>
+                `;
                 
                 let trs = data?.ec?.word?.[0]?.trs;
                 if (trs && trs.length > 0) {
@@ -428,7 +507,7 @@
                         <div class="mt-3 pt-3 border-t border-slate-100 border-dashed text-left w-full max-w-sm mx-auto">
                             <div class="flex items-center justify-between gap-3 mb-1">
                                 <div class="text-[14px] text-slate-800 leading-snug dict-sentence pt-1">${eng}</div>
-                                <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(cleanEngForSpeech)}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读例句">
+                                <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(cleanEngForSpeech)}')" class="w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm" title="朗读有道例句">
                                     ${speakerIcon}
                                 </button>
                             </div>
@@ -441,13 +520,14 @@
                 console.error("词典解析错误", err);
             }
 
-            if (!transHTML) transHTML = "<div class='text-center'>未匹配到具体释义</div>";
+            if (!transHTML) transHTML = "<div class='text-center text-xs text-slate-400 py-1'>未匹配到具体释义</div>";
 
             dictArea.innerHTML = `
                 <div class="w-full flex flex-col items-center pointer-events-auto pb-4">
                     ${phoneticHTML}
                     ${starHTML}
                     <div class="w-full max-w-sm mx-auto flex flex-col items-start px-2">${transHTML}</div>
+                    ${suyuanHTML}
                     ${sentenceHTML}
                 </div>
             `;
@@ -566,7 +646,7 @@
             
             memoryStats[word] = card;
             await idbSet('memory_stats', memoryStats);
-            await markProgressDirty(); // 标记进度变动
+            await markProgressDirty(); 
             
             showStatus(`✨ 已将 "${word}" 加入学习池！`, 'success');
             renderWords();
@@ -633,7 +713,7 @@
             if (increment) stats.count++;
             if (decrement && stats.count > 0) stats.count--;
             await idbSet('stats', stats);
-            await markProgressDirty(); // 统计变动也属于进度变动
+            await markProgressDirty(); 
             DOM.todayCountEl.textContent = `今日已删: ${stats.count}`;
         }
 
@@ -686,16 +766,13 @@
                 const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path);
 
                 if (curMainSha === fileSha) {
-                    // 云端文件未改变
                     if (isDirty) {
                         await pushWordsCore(config, curMainSha);
                     } else {
                         showStatus('✅ 词库已是最新，无需同步', 'success');
                     }
                 } else {
-                    // 云端文件有改变
                     if (isDirty) {
-                        // 产生冲突，精确比对最后修改时间
                         const remoteTime = await getRemoteFileTime(config, config.owner, config.repo, config.path);
                         const localTime = await idbGet('local_words_updated_at') || 0;
                         
@@ -707,7 +784,6 @@
                             await pullWordsCore(config);
                         }
                     } else {
-                        // 只有云端有变，直接拉取
                         await pullWordsCore(config);
                     }
                 }
@@ -761,7 +837,7 @@
             }
 
             if (syncSuccess) {
-                await idbSet('words_local_dirty', false); // 消除标记
+                await idbSet('words_local_dirty', false); 
                 showStatus(`🎉 词库推送成功！(${msgs.join(', ')})`, 'success'); 
             } else { 
                 showStatus(`⚠ 同步异常: ${msgs.join(' | ')}`, 'error'); 
@@ -788,7 +864,7 @@
                 oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
             }
 
-            await idbSet('words_local_dirty', false); // 消除标记
+            await idbSet('words_local_dirty', false); 
             showStatus(`🎉 词库拉取成功！加载 ${words.length} 词`, 'success');
             switchMode(viewMode);
         }
@@ -868,7 +944,7 @@
             
             backupFileSha = dataBackup.content.sha;
             await idbSet('backup_file_sha', backupFileSha);
-            await idbSet('progress_local_dirty', false); // 消除标记
+            await idbSet('progress_local_dirty', false); 
             
             showStatus('🎉 学习进度推送成功！', 'success');
         }
@@ -891,7 +967,7 @@
                 await updateTodayCountDisplay(false, false);
             }
 
-            await idbSet('progress_local_dirty', false); // 消除标记
+            await idbSet('progress_local_dirty', false); 
             showStatus('🎉 进度拉取成功！已还原', 'success');
             switchMode(viewMode);
         }
@@ -950,7 +1026,7 @@
                 
                 memoryStats[word] = next_card;
                 await idbSet('memory_stats', memoryStats);
-                await markProgressDirty(); // 进度变动
+                await markProgressDirty(); 
 
                 displayWords.splice(currentCardIndex, 1);
                 if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
@@ -1005,7 +1081,7 @@
             await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
             
             await markWordsDirty();
-            await markProgressDirty(); // Trash 变动也属于进度变动
+            await markProgressDirty(); 
 
             const todayStr = new Date().toISOString().slice(0, 10);
             const delStr = new Date(item.deletedAt).toISOString().slice(0, 10);
@@ -1044,7 +1120,7 @@
                 await idbSet('trash_bin', trash);
                 
                 await markWordsDirty();
-                await markProgressDirty(); // Trash 和 统计变动也属于进度变动
+                await markProgressDirty(); 
 
                 const displayIndex = displayWords.indexOf(wordTarget);
                 if (displayIndex > -1) {
@@ -1181,10 +1257,10 @@
                                 <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>
                                 </button>
-                                <span class="text-[13px] text-slate-400 font-medium">点击卡片看释义</span>
+                                <span class="text-[13px] text-slate-400 font-medium">点击卡片看释义与语境</span>
                             </div>
 
-                            <!-- 有道词典渲染区 (反面：初始隐藏) -->
+                            <!-- 词典与双语溯源例句渲染区 (反面：初始隐藏) -->
                             <div id="dict-area" class="w-full flex-1 flex-col items-center justify-start mt-1 hidden">
                                 <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4 text-center w-full block">📡 呼叫词典...</span>
                             </div>
@@ -1202,6 +1278,7 @@
                     if (dictCache[lowerWord]) {
                         parseAndRenderDict(dictCache[lowerWord], currentWord);
                     } else {
+                        parseAndRenderDict(null, currentWord);
                         window.dispatchEvent(new CustomEvent('TM_Dict_Request', { detail: { word: currentWord } }));
                     }
                 }
