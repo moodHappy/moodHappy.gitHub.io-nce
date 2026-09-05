@@ -63,13 +63,16 @@
         <div class="w-full bg-slate-50 py-2 shrink-0 border-b border-slate-200/60">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
                 
-                <!-- 核心同步操作栏：智能双向同步 -->
-                <div class="grid grid-cols-2 gap-2 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                    <button id="btn-sync-words" class="py-2 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="智能比对时间戳并同步词库">
-                        <span class="text-sm">🔄</span><span>智能同步词库</span>
+                <!-- 核心同步操作栏：三路独立同步 -->
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                    <button id="btn-sync-words" class="py-2 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-sm active:scale-95" title="智能比对时间戳并同步主词库">
+                        <span class="text-sm">🔄</span><span class="truncate">同步主词库</span>
                     </button>
-                    <button id="btn-sync-progress" class="py-2 px-1 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="智能双向合并两端学习进度，防止覆盖卡词">
-                        <span class="text-sm">🔄</span><span>智能同步进度</span>
+                    <button id="btn-sync-star" class="py-2 px-1 bg-amber-50/80 hover:bg-amber-100 text-amber-700 border border-amber-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-sm active:scale-95" title="将本地五星词库同步推送到云端">
+                        <span class="text-sm">⭐</span><span class="truncate">五星同步词库</span>
+                    </button>
+                    <button id="btn-sync-progress" class="py-2 px-1 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-sm active:scale-95" title="智能双向合并两端学习进度，防止覆盖卡词">
+                        <span class="text-sm">🔄</span><span class="truncate">智能同步进度</span>
                     </button>
                 </div>
 
@@ -378,6 +381,7 @@
             btnSaveConfig: document.getElementById('btn-save-config'),
             
             btnSyncWords: document.getElementById('btn-sync-words'),
+            btnSyncStar: document.getElementById('btn-sync-star'),
             btnSyncProgress: document.getElementById('btn-sync-progress'),
             
             btnToggleConfirm: document.getElementById('btn-toggle-confirm'),
@@ -575,9 +579,9 @@
         backupFileSha = await idbGet('backup_file_sha') || '';
         
         const oneCache = await idbGet('one_cache');
-        if (oneCache && oneCache.fileSha) {
+        if (oneCache && oneCache.words) {
             oneWords = oneCache.words || [];
-            oneFileSha = oneCache.fileSha;
+            oneFileSha = oneCache.fileSha || '';
             oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
         }
 
@@ -587,7 +591,6 @@
             fileSha = cached.fileSha;
             switchMode('fsrs'); 
             renderTrash();
-            // 关键修复：换设备后若有旧缓存，先渲染保证体验，同时静默执行云端比对拉取最新进度
             if (config.token) {
                 syncWordsAuto(true);
                 syncProgressAuto(true);
@@ -607,7 +610,7 @@
         });
 
         // ==========================================
-        // 核心模式切换：大池子 -> 小池子筛选机制
+        // 核心模式切换
         // ==========================================
         function switchMode(newMode) {
             viewMode = newMode;
@@ -621,15 +624,15 @@
                 }
             });
 
-            const filtered = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
-            
             if (viewMode === 'list') {
-                displayWords = [...filtered];
+                displayWords = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
             } else if (viewMode === 'star_list') {
-                displayWords = filtered.filter(w => oneTxtSet.has(w.toLowerCase()));
+                // 五星列表直接以本地 oneWords 为源
+                displayWords = oneWords.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
             } else if (viewMode === 'fsrs') {
                 const now = Date.now();
-                displayWords = filtered.filter(w => {
+                displayWords = words.filter(w => {
+                    if (!w.toLowerCase().includes(currentFilter.toLowerCase())) return false;
                     const card = memoryStats[w];
                     return card && card.nextDate && card.nextDate <= now;
                 });
@@ -648,7 +651,7 @@
             const now = Date.now();
             let card = hydrateCard(memoryStats[word]);
             card.nextDate = now; 
-            card.updatedAt = now; // 记录卡片内部精准更新时间
+            card.updatedAt = now;
             
             memoryStats[word] = card;
             await idbSet('memory_stats', memoryStats);
@@ -712,7 +715,6 @@
             setTimeout(() => { DOM.statusBar.classList.add('hidden'); }, 3000);
         }
 
-        // 关键修复：刷新显示时绝不调用 markProgressDirty()
         async function updateTodayCountDisplay(increment = false, decrement = false) {
             const todayStr = new Date().toISOString().slice(0, 10);
             let stats = await idbGet('stats') || { date: todayStr, count: 0 };
@@ -732,7 +734,7 @@
         }
 
         // ==========================================
-        // GitHub API 交互核心辅助
+        // GitHub API 交互辅助
         // ==========================================
         function base64ToUtf8(base64) { try { return decodeURIComponent(Array.prototype.map.call(atob(base64), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')); } catch (e) { return atob(base64); } }
         function utf8ToBase64(str) { return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))); }
@@ -766,7 +768,187 @@
         }
 
         // ==========================================
-        // 智能双向合并算法 (Merge Logic)
+        // 专有：五星同步词库 (用本地强制更新推送到云端)
+        // ==========================================
+        async function syncStarWords() {
+            const config = await idbGet('config');
+            if (!config || !config.token) {
+                DOM.modalSettings.classList.remove('hidden');
+                return;
+            }
+            if (!config.pathTwo) {
+                alert('请先在配置中指定五星联动库路径（例如 Notes/one.txt）！');
+                return;
+            }
+
+            DOM.btnSyncStar.setAttribute('disabled', 'true');
+            showStatus('⭐ 正在将本地五星词库同步推送至云端...', 'info');
+
+            try {
+                const curOneSha = await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo);
+                const encOne = utf8ToBase64(oneWords.join('\n') + (oneWords.length ? '\n' : ''));
+                const putOneBody = { 
+                    message: `WordSync Pro: Sync Starred Words (${new Date().toISOString().slice(0, 10)})`, 
+                    content: encOne 
+                };
+                if (curOneSha) putOneBody.sha = curOneSha;
+
+                const resOne = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.pathTwo}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `token ${config.token}`, 
+                        'Content-Type': 'application/json', 
+                        'Accept': 'application/vnd.github.v3+json' 
+                    },
+                    body: JSON.stringify(putOneBody)
+                });
+
+                if (!resOne.ok) {
+                    const errData = await resOne.json();
+                    throw new Error(errData.message || resOne.statusText);
+                }
+
+                const dataOne = await resOne.json();
+                oneFileSha = dataOne.content.sha;
+                await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                await idbSet('one_dirty', false);
+                
+                showStatus(`🎉 五星词库已成功同步至云端！(共 ${oneWords.length} 词)`, 'success');
+            } catch (err) {
+                showStatus(`五星词库同步失败: ${err.message}`, 'error');
+            } finally {
+                DOM.btnSyncStar.removeAttribute('disabled');
+            }
+        }
+
+        DOM.btnSyncStar.addEventListener('click', () => syncStarWords());
+
+        // ==========================================
+        // 智能双向同步逻辑 (主词库)
+        // ==========================================
+        async function syncWordsAuto(silent = false) {
+            const config = await idbGet('config');
+            if (!config || !config.token) {
+                if (!silent) DOM.modalSettings.classList.remove('hidden');
+                return;
+            }
+
+            DOM.btnSyncWords.setAttribute('disabled', 'true');
+            if (!silent) showStatus('🔄 正在比对主词库状态...', 'info');
+
+            try {
+                const isDirty = await idbGet('words_local_dirty') || false;
+                const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path);
+
+                if (curMainSha === fileSha) {
+                    if (isDirty) {
+                        await pushWordsCore(config, curMainSha);
+                    } else {
+                        if (!silent) showStatus('✅ 主词库已是最新，无需同步', 'success');
+                    }
+                } else {
+                    if (isDirty) {
+                        const remoteTime = await getRemoteFileTime(config, config.owner, config.repo, config.path);
+                        const localTime = await idbGet('local_words_updated_at') || 0;
+                        
+                        if (localTime > remoteTime) {
+                            showStatus('⚠️ 判定本地更新较新，推送主词库至云端...', 'info');
+                            await pushWordsCore(config, curMainSha);
+                        } else {
+                            showStatus('⚠️ 判定云端较新，覆盖本地词库...', 'info');
+                            await pullWordsCore(config);
+                        }
+                    } else {
+                        await pullWordsCore(config);
+                    }
+                }
+            } catch (err) {
+                if (!silent) showStatus(`词库同步异常: ${err.message}`, 'error');
+            } finally {
+                DOM.btnSyncWords.removeAttribute('disabled');
+            }
+        }
+
+        async function pushWordsCore(config, mainSha) {
+            let syncSuccess = true;
+            let msgs = [];
+            try {
+                const encMain = utf8ToBase64(words.join('\n') + (words.length ? '\n' : ''));
+                const putMainBody = { message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain };
+                if (mainSha) putMainBody.sha = mainSha;
+
+                const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify(putMainBody)
+                });
+                if (!resMain.ok) throw new Error((await resMain.json()).message);
+                const dataMain = await resMain.json();
+                fileSha = dataMain.content.sha;
+                await idbSet('words_cache', { words, fileSha });
+                msgs.push('主库成功');
+            } catch(err) { syncSuccess = false; msgs.push(`主库失败: ${err.message}`); }
+
+            const isOneDirty = await idbGet('one_dirty');
+            if (isOneDirty && config.pathTwo) {
+                try {
+                    const curOneSha = await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) || oneFileSha;
+                    const encOne = utf8ToBase64(oneWords.join('\n') + (oneWords.length ? '\n' : ''));
+                    const putOneBody = { message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, content: encOne };
+                    if (curOneSha) putOneBody.sha = curOneSha;
+
+                    const resOne = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.pathTwo}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                        body: JSON.stringify(putOneBody)
+                    });
+                    if (!resOne.ok) throw new Error((await resOne.json()).message);
+                    const dataOne = await resOne.json();
+                    oneFileSha = dataOne.content.sha;
+                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                    await idbSet('one_dirty', false);
+                    msgs.push('五星库联动推送成功');
+                } catch(err) { msgs.push(`五星库联动未完成: ${err.message}`); }
+            }
+
+            if (syncSuccess) {
+                await idbSet('words_local_dirty', false); 
+                showStatus(`🎉 词库推送成功！(${msgs.join(', ')})`, 'success'); 
+            } else { 
+                showStatus(`⚠ 同步异常: ${msgs.join(' | ')}`, 'error'); 
+            }
+        }
+
+        async function pullWordsCore(config) {
+            const fetchPromises = [fetchGitHubFile(config, config.owner, config.repo, config.path)];
+            if (config.pathTwo) fetchPromises.push(fetchGitHubFile(config, config.owner, config.repo, config.pathTwo).catch(e => null));
+            const results = await Promise.all(fetchPromises);
+            
+            const mainData = results[0];
+            const oneData = results[1];
+
+            fileSha = mainData.sha;
+            words = base64ToUtf8(mainData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+            await idbSet('words_cache', { words, fileSha });
+
+            if (oneData) {
+                const isOneDirty = await idbGet('one_dirty') || false;
+                // 关键修复：本地有删除或变更五星词时，绝不被云端直接覆盖还原
+                if (!isOneDirty) {
+                    oneWords = base64ToUtf8(oneData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                    oneFileSha = oneData.sha;
+                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                    oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
+                }
+            }
+
+            await idbSet('words_local_dirty', false); 
+            showStatus(`🎉 词库拉取成功！已同步 ${words.length} 词`, 'success');
+            switchMode(viewMode);
+        }
+
+        // ==========================================
+        // 双向智能合并进度 (Progress)
         // ==========================================
         function getCardTimestamp(card) {
             if (!card) return 0;
@@ -829,130 +1011,6 @@
             return remoteStats;
         }
 
-        // ==========================================
-        // 双向智能同步逻辑 (Words)
-        // ==========================================
-        async function syncWordsAuto(silent = false) {
-            const config = await idbGet('config');
-            if (!config || !config.token) {
-                if (!silent) DOM.modalSettings.classList.remove('hidden');
-                return;
-            }
-
-            DOM.btnSyncWords.setAttribute('disabled', 'true');
-            if (!silent) showStatus('🔄 正在比对云端词库状态...', 'info');
-
-            try {
-                const isDirty = await idbGet('words_local_dirty') || false;
-                const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path);
-
-                if (curMainSha === fileSha) {
-                    if (isDirty) {
-                        await pushWordsCore(config, curMainSha);
-                    } else {
-                        if (!silent) showStatus('✅ 词库已是最新，无需同步', 'success');
-                    }
-                } else {
-                    if (isDirty) {
-                        const remoteTime = await getRemoteFileTime(config, config.owner, config.repo, config.path);
-                        const localTime = await idbGet('local_words_updated_at') || 0;
-                        
-                        if (localTime > remoteTime) {
-                            showStatus('⚠️ 判定本地更新较新，推送词库至云端...', 'info');
-                            await pushWordsCore(config, curMainSha);
-                        } else {
-                            showStatus('⚠️ 判定云端较新，覆盖本地词库...', 'info');
-                            await pullWordsCore(config);
-                        }
-                    } else {
-                        await pullWordsCore(config);
-                    }
-                }
-            } catch (err) {
-                if (!silent) showStatus(`词库同步异常: ${err.message}`, 'error');
-            } finally {
-                DOM.btnSyncWords.removeAttribute('disabled');
-            }
-        }
-
-        async function pushWordsCore(config, mainSha) {
-            let syncSuccess = true;
-            let msgs = [];
-            try {
-                const encMain = utf8ToBase64(words.join('\n') + '\n');
-                const putMainBody = { message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain };
-                if (mainSha) putMainBody.sha = mainSha;
-
-                const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                    body: JSON.stringify(putMainBody)
-                });
-                if (!resMain.ok) throw new Error((await resMain.json()).message);
-                const dataMain = await resMain.json();
-                fileSha = dataMain.content.sha;
-                await idbSet('words_cache', { words, fileSha });
-                msgs.push('主库成功');
-            } catch(err) { syncSuccess = false; msgs.push(`主库失败: ${err.message}`); }
-
-            const isOneDirty = await idbGet('one_dirty');
-            if (isOneDirty && config.pathTwo) {
-                try {
-                    const curOneSha = await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) || oneFileSha;
-                    const encOne = utf8ToBase64(oneWords.join('\n') + '\n');
-                    const putOneBody = { message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, content: encOne };
-                    if (curOneSha) putOneBody.sha = curOneSha;
-
-                    const resOne = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.pathTwo}`, {
-                        method: 'PUT',
-                        headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                        body: JSON.stringify(putOneBody)
-                    });
-                    if (!resOne.ok) throw new Error((await resOne.json()).message);
-                    const dataOne = await resOne.json();
-                    oneFileSha = dataOne.content.sha;
-                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
-                    await idbSet('one_dirty', false);
-                    msgs.push('星标库成功');
-                } catch(err) { syncSuccess = false; msgs.push(`星标库失败: ${err.message}`); }
-            }
-
-            if (syncSuccess) {
-                await idbSet('words_local_dirty', false); 
-                showStatus(`🎉 词库推送成功！(${msgs.join(', ')})`, 'success'); 
-            } else { 
-                showStatus(`⚠ 同步异常: ${msgs.join(' | ')}`, 'error'); 
-            }
-        }
-
-        async function pullWordsCore(config) {
-            const fetchPromises = [fetchGitHubFile(config, config.owner, config.repo, config.path)];
-            if (config.pathTwo) fetchPromises.push(fetchGitHubFile(config, config.owner, config.repo, config.pathTwo).catch(e => null));
-            const results = await Promise.all(fetchPromises);
-            
-            const mainData = results[0];
-            const oneData = results[1];
-
-            fileSha = mainData.sha;
-            words = base64ToUtf8(mainData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-            await idbSet('words_cache', { words, fileSha });
-
-            if (oneData) {
-                oneWords = base64ToUtf8(oneData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-                oneFileSha = oneData.sha;
-                await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
-                await idbSet('one_dirty', false);
-                oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
-            }
-
-            await idbSet('words_local_dirty', false); 
-            showStatus(`🎉 词库拉取成功！加载 ${words.length} 词`, 'success');
-            switchMode(viewMode);
-        }
-
-        // ==========================================
-        // 关键修复：双向智能合并进度 (Progress)
-        // ==========================================
         async function syncProgressAuto(silent = false) {
             const config = await idbGet('config');
             if (!config || !config.token) {
@@ -972,26 +1030,19 @@
                 const curSha = await getRemoteFileSha(config, config.owner, config.backupRepo, config.backupPath);
 
                 if (curSha === backupFileSha) {
-                    // 云端自上次同步后没有被其他设备修改
                     if (isDirty) {
                         await pushProgressCore(config, curSha);
                     } else {
                         if (!silent) showStatus('✅ 进度已是最新，无需同步', 'success');
                     }
                 } else {
-                    // 云端已被其他设备更新（或首次使用）
                     const backupData = await fetchGitHubFile(config, config.owner, config.backupRepo, config.backupPath);
                     const backupJson = JSON.parse(base64ToUtf8(backupData.content));
                     
                     if (isDirty) {
-                        // 核心修复：两端皆有修改时，智能双向合并，绝不盲目覆盖！
                         showStatus('🔄 检测到多设备记录，正在智能合并学习进度...', 'info');
-                        
-                        // 1. 逐词比对时间戳合并 memoryStats
                         const mergedStats = mergeMemoryStats(memoryStats, backupJson.memoryStats || {});
-                        // 2. 合并回收站
                         const mergedTrash = mergeTrash(trash, backupJson.trash || []);
-                        // 3. 合并今日统计
                         const localTodayStats = await idbGet('stats');
                         const mergedTodayStats = mergeStats(localTodayStats, backupJson.stats);
                         
@@ -1003,12 +1054,10 @@
                         renderTrash();
                         await updateTodayCountDisplay(false, false);
                         
-                        // 将两端合并后的最全最新数据保存并推送到云端
                         await pushProgressCore(config, backupData.sha);
                         showStatus('🎉 已智能双向合并云端与本地进度！', 'success');
                         switchMode(viewMode);
                     } else {
-                        // 本地没有新修改，直接应用云端最新进度
                         await applyProgressCore(backupData, backupJson);
                     }
                 }
@@ -1132,7 +1181,7 @@
                 let next_card = scheduling_cards[targetGrade].card;
                 
                 next_card.nextDate = getNextReviewTime(next_card.scheduled_days);
-                next_card.updatedAt = Date.now(); // 记录精准打分时间戳
+                next_card.updatedAt = Date.now();
                 
                 memoryStats[word] = next_card;
                 await idbSet('memory_stats', memoryStats);
@@ -1178,19 +1227,24 @@
 
         window.restoreWord = async function(index) {
             const item = trash[index];
-            if (item.inMain) words.push(item.word);
+            const lower = item.word.trim().toLowerCase();
+
+            if (item.inMain && !words.some(w => w.trim().toLowerCase() === lower)) {
+                words.push(item.word);
+                await markWordsDirty();
+                await idbSet('words_cache', { words, fileSha });
+            }
             if (item.inOne) {
-                oneWords.push(item.word);
-                oneTxtSet.add(item.word.toLowerCase());
+                if (!oneWords.some(w => w.trim().toLowerCase() === lower)) {
+                    oneWords.push(item.word);
+                    oneTxtSet.add(lower);
+                }
                 await idbSet('one_dirty', true);
+                await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
             }
             
             trash.splice(index, 1);
             await idbSet('trash_bin', trash);
-            await idbSet('words_cache', { words, fileSha });
-            await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
-            
-            await markWordsDirty();
             await markProgressDirty(); 
 
             const todayStr = new Date().toISOString().slice(0, 10);
@@ -1202,49 +1256,62 @@
             showStatus(`已成功恢复 "${item.word}" 💊`, 'success');
         };
 
+        // 核心删除逻辑：精准移除主库、五星库及学习池
         window.removeWord = async function(wordTarget) {
             if (confirmDeleteEnabled && !confirm(`确认将 "${wordTarget}" 踢出词库吗？\n如果它是星标词或正在学习池中，也会一并被清退！`)) return;
 
             let inMain = false;
             let inOne = false;
+            const lowerTarget = wordTarget.trim().toLowerCase();
 
-            const mainIdx = words.indexOf(wordTarget);
-            if (mainIdx > -1) { words.splice(mainIdx, 1); inMain = true; }
+            // 1. 从主词库移除
+            const mainIdx = words.findIndex(w => w.trim().toLowerCase() === lowerTarget);
+            if (mainIdx > -1) { 
+                words.splice(mainIdx, 1); 
+                inMain = true; 
+            }
 
-            const lowerTarget = wordTarget.toLowerCase();
-            const oneIdx = oneWords.findIndex(w => w.toLowerCase() === lowerTarget);
+            // 2. 从五星联动库移除
+            const oneIdx = oneWords.findIndex(w => w.trim().toLowerCase() === lowerTarget);
             if (oneIdx > -1) {
                 oneWords.splice(oneIdx, 1);
                 oneTxtSet.delete(lowerTarget);
                 inOne = true;
-                await idbSet('one_dirty', true);
             }
 
+            // 3. 从 FSRS 记忆库移除
             if (memoryStats[wordTarget]) {
                 delete memoryStats[wordTarget];
                 await idbSet('memory_stats', memoryStats);
             }
 
             if (inMain || inOne) {
-                trash.unshift({ word: wordTarget, inMain, inOne, deletedAt: Date.now() });
-                await idbSet('trash_bin', trash);
-                
-                await markWordsDirty();
-                await markProgressDirty(); 
-
-                const displayIndex = displayWords.indexOf(wordTarget);
-                if (displayIndex > -1) {
-                    displayWords.splice(displayIndex, 1);
-                    if (currentCardIndex >= displayWords.length) currentCardIndex--; 
+                // 标记五星库被修改
+                if (inOne) {
+                    await idbSet('one_dirty', true);
+                    await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                }
+                if (inMain) {
+                    await markWordsDirty();
+                    await idbSet('words_cache', { words, fileSha });
                 }
 
-                await idbSet('words_cache', { words, fileSha });
-                if (inOne) await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                trash.unshift({ word: wordTarget, inMain, inOne, deletedAt: Date.now() });
+                await idbSet('trash_bin', trash);
+                await markProgressDirty(); 
+
+                const displayIndex = displayWords.findIndex(w => w.trim().toLowerCase() === lowerTarget);
+                if (displayIndex > -1) {
+                    displayWords.splice(displayIndex, 1);
+                    if (currentCardIndex >= displayWords.length) currentCardIndex = Math.max(0, displayWords.length - 1);
+                }
+
                 await updateTodayCountDisplay(true, false);
-                
                 renderWords();
                 renderTrash();
                 DOM.trashCount.textContent = trash.length;
+                
+                showStatus(`已删除 "${wordTarget}"。记得点击【⭐ 五星同步词库】同步至云端！`, 'info');
             }
         };
 
@@ -1277,7 +1344,7 @@
                         emptyMsg = '🎉 太棒了！今日待背单词已全部消灭！\n\n💡 提示：双击屏幕唤出菜单\n去列表添加新词，或稍后再来~';
                     }
                 } else if (viewMode === 'star_list') {
-                    emptyMsg = '⭐ 当前星标联动库 (one.txt) 中暂无词汇。';
+                    emptyMsg = '⭐ 当前五星联动库 (one.txt) 中暂无词汇。';
                 }
                 DOM.wordListEl.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold whitespace-pre-line leading-relaxed">${emptyMsg}</div>`;
                 return;
@@ -1370,7 +1437,7 @@
                                 <span class="text-[13px] text-slate-400 font-medium">点击卡片看释义与语境</span>
                             </div>
 
-                            <!-- 词典与双语溯源例句渲染区 (反面：初始隐藏) -->
+                            <!-- 词典与双语溯源例句渲染区 -->
                             <div id="dict-area" class="w-full flex-1 flex-col items-center justify-start mt-1 hidden">
                                 <span class="text-[11px] text-slate-300 animate-pulse tracking-wide py-4 text-center w-full block">📡 呼叫词典...</span>
                             </div>
@@ -1380,7 +1447,6 @@
                     </div>
                 `;
 
-                // 切换卡片时：单词默认自动播放发音
                 playYoudaoAudio(currentWord);
 
                 if (currentWord) {
