@@ -39,9 +39,8 @@
 </head>
 <body class="bg-slate-50 h-[100dvh] w-screen text-slate-800 flex flex-col font-sans overflow-hidden">
     
-    <!-- 顶部控制面板区 (初始状态增加 collapsed 默认折叠) -->
+    <!-- 顶部控制面板区 -->
     <div id="controls-panel" class="controls-container collapsed flex flex-col shrink-0">
-        
         <!-- 顶部导航栏 -->
         <header class="bg-white shadow-sm border-b border-slate-100 z-10 shrink-0">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 py-2 flex justify-between items-center flex-wrap gap-2">
@@ -62,10 +61,9 @@
         <!-- 工具栏区域 -->
         <div class="w-full bg-slate-50 py-2 shrink-0 border-b border-slate-200/60">
             <div class="max-w-4xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
-                
-                <!-- 核心同步操作栏：三路独立同步 -->
+                <!-- 核心同步操作栏 -->
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                    <button id="btn-sync-words" class="py-2 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-sm active:scale-95" title="智能比对时间戳并同步主词库">
+                    <button id="btn-sync-words" class="py-2 px-1 bg-blue-50/70 hover:bg-blue-100 text-blue-700 border border-blue-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-sm active:scale-95" title="智能比对时间戳并同步主词库与星标库">
                         <span class="text-sm">🔄</span><span class="truncate">同步主词库</span>
                     </button>
                     <button id="btn-sync-star" class="py-2 px-1 bg-amber-50/80 hover:bg-amber-100 text-amber-700 border border-amber-200/60 rounded-xl transition font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-sm active:scale-95" title="将本地五星词库同步推送到云端">
@@ -187,7 +185,6 @@
         </div>
     </main>
 
-    <!-- 核心 JavaScript 逻辑 -->
     <script type="module">
         // ==========================================
         // 有道原声播放引擎
@@ -206,7 +203,6 @@
             });
         };
 
-        // 核心展示逻辑：点击翻转卡片
         window.revealCard = function() {
             const frontHint = document.getElementById('front-hint');
             const dictArea = document.getElementById('dict-area');
@@ -295,9 +291,6 @@
             console.error(err);
         }
 
-        // ==========================================
-        // 双击全屏沉浸逻辑
-        // ==========================================
         const controlsPanel = document.getElementById('controls-panel');
         const learningContainer = document.getElementById('learning-container');
         
@@ -341,7 +334,7 @@
         }
 
         // ==========================================
-        // 标记修改以进行智能合并（仅在实际学习/删除操作时触发）
+        // 标记修改以进行智能合并（更新时间戳）
         // ==========================================
         async function markWordsDirty() {
             await idbSet('words_local_dirty', true);
@@ -424,7 +417,6 @@
 
             const speakerIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>`;
 
-            // 1. 抽取溯源例句
             const suyuanItem = findRandomSuyuanSentence(currentWord);
             let suyuanHTML = '';
             if (suyuanItem) {
@@ -627,7 +619,6 @@
             if (viewMode === 'list') {
                 displayWords = words.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
             } else if (viewMode === 'star_list') {
-                // 五星列表直接以本地 oneWords 为源
                 displayWords = oneWords.filter(w => w.toLowerCase().includes(currentFilter.toLowerCase()));
             } else if (viewMode === 'fsrs') {
                 const now = Date.now();
@@ -812,6 +803,7 @@
                 oneFileSha = dataOne.content.sha;
                 await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
                 await idbSet('one_dirty', false);
+                await idbSet('local_words_updated_at', Date.now()); // 更新时间戳基准
                 
                 showStatus(`🎉 五星词库已成功同步至云端！(共 ${oneWords.length} 词)`, 'success');
             } catch (err) {
@@ -824,7 +816,7 @@
         DOM.btnSyncStar.addEventListener('click', () => syncStarWords());
 
         // ==========================================
-        // 智能双向同步逻辑 (主词库)
+        // 智能双向同步逻辑 (主词库及星标库)
         // ==========================================
         async function syncWordsAuto(silent = false) {
             const config = await idbGet('config');
@@ -834,32 +826,45 @@
             }
 
             DOM.btnSyncWords.setAttribute('disabled', 'true');
-            if (!silent) showStatus('🔄 正在比对主词库状态...', 'info');
+            if (!silent) showStatus('🔄 正在比对云端双词库状态...', 'info');
 
             try {
                 const isDirty = await idbGet('words_local_dirty') || false;
+                const isOneDirty = await idbGet('one_dirty') || false;
+                
                 const curMainSha = await getRemoteFileSha(config, config.owner, config.repo, config.path);
+                const curOneSha = config.pathTwo ? await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) : null;
 
-                if (curMainSha === fileSha) {
-                    if (isDirty) {
-                        await pushWordsCore(config, curMainSha);
+                const mainChanged = curMainSha && (curMainSha !== fileSha);
+                const oneChanged = curOneSha && (curOneSha !== oneFileSha);
+
+                if (!mainChanged && !oneChanged) {
+                    if (isDirty || isOneDirty) {
+                        await pushWordsCore(config, curMainSha, curOneSha);
                     } else {
-                        if (!silent) showStatus('✅ 主词库已是最新，无需同步', 'success');
+                        if (!silent) showStatus('✅ 词库已是最新，无需同步', 'success');
                     }
                 } else {
-                    if (isDirty) {
-                        const remoteTime = await getRemoteFileTime(config, config.owner, config.repo, config.path);
+                    let shouldPush = false;
+                    if (isDirty || isOneDirty) {
+                        let remoteTime = 0;
+                        if (mainChanged) remoteTime = Math.max(remoteTime, await getRemoteFileTime(config, config.owner, config.repo, config.path));
+                        if (oneChanged && config.pathTwo) remoteTime = Math.max(remoteTime, await getRemoteFileTime(config, config.owner, config.repo, config.pathTwo));
+                        
                         const localTime = await idbGet('local_words_updated_at') || 0;
                         
                         if (localTime > remoteTime) {
-                            showStatus('⚠️ 判定本地更新较新，推送主词库至云端...', 'info');
-                            await pushWordsCore(config, curMainSha);
-                        } else {
-                            showStatus('⚠️ 判定云端较新，覆盖本地词库...', 'info');
-                            await pullWordsCore(config);
+                            shouldPush = true;
                         }
+                    }
+
+                    if (shouldPush) {
+                        showStatus('⚠️ 判定本地更新较新，推送至云端...', 'info');
+                        await pushWordsCore(config, curMainSha, curOneSha);
                     } else {
-                        await pullWordsCore(config);
+                        showStatus('⚠️ 发现云端更改 (如油猴脚本删词等)，拉取覆盖本地...', 'info');
+                        // 强制覆盖：如果是油猴从云端删了词，要强制清理本地对应的缓存
+                        await pullWordsCore(config, true);
                     }
                 }
             } catch (err) {
@@ -869,30 +874,35 @@
             }
         }
 
-        async function pushWordsCore(config, mainSha) {
+        async function pushWordsCore(config, mainSha, oneSha) {
             let syncSuccess = true;
             let msgs = [];
-            try {
-                const encMain = utf8ToBase64(words.join('\n') + (words.length ? '\n' : ''));
-                const putMainBody = { message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain };
-                if (mainSha) putMainBody.sha = mainSha;
+            
+            const isDirty = await idbGet('words_local_dirty');
+            if (isDirty) {
+                try {
+                    const encMain = utf8ToBase64(words.join('\n') + (words.length ? '\n' : ''));
+                    const putMainBody = { message: `WordSync Pro: Sync Words (${new Date().toISOString().slice(0,10)})`, content: encMain };
+                    if (mainSha) putMainBody.sha = mainSha;
 
-                const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                    body: JSON.stringify(putMainBody)
-                });
-                if (!resMain.ok) throw new Error((await resMain.json()).message);
-                const dataMain = await resMain.json();
-                fileSha = dataMain.content.sha;
-                await idbSet('words_cache', { words, fileSha });
-                msgs.push('主库成功');
-            } catch(err) { syncSuccess = false; msgs.push(`主库失败: ${err.message}`); }
+                    const resMain = await fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${config.token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                        body: JSON.stringify(putMainBody)
+                    });
+                    if (!resMain.ok) throw new Error((await resMain.json()).message);
+                    const dataMain = await resMain.json();
+                    fileSha = dataMain.content.sha;
+                    await idbSet('words_cache', { words, fileSha });
+                    await idbSet('words_local_dirty', false);
+                    msgs.push('主库成功');
+                } catch(err) { syncSuccess = false; msgs.push(`主库失败: ${err.message}`); }
+            }
 
             const isOneDirty = await idbGet('one_dirty');
             if (isOneDirty && config.pathTwo) {
                 try {
-                    const curOneSha = await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) || oneFileSha;
+                    const curOneSha = oneSha || await getRemoteFileSha(config, config.owner, config.repo, config.pathTwo) || oneFileSha;
                     const encOne = utf8ToBase64(oneWords.join('\n') + (oneWords.length ? '\n' : ''));
                     const putOneBody = { message: `WordSync Pro: Sync Starred (${new Date().toISOString().slice(0,10)})`, content: encOne };
                     if (curOneSha) putOneBody.sha = curOneSha;
@@ -907,19 +917,19 @@
                     oneFileSha = dataOne.content.sha;
                     await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
                     await idbSet('one_dirty', false);
-                    msgs.push('五星库联动推送成功');
-                } catch(err) { msgs.push(`五星库联动未完成: ${err.message}`); }
+                    msgs.push('五星库推送成功');
+                } catch(err) { syncSuccess = false; msgs.push(`五星库未完成: ${err.message}`); }
             }
 
             if (syncSuccess) {
-                await idbSet('words_local_dirty', false); 
+                await idbSet('local_words_updated_at', Date.now());
                 showStatus(`🎉 词库推送成功！(${msgs.join(', ')})`, 'success'); 
             } else { 
                 showStatus(`⚠ 同步异常: ${msgs.join(' | ')}`, 'error'); 
             }
         }
 
-        async function pullWordsCore(config) {
+        async function pullWordsCore(config, forceOverwrite = false) {
             const fetchPromises = [fetchGitHubFile(config, config.owner, config.repo, config.path)];
             if (config.pathTwo) fetchPromises.push(fetchGitHubFile(config, config.owner, config.repo, config.pathTwo).catch(e => null));
             const results = await Promise.all(fetchPromises);
@@ -927,22 +937,26 @@
             const mainData = results[0];
             const oneData = results[1];
 
-            fileSha = mainData.sha;
-            words = base64ToUtf8(mainData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
-            await idbSet('words_cache', { words, fileSha });
+            if (mainData && mainData.sha) {
+                fileSha = mainData.sha;
+                words = base64ToUtf8(mainData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+                await idbSet('words_cache', { words, fileSha });
+                await idbSet('words_local_dirty', false);
+            }
 
-            if (oneData) {
+            if (oneData && oneData.sha) {
                 const isOneDirty = await idbGet('one_dirty') || false;
-                // 关键修复：本地有删除或变更五星词时，绝不被云端直接覆盖还原
-                if (!isOneDirty) {
+                // 如果云端时间更新(forceOverwrite=true)，则无视本地修改强行覆盖。
+                if (!isOneDirty || forceOverwrite) {
                     oneWords = base64ToUtf8(oneData.content).split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
                     oneFileSha = oneData.sha;
                     await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
                     oneTxtSet = new Set(oneWords.map(w => w.toLowerCase()));
+                    await idbSet('one_dirty', false);
                 }
             }
 
-            await idbSet('words_local_dirty', false); 
+            await idbSet('local_words_updated_at', Date.now()); // 拉取完刷新时间标尺
             showStatus(`🎉 词库拉取成功！已同步 ${words.length} 词`, 'success');
             switchMode(viewMode);
         }
@@ -1241,6 +1255,7 @@
                 }
                 await idbSet('one_dirty', true);
                 await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
+                await idbSet('local_words_updated_at', Date.now()); // 更新同步时间
             }
             
             trash.splice(index, 1);
@@ -1286,7 +1301,6 @@
             }
 
             if (inMain || inOne) {
-                // 标记五星库被修改
                 if (inOne) {
                     await idbSet('one_dirty', true);
                     await idbSet('one_cache', { words: oneWords, fileSha: oneFileSha });
@@ -1295,6 +1309,8 @@
                     await markWordsDirty();
                     await idbSet('words_cache', { words, fileSha });
                 }
+                
+                await idbSet('local_words_updated_at', Date.now()); // 更新同步基准时间
 
                 trash.unshift({ word: wordTarget, inMain, inOne, deletedAt: Date.now() });
                 await idbSet('trash_bin', trash);
@@ -1363,8 +1379,7 @@
                                     <div class="flex items-center justify-between p-3.5 bg-slate-50 sm:bg-white sm:shadow-sm hover:bg-slate-100 border border-slate-200 rounded-2xl transition group relative overflow-hidden">
                                         <div class="flex flex-col truncate pr-2">
                                             <div class="flex items-center gap-1.5">
-                                                <span class="font-extrabold text-slate-800 text-base truncate">${escapeHtml(word)}</span>
-                                                ${inPool ? '<span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">已在池</span>' : ''}
+                                                <span class="font-extrabold text-slate-800 text-base truncate">${escapeHtml(word)}</span>${inPool ? '<span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">已在池</span>' : ''}
                                             </div>
                                             ${isStar ? '<span class="text-[10px] text-amber-500 tracking-widest leading-none mt-1">★★★★★</span>' : ''}
                                         </div>
@@ -1429,7 +1444,7 @@
                             <!-- 单词主体 -->
                             <span class="text-4xl sm:text-5xl font-black text-red-600 tracking-tight text-center break-words select-all mb-1 mt-4 shrink-0" onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')">${escapeHtml(currentWord)}</span>
                             
-                            <!-- 正面引导区：点击任意区域翻开卡片 -->
+                            <!-- 正面引导区 -->
                             <div id="front-hint" class="flex flex-col items-center mt-6 w-full">
                                 <button onclick="event.stopPropagation(); playYoudaoAudio('${escapeHtml(currentWord)}')" class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition shrink-0 active:scale-95 shadow-sm mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" /><path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" /></svg>
@@ -1460,7 +1475,6 @@
                 }
             }
         }
-
     </script>
 </body>
 </html>
