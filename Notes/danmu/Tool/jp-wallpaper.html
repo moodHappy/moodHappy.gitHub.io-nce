@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>日语壁纸学习卡</title>
+  <style>
+    :root {
+      --bg: #F5F0E1;
+      --bg-rgb: 245, 240, 225;
+      --surface: rgba(44, 42, 39, 0.055);
+      --surface-bg-img: rgba(245, 240, 225, 0.58);
+      --border: rgba(44, 42, 39, 0.12);
+      --text: #2C2A27;
+      --muted: #6E685F;
+      --accent: #B84A39;
+      --panel-bg: rgba(255, 252, 245, 0.92);
+      --font-main: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", "Songti SC", "STSong", serif;
+      --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans", sans-serif;
+      --offset-y: 4vh;
+      --bg-blur: 2px;
+      --bg-overlay: 0.48;
+      --text-shadow: none;
+    }
+
+    [data-theme="dark"] {
+      --bg: #121315;
+      --bg-rgb: 18, 19, 21;
+      --surface: rgba(255, 255, 255, 0.06);
+      --surface-bg-img: rgba(18, 19, 21, 0.52);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: #EAE6DF;
+      --muted: #B2ADA4;
+      --accent: #E2856F;
+      --panel-bg: rgba(28, 30, 34, 0.92);
+    }
+
+    [data-theme="matcha"] {
+      --bg: #E9EFEA;
+      --bg-rgb: 233, 239, 234;
+      --surface: rgba(34, 51, 41, 0.055);
+      --surface-bg-img: rgba(233, 239, 234, 0.58);
+      --border: rgba(34, 51, 41, 0.12);
+      --text: #223329;
+      --muted: #566B5F;
+      --accent: #447252;
+      --panel-bg: rgba(244, 248, 245, 0.92);
+    }
+
+    [data-theme="nightblue"] {
+      --bg: #1B232E;
+      --bg-rgb: 27, 35, 46;
+      --surface: rgba(230, 238, 248, 0.065);
+      --surface-bg-img: rgba(27, 35, 46, 0.54);
+      --border: rgba(230, 238, 248, 0.14);
+      --text: #E8EEF5;
+      --muted: #A7B7CC;
+      --accent: #82B0E3;
+      --panel-bg: rgba(32, 41, 54, 0.92);
+    }
+
+    [data-font="sans"] {
+      --font-main: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", "PingFang SC", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* 无背景图时的细腻纸张质感 */
+    body:not(.has-bg)::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.032;
+      background-image: radial-gradient(var(--text) 0.6px, transparent 0.6px);
+      background-size: 16px 16px;
+      z-index: 1;
+    }
+
+    /* 自定义背景图层与遮罩层 */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(var(--bg-blur));
+      transform: scale(1.06);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 0;
+    }
+
+    .bg-scrim {
+      position: fixed;
+      inset: 0;
+      background: rgba(var(--bg-rgb), var(--bg-overlay));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, background-color 0.25s ease;
+      z-index: 1;
+    }
+
+    body.has-bg .bg-layer,
+    body.has-bg .bg-scrim {
+      opacity: 1;
+    }
+
+    .wallpaper {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: env(safe-area-inset-top, 24px) 26px env(safe-area-inset-bottom, 24px);
+      user-select: none;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      transform: translateY(var(--offset-y));
+      transition: transform 0.12s ease-out;
+      text-shadow: var(--text-shadow);
+    }
+
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .tag-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.9;
+    }
+
+    .tag-text {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .jp-sentence {
+      font-family: var(--font-main);
+      font-size: clamp(1.7rem, 7vw, 2.25rem);
+      font-weight: 500;
+      line-height: 2.15;
+      letter-spacing: 0.04em;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      margin-bottom: 8px;
+    }
+
+    .jp-sentence ruby {
+      ruby-position: over;
+    }
+
+    .jp-sentence rt {
+      font-size: 0.4em;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      transform: translateY(-2px);
+    }
+
+    .romaji {
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      opacity: 0.9;
+      margin-bottom: 22px;
+      font-style: italic;
+    }
+
+    .divider {
+      width: 34px;
+      height: 1.5px;
+      background: var(--accent);
+      opacity: 0.75;
+      margin-bottom: 18px;
+    }
+
+    .zh-translation {
+      font-size: 17px;
+      line-height: 1.6;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      opacity: 0.92;
+      margin-bottom: 26px;
+    }
+
+    .notes-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-shadow: none;
+    }
+
+    body.has-bg .notes-box {
+      background: var(--surface-bg-img);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .note-item {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .note-word {
+      flex-shrink: 0;
+      font-family: var(--font-main);
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 78px;
+    }
+
+    .note-desc {
+      color: var(--text);
+      opacity: 0.88;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 顶部轻提示 */
+    .toast {
+      position: fixed;
+      top: max(18px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.76);
+      color: #fff;
+      font-size: 12px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 60;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* 底部悬浮控制栏 */
+    .toolbar {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      max-width: 440px;
+      margin: 0 auto;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 12px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 20;
+    }
+
+    .toolbar.hide {
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+    }
+
+    .tool-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .theme-dots {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot-btn {
+      width: 23px;
+      height: 23px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.35);
+    }
+
+    .dot-btn.active {
+      border-color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    .chip-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      line-height: 1.2;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .chip-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .chip-btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      font-weight: 600;
+      padding: 6px 12px;
+    }
+
+    .sliders-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .slider-row span {
+      min-width: 28px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+
+    .bg-sliders {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* 通用弹窗 */
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-mask.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-mask.center {
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg);
+      color: var(--text);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      padding: 18px 18px max(20px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 86dvh;
+      overflow-y: auto;
+    }
+
+    .modal h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .field input, .field textarea {
+      width: 100%;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .field textarea {
+      min-height: 86px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    /* 导出壁纸预览弹窗 */
+    .export-card {
+      width: 100%;
+      max-width: 340px;
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .export-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .export-res {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    .export-preview {
+      max-height: 58dvh;
+      max-width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    }
+
+    .export-tip {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .export-actions {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+    }
+
+    .export-actions .chip-btn {
+      flex: 1;
+      padding: 9px 12px;
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body data-theme="ivory" data-font="serif">
+  <div class="bg-layer" id="bgLayer"></div>
+  <div class="bg-scrim" id="bgScrim"></div>
+  <div class="toast" id="toast">轻触空白处隐藏工具栏，或直接点「生成壁纸」保存无边框原图</div>
+
+  <input type="file" id="bgFileInput" accept="image/*" class="hidden" />
+
+  <main class="wallpaper" id="wallpaper">
+    <article class="card" id="card">
+      <div class="tag-row">
+        <span class="tag-dot"></span>
+        <span class="tag-text" id="tagText">DAILY JAPANESE</span>
+      </div>
+
+      <div class="jp-sentence" id="jpSentence"></div>
+      <div class="romaji" id="romajiText"></div>
+
+      <div class="divider"></div>
+      <div class="zh-translation" id="zhText"></div>
+
+      <section class="notes-box" id="notesBox"></section>
+    </article>
+  </main>
+
+  <aside class="toolbar" id="toolbar">
+    <div class="tool-row">
+      <div class="theme-dots" aria-label="主题切换">
+        <button class="dot-btn active" data-set-theme="ivory" style="background:#F5F0E1" title="暖瓷（深字）"></button>
+        <button class="dot-btn" data-set-theme="dark" style="background:#121315" title="暗夜（浅字）"></button>
+        <button class="dot-btn" data-set-theme="matcha" style="background:#E9EFEA" title="青瓷（深字）"></button>
+        <button class="dot-btn" data-set-theme="nightblue" style="background:#1B232E" title="暮蓝（浅字）"></button>
+      </div>
+      <div class="chip-group">
+        <button class="chip-btn" id="btnFont">黑体</button>
+        <button class="chip-btn active" id="btnRomaji">罗马音</button>
+        <button class="chip-btn active" id="btnNotes">解析</button>
+        <button class="chip-btn" id="btnEdit">换句</button>
+      </div>
+    </div>
+
+    <div class="sliders-wrap">
+      <div class="slider-row">
+        <span>位置</span>
+        <input type="range" id="offsetSlider" min="-20" max="24" value="4" step="1" />
+      </div>
+      <div class="bg-sliders hidden" id="bgSliders">
+        <div class="slider-row">
+          <span>遮罩</span>
+          <input type="range" id="overlaySlider" min="0" max="85" value="48" step="1" />
+        </div>
+        <div class="slider-row">
+          <span>模糊</span>
+          <input type="range" id="blurSlider" min="0" max="16" value="2" step="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="chip-group">
+        <button class="chip-btn" id="btnPickBg">背景图</button>
+        <button class="chip-btn hidden" id="btnClearBg">清除图</button>
+        <button class="chip-btn" id="btnHideNow">隐藏栏</button>
+      </div>
+      <button class="chip-btn primary" id="btnExport">生成壁纸</button>
+    </div>
+  </aside>
+
+  <!-- 编辑句子弹窗 -->
+  <div class="modal-mask" id="modalMask">
+    <div class="modal" id="modal">
+      <h3>编辑壁纸内容</h3>
+      <div class="field">
+        <label>日语句子（用 汉字[假名] 标注读音）</label>
+        <input id="inputJp" type="text" />
+      </div>
+      <div class="field">
+        <label>罗马音（留空自动隐藏）</label>
+        <input id="inputRomaji" type="text" />
+      </div>
+      <div class="field">
+        <label>中文释义</label>
+        <input id="inputZh" type="text" />
+      </div>
+      <div class="field">
+        <label>词汇解析（每行一条，用“|”分隔词条与解释）</label>
+        <textarea id="inputNotes"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="chip-btn" id="btnCancel">取消</button>
+        <button class="chip-btn active" id="btnSave">应用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导出壁纸预览弹窗 -->
+  <div class="modal-mask center" id="exportMask">
+    <div class="export-card">
+      <div class="export-header">
+        <h3>无边框壁纸已生成</h3>
+        <span class="export-res" id="exportRes"></span>
+      </div>
+      <img id="exportPreview" class="export-preview" alt="壁纸预览" />
+      <p class="export-tip">点击下方直接下载 PNG；若浏览器拦截下载，长按上方图片即可保存到相册</p>
+      <div class="export-actions">
+        <button class="chip-btn" id="btnCloseExport">返回调整</button>
+        <button class="chip-btn primary" id="btnDownloadPng">保存原图</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const THEMES = {
+      ivory: {
+        bg: "#F5F0E1",
+        bgRgb: "245, 240, 225",
+        surface: "rgba(44, 42, 39, 0.055)",
+        surfaceBgImg: "rgba(245, 240, 225, 0.62)",
+        border: "rgba(44, 42, 39, 0.12)",
+        text: "#2C2A27",
+        muted: "#6E685F",
+        accent: "#B84A39",
+        isDark: false
+      },
+      dark: {
+        bg: "#121315",
+        bgRgb: "18, 19, 21",
+        surface: "rgba(255, 255, 255, 0.06)",
+        surfaceBgImg: "rgba(18, 19, 21, 0.56)",
+        border: "rgba(255, 255, 255, 0.14)",
+        text: "#EAE6DF",
+        muted: "#B2ADA4",
+        accent: "#E2856F",
+        isDark: true
+      },
+      matcha: {
+        bg: "#E9EFEA",
+        bgRgb: "233, 239, 234",
+        surface: "rgba(34, 51, 41, 0.055)",
+        surfaceBgImg: "rgba(233, 239, 234, 0.62)",
+        border: "rgba(34, 51, 41, 0.12)",
+        text: "#223329",
+        muted: "#566B5F",
+        accent: "#447252",
+        isDark: false
+      },
+      nightblue: {
+        bg: "#1B232E",
+        bgRgb: "27, 35, 46",
+        surface: "rgba(230, 238, 248, 0.065)",
+        surfaceBgImg: "rgba(27, 35, 46, 0.58)",
+        border: "rgba(230, 238, 248, 0.14)",
+        text: "#E8EEF5",
+        muted: "#A7B7CC",
+        accent: "#82B0E3",
+        isDark: true
+      }
+    };
+
+    const FONT_STACKS = {
+      serif: '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", "Songti SC", "STSong", serif',
+      sans: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", "PingFang SC", sans-serif',
+      ui: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans", sans-serif'
+    };
+
+    const state = {
+      jp: "今日[きょう]はちょっと疲れた[つかれた]な。",
+      romaji: "Kyō wa chotto tsukareta na.",
+      zh: "今天有点累了啊。",
+      notes: [
+        "今日 (きょう) | 今天",
+        "ちょっと | 有点、稍微（口语常用）",
+        "疲れた (つかれた) | 累了（疲れる 的た形，表示已处于疲惫状态）",
+        "な | 终助词，表自言自语或轻声感叹"
+      ],
+      theme: "ivory",
+      font: "serif",
+      showRomaji: true,
+      showNotes: true,
+      offsetY: 4,
+      bgOverlay: 48,
+      bgBlur: 2,
+      bgImage: null,
+      bgObjectUrl: null,
+      exportedDataUrl: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    // 尝试恢复上次编辑的文字配置
+    try {
+      const saved = JSON.parse(localStorage.getItem("jp_wallpaper_state_v2") || "null");
+      if (saved && typeof saved === "object") {
+        ["jp", "romaji", "zh", "notes", "theme", "font", "showRomaji", "showNotes", "offsetY", "bgOverlay", "bgBlur"].forEach((k) => {
+          if (saved[k] !== undefined) state[k] = saved[k];
+        });
+      }
+    } catch (_) {}
+
+    function persistState() {
+      try {
+        localStorage.setItem("jp_wallpaper_state_v2", JSON.stringify({
+          jp: state.jp,
+          romaji: state.romaji,
+          zh: state.zh,
+          notes: state.notes,
+          theme: state.theme,
+          font: state.font,
+          showRomaji: state.showRomaji,
+          showNotes: state.showNotes,
+          offsetY: state.offsetY,
+          bgOverlay: state.bgOverlay,
+          bgBlur: state.bgBlur
+        }));
+      } catch (_) {}
+    }
+
+    // 统一解析 汉字[假名]，DOM 与 Canvas 共用同一套切分规则
+    function tokenizeFurigana(raw) {
+      const tokens = [];
+      const regex = /([一-龯々ヶヵ]+[ぁ-んァ-ヶー]*)\[([^\]]+)\]/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = regex.exec(raw)) !== null) {
+        if (match.index > lastIndex) {
+          tokens.push({ type: "text", text: raw.slice(lastIndex, match.index) });
+        }
+        let b = match[1];
+        let r = match[2];
+        while (b.length > 1 && r.length > 1 && b[b.length - 1] === r[r.length - 1]) {
+          b = b.slice(0, -1);
+          r = r.slice(0, -1);
+        }
+        const suffix = match[1].slice(b.length);
+        tokens.push({ type: "ruby", base: b, rt: r });
+        if (suffix) tokens.push({ type: "text", text: suffix });
+        lastIndex = regex.lastIndex;
+      }
+
+      if (lastIndex < raw.length) {
+        tokens.push({ type: "text", text: raw.slice(lastIndex) });
+      }
+      return tokens;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function updateBgCssVars() {
+      const hasBg = Boolean(state.bgImage);
+      document.body.classList.toggle("has-bg", hasBg);
+      $("bgSliders").classList.toggle("hidden", !hasBg);
+      $("btnClearBg").classList.toggle("hidden", !hasBg);
+
+      document.documentElement.style.setProperty("--bg-overlay", (state.bgOverlay / 100).toFixed(2));
+      document.documentElement.style.setProperty("--bg-blur", `${state.bgBlur}px`);
+
+      // 低遮罩配背景图时自动给文字加轻柔阴影防吃字
+      const theme = THEMES[state.theme];
+      if (hasBg && state.bgOverlay < 35) {
+        const shadow = theme.isDark
+          ? "0 2px 10px rgba(0, 0, 0, 0.55)"
+          : "0 1px 8px rgba(255, 255, 255, 0.65)";
+        document.documentElement.style.setProperty("--text-shadow", shadow);
+      } else {
+        document.documentElement.style.setProperty("--text-shadow", "none");
+      }
+    }
+
+    function render() {
+      document.body.dataset.theme = state.theme;
+      document.body.dataset.font = state.font;
+      document.documentElement.style.setProperty("--offset-y", `${state.offsetY}vh`);
+
+      document.querySelectorAll("[data-set-theme]").forEach(b => {
+        b.classList.toggle("active", b.dataset.setTheme === state.theme);
+      });
+      $("btnFont").textContent = state.font === "sans" ? "明朝" : "黑体";
+      $("btnRomaji").classList.toggle("active", state.showRomaji);
+      $("btnNotes").classList.toggle("active", state.showNotes);
+      $("offsetSlider").value = state.offsetY;
+      $("overlaySlider").value = state.bgOverlay;
+      $("blurSlider").value = state.bgBlur;
+
+      const tokens = tokenizeFurigana(state.jp);
+      $("jpSentence").innerHTML = tokens.map(t =>
+        t.type === "ruby"
+          ? `<ruby>${escapeHtml(t.base)}<rt>${escapeHtml(t.rt)}</rt></ruby>`
+          : escapeHtml(t.text)
+      ).join("");
+
+      $("romajiText").textContent = state.romaji;
+      $("romajiText").classList.toggle("hidden", !state.showRomaji || !state.romaji.trim());
+      $("zhText").textContent = state.zh;
+
+      const notesBox = $("notesBox");
+      notesBox.innerHTML = "";
+      const validNotes = state.notes.map(s => s.trim()).filter(Boolean);
+      notesBox.classList.toggle("hidden", !state.showNotes || validNotes.length === 0);
+
+      validNotes.forEach(line => {
+        const [word, ...rest] = line.split("|");
+        const desc = rest.join("|").trim();
+        const item = document.createElement("div");
+        item.className = "note-item";
+        item.innerHTML = desc
+          ? `<span class="note-word">${escapeHtml(word.trim())}</span><span class="note-desc">${escapeHtml(desc)}</span>`
+          : `<span class="note-desc">${escapeHtml(word.trim())}</span>`;
+        notesBox.appendChild(item);
+      });
+
+      updateBgCssVars();
+      persistState();
+    }
+
+    function showToast(msg) {
+      const toast = $("toast");
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
+    }
+
+    // 阻止工具栏点击冒泡到背景
+    $("toolbar").addEventListener("click", (e) => e.stopPropagation());
+
+    // 轻触空白处隐藏/显示工具栏
+    $("wallpaper").addEventListener("click", () => {
+      $("toolbar").classList.toggle("hide");
+    });
+
+    $("btnHideNow").addEventListener("click", () => {
+      $("toolbar").classList.add("hide");
+    });
+
+    // 主题切换（选深/浅主题可同步改变背景图遮罩色调与文字颜色）
+    document.querySelectorAll("[data-set-theme]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.theme = btn.dataset.setTheme;
+        render();
+      });
+    });
+
+    // 字体 / 罗马音 / 解析开关
+    $("btnFont").addEventListener("click", () => {
+      state.font = state.font === "sans" ? "serif" : "sans";
+      render();
+    });
+
+    $("btnRomaji").addEventListener("click", () => {
+      state.showRomaji = !state.showRomaji;
+      render();
+    });
+
+    $("btnNotes").addEventListener("click", () => {
+      state.showNotes = !state.showNotes;
+      render();
+    });
+
+    // 滑块调节
+    $("offsetSlider").addEventListener("input", (e) => {
+      state.offsetY = Number(e.target.value);
+      document.documentElement.style.setProperty("--offset-y", `${state.offsetY}vh`);
+      persistState();
+    });
+
+    $("overlaySlider").addEventListener("input", (e) => {
+      state.bgOverlay = Number(e.target.value);
+      updateBgCssVars();
+      persistState();
+    });
+
+    $("blurSlider").addEventListener("input", (e) => {
+      state.bgBlur = Number(e.target.value);
+      updateBgCssVars();
+      persistState();
+    });
+
+    // 自定义背景图选择
+    $("btnPickBg").addEventListener("click", () => {
+      $("bgFileInput").value = "";
+      $("bgFileInput").click();
+    });
+
+    $("bgFileInput").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (state.bgObjectUrl) URL.revokeObjectURL(state.bgObjectUrl);
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        state.bgObjectUrl = url;
+        state.bgImage = img;
+        $("bgLayer").style.backgroundImage = `url("${url}")`;
+        updateBgCssVars();
+        showToast("已载入背景图，可调遮罩/模糊或切换深浅主题");
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        showToast("图片读取失败，请换一张重试");
+      };
+      img.src = url;
+    });
+
+    $("btnClearBg").addEventListener("click", () => {
+      if (state.bgObjectUrl) URL.revokeObjectURL(state.bgObjectUrl);
+      state.bgObjectUrl = null;
+      state.bgImage = null;
+      $("bgLayer").style.backgroundImage = "";
+      updateBgCssVars();
+      showToast("已恢复纯色纸感背景");
+    });
+
+    // 编辑内容弹窗
+    $("btnEdit").addEventListener("click", () => {
+      $("inputJp").value = state.jp;
+      $("inputRomaji").value = state.romaji;
+      $("inputZh").value = state.zh;
+      $("inputNotes").value = state.notes.join("\n");
+      $("modalMask").classList.add("open");
+    });
+
+    $("btnCancel").addEventListener("click", () => $("modalMask").classList.remove("open"));
+    $("modalMask").addEventListener("click", (e) => {
+      if (e.target === $("modalMask")) $("modalMask").classList.remove("open");
+    });
+
+    $("btnSave").addEventListener("click", () => {
+      state.jp = $("inputJp").value.trim() || state.jp;
+      state.romaji = $("inputRomaji").value.trim();
+      state.zh = $("inputZh").value.trim();
+      state.notes = $("inputNotes").value.split("\n");
+      render();
+      $("modalMask").classList.remove("open");
+    });
+
+    // ================= 原生 Canvas 高清无边框壁纸渲染引擎 =================
+    function drawRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawImageCover(ctx, img, w, h, extraScale = 1) {
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const boxRatio = w / h;
+      let drawW, drawH;
+      if (imgRatio > boxRatio) {
+        drawH = h * extraScale;
+        drawW = drawH * imgRatio;
+      } else {
+        drawW = w * extraScale;
+        drawH = drawW / imgRatio;
+      }
+      const dx = (w - drawW) / 2;
+      const dy = (h - drawH) / 2;
+      ctx.drawImage(img, dx, dy, drawW, drawH);
+    }
+
+    function measureTracked(ctx, text, tracking) {
+      const chars = Array.from(text);
+      if (!chars.length) return 0;
+      let total = 0;
+      for (let i = 0; i < chars.length; i++) {
+        total += ctx.measureText(chars[i]).width;
+        if (i < chars.length - 1) total += tracking;
+      }
+      return total;
+    }
+
+    function drawTracked(ctx, text, x, y, tracking) {
+      const chars = Array.from(text);
+      let cursor = x;
+      for (let i = 0; i < chars.length; i++) {
+        ctx.fillText(chars[i], cursor, y);
+        cursor += ctx.measureText(chars[i]).width + tracking;
+      }
+    }
+
+    function wrapSimpleText(ctx, text, maxWidth, tracking, byWord = false) {
+      const lines = [];
+      const units = byWord ? text.split(/(\s+)/) : Array.from(text);
+      const kinsokuStart = /^[。、，．！？；：」』）\])]/;
+      let current = "";
+
+      for (const unit of units) {
+        if (!unit) continue;
+        const candidate = current + unit;
+        if (current && measureTracked(ctx, candidate, tracking) > maxWidth) {
+          if (!byWord && kinsokuStart.test(unit)) {
+            lines.push(candidate);
+            current = "";
+          } else {
+            lines.push(current.trimEnd());
+            current = byWord ? unit.trimStart() : unit;
+          }
+        } else {
+          current = candidate;
+        }
+      }
+      if (current) lines.push(current.trimEnd());
+      return lines;
+    }
+
+    function generateWallpaper() {
+      const theme = THEMES[state.theme];
+      const mainFont = FONT_STACKS[state.font];
+      const uiFont = FONT_STACKS.ui;
+
+      // 自动读取手机物理屏幕竖屏比例（避开浏览器上下栏裁切）；桌面端默认 9:20
+      const sw = window.screen.width || 390;
+      const sh = window.screen.height || 866;
+      const aspect = sh >= sw ? (sh / sw) : (20 / 9);
+      const safeAspect = Math.min(Math.max(aspect, 1.6), 2.35);
+
+      const logicalW = 390;
+      const logicalH = Math.round(logicalW * safeAspect);
+      const dpr = Math.max(3, Math.min(window.devicePixelRatio || 3, 4));
+      const pixelW = Math.round(logicalW * dpr);
+      const pixelH = Math.round(logicalH * dpr);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = pixelW;
+      canvas.height = pixelH;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      ctx.textBaseline = "alphabetic";
+
+      // 1. 绘制背景
+      ctx.fillStyle = theme.bg;
+      ctx.fillRect(0, 0, logicalW, logicalH);
+
+      if (state.bgImage) {
+        // 先铺一层原图打底防模糊边缘露边
+        drawImageCover(ctx, state.bgImage, logicalW, logicalH, 1.02);
+        if (state.bgBlur > 0) {
+          ctx.save();
+          ctx.filter = `blur(${state.bgBlur}px)`;
+          drawImageCover(ctx, state.bgImage, logicalW, logicalH, 1.08);
+          ctx.restore();
+        }
+        ctx.fillStyle = `rgba(${theme.bgRgb}, ${(state.bgOverlay / 100).toFixed(2)})`;
+        ctx.fillRect(0, 0, logicalW, logicalH);
+      } else {
+        // 细腻点阵纸感
+        ctx.save();
+        ctx.fillStyle = theme.text;
+        ctx.globalAlpha = 0.032;
+        for (let y = 8; y < logicalH; y += 16) {
+          for (let x = 8; x < logicalW; x += 16) {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.55, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
+      // 2. 预排版并计算整张卡片高度，保证精确居中 + 位置滑块偏移
+      const padX = 26;
+      const contentW = logicalW - padX * 2;
+
+      const jpFontSize = 30;
+      const jpTracking = jpFontSize * 0.04;
+      const rtFontSize = Math.round(jpFontSize * 0.4);
+      const rtTracking = rtFontSize * 0.06;
+      const jpLineHeight = jpFontSize * 2.15;
+
+      // 将日语句子拆成可换行原子块（ruby 为不可拆分整体，普通文本按字拆分）
+      const rawTokens = tokenizeFurigana(state.jp);
+      const jpAtoms = [];
+      for (const tk of rawTokens) {
+        if (tk.type === "ruby") {
+          ctx.font = `500 ${jpFontSize}px ${mainFont}`;
+          const baseW = measureTracked(ctx, tk.base, jpTracking);
+          ctx.font = `400 ${rtFontSize}px ${mainFont}`;
+          const rtW = measureTracked(ctx, tk.rt, rtTracking);
+          jpAtoms.push({
+            type: "ruby",
+            base: tk.base,
+            rt: tk.rt,
+            baseW,
+            rtW,
+            width: Math.max(baseW, rtW) + jpTracking
+          });
+        } else {
+          ctx.font = `500 ${jpFontSize}px ${mainFont}`;
+          for (const ch of Array.from(tk.text)) {
+            jpAtoms.push({
+              type: "char",
+              char: ch,
+              width: ctx.measureText(ch).width + jpTracking
+            });
+          }
+        }
+      }
+
+      const jpLines = [];
+      let curLine = [];
+      let curLineW = 0;
+      const jpKinsoku = /^[。、，．！？」』）]/;
+
+      for (const atom of jpAtoms) {
+        if (curLine.length && curLineW + atom.width > contentW) {
+          if (atom.type === "char" && jpKinsoku.test(atom.char)) {
+            curLine.push(atom);
+            jpLines.push(curLine);
+            curLine = [];
+            curLineW = 0;
+          } else {
+            jpLines.push(curLine);
+            curLine = [atom];
+            curLineW = atom.width;
+          }
+        } else {
+          curLine.push(atom);
+          curLineW += atom.width;
+        }
+      }
+      if (curLine.length) jpLines.push(curLine);
+
+      // 罗马音换行
+      const hasRomaji = state.showRomaji && state.romaji.trim().length > 0;
+      let romajiLines = [];
+      if (hasRomaji) {
+        ctx.font = `italic 400 13px ${uiFont}`;
+        romajiLines = wrapSimpleText(ctx, state.romaji.trim(), contentW, 0.5, true);
+      }
+
+      // 中文译文换行
+      const hasZh = state.zh.trim().length > 0;
+      let zhLines = [];
+      if (hasZh) {
+        ctx.font = `400 17px ${uiFont}`;
+        zhLines = wrapSimpleText(ctx, state.zh.trim(), contentW, 1.0, false);
+      }
+
+      // 解析区布局计算
+      const validNotes = state.notes.map(s => s.trim()).filter(Boolean);
+      const hasNotes = state.showNotes && validNotes.length > 0;
+      const noteLayouts = [];
+      let notesBoxH = 0;
+      if (hasNotes) {
+        const boxInnerW = contentW - 32;
+        const noteLineH = 20;
+        let innerH = 0;
+        validNotes.forEach((line, idx) => {
+          const [word, ...rest] = line.split("|");
+          const wText = word.trim();
+          const dText = rest.join("|").trim();
+          if (dText) {
+            ctx.font = `600 13px ${mainFont}`;
+            const wWidth = Math.max(78, ctx.measureText(wText).width);
+            const descXOffset = Math.min(wWidth + 10, boxInnerW * 0.48);
+            const descMaxW = boxInnerW - descXOffset;
+            ctx.font = `400 13px ${uiFont}`;
+            const dLines = wrapSimpleText(ctx, dText, descMaxW, 0.2, false);
+            const itemH = Math.max(1, dLines.length) * noteLineH;
+            noteLayouts.push({ word: wText, descLines: dLines, descXOffset, itemH });
+            innerH += itemH;
+          } else {
+            ctx.font = `400 13px ${uiFont}`;
+            const dLines = wrapSimpleText(ctx, wText, boxInnerW, 0.2, false);
+            const itemH = Math.max(1, dLines.length) * noteLineH;
+            noteLayouts.push({ word: "", descLines: dLines, descXOffset: 0, itemH });
+            innerH += itemH;
+          }
+          if (idx < validNotes.length - 1) innerH += 10;
+        });
+        notesBoxH = innerH + 28;
+      }
+
+      // 累加总高度
+      let totalH = 14 + 18; // tagRow + margin
+      totalH += jpLines.length * jpLineHeight + 8;
+      if (hasRomaji) totalH += romajiLines.length * 19 + 22;
+      else totalH += 10;
+      totalH += 2 + 18; // divider + margin
+      if (hasZh) totalH += zhLines.length * 27 + (hasNotes ? 26 : 0);
+      if (hasNotes) totalH += notesBoxH;
+
+      const offsetPx = (state.offsetY / 100) * logicalH;
+      let y = (logicalH - totalH) / 2 + offsetPx;
+
+      // 低遮罩配图时启用轻微阴影提升可读性
+      const useTextShadow = Boolean(state.bgImage && state.bgOverlay < 35);
+      function applyTextShadow() {
+        if (!useTextShadow) return;
+        ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.58)" : "rgba(255,255,255,0.72)";
+        ctx.shadowBlur = 9;
+        ctx.shadowOffsetY = 1.5;
+      }
+      function clearShadow() {
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+      }
+
+      // 3. 绘制顶部标签
+      ctx.save();
+      ctx.fillStyle = theme.accent;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(padX + 3, y + 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      applyTextShadow();
+      ctx.font = `400 11px ${uiFont}`;
+      ctx.fillStyle = theme.muted;
+      drawTracked(ctx, "DAILY JAPANESE", padX + 16, y + 10, 2.4);
+      ctx.restore();
+      y += 32;
+
+      // 4. 绘制日语句子 + 精准假名注音
+      ctx.save();
+      applyTextShadow();
+      for (const line of jpLines) {
+        const baselineY = y + jpFontSize * 1.48;
+        let x = padX;
+        for (const atom of line) {
+          if (atom.type === "ruby") {
+            const boxW = Math.max(atom.baseW, atom.rtW);
+            const baseX = x + (boxW - atom.baseW) / 2;
+            const rtX = x + (boxW - atom.rtW) / 2;
+
+            ctx.font = `500 ${jpFontSize}px ${mainFont}`;
+            ctx.fillStyle = theme.text;
+            drawTracked(ctx, atom.base, baseX, baselineY, jpTracking);
+
+            ctx.font = `400 ${rtFontSize}px ${mainFont}`;
+            ctx.fillStyle = theme.muted;
+            drawTracked(ctx, atom.rt, rtX, baselineY - jpFontSize * 1.02, rtTracking);
+
+            x += boxW + jpTracking;
+          } else {
+            ctx.font = `500 ${jpFontSize}px ${mainFont}`;
+            ctx.fillStyle = theme.text;
+            ctx.fillText(atom.char, x, baselineY);
+            x += atom.width;
+          }
+        }
+        y += jpLineHeight;
+      }
+      ctx.restore();
+      y += 8;
+
+      // 5. 绘制罗马音
+      if (hasRomaji) {
+        ctx.save();
+        applyTextShadow();
+        ctx.font = `italic 400 13px ${uiFont}`;
+        ctx.fillStyle = theme.muted;
+        ctx.globalAlpha = 0.9;
+        for (const rLine of romajiLines) {
+          drawTracked(ctx, rLine, padX, y + 13, 0.5);
+          y += 19;
+        }
+        ctx.restore();
+        y += 22;
+      } else {
+        y += 10;
+      }
+
+      // 6. 绘制分割短线
+      ctx.save();
+      ctx.fillStyle = theme.accent;
+      ctx.globalAlpha = 0.78;
+      ctx.fillRect(padX, y, 34, 1.5);
+      ctx.restore();
+      y += 20;
+
+      // 7. 绘制中文释义
+      if (hasZh) {
+        ctx.save();
+        applyTextShadow();
+        ctx.font = `400 17px ${uiFont}`;
+        ctx.fillStyle = theme.text;
+        ctx.globalAlpha = 0.92;
+        for (const zLine of zhLines) {
+          drawTracked(ctx, zLine, padX, y + 17, 1.0);
+          y += 27;
+        }
+        ctx.restore();
+        if (hasNotes) y += 26;
+      }
+
+      // 8. 绘制词汇解析卡片
+      if (hasNotes) {
+        clearShadow();
+        ctx.save();
+        drawRoundRect(ctx, padX, y, contentW, notesBoxH, 14);
+        ctx.fillStyle = state.bgImage ? theme.surfaceBgImg : theme.surface;
+        ctx.fill();
+        ctx.strokeStyle = theme.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        let ny = y + 14;
+        const innerX = padX + 16;
+        noteLayouts.forEach((item, idx) => {
+          if (item.word) {
+            ctx.font = `600 13px ${mainFont}`;
+            ctx.fillStyle = theme.accent;
+            ctx.globalAlpha = 1;
+            ctx.fillText(item.word, innerX, ny + 14);
+          }
+          ctx.font = `400 13px ${uiFont}`;
+          ctx.fillStyle = theme.text;
+          ctx.globalAlpha = 0.88;
+          item.descLines.forEach((dl, lIdx) => {
+            drawTracked(ctx, dl, innerX + item.descXOffset, ny + 14 + lIdx * 20, 0.2);
+          });
+          ny += item.itemH + (idx < noteLayouts.length - 1 ? 10 : 0);
+        });
+        ctx.restore();
+      }
+
+      state.exportedDataUrl = canvas.toDataURL("image/png");
+      $("exportPreview").src = state.exportedDataUrl;
+      $("exportRes").textContent = `${pixelW} × ${pixelH} px`;
+      $("exportMask").classList.add("open");
+    }
+
+    $("btnExport").addEventListener("click", () => {
+      try {
+        generateWallpaper();
+      } catch (err) {
+        showToast("生成失败，可点「隐藏栏」后系统截屏");
+      }
+    });
+
+    $("btnCloseExport").addEventListener("click", () => {
+      $("exportMask").classList.remove("open");
+    });
+
+    $("exportMask").addEventListener("click", (e) => {
+      if (e.target === $("exportMask")) $("exportMask").classList.remove("open");
+    });
+
+    $("btnDownloadPng").addEventListener("click", () => {
+      if (!state.exportedDataUrl) return;
+      const link = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      link.download = `jp-wallpaper-${stamp}.png`;
+      link.href = state.exportedDataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("已开始下载无边框原图");
+    });
+
+    render();
+    showToast("可换背景图，点「生成壁纸」直接保存无边框原图");
+  </script>
+</body>
+</html>
