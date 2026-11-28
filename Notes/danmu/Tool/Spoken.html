@@ -51,6 +51,8 @@
         --primary-soft: #E3EDE7;
         --fav-color: #D97706;
         --fav-bg: #FEF3C7;
+        --lucky-color: #7C3AED;
+        --lucky-bg: #EDE9FE;
         --highlight-bg: #FDE68A;
         --highlight-text: #78350F;
         --online-color: #059669;
@@ -95,6 +97,8 @@
         --primary-soft: #22382C;
         --fav-color: #FBBF24;
         --fav-bg: rgba(245, 158, 11, 0.16);
+        --lucky-color: #C4B5FD;
+        --lucky-bg: rgba(139, 92, 246, 0.2);
         --highlight-bg: rgba(251, 191, 36, 0.28);
         --highlight-text: #FDE68A;
         --online-color: #34D399;
@@ -239,6 +243,18 @@
         background: var(--primary-soft);
         border-color: var(--primary);
         color: var(--primary);
+      }
+
+      .btn-lucky.active {
+        background: var(--lucky-bg);
+        border-color: var(--lucky-color);
+        color: var(--lucky-color);
+      }
+
+      .btn-lucky.active:hover:not(:disabled) {
+        background: var(--lucky-bg);
+        border-color: var(--lucky-color);
+        color: var(--lucky-color);
       }
 
       /* 搜索与收藏快捷区 */
@@ -476,6 +492,18 @@
         color: var(--text-secondary);
       }
 
+      .lucky-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: var(--lucky-bg);
+        color: var(--lucky-color);
+        font-size: 11.5px;
+        font-weight: 600;
+      }
+
       .status-dot {
         width: 7px;
         height: 7px;
@@ -510,6 +538,14 @@
 
       .text-link-btn:hover {
         background: var(--primary-soft);
+      }
+
+      .text-link-btn.lucky-link {
+        color: var(--lucky-color);
+      }
+
+      .text-link-btn.lucky-link:hover {
+        background: var(--lucky-bg);
       }
 
       /* 卡片网格 */
@@ -850,7 +886,7 @@
         max-width: 380px;
       }
 
-      @media (max-width: 560px) {
+      @media (max-width: 580px) {
         .btn-label-hide-sm {
           display: none;
         }
@@ -1015,6 +1051,7 @@
         search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
         clear: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
         star: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+        dice: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`,
         speaker: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`,
         copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
         eye: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
@@ -1088,6 +1125,7 @@
         tag: "ALL",
         onlyFav: false,
         blurMode: false,
+        luckyNotes: null, // 试试手气抽取的 3 条笔记（null 表示普通浏览模式）
         page: 1
       };
 
@@ -1120,12 +1158,10 @@
       }
 
       async function loadOfflineNotes() {
-        // 1. 优先读取 IndexedDB 离线缓存
         const idbData = await OfflineDB.get("notes_data");
         if (Array.isArray(idbData) && idbData.length > 0) {
           return { notes: idbData, fromCache: true };
         }
-        // 2. 兼容读取 localStorage 旧缓存
         try {
           const savedV2 = localStorage.getItem(STORAGE_KEY_V2);
           if (savedV2) {
@@ -1178,7 +1214,6 @@
         } catch (e) {}
       }
 
-      // 为每条笔记生成唯一稳定 ID，用于收藏持久化
       function getNoteKey(note) {
         if (note && note.noteId !== undefined && note.noteId !== null && String(note.noteId).trim() !== "") {
           return "id:" + String(note.noteId);
@@ -1230,6 +1265,10 @@
               <div class="header-actions">
                 <button class="btn btn-icon-only" id="themeToggleBtn" title="切换深浅色主题">
                   ${isDark ? ICONS.sun : ICONS.moon}
+                </button>
+                <button class="btn btn-lucky" id="luckyBtn" title="随机抽取 3 条句型进行学习">
+                  ${ICONS.dice}
+                  <span>试试手气</span>
                 </button>
                 <button class="btn" id="toggleBlurBtn" title="隐藏讲解与翻译用于背诵">
                   <span id="blurIconWrap">${ICONS.eye}</span>
@@ -1286,6 +1325,7 @@
       const el = {
         totalCountBadge: shadow.getElementById("totalCountBadge"),
         themeToggleBtn: shadow.getElementById("themeToggleBtn"),
+        luckyBtn: shadow.getElementById("luckyBtn"),
         toggleBlurBtn: shadow.getElementById("toggleBlurBtn"),
         blurIconWrap: shadow.getElementById("blurIconWrap"),
         blurLabel: shadow.getElementById("blurLabel"),
@@ -1399,6 +1439,38 @@
         el.syncLabel.textContent = syncing ? "同步中..." : "同步远程";
       }
 
+      // 随机抽取 3 条笔记来学习（优先避开上一轮刚抽到的卡片）
+      function shuffleArray(arr) {
+        const copy = arr.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+      }
+
+      function pickLuckyThree() {
+        if (!allNotes || allNotes.length === 0) {
+          showToast("当前没有可供抽取的笔记");
+          return;
+        }
+        const prevKeys = new Set((state.luckyNotes || []).map(getNoteKey));
+        const freshPool = allNotes.filter(n => !prevKeys.has(getNoteKey(n)));
+        let picked;
+        if (freshPool.length >= 3) {
+          picked = shuffleArray(freshPool).slice(0, 3);
+        } else {
+          const remainder = shuffleArray(allNotes.filter(n => prevKeys.has(getNoteKey(n))));
+          picked = [...shuffleArray(freshPool), ...remainder].slice(0, Math.min(3, allNotes.length));
+        }
+
+        state.luckyNotes = picked;
+        state.page = 1;
+        renderAll();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        showToast(`🎲 已为你随机抽取 ${picked.length} 条句型，开始学习吧！`);
+      }
+
       // 远程拉取并缓存到本地（支持离线可用）
       async function syncRemoteData(isAutoBoot = false) {
         if (isSyncing) return;
@@ -1422,6 +1494,7 @@
           state.rating = "ALL";
           state.tag = "ALL";
           state.onlyFav = false;
+          state.luckyNotes = null;
           state.page = 1;
           await saveOfflineNotes(allNotes, "remote");
           renderAll();
@@ -1510,7 +1583,7 @@
         const allTags = [...new Set(allNotes.flatMap(n => Array.isArray(n.tags) ? n.tags : []))];
 
         let html = ratings.map(r => `
-          <span class="chip ${state.rating === r ? "active" : ""}" data-rating="${escapeAttr(r)}">
+          <span class="chip ${!state.luckyNotes && state.rating === r ? "active" : ""}" data-rating="${escapeAttr(r)}">
             ${r === "ALL" ? "全部等级" : "Rating " + escapeHtml(r)}
           </span>
         `).join("");
@@ -1518,7 +1591,7 @@
         if (allTags.length > 0) {
           html += `<span class="chip-divider"></span>`;
           html += allTags.map(t => `
-            <span class="chip ${state.tag === t ? "active" : ""}" data-tag="${escapeAttr(t)}">
+            <span class="chip ${!state.luckyNotes && state.tag === t ? "active" : ""}" data-tag="${escapeAttr(t)}">
               #${escapeHtml(t)}
             </span>
           `).join("");
@@ -1620,7 +1693,7 @@
       }
 
       function renderPagination(totalItems, totalPages, startIdx, endIdx) {
-        if (totalItems === 0) {
+        if (state.luckyNotes || totalItems === 0) {
           el.paginationWrap.innerHTML = "";
           return;
         }
@@ -1647,20 +1720,24 @@
       }
 
       function renderAll() {
-        const filtered = getFilteredNotes();
+        const isLuckyMode = Array.isArray(state.luckyNotes);
+        const filtered = isLuckyMode ? state.luckyNotes : getFilteredNotes();
         const totalItems = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+        const totalPages = isLuckyMode ? 1 : Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
         state.page = Math.max(1, Math.min(state.page, totalPages));
 
-        const startIdx = (state.page - 1) * PAGE_SIZE;
-        const endIdx = Math.min(startIdx + PAGE_SIZE, totalItems);
-        const pageNotes = filtered.slice(startIdx, endIdx);
+        const startIdx = isLuckyMode ? 0 : (state.page - 1) * PAGE_SIZE;
+        const endIdx = isLuckyMode ? totalItems : Math.min(startIdx + PAGE_SIZE, totalItems);
+        const pageNotes = isLuckyMode ? filtered : filtered.slice(startIdx, endIdx);
 
         const favCount = getCurrentDatasetFavCount();
-        el.totalCountBadge.textContent =
-          totalItems === allNotes.length ? `${allNotes.length} 条` : `${totalItems} / ${allNotes.length} 条`;
+        el.totalCountBadge.textContent = isLuckyMode
+          ? `随机 ${totalItems} / ${allNotes.length} 条`
+          : (totalItems === allNotes.length ? `${allNotes.length} 条` : `${totalItems} / ${allNotes.length} 条`);
+
         el.favCountPill.textContent = favCount;
-        el.onlyFavBtn.classList.toggle("active", state.onlyFav);
+        el.onlyFavBtn.classList.toggle("active", !isLuckyMode && state.onlyFav);
+        el.luckyBtn.classList.toggle("active", isLuckyMode);
         el.searchClearBtn.classList.toggle("visible", state.search.length > 0);
 
         el.toggleBlurBtn.classList.toggle("btn-active", state.blurMode);
@@ -1686,21 +1763,34 @@
               <span class="status-dot ${isOnline ? "" : "offline"}"></span>
               ${isOnline ? "在线" : "离线模式"} · ${sourceText}${timeText}
             </span>
-            <span>
-              ${totalItems > 0
-                ? `每页 ${PAGE_SIZE} 条 · 当前第 ${startIdx + 1}–${endIdx} 条`
-                : `暂无匹配笔记`}
-            </span>
+            ${isLuckyMode ? `
+              <span class="lucky-pill">
+                ${ICONS.dice} 试试手气模式 · 随机抽取 ${totalItems} 条
+              </span>
+            ` : `
+              <span>
+                ${totalItems > 0
+                  ? `每页 ${PAGE_SIZE} 条 · 当前第 ${startIdx + 1}–${endIdx} 条`
+                  : `暂无匹配笔记`}
+              </span>
+            `}
           </div>
           <div class="status-actions">
-            ${favCount > 0 ? `
-              <button class="text-link-btn" id="exportFavBtn">
-                ${ICONS.download} 导出收藏 (${favCount})
+            ${isLuckyMode ? `
+              <button class="text-link-btn lucky-link" id="rerollLuckyBtn">
+                ${ICONS.dice} 再抽 3 条
               </button>
-            ` : ""}
-            ${hasFilter ? `
-              <button class="text-link-btn" id="resetFilterBtn">重置筛选</button>
-            ` : ""}
+              <button class="text-link-btn" id="exitLuckyBtn">退出手气模式</button>
+            ` : `
+              ${favCount > 0 ? `
+                <button class="text-link-btn" id="exportFavBtn">
+                  ${ICONS.download} 导出收藏 (${favCount})
+                </button>
+              ` : ""}
+              ${hasFilter ? `
+                <button class="text-link-btn" id="resetFilterBtn">重置筛选</button>
+              ` : ""}
+            `}
           </div>
         `;
 
@@ -1724,7 +1814,7 @@
             .map((note, idx) => renderCard(note, startIdx + idx + 1))
             .join("");
 
-          if (state.search.trim()) {
+          if (!isLuckyMode && state.search.trim()) {
             el.cardList.querySelectorAll(".searchable").forEach(node => {
               highlightMatches(node, state.search);
             });
@@ -1743,6 +1833,10 @@
         syncOuterBodyBg();
       });
 
+      el.luckyBtn.addEventListener("click", () => {
+        pickLuckyThree();
+      });
+
       el.toggleBlurBtn.addEventListener("click", () => {
         state.blurMode = !state.blurMode;
         renderAll();
@@ -1753,6 +1847,7 @@
       });
 
       el.onlyFavBtn.addEventListener("click", () => {
+        state.luckyNotes = null;
         state.onlyFav = !state.onlyFav;
         state.page = 1;
         renderAll();
@@ -1762,12 +1857,14 @@
       el.searchInput.addEventListener("compositionstart", () => { isComposing = true; });
       el.searchInput.addEventListener("compositionend", (e) => {
         isComposing = false;
+        state.luckyNotes = null;
         state.search = e.target.value;
         state.page = 1;
         renderAll();
       });
       el.searchInput.addEventListener("input", (e) => {
         if (isComposing) return;
+        state.luckyNotes = null;
         state.search = e.target.value;
         state.page = 1;
         renderAll();
@@ -1775,6 +1872,7 @@
 
       el.searchClearBtn.addEventListener("click", () => {
         el.searchInput.value = "";
+        state.luckyNotes = null;
         state.search = "";
         state.page = 1;
         el.searchInput.focus();
@@ -1784,6 +1882,7 @@
       el.filterRow.addEventListener("click", (e) => {
         const ratingChip = e.target.closest("[data-rating]");
         if (ratingChip) {
+          state.luckyNotes = null;
           state.rating = ratingChip.getAttribute("data-rating");
           state.page = 1;
           renderAll();
@@ -1792,6 +1891,7 @@
         const tagChip = e.target.closest("[data-tag]");
         if (tagChip) {
           const clickedTag = tagChip.getAttribute("data-tag");
+          state.luckyNotes = null;
           state.tag = state.tag === clickedTag ? "ALL" : clickedTag;
           state.page = 1;
           renderAll();
@@ -1799,12 +1899,22 @@
       });
 
       el.statusBar.addEventListener("click", (e) => {
+        if (e.target.closest("#rerollLuckyBtn")) {
+          pickLuckyThree();
+          return;
+        }
+        if (e.target.closest("#exitLuckyBtn")) {
+          state.luckyNotes = null;
+          renderAll();
+          return;
+        }
         if (e.target.closest("#resetFilterBtn")) {
           el.searchInput.value = "";
           state.search = "";
           state.rating = "ALL";
           state.tag = "ALL";
           state.onlyFav = false;
+          state.luckyNotes = null;
           state.page = 1;
           renderAll();
           return;
@@ -1833,6 +1943,7 @@
           state.rating = "ALL";
           state.tag = "ALL";
           state.onlyFav = false;
+          state.luckyNotes = null;
           state.page = 1;
           renderAll();
           return;
@@ -1897,6 +2008,7 @@
             state.rating = "ALL";
             state.tag = "ALL";
             state.onlyFav = false;
+            state.luckyNotes = null;
             state.page = 1;
             await saveOfflineNotes(allNotes, "local_file");
             renderAll();
