@@ -26,13 +26,21 @@
         -webkit-tap-highlight-color: transparent;
       }
 
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .spin {
+        animation: spin 0.9s linear infinite;
+      }
+
       .app-shell {
         --bg-page: #F4F1EA;
         --bg-header: rgba(244, 241, 234, 0.86);
         --bg-card: #FFFFFF;
         --bg-sub: #F7F5F0;
         --bg-accent: #E8EFE9;
-        --bg-memo: #EDF3EE;
         --text-main: #1E201D;
         --text-secondary: #4A4E48;
         --text-muted: #787A73;
@@ -45,6 +53,8 @@
         --fav-bg: #FEF3C7;
         --highlight-bg: #FDE68A;
         --highlight-text: #78350F;
+        --online-color: #059669;
+        --offline-color: #D97706;
 
         --rating-s: #B45309;
         --rating-s-bg: linear-gradient(135deg, #FEF3C7, #FDE68A);
@@ -75,7 +85,6 @@
         --bg-card: #1E211F;
         --bg-sub: #262A27;
         --bg-accent: #22332A;
-        --bg-memo: #1E2C24;
         --text-main: #ECEEEB;
         --text-secondary: #C2C7C0;
         --text-muted: #8C928A;
@@ -88,6 +97,8 @@
         --fav-bg: rgba(245, 158, 11, 0.16);
         --highlight-bg: rgba(251, 191, 36, 0.28);
         --highlight-text: #FDE68A;
+        --online-color: #34D399;
+        --offline-color: #FBBF24;
 
         --rating-s: #FCD34D;
         --rating-s-bg: rgba(217, 119, 6, 0.22);
@@ -171,6 +182,7 @@
         display: flex;
         align-items: center;
         gap: 7px;
+        flex-wrap: wrap;
       }
 
       .btn {
@@ -181,7 +193,7 @@
         font-size: 13px;
         font-weight: 600;
         height: 34px;
-        padding: 0 12px;
+        padding: 0 11px;
         border-radius: 10px;
         cursor: pointer;
         display: inline-flex;
@@ -192,13 +204,18 @@
         white-space: nowrap;
       }
 
-      .btn:hover {
+      .btn:hover:not(:disabled) {
         border-color: var(--border-hover);
         background: var(--bg-sub);
       }
 
-      .btn:active {
+      .btn:active:not(:disabled) {
         transform: scale(0.96);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       .btn-icon-only {
@@ -212,7 +229,7 @@
         border-color: var(--primary);
       }
 
-      .btn-primary:hover {
+      .btn-primary:hover:not(:disabled) {
         background: var(--primary-hover);
         border-color: var(--primary-hover);
         color: #FFFFFF;
@@ -439,6 +456,38 @@
         color: var(--text-muted);
       }
 
+      .status-left {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .offline-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-soft);
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--online-color);
+        flex-shrink: 0;
+      }
+
+      .status-dot.offline {
+        background: var(--offline-color);
+      }
+
       .status-actions {
         display: flex;
         align-items: center;
@@ -452,7 +501,7 @@
         font-size: 12.5px;
         font-weight: 600;
         cursor: pointer;
-        padding: 2px 4px;
+        padding: 2px 6px;
         border-radius: 6px;
         display: inline-flex;
         align-items: center;
@@ -663,20 +712,6 @@
         line-height: 1.5;
       }
 
-      /* 笔记块 */
-      .memo-box {
-        background: var(--bg-memo);
-        border: 1px solid rgba(47, 92, 70, 0.12);
-        border-radius: 11px;
-        padding: 10px 13px;
-        font-size: 13.5px;
-        color: var(--text-secondary);
-      }
-
-      .memo-box .field-label {
-        color: var(--primary);
-      }
-
       /* 搜索词高亮 */
       mark.search-hl {
         background: var(--highlight-bg);
@@ -812,10 +847,10 @@
 
       .empty-desc {
         font-size: 13.5px;
-        max-width: 360px;
+        max-width: 380px;
       }
 
-      @media (max-width: 520px) {
+      @media (max-width: 560px) {
         .btn-label-hide-sm {
           display: none;
         }
@@ -828,13 +863,17 @@
 
   <script>
     (function () {
+      const REMOTE_URL = "https://raw.githubusercontent.com/moodHappy/moodHappy.gitHub.io-nce/refs/heads/main/config/Spoken.json";
+      const DB_NAME = "anki_pattern_offline_db_v1";
+      const DB_STORE = "kv_store";
       const STORAGE_KEY_V2 = "anki_pattern_viewer_data_v2";
       const STORAGE_KEY_V1 = "anki_pattern_viewer_data_v1";
+      const META_STORAGE_KEY = "anki_pattern_viewer_meta_v1";
       const FAV_STORAGE_KEY = "anki_pattern_viewer_favs_v1";
       const THEME_STORAGE_KEY = "anki_pattern_viewer_theme_v1";
       const PAGE_SIZE = 10;
 
-      // 内置 12 条高质量示例数据，开箱即可体验 10 条分页、搜索、收藏与朗读
+      // 内置兜底示例数据（当无本地缓存且首次拉取离线失败时使用）
       const SAMPLE_DATA = [
         {
           noteId: 1700000001,
@@ -845,8 +884,7 @@
           "讲解": "询问头发、物体或时间长度的常用基础疑问句型：How long + be + 主语？",
           "例句": "How long is her hair? It reaches down to her shoulders.",
           "翻译": "她的头发有多长？长到她的肩膀那里。",
-          "Rating": "S",
-          "笔记": "回答时常用 reach down to... 或 shoulder-length 表示及肩长发。"
+          "Rating": "S"
         },
         {
           noteId: 1700000002,
@@ -857,8 +895,7 @@
           "讲解": "礼貌且自然地向对方提出共同做某事的建议，语气轻松友好。",
           "例句": "Why don't we grab a cup of coffee and talk it over?",
           "翻译": "我们为什么不喝杯咖啡好好聊聊呢？",
-          "Rating": "S",
-          "笔记": "与 Let's... 意思相近，但带有征求对方意见的礼貌感。"
+          "Rating": "S"
         },
         {
           noteId: 1700000003,
@@ -869,8 +906,7 @@
           "讲解": "非常客气地请求对方做某事或征求许可，表示“你介意……吗？”。",
           "例句": "Would you mind turning down the music a little bit?",
           "翻译": "你介意把音乐声调小一点吗？",
-          "Rating": "S",
-          "笔记": "注意：如果同意对方请求，应回答 Not at all / Of course not（一点也不介意）。"
+          "Rating": "S"
         },
         {
           noteId: 1700000004,
@@ -881,8 +917,7 @@
           "讲解": "表达明确的个人偏好，“宁愿做某事而不愿做另一件事”。",
           "例句": "I'd rather stay home tonight than go to a noisy party.",
           "翻译": "今晚我宁愿待在家里，也不想去吵闹的派对。",
-          "Rating": "A",
-          "笔记": "否定形式为 I'd rather not + 动词原形。"
+          "Rating": "A"
         },
         {
           noteId: 1700000005,
@@ -893,8 +928,7 @@
           "讲解": "表示“习惯于某事/做某事”（强调状态），注意这里的 to 是介词。",
           "例句": "She is used to getting up early for her morning jog.",
           "翻译": "她已经习惯早起晨跑了。",
-          "Rating": "S",
-          "笔记": "对比 used to do（过去常常做某事，现在不做了）。"
+          "Rating": "S"
         },
         {
           noteId: 1700000006,
@@ -905,8 +939,7 @@
           "讲解": "表示“做某事花费（某人）多少时间”，最地道的耗时表达结构。",
           "例句": "It takes me about twenty minutes to commute by subway.",
           "翻译": "我坐地铁通勤大约需要二十分钟。",
-          "Rating": "A",
-          "笔记": "提问耗时用 How long does it take to...?。"
+          "Rating": "A"
         },
         {
           noteId: 1700000007,
@@ -917,8 +950,7 @@
           "讲解": "用于正式或半正式场合引出个人观点，“就我而言 / 在我看来”。",
           "例句": "As far as I'm concerned, quality matters much more than speed.",
           "翻译": "就我个人而言，质量比速度重要得多。",
-          "Rating": "A",
-          "笔记": "比单纯用 I think 更丰富地道。"
+          "Rating": "A"
         },
         {
           noteId: 1700000008,
@@ -929,8 +961,7 @@
           "讲解": "委婉地表达推测或印象，“看起来似乎……”。",
           "例句": "It seems that everyone has already heard the good news.",
           "翻译": "看起来大家似乎都已经听到这个好消息了。",
-          "Rating": "B",
-          "笔记": "口语中也常简化为 Seems like + 从句。"
+          "Rating": "B"
         },
         {
           noteId: 1700000009,
@@ -941,8 +972,7 @@
           "讲解": "表达真诚的感激，比单纯的 Thank you 更显诚意和成熟。",
           "例句": "I really appreciate your taking the time to help me out.",
           "翻译": "我非常感激你抽出时间帮我解决困难。",
-          "Rating": "S",
-          "笔记": "appreciate 后面接事物或动名词，不能直接接人（不说 appreciate you）。"
+          "Rating": "S"
         },
         {
           noteId: 1700000010,
@@ -953,8 +983,7 @@
           "讲解": "恍然大悟时使用，表示“难怪…… / 怪不得……”。",
           "例句": "No wonder you look so tired—you've been working all night!",
           "翻译": "难怪你看起来这么累——你整晚都在工作！",
-          "Rating": "A",
-          "笔记": "在口语中非常高频，可单独作为感叹句 No wonder! 使用。"
+          "Rating": "A"
         },
         {
           noteId: 1700000011,
@@ -965,8 +994,7 @@
           "讲解": "引导条件状语从句，表示“只要……（就……）”。",
           "例句": "As long as you keep practicing, your spoken English will improve.",
           "翻译": "只要你坚持练习，你的英语口语就会提高。",
-          "Rating": "B",
-          "笔记": "主句用将来时，从句通常用一般现在时代替将来时。"
+          "Rating": "B"
         },
         {
           noteId: 1700000012,
@@ -977,8 +1005,7 @@
           "讲解": "用过去进行时表示特别客气、委婉的询问或请求，“我想知道是否……”。",
           "例句": "I was wondering if we could reschedule tomorrow's meeting.",
           "翻译": "我想知道我们能不能把明天的会议改期。",
-          "Rating": "S",
-          "笔记": "职场邮件和口头请求神句，语气极度礼貌。"
+          "Rating": "S"
         }
       ];
 
@@ -994,6 +1021,7 @@
         eyeOff: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
         upload: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
         download: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+        sync: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
         sun: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
         moon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
         chevLeft: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`,
@@ -1001,9 +1029,58 @@
         inbox: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`
       };
 
-      let allNotes = loadNotes();
+      // IndexedDB 离线缓存封装（支持大容量 JSON，突破 localStorage 5MB 限制）
+      const OfflineDB = {
+        open() {
+          return new Promise((resolve, reject) => {
+            if (!("indexedDB" in window)) {
+              reject(new Error("IndexedDB unavailable"));
+              return;
+            }
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains(DB_STORE)) {
+                db.createObjectStore(DB_STORE);
+              }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          });
+        },
+        async get(key) {
+          try {
+            const db = await this.open();
+            return await new Promise((resolve, reject) => {
+              const tx = db.transaction(DB_STORE, "readonly");
+              const req = tx.objectStore(DB_STORE).get(key);
+              req.onsuccess = () => resolve(req.result);
+              req.onerror = () => reject(req.error);
+            });
+          } catch (e) {
+            return null;
+          }
+        },
+        async set(key, value) {
+          try {
+            const db = await this.open();
+            return await new Promise((resolve, reject) => {
+              const tx = db.transaction(DB_STORE, "readwrite");
+              const req = tx.objectStore(DB_STORE).put(value, key);
+              req.onsuccess = () => resolve(true);
+              req.onerror = () => reject(req.error);
+            });
+          } catch (e) {
+            return false;
+          }
+        }
+      };
+
+      let allNotes = SAMPLE_DATA;
+      let cacheMeta = loadMeta();
       let favSet = loadFavorites();
       let isDark = loadTheme();
+      let isSyncing = false;
 
       let state = {
         search: "",
@@ -1014,28 +1091,60 @@
         page: 1
       };
 
-      function loadNotes() {
+      function loadMeta() {
+        try {
+          const raw = localStorage.getItem(META_STORAGE_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return { source: "sample", updatedAt: null };
+      }
+
+      function saveMeta(meta) {
+        cacheMeta = meta;
+        try {
+          localStorage.setItem(META_STORAGE_KEY, JSON.stringify(meta));
+        } catch (e) {}
+      }
+
+      async function saveOfflineNotes(notes, source) {
+        const meta = { source, updatedAt: Date.now(), count: notes.length };
+        saveMeta(meta);
+        const idbOk = await OfflineDB.set("notes_data", notes);
+        try {
+          localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(notes));
+        } catch (e) {
+          if (!idbOk) {
+            showToast("数据较大，已加载到当前页面（本地存储空间受限）");
+          }
+        }
+      }
+
+      async function loadOfflineNotes() {
+        // 1. 优先读取 IndexedDB 离线缓存
+        const idbData = await OfflineDB.get("notes_data");
+        if (Array.isArray(idbData) && idbData.length > 0) {
+          return { notes: idbData, fromCache: true };
+        }
+        // 2. 兼容读取 localStorage 旧缓存
         try {
           const savedV2 = localStorage.getItem(STORAGE_KEY_V2);
           if (savedV2) {
             const parsed = JSON.parse(savedV2);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              OfflineDB.set("notes_data", parsed);
+              return { notes: parsed, fromCache: true };
+            }
           }
           const savedV1 = localStorage.getItem(STORAGE_KEY_V1);
           if (savedV1) {
             const parsed = JSON.parse(savedV1);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              OfflineDB.set("notes_data", parsed);
+              return { notes: parsed, fromCache: true };
+            }
           }
         } catch (e) {}
-        return SAMPLE_DATA;
-      }
-
-      function saveNotes(notes) {
-        try {
-          localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(notes));
-        } catch (e) {
-          showToast("数据已加载（文件较大，超出浏览器本地存储限额，刷新后需重新导入）");
-        }
+        return { notes: null, fromCache: false };
       }
 
       function loadFavorites() {
@@ -1083,6 +1192,13 @@
         return "hash:" + hash;
       }
 
+      function formatSyncTime(ts) {
+        if (!ts) return "未缓存";
+        const d = new Date(ts);
+        const pad = n => String(n).padStart(2, "0");
+        return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
       // 构建隔离的 Shadow DOM，抵御第三方插件干扰
       const host = document.getElementById("anki-viewer-root");
       const shadow = host.attachShadow({ mode: "open" });
@@ -1093,7 +1209,6 @@
       shell.className = "app-shell" + (isDark ? " theme-dark" : "");
       shadow.appendChild(shell);
 
-      // 同步外层 body 背景色
       function syncOuterBodyBg() {
         document.body.style.backgroundColor = isDark ? "#141615" : "#F4F1EA";
       }
@@ -1120,6 +1235,10 @@
                   <span id="blurIconWrap">${ICONS.eye}</span>
                   <span class="btn-label-hide-sm" id="blurLabel">背诵遮罩</span>
                 </button>
+                <button class="btn" id="syncRemoteBtn" title="从远程拉取 Spoken.json 并缓存到本地供离线使用">
+                  <span id="syncIconWrap" style="display:inline-flex;">${ICONS.sync}</span>
+                  <span class="btn-label-hide-sm" id="syncLabel">同步远程</span>
+                </button>
                 <label class="btn btn-primary" for="jsonFileInput">
                   ${ICONS.upload}
                   <span>导入 JSON</span>
@@ -1135,7 +1254,7 @@
                   type="text"
                   class="search-input"
                   id="searchInput"
-                  placeholder="搜索句型、讲解、例句、翻译、笔记或标签..."
+                  placeholder="搜索句型、讲解、例句、翻译或标签..."
                   autocomplete="off"
                 />
                 <button class="search-clear" id="searchClearBtn" title="清空搜索">
@@ -1170,6 +1289,9 @@
         toggleBlurBtn: shadow.getElementById("toggleBlurBtn"),
         blurIconWrap: shadow.getElementById("blurIconWrap"),
         blurLabel: shadow.getElementById("blurLabel"),
+        syncRemoteBtn: shadow.getElementById("syncRemoteBtn"),
+        syncIconWrap: shadow.getElementById("syncIconWrap"),
+        syncLabel: shadow.getElementById("syncLabel"),
         jsonFileInput: shadow.getElementById("jsonFileInput"),
         searchInput: shadow.getElementById("searchInput"),
         searchClearBtn: shadow.getElementById("searchClearBtn"),
@@ -1188,7 +1310,7 @@
         clearTimeout(el.toastEl._timer);
         el.toastEl._timer = setTimeout(() => {
           el.toastEl.classList.remove("show");
-        }, 2600);
+        }, 2800);
       }
 
       function stripHtml(html) {
@@ -1262,6 +1384,58 @@
         document.body.removeChild(ta);
       }
 
+      function extractNotesArray(json) {
+        if (Array.isArray(json)) return json;
+        if (json && Array.isArray(json.notes)) return json.notes;
+        if (json && Array.isArray(json.data)) return json.data;
+        return null;
+      }
+
+      function setSyncUI(syncing) {
+        isSyncing = syncing;
+        el.syncRemoteBtn.disabled = syncing;
+        const svg = el.syncIconWrap.querySelector("svg");
+        if (svg) svg.classList.toggle("spin", syncing);
+        el.syncLabel.textContent = syncing ? "同步中..." : "同步远程";
+      }
+
+      // 远程拉取并缓存到本地（支持离线可用）
+      async function syncRemoteData(isAutoBoot = false) {
+        if (isSyncing) return;
+        if (!navigator.onLine) {
+          if (!isAutoBoot) {
+            showToast("当前处于离线状态，已使用本地离线缓存");
+          }
+          renderAll();
+          return;
+        }
+
+        setSyncUI(true);
+        try {
+          const res = await fetch(REMOTE_URL, { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const rawJson = await res.json();
+          const notes = extractNotesArray(rawJson);
+          if (!notes) throw new Error("远程 JSON 格式不是有效的笔记数组");
+
+          allNotes = notes;
+          state.rating = "ALL";
+          state.tag = "ALL";
+          state.onlyFav = false;
+          state.page = 1;
+          await saveOfflineNotes(allNotes, "remote");
+          renderAll();
+          showToast(`远程同步成功，已离线缓存 ${allNotes.length} 条笔记！`);
+        } catch (err) {
+          if (!isAutoBoot) {
+            showToast("远程同步失败，已保留本地缓存：" + err.message);
+          }
+          renderAll();
+        } finally {
+          setSyncUI(false);
+        }
+      }
+
       function getFilteredNotes() {
         const q = state.search.trim().toLowerCase();
         return allNotes.filter(item => {
@@ -1280,7 +1454,6 @@
             item["讲解"],
             item["例句"],
             item["翻译"],
-            item["笔记"],
             item.deckName,
             tags.join(" ")
           ].join(" ").toLowerCase();
@@ -1288,7 +1461,6 @@
         });
       }
 
-      // 统计当前数据集中被收藏的笔记数量
       function getCurrentDatasetFavCount() {
         let count = 0;
         for (const n of allNotes) {
@@ -1297,7 +1469,6 @@
         return count;
       }
 
-      // 安全地对纯文本节点做搜索词高亮（不破坏 Anki 原有 HTML 标签）
       function highlightMatches(rootEl, keyword) {
         const q = keyword.trim();
         if (!q || !rootEl) return;
@@ -1366,7 +1537,6 @@
         const explain = note["讲解"] || "";
         const example = note["例句"] || "";
         const trans = note["翻译"] || "";
-        const memo = note["笔记"] || "";
 
         return `
           <article class="note-card ${isFav ? "is-fav" : ""}" data-key="${escapeAttr(key)}">
@@ -1431,18 +1601,10 @@
                 ${trans ? `<div class="example-zh spoiler searchable">${sanitizeField(trans)}</div>` : ""}
               </div>
             ` : ""}
-
-            ${memo ? `
-              <div class="memo-box">
-                <div class="field-label">笔记</div>
-                <div class="spoiler searchable">${sanitizeField(memo)}</div>
-              </div>
-            ` : ""}
           </article>
         `;
       }
 
-      // 生成带省略号的智能页码列表
       function buildPageNumbers(current, total) {
         if (total <= 7) {
           return Array.from({ length: total }, (_, i) => i + 1);
@@ -1494,7 +1656,6 @@
         const endIdx = Math.min(startIdx + PAGE_SIZE, totalItems);
         const pageNotes = filtered.slice(startIdx, endIdx);
 
-        // 更新顶栏统计与状态
         const favCount = getCurrentDatasetFavCount();
         el.totalCountBadge.textContent =
           totalItems === allNotes.length ? `${allNotes.length} 条` : `${totalItems} / ${allNotes.length} 条`;
@@ -1509,14 +1670,28 @@
 
         renderFilters();
 
-        // 渲染状态栏（当前筛选摘要 + 导出收藏 / 重置筛选）
+        const isOnline = navigator.onLine;
+        const sourceMap = {
+          remote: "远程离线缓存",
+          local_file: "本地导入缓存",
+          sample: "内置示例"
+        };
+        const sourceText = sourceMap[cacheMeta.source] || "本地缓存";
+        const timeText = cacheMeta.updatedAt ? ` · ${formatSyncTime(cacheMeta.updatedAt)}` : "";
+
         const hasFilter = state.search || state.rating !== "ALL" || state.tag !== "ALL" || state.onlyFav;
         el.statusBar.innerHTML = `
-          <span>
-            ${totalItems > 0
-              ? `每页 ${PAGE_SIZE} 条 · 当前第 ${startIdx + 1}–${endIdx} 条`
-              : `暂无匹配笔记`}
-          </span>
+          <div class="status-left">
+            <span class="offline-pill" title="数据已保存于本地，断网亦可正常浏览">
+              <span class="status-dot ${isOnline ? "" : "offline"}"></span>
+              ${isOnline ? "在线" : "离线模式"} · ${sourceText}${timeText}
+            </span>
+            <span>
+              ${totalItems > 0
+                ? `每页 ${PAGE_SIZE} 条 · 当前第 ${startIdx + 1}–${endIdx} 条`
+                : `暂无匹配笔记`}
+            </span>
+          </div>
           <div class="status-actions">
             ${favCount > 0 ? `
               <button class="text-link-btn" id="exportFavBtn">
@@ -1529,7 +1704,6 @@
           </div>
         `;
 
-        // 渲染卡片列表
         if (pageNotes.length === 0) {
           el.cardList.innerHTML = `
             <div class="empty-state">
@@ -1540,7 +1714,7 @@
               <div class="empty-desc">
                 ${state.onlyFav
                   ? "点击卡片右上角的星标按钮即可收藏重点句型，方便集中复习。"
-                  : "试试更换搜索关键词、清除筛选条件，或者点击右上角导入你的 Anki JSON 文件。"}
+                  : "试试更换搜索关键词、清除筛选条件，或者点击右上角「同步远程」/「导入 JSON」。"}
               </div>
               ${hasFilter ? `<button class="btn btn-primary" id="emptyResetBtn">查看全部笔记</button>` : ""}
             </div>
@@ -1560,7 +1734,7 @@
         renderPagination(totalItems, totalPages, startIdx, endIdx);
       }
 
-      // 事件绑定（全部委托或绑定到静态节点，高效且无内存泄漏）
+      // 事件监听
       el.themeToggleBtn.addEventListener("click", () => {
         isDark = !isDark;
         saveTheme(isDark);
@@ -1574,13 +1748,16 @@
         renderAll();
       });
 
+      el.syncRemoteBtn.addEventListener("click", () => {
+        syncRemoteData(false);
+      });
+
       el.onlyFavBtn.addEventListener("click", () => {
         state.onlyFav = !state.onlyFav;
         state.page = 1;
         renderAll();
       });
 
-      // 输入法组合保护：中文输入选词完成前不触发重排，输入完毕立即响应
       let isComposing = false;
       el.searchInput.addEventListener("compositionstart", () => { isComposing = true; });
       el.searchInput.addEventListener("compositionend", (e) => {
@@ -1708,13 +1885,11 @@
         const file = e.target.files && e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           try {
-            let data = JSON.parse(ev.target.result);
-            if (!Array.isArray(data) && data && Array.isArray(data.notes)) {
-              data = data.notes;
-            }
-            if (!Array.isArray(data)) {
+            const rawJson = JSON.parse(ev.target.result);
+            const data = extractNotesArray(rawJson);
+            if (!data) {
               showToast("JSON 格式错误：根节点必须是数组 [...]");
               return;
             }
@@ -1723,9 +1898,9 @@
             state.tag = "ALL";
             state.onlyFav = false;
             state.page = 1;
-            saveNotes(allNotes);
+            await saveOfflineNotes(allNotes, "local_file");
             renderAll();
-            showToast(`成功导入 ${allNotes.length} 条笔记！`);
+            showToast(`成功导入并离线缓存 ${allNotes.length} 条笔记！`);
           } catch (err) {
             showToast("JSON 解析失败：" + err.message);
           } finally {
@@ -1735,11 +1910,31 @@
         reader.readAsText(file, "utf-8");
       });
 
+      window.addEventListener("online", () => {
+        renderAll();
+        showToast("网络已恢复，可点击「同步远程」更新最新笔记");
+      });
+
+      window.addEventListener("offline", () => {
+        renderAll();
+        showToast("网络已断开，已自动切换为本地离线模式");
+      });
+
       if ("speechSynthesis" in window) {
         window.speechSynthesis.getVoices();
       }
 
-      renderAll();
+      // 启动流程：优先加载本地离线缓存；若首次无缓存，则自动拉取远程 Spoken.json 并缓存
+      (async function initApp() {
+        const cached = await loadOfflineNotes();
+        if (cached.notes) {
+          allNotes = cached.notes;
+          renderAll();
+        } else {
+          renderAll();
+          syncRemoteData(true);
+        }
+      })();
     })();
   </script>
 </body>
